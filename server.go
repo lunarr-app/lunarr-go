@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"os"
+
+	config "lunarr/internal"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -10,6 +14,9 @@ import (
 )
 
 func main() {
+
+	log.Printf("Application started.")
+
 	e := echo.New()
 
 	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -32,5 +39,6 @@ func main() {
 		return c.String(http.StatusOK, "Hello, World!")
 	})
 
-	e.Logger.Fatal(e.Start(":3000"))
+	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%d", config.Config.Bind, config.Config.Port)))
+
 }
