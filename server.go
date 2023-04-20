@@ -2,30 +2,23 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 
-	config "lunarr/internal"
+	common "lunarr/internal"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/rs/zerolog"
 )
 
 func main() {
-
-	log.Printf("Application started.")
-
 	e := echo.New()
 
-	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogMethod: true,
 		LogURI:    true,
 		LogStatus: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			logger.Info().
+			common.Logger.Info().
 				Str("method", v.Method).
 				Str("path", v.URI).
 				Int("status", v.Status).
@@ -36,9 +29,8 @@ func main() {
 	}))
 
 	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
+		return c.String(http.StatusOK, "Hello, World!\n")
 	})
 
-	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%d", config.Config.Bind, config.Config.Port)))
-
+	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%d", common.Config.Bind, common.Config.Port)))
 }
