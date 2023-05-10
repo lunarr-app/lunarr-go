@@ -8,9 +8,9 @@ import (
 	"github.com/kataras/iris/v12"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
 
@@ -18,7 +18,7 @@ func SignupHandler(ctx iris.Context) {
 	var userReq models.UserSignup
 	if err := ctx.ReadJSON(&userReq); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(map[string]string{"error": "invalid request body"})
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": err.Error()})
 		return
 	}
 
@@ -26,7 +26,7 @@ func SignupHandler(ctx iris.Context) {
 	validate := validator.New()
 	if err := validate.Struct(userReq); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(map[string]string{"error": err.Error()})
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": err.Error()})
 		return
 	}
 
@@ -34,33 +34,21 @@ func SignupHandler(ctx iris.Context) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userReq.Password), bcrypt.DefaultCost)
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(map[string]string{"error": "failed to hash password"})
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to hash password"})
 		return
 	}
-
-	// Connect to MongoDB
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(map[string]string{"error": "failed to connect to database"})
-		return
-	}
-	defer client.Disconnect(context.Background())
 
 	// Check if the username already exists in the database
-	collection := client.Database("mydb").Collection("users")
-	filter := bson.M{"username": userReq.Username}
 	var existingUser models.UserSignup
-	err = collection.FindOne(context.Background(), filter).Decode(&existingUser)
+	err = db.UsersAccounts.FindOne(context.Background(), bson.M{"username": userReq.Username}).Decode(&existingUser)
 	if err != nil && err != mongo.ErrNoDocuments {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(map[string]string{"error": "failed to check username availability"})
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to check username availability"})
 		return
 	}
 	if existingUser.Username != "" {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(map[string]string{"error": "username already exists"})
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": "Username already exists"})
 		return
 	}
 
@@ -71,13 +59,14 @@ func SignupHandler(ctx iris.Context) {
 		Password:    string(hashedPassword),
 		Sex:         userReq.Sex,
 	}
-	_, err = collection.InsertOne(context.Background(), newUser)
+	_, err = db.UsersAccounts.InsertOne(context.Background(), newUser)
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(map[string]string{"error": "failed to create user"})
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to create user"})
 		return
 	}
 
 	ctx.StatusCode(http.StatusCreated)
-	ctx.JSON(map[string]string{"message": "user created successfully"})
+	ctx.JSON(map[string]string{"status": http.StatusText(http.StatusCreated), "message": "User created successfully"})
+
 }
