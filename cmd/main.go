@@ -6,7 +6,7 @@ import (
 	"github.com/kataras/iris/v12"
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
-	"github.com/lunarr-app/lunarr-go/server"
+	"github.com/lunarr-app/lunarr-go/internal/server"
 )
 
 func main() {

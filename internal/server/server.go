@@ -6,7 +6,7 @@ import (
 
 	"github.com/lunarr-app/lunarr-go/internal/handlers"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/auth"
-	"github.com/lunarr-app/lunarr-go/server/middleware"
+	"github.com/lunarr-app/lunarr-go/internal/server/middleware"
 )
 
 func New() *iris.Application {
