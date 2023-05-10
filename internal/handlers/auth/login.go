@@ -17,16 +17,20 @@ import (
 func LoginHandler(ctx iris.Context) {
 	var loginReq models.UserLogin
 	if err := ctx.ReadJSON(&loginReq); err != nil {
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": err.Error()})
+		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
+			"status":  http.StatusText(http.StatusBadRequest),
+			"message": err.Error(),
+		})
 		return
 	}
 
 	// Validate user input
 	validate := validator.New()
 	if err := validate.Struct(loginReq); err != nil {
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": err.Error()})
+		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
+			"status":  http.StatusText(http.StatusBadRequest),
+			"message": err.Error(),
+		})
 		return
 	}
 
@@ -35,28 +39,36 @@ func LoginHandler(ctx iris.Context) {
 	err := db.UsersAccounts.FindOne(context.Background(), bson.M{"username": loginReq.Username}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": "Invalid username or password"})
+			ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
+				"status":  http.StatusText(http.StatusBadRequest),
+				"message": "Invalid username or password",
+			})
 			return
 		} else {
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to find user"})
+			ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+				"status":  http.StatusText(http.StatusInternalServerError),
+				"message": "Failed to find user",
+			})
 			return
 		}
 	}
 
 	// Compare password hash
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginReq.Password)); err != nil {
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": "Invalid username or password"})
+		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
+			"status":  http.StatusText(http.StatusBadRequest),
+			"message": "Invalid username or password",
+		})
 		return
 	}
 
 	// Generate JWT token
 	token, err := generateToken(user.Username)
 	if err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to generate token"})
+		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to generate token",
+		})
 		return
 	}
 

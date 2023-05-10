@@ -16,8 +16,10 @@ func Authenticate(ctx iris.Context) {
 	// Get the API key from the header
 	apiKey := ctx.GetHeader("x-api-key")
 	if apiKey == "" {
-		ctx.StatusCode(http.StatusUnauthorized)
-		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusUnauthorized), "message": "API key not provided"})
+		ctx.StopWithJSON(http.StatusUnauthorized, iris.Map{
+			"status":  http.StatusText(http.StatusUnauthorized),
+			"message": "API key not provided",
+		})
 		return
 	}
 
@@ -26,13 +28,17 @@ func Authenticate(ctx iris.Context) {
 	err := db.UsersAccounts.FindOne(context.Background(), bson.M{"api_key": apiKey}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			ctx.StatusCode(http.StatusUnauthorized)
-			ctx.JSON(map[string]string{"status": http.StatusText(http.StatusUnauthorized), "message": "Invalid API key"})
+			ctx.StopWithJSON(http.StatusUnauthorized, iris.Map{
+				"status":  http.StatusText(http.StatusUnauthorized),
+				"message": "Invalid API key",
+			})
 			return
 		}
 
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to authenticate"})
+		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to authenticate",
+		})
 		return
 	}
 
