@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 
-	"lunarr/internal/models"
+	"github.com/lunarr-app/lunarr-go/internal/models"
 )
 
 func SignupHandler(ctx iris.Context) {

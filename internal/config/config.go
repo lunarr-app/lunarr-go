@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 
-	"lunarr/internal/common"
+	"github.com/lunarr-app/lunarr-go/internal/common"
 )
 
 var (

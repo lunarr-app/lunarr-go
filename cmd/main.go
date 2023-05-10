@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"lunarr/internal/config"
-	"lunarr/internal/handlers"
+	"github.com/lunarr-app/lunarr-go/internal/config"
+	"github.com/lunarr-app/lunarr-go/internal/handlers"
 
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/logger"

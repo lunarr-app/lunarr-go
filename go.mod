@@ -1,4 +1,4 @@
-module lunarr
+module github.com/lunarr-app/lunarr-go
 
 go 1.20
 

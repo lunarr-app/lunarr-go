@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"lunarr/internal/common"
-	"lunarr/internal/config"
+	"github.com/lunarr-app/lunarr-go/internal/common"
+	"github.com/lunarr-app/lunarr-go/internal/config"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
