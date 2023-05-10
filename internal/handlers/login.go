@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/kataras/iris/v12"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,6 +17,14 @@ import (
 func LoginHandler(ctx iris.Context) {
 	var loginReq models.UserLogin
 	if err := ctx.ReadJSON(&loginReq); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": err.Error()})
+		return
+	}
+
+	// Validate user input
+	validate := validator.New()
+	if err := validate.Struct(loginReq); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusBadRequest), "message": err.Error()})
 		return
