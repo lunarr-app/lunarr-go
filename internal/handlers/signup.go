@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"context"
@@ -14,8 +14,7 @@ import (
 	"lunarr/internal/models"
 )
 
-func signUp(ctx iris.Context) {
-
+func SignupHandler(ctx iris.Context) {
 	var userReq models.UserSignup
 	if err := ctx.ReadJSON(&userReq); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)

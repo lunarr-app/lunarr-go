@@ -32,6 +32,7 @@ func main() {
 
 	// Register routes
 	app.Get("/", handlers.RootHandler)
+	app.Get("/signup", handlers.SignupHandler)
 
 	// Start the server on the specified port
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
