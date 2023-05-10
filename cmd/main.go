@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"lunarr/internal/common"
 	"lunarr/internal/config"
-	"lunarr/internal/logger"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -20,7 +20,7 @@ func main() {
 		LogURI:    true,
 		LogStatus: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			logger.Log.Info().
+			common.Logger.Info().
 				Str("method", v.Method).
 				Str("path", v.URI).
 				Int("status", v.Status).
