@@ -53,13 +53,28 @@ func SignupHandler(ctx iris.Context) {
 		return
 	}
 
+	// Check if the database is empty
+	count, err := db.UsersAccounts.CountDocuments(context.Background(), bson.M{})
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to check database"})
+		return
+	}
+
+	var role string
+	if count == 0 {
+		role = "admin"
+	} else {
+		role = "subscriber"
+	}
+
 	// Create new user
 	newUser := &models.UserMongo{
 		Displayname:   userReq.Displayname,
 		Username:      userReq.Username,
 		Password:      string(hashedPassword),
 		Sex:           userReq.Sex,
-		Role:          "subscriber",
+		Role:          role,
 		APIKey:        "",
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
