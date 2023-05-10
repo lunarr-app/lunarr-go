@@ -4,37 +4,48 @@ import (
 	"context"
 	"net/http"
 
-	"lunarr/internal/models"
-
-	"github.com/labstack/echo/v4"
+	"github.com/go-playground/validator/v10"
+	"github.com/kataras/iris/v12"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
+
+	"lunarr/internal/models"
 )
 
-func signUp(c echo.Context) error {
+func signUp(ctx iris.Context) {
+
 	var userReq models.UserSignup
-	if err := c.Bind(&userReq); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	if err := ctx.ReadJSON(&userReq); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(map[string]string{"error": "invalid request body"})
+		return
 	}
 
 	// Validate user input
-	if err := c.Validate(&userReq); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	validate := validator.New()
+	if err := validate.Struct(userReq); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(map[string]string{"error": err.Error()})
+		return
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userReq.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to hash password"})
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(map[string]string{"error": "failed to hash password"})
+		return
 	}
 
 	// Connect to MongoDB
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to connect to database"})
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(map[string]string{"error": "failed to connect to database"})
+		return
 	}
 	defer client.Disconnect(context.Background())
 
@@ -44,10 +55,14 @@ func signUp(c echo.Context) error {
 	var existingUser models.UserSignup
 	err = collection.FindOne(context.Background(), filter).Decode(&existingUser)
 	if err != nil && err != mongo.ErrNoDocuments {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to check username availability"})
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(map[string]string{"error": "failed to check username availability"})
+		return
 	}
 	if existingUser.Username != "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "username already exists"})
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(map[string]string{"error": "username already exists"})
+		return
 	}
 
 	// Create new user
@@ -59,8 +74,11 @@ func signUp(c echo.Context) error {
 	}
 	_, err = collection.InsertOne(context.Background(), newUser)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create user"})
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(map[string]string{"error": "failed to create user"})
+		return
 	}
 
-	return c.JSON(http.StatusCreated, map[string]string{"message": "user created successfully"})
+	ctx.StatusCode(http.StatusCreated)
+	ctx.JSON(map[string]string{"message": "user created successfully"})
 }
