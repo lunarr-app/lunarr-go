@@ -2,38 +2,38 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 
-	"lunarr/internal/common"
 	"lunarr/internal/config"
+	"lunarr/internal/handlers"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/middleware/logger"
 )
 
 func main() {
+	// Get the config
 	cfg := config.Get()
-	e := echo.New()
 
-	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogMethod: true,
-		LogURI:    true,
-		LogStatus: true,
-		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			common.Logger.Info().
-				Str("method", v.Method).
-				Str("path", v.URI).
-				Int("status", v.Status).
-				Msg("request")
+	// Create a new Iris application
+	app := iris.New()
 
-			return nil
-		},
-	}))
-
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!\n")
+	// Set up a custom logger
+	customLogger := logger.New(logger.Config{
+		Status:           true,
+		IP:               true,
+		Method:           true,
+		Path:             true,
+		PathAfterHandler: true,
+		Query:            true,
 	})
 
-	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)))
+	// Register the custom logger as middleware
+	app.Use(customLogger)
 
+	// Register routes
+	app.Get("/", handlers.RootHandler)
+
+	// Start the server on the specified port
+	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	app.Run(iris.Addr(addr))
 }
