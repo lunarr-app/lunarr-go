@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/lunarr-app/lunarr-go/internal/common"
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
@@ -81,6 +82,17 @@ func SignupHandler(ctx iris.Context) {
 		LastSeenAt:    time.Now(),
 		CurrentStatus: "active",
 	}
+
+	// Generate API key
+	apiKey, err := common.GenerateAPIKey()
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to generate API key"})
+		return
+	}
+	newUser.APIKey = apiKey
+
+	// Insert new user into database
 	if err := db.InsertUser(newUser); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to create user"})
@@ -89,5 +101,4 @@ func SignupHandler(ctx iris.Context) {
 
 	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(map[string]string{"status": http.StatusText(http.StatusCreated), "message": "User created successfully"})
-
 }
