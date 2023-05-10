@@ -30,9 +30,12 @@ func main() {
 	// Register the custom logger as middleware
 	app.Use(customLogger)
 
-	// Register routes
-	app.Get("/", handlers.RootHandler)
-	app.Get("/signup", handlers.SignupHandler)
+	// Create a sub-router for all API routes
+	api := app.Party("/api")
+
+	// Register api routes
+	api.Get("/", handlers.RootHandler)
+	api.Get("/signup", handlers.SignupHandler)
 
 	// Start the server on the specified port
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
