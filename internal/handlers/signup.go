@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/kataras/iris/v12"
@@ -53,14 +54,19 @@ func SignupHandler(ctx iris.Context) {
 	}
 
 	// Create new user
-	newUser := &models.UserSignup{
-		Displayname: userReq.Displayname,
-		Username:    userReq.Username,
-		Password:    string(hashedPassword),
-		Sex:         userReq.Sex,
+	newUser := &models.UserMongo{
+		Displayname:   userReq.Displayname,
+		Username:      userReq.Username,
+		Password:      string(hashedPassword),
+		Sex:           userReq.Sex,
+		Role:          "subscriber",
+		APIKey:        "",
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+		LastSeenAt:    time.Now(),
+		CurrentStatus: "active",
 	}
-	_, err = db.UsersAccounts.InsertOne(context.Background(), newUser)
-	if err != nil {
+	if err := db.InsertUser(newUser); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(map[string]string{"status": http.StatusText(http.StatusInternalServerError), "message": "Failed to create user"})
 		return
