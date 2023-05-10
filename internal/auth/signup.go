@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"lunarr/internal/models"
+
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,22 +13,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserSignupRequest struct {
-	Displayname string `json:"displayname" validate:"required,min=1,max=48"`
-	Username    string `json:"username" validate:"required,min=2,max=16,alphanum"`
-	Password    string `json:"password" validate:"required,min=6,max=32"`
-	Sex         string `json:"sex" validate:"oneof=male female unknown"`
-}
-
-type User struct {
-	Displayname string `bson:"displayname"`
-	Username    string `bson:"username"`
-	Password    string `bson:"password"`
-	Sex         string `bson:"sex"`
-}
-
 func signUp(c echo.Context) error {
-	var userReq UserSignupRequest
+	var userReq models.UserSignup
 	if err := c.Bind(&userReq); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
@@ -53,7 +41,7 @@ func signUp(c echo.Context) error {
 	// Check if the username already exists in the database
 	collection := client.Database("mydb").Collection("users")
 	filter := bson.M{"username": userReq.Username}
-	var existingUser User
+	var existingUser models.UserSignup
 	err = collection.FindOne(context.Background(), filter).Decode(&existingUser)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to check username availability"})
@@ -63,7 +51,7 @@ func signUp(c echo.Context) error {
 	}
 
 	// Create new user
-	newUser := &User{
+	newUser := &models.UserSignup{
 		Displayname: userReq.Displayname,
 		Username:    userReq.Username,
 		Password:    string(hashedPassword),
