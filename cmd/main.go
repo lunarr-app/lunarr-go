@@ -36,6 +36,7 @@ func main() {
 	// Register api routes
 	api.Get("/", handlers.RootHandler)
 	api.Post("/signup", handlers.SignupHandler)
+	api.Post("/login", handlers.LoginHandler)
 
 	// Start the server on the specified port
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
