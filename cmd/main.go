@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
-	common "lunarr/internal"
+	"lunarr/internal/config"
+	"lunarr/internal/logger"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
+	cfg := config.Get()
 	e := echo.New()
 
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -18,7 +20,7 @@ func main() {
 		LogURI:    true,
 		LogStatus: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			common.Logger.Info().
+			logger.Log.Info().
 				Str("method", v.Method).
 				Str("path", v.URI).
 				Int("status", v.Status).
@@ -32,5 +34,6 @@ func main() {
 		return c.String(http.StatusOK, "Hello, World!\n")
 	})
 
-	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%d", common.Config.Bind, common.Config.Port)))
+	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)))
+
 }
