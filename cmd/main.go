@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/lunarr-app/lunarr-go/internal/config"
-	"github.com/lunarr-app/lunarr-go/internal/handlers"
-
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/logger"
+
+	"github.com/lunarr-app/lunarr-go/internal/config"
+	"github.com/lunarr-app/lunarr-go/internal/handlers"
+	"github.com/lunarr-app/lunarr-go/internal/handlers/auth"
 )
 
 func main() {
@@ -35,8 +36,8 @@ func main() {
 
 	// Register api routes
 	api.Get("/", handlers.RootHandler)
-	api.Post("/signup", handlers.SignupHandler)
-	api.Post("/login", handlers.LoginHandler)
+	api.Post("/signup", auth.SignupHandler)
+	api.Post("/login", auth.LoginHandler)
 
 	// Start the server on the specified port
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
