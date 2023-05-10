@@ -77,9 +77,9 @@ func SignupHandler(ctx iris.Context) {
 		Sex:           userReq.Sex,
 		Role:          role,
 		APIKey:        "",
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-		LastSeenAt:    time.Now(),
+		CreatedAt:     time.Now().UTC(),
+		UpdatedAt:     time.Now().UTC(),
+		LastSeenAt:    time.Now().UTC(),
 		CurrentStatus: "active",
 	}
 
