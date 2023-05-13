@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 
-	"github.com/lunarr-app/lunarr-go/internal/common"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
 var (
@@ -47,9 +47,9 @@ func init() {
 	cfg.Database.URI = *dbURI
 
 	// Log information
-	common.Logger.Info().Msgf("Server port: %d", *serverPort)
-	common.Logger.Info().Msgf("Server bind IP address: %s", *serverHost)
-	common.Logger.Info().Msgf("MongoDB database URI: %s", *dbURI)
+	util.Logger.Info().Msgf("Server port: %d", *serverPort)
+	util.Logger.Info().Msgf("Server bind IP address: %s", *serverHost)
+	util.Logger.Info().Msgf("MongoDB database URI: %s", *dbURI)
 }
 
 func Get() *Config {

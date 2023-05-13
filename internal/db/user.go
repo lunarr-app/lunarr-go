@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/lunarr-app/lunarr-go/internal/common"
 	"github.com/lunarr-app/lunarr-go/internal/models"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -16,7 +16,7 @@ func InsertUser(user *models.UserMongo) error {
 
 	_, err := UsersAccounts.InsertOne(ctx, user)
 	if err != nil {
-		common.Logger.Error().Err(err).Msg("Failed to insert user into MongoDB")
+		util.Logger.Error().Err(err).Msg("Failed to insert user into MongoDB")
 		return err
 	}
 
@@ -32,7 +32,7 @@ func UpdateUser(username string, updates bson.M) error {
 	update := bson.M{"$set": updates}
 	_, err := UsersAccounts.UpdateOne(ctx, filter, update)
 	if err != nil {
-		common.Logger.Error().Err(err).Msg("Failed to update user in MongoDB")
+		util.Logger.Error().Err(err).Msg("Failed to update user in MongoDB")
 		return err
 	}
 

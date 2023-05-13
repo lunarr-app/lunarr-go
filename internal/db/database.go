@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/lunarr-app/lunarr-go/internal/common"
 	"github.com/lunarr-app/lunarr-go/internal/config"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,24 +21,24 @@ func init() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	common.Logger.Info().Msg("Creating new MongoClient instance")
+	util.Logger.Info().Msg("Creating new MongoClient instance")
 	clientOptions := options.Client().ApplyURI(config.Get().Database.URI)
 	mongoClient, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		common.Logger.Fatal().Err(err).Msg("Failed to connect to MongoDB")
+		util.Logger.Fatal().Err(err).Msg("Failed to connect to MongoDB")
 	}
 	err = mongoClient.Ping(ctx, nil)
 	if err != nil {
-		common.Logger.Fatal().Err(err).Msg("Failed to ping MongoDB")
+		util.Logger.Fatal().Err(err).Msg("Failed to ping MongoDB")
 	}
 
-	common.Logger.Info().Msg("Exporting MongoDB collections as typed objects")
+	util.Logger.Info().Msg("Exporting MongoDB collections as typed objects")
 	UsersAccounts = mongoClient.Database("lunarr").Collection("users.accounts")
 	MoviesLists = mongoClient.Database("lunarr").Collection("movies.lists")
 	TvShowsLists = mongoClient.Database("lunarr").Collection("tv_shows.lists")
 	WatchHistory = mongoClient.Database("lunarr").Collection("watch.history")
 
-	common.Logger.Info().Msg("Creating indexes on relevant fields for improved query performance")
+	util.Logger.Info().Msg("Creating indexes on relevant fields for improved query performance")
 	UsersAccounts.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"username": 1}, Options: options.Index().SetName("username_index").SetUnique(true)},
 		{Keys: bson.M{"api_key": 1}, Options: options.Index().SetName("api_key_index").SetUnique(true)},
@@ -50,7 +50,7 @@ func init() {
 			SetUnique(false),
 	})
 
-	common.Logger.Info().Msg("Creating text indexes for improved searching performance")
+	util.Logger.Info().Msg("Creating text indexes for improved searching performance")
 	MoviesLists.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
 			Keys: bson.M{

@@ -11,9 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/lunarr-app/lunarr-go/internal/common"
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
 func SignupHandler(ctx iris.Context) {
@@ -96,7 +96,7 @@ func SignupHandler(ctx iris.Context) {
 	}
 
 	// Generate API key
-	apiKey, err := common.GenerateAPIKey()
+	apiKey, err := util.GenerateAPIKey()
 	if err != nil {
 		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
 			"status": http.StatusText(http.StatusInternalServerError),
