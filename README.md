@@ -12,8 +12,8 @@ Lunarr is a self-hosted media streaming platform for movies and TV shows that ai
 
 ## Technologies Used
 
-- Node.js
-- Fastify web framework
+- Golang
+- Iris web framework
 - MongoDB database for storing media and user information
 - React Native for building mobile applications (separate repository)
 
