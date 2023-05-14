@@ -1,12 +1,10 @@
 package auth
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/kataras/iris/v12"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
@@ -35,8 +33,7 @@ func LoginHandler(ctx iris.Context) {
 	}
 
 	// Find user in database
-	var user models.UserSignup
-	err := db.UsersAccounts.FindOne(context.Background(), bson.M{"username": loginReq.Username}).Decode(&user)
+	user, err := db.FindUserByUsername(loginReq.Username)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
@@ -62,21 +59,6 @@ func LoginHandler(ctx iris.Context) {
 		return
 	}
 
-	// Generate JWT token
-	token, err := generateToken(user.Username)
-	if err != nil {
-		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to generate token",
-		})
-		return
-	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(map[string]string{"status": http.StatusText(http.StatusOK), "token": token})
-}
-
-func generateToken(username string) (string, error) {
-	// TODO: implement JWT token generation
-	return "", nil
+	ctx.JSON(map[string]string{"status": http.StatusText(http.StatusOK), "api_key": user.APIKey})
 }
