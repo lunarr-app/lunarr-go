@@ -6,6 +6,7 @@ import (
 
 	"github.com/lunarr-app/lunarr-go/internal/handlers"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/auth"
+	"github.com/lunarr-app/lunarr-go/internal/handlers/movies"
 	"github.com/lunarr-app/lunarr-go/internal/server/middleware"
 )
 
@@ -37,6 +38,7 @@ func New() *iris.Application {
 
 	// Register authenticated API routes
 	api.Get("/", handlers.RootHandler)
+	api.Get("/movies", movies.ListsHandler)
 
 	// Return the application instance
 	return app

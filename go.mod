@@ -3,6 +3,7 @@ module github.com/lunarr-app/lunarr-go
 go 1.20
 
 require (
+	github.com/cyruzin/golang-tmdb v1.5.0
 	github.com/go-playground/validator/v10 v10.13.0
 	github.com/kataras/iris/v12 v12.2.0
 	github.com/rs/zerolog v1.29.1
@@ -30,6 +31,7 @@ require (
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/iris-contrib/schema v0.0.6 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kataras/blocks v0.0.7 // indirect
 	github.com/kataras/golog v0.1.8 // indirect
 	github.com/kataras/pio v0.0.11 // indirect
@@ -42,6 +44,8 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.23 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
