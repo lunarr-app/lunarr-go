@@ -36,8 +36,7 @@ func TestUserMongo(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Retrieve the test user from the database
-	var retrievedUser models.UserMongo
-	err = UsersAccounts.FindOne(ctx, bson.M{"username": testUser.Username}).Decode(&retrievedUser)
+	retrievedUser, err := FindUserByUsername(testUser.Username)
 	assert.NoError(t, err)
 	assert.Equal(t, testUser.Displayname, retrievedUser.Displayname)
 	assert.Equal(t, testUser.Username, retrievedUser.Username)

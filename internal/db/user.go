@@ -38,3 +38,19 @@ func UpdateUser(username string, updates bson.M) error {
 
 	return nil
 }
+
+// FindUserByUsername finds a user in the users.accounts collection by username
+func FindUserByUsername(username string) (*models.UserMongo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"username": username}
+	var user models.UserMongo
+	err := UsersAccounts.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		util.Logger.Error().Err(err).Msgf("Failed to find user %s in MongoDB", username)
+		return nil, err
+	}
+
+	return &user, nil
+}
