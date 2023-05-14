@@ -1,17 +1,15 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/kataras/iris/v12"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-
 	"github.com/lunarr-app/lunarr-go/internal/db"
-	"github.com/lunarr-app/lunarr-go/internal/models"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// Authenticate middleware checks if a valid API key is provided in the header
+// and if it belongs to a valid user in the database
 func Authenticate(ctx iris.Context) {
 	// Get the API key from the header
 	apiKey := ctx.GetHeader("x-api-key")
@@ -23,9 +21,8 @@ func Authenticate(ctx iris.Context) {
 		return
 	}
 
-	// Check if the API key exists in the database
-	var user models.UserMongo
-	err := db.UsersAccounts.FindOne(context.Background(), bson.M{"api_key": apiKey}).Decode(&user)
+	// Get the user associated with the API key
+	user, err := db.GetUserByAPIKey(apiKey)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			ctx.StopWithJSON(http.StatusUnauthorized, iris.Map{

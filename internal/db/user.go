@@ -7,6 +7,7 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // InsertUserMongo inserts a new user into the users.accounts collection
@@ -49,6 +50,24 @@ func FindUserByUsername(username string) (*models.UserMongo, error) {
 	err := UsersAccounts.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		util.Logger.Error().Err(err).Msgf("Failed to find user %s in MongoDB", username)
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// GetUserByAPIKey returns a user from the users.accounts collection by API key
+func GetUserByAPIKey(apiKey string) (*models.UserMongo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"api_key": apiKey}
+	projection := bson.M{"password": 0}
+	opts := options.FindOne().SetProjection(projection)
+
+	var user models.UserMongo
+	err := UsersAccounts.FindOne(ctx, filter, opts).Decode(&user)
+	if err != nil {
 		return nil, err
 	}
 

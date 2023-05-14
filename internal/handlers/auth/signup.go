@@ -74,11 +74,11 @@ func SignupHandler(ctx iris.Context) {
 		return
 	}
 
-	var role string
+	var role models.UserRole
 	if count == 0 {
-		role = "admin"
+		role = models.UserRoleAdmin
 	} else {
-		role = "subscriber"
+		role = models.UserRoleSubscriber
 	}
 
 	// Create new user
