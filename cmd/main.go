@@ -6,10 +6,17 @@ import (
 	"github.com/kataras/iris/v12"
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
+	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/server"
 )
 
 func main() {
+	// Parse command-line flags
+	config.ParseFlags()
+
+	// Initialize the database
+	db.InitDatabase()
+
 	// Create a new instance of the server
 	app := server.New()
 

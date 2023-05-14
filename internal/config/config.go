@@ -21,6 +21,7 @@ type Config struct {
 }
 
 func init() {
+	// Initialize the default configuration values
 	cfg = &Config{
 		Server: struct {
 			Host string
@@ -35,13 +36,17 @@ func init() {
 			URI: "mongodb://127.0.0.1:27017/lunarr",
 		},
 	}
+}
 
+func ParseFlags() {
+	// Define the command-line flags
 	serverHost := flag.String("host", cfg.Server.Host, "The hostname or IP address that the server should bind to.")
 	serverPort := flag.Int("port", cfg.Server.Port, "The port number that the server should listen on.")
 	dbURI := flag.String("database-uri", cfg.Database.URI, "The URI of the MongoDB database to connect to.")
 
 	flag.Parse()
 
+	// Update the configuration values with the parsed flags
 	cfg.Server.Host = *serverHost
 	cfg.Server.Port = *serverPort
 	cfg.Database.URI = *dbURI

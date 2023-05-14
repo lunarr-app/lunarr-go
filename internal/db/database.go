@@ -17,7 +17,7 @@ var MoviesLists *mongo.Collection
 var TvShowsLists *mongo.Collection
 var WatchHistory *mongo.Collection
 
-func init() {
+func InitDatabase() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
