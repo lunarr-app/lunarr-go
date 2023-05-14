@@ -4,13 +4,13 @@ import (
 	"net/http"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
-	"github.com/go-playground/validator/v10"
 	"github.com/kataras/iris/v12"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
 func ListsHandler(ctx iris.Context) {
@@ -23,27 +23,8 @@ func ListsHandler(ctx iris.Context) {
 		return
 	}
 
-	// Validate user input
-	validate := validator.New()
-	if err := validate.Struct(query); err != nil {
-		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": err.Error(),
-		})
-		return
-	}
-
-	// Build query object based on search query
-	search := bson.M{}
-	if query.Query != "" {
-		search = bson.M{
-			"$text": bson.M{
-				"$search":             query.Query,
-				"$caseSensitive":      false,
-				"$diacriticSensitive": false,
-			},
-		}
-	}
+	// Build query object based on search query and filters
+	search := util.BuildSearchQuery(&query)
 
 	// Find movies in the database based on query and pagination
 	opts := options.Find().SetSort(bson.M{"title": 1})
