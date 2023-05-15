@@ -7,6 +7,7 @@ import (
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/db"
+	"github.com/lunarr-app/lunarr-go/internal/scanner"
 	"github.com/lunarr-app/lunarr-go/internal/server"
 )
 
@@ -16,6 +17,9 @@ func main() {
 
 	// Initialize the database
 	db.InitDatabase()
+
+	// Initialize the TMDB client
+	scanner.InitTMDBClient()
 
 	// Create a new instance of the server
 	app := server.New()
