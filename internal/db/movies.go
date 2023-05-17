@@ -11,10 +11,11 @@ func CheckMovieExists(filePath string) bool {
 		"files": filePath,
 	}
 
-	count, err := MoviesLists.CountDocuments(context.TODO(), filter)
+	var result bson.M
+	err := MoviesLists.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
 		return false
 	}
 
-	return count > 0
+	return result != nil
 }
