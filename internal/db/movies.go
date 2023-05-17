@@ -5,14 +5,10 @@ import (
 	"time"
 
 	TMDb "github.com/lunarr-app/golang-tmdb"
+	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 	"go.mongodb.org/mongo-driver/bson"
 )
-
-type MovieWithFiles struct {
-	Movie *TMDb.MovieDetails `bson:"movie"`
-	Files []string           `bson:"files"`
-}
 
 func CheckMovieExists(filePath string) bool {
 	filter := bson.M{
@@ -32,9 +28,11 @@ func InsertMovie(movie *TMDb.MovieDetails, file string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	movieWithFiles := MovieWithFiles{
-		Movie: movie,
-		Files: []string{file},
+	movieWithFiles := models.MovieWithFiles{
+		Movie:     movie,
+		Files:     []string{file},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	_, err := MoviesLists.InsertOne(ctx, movieWithFiles)
