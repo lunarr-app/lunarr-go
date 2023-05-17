@@ -18,6 +18,9 @@ type Config struct {
 	Database struct {
 		URI string
 	}
+	TMDb struct {
+		APIKey string
+	}
 }
 
 func init() {
@@ -35,6 +38,11 @@ func init() {
 		}{
 			URI: "mongodb://127.0.0.1:27017/lunarr",
 		},
+		TMDb: struct {
+			APIKey string
+		}{
+			APIKey: "", // Default empty value
+		},
 	}
 }
 
@@ -43,6 +51,7 @@ func ParseFlags() {
 	serverHost := flag.String("host", cfg.Server.Host, "The hostname or IP address that the server should bind to.")
 	serverPort := flag.Int("port", cfg.Server.Port, "The port number that the server should listen on.")
 	dbURI := flag.String("database-uri", cfg.Database.URI, "The URI of the MongoDB database to connect to.")
+	tmdbAPIKey := flag.String("tmdb-api-key", cfg.TMDb.APIKey, "The API key for TMDb")
 
 	flag.Parse()
 
@@ -50,11 +59,15 @@ func ParseFlags() {
 	cfg.Server.Host = *serverHost
 	cfg.Server.Port = *serverPort
 	cfg.Database.URI = *dbURI
+	cfg.TMDb.APIKey = *tmdbAPIKey
 
 	// Log information
 	util.Logger.Info().Msgf("Server port: %d", *serverPort)
 	util.Logger.Info().Msgf("Server bind IP address: %s", *serverHost)
 	util.Logger.Info().Msgf("MongoDB database URI: %s", *dbURI)
+	if *tmdbAPIKey != "" {
+		util.Logger.Info().Msgf("TMDb API key: %s", util.MaskSecret(*tmdbAPIKey))
+	}
 }
 
 func Get() *Config {

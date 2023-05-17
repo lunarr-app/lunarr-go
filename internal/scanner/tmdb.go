@@ -2,6 +2,7 @@ package scanner
 
 import (
 	tmdb "github.com/lunarr-app/golang-tmdb"
+	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
@@ -12,7 +13,17 @@ const accessToken = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhMGVlMjVjNzg4OGQ3MGU4NTg3OD
 
 func InitTMDBClient() {
 	util.Logger.Info().Msg("Initializing TMDB client...")
-	client, err := tmdb.InitWithAccessToken(accessToken)
+	cfg := config.Get()
+
+	var client *tmdb.Client
+	var err error
+
+	if cfg.TMDb.APIKey != "" {
+		client, err = tmdb.Init(cfg.TMDb.APIKey)
+	} else {
+		client, err = tmdb.InitWithAccessToken(accessToken)
+	}
+
 	if err != nil {
 		util.Logger.Fatal().Err(err).Msg("Failed to initialize TMDB client")
 	}
