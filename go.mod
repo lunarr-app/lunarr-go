@@ -3,9 +3,9 @@ module github.com/lunarr-app/lunarr-go
 go 1.20
 
 require (
-	github.com/cyruzin/golang-tmdb v1.5.0
 	github.com/go-playground/validator/v10 v10.13.0
 	github.com/kataras/iris/v12 v12.2.0
+	github.com/lunarr-app/golang-tmdb v1.5.1
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.2
 	go.mongodb.org/mongo-driver v1.11.4

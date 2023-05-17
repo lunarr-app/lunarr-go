@@ -3,8 +3,8 @@ package movies
 import (
 	"net/http"
 
-	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/kataras/iris/v12"
+	tmdb "github.com/lunarr-app/golang-tmdb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
