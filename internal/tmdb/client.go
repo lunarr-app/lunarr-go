@@ -1,4 +1,4 @@
-package scanner
+package tmdb
 
 import (
 	tmdb "github.com/lunarr-app/golang-tmdb"
