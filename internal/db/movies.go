@@ -31,8 +31,8 @@ func InsertMovie(movie *TMDb.MovieDetails, file string) error {
 	movieWithFiles := models.MovieWithFiles{
 		Movie:     movie,
 		Files:     []string{file},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
 	}
 
 	_, err := MoviesLists.InsertOne(ctx, movieWithFiles)

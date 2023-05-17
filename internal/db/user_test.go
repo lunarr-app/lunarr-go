@@ -23,9 +23,9 @@ func TestUserMongo(t *testing.T) {
 		Sex:           "males",
 		Role:          "subscriber",
 		APIKey:        "testapikey",
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-		LastSeenAt:    time.Now(),
+		CreatedAt:     time.Now().UTC(),
+		UpdatedAt:     time.Now().UTC(),
+		LastSeenAt:    time.Now().UTC(),
 		CurrentStatus: "active",
 	}
 
