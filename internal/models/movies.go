@@ -7,8 +7,8 @@ import (
 )
 
 type MovieWithFiles struct {
-	Movie     *TMDb.MovieDetails `bson:"movie"`
-	Files     []string           `bson:"files"`
-	CreatedAt time.Time          `bson:"created_at"`
-	UpdatedAt time.Time          `bson:"updated_at"`
+	Movie     *TMDb.MovieDetails `json:"movie" bson:"movie"`
+	Files     []string           `json:"files" bson:"files"`
+	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
 }
