@@ -89,10 +89,22 @@ func SignupHandler(ctx iris.Context) {
 		Sex:           userReq.Sex,
 		Role:          role,
 		APIKey:        "",
-		CreatedAt:     time.Now().UTC(),
-		UpdatedAt:     time.Now().UTC(),
-		LastSeenAt:    time.Now().UTC(),
 		CurrentStatus: "active",
+		Settings: models.UserSettings{
+			Theme: "system",
+			Subtitle: models.SubtitleSettings{
+				Enabled:  true,
+				Language: "en-US",
+			},
+			Transcoding: models.TranscodingSettings{
+				Resolution: "direct",
+				Bitrate:    2000,
+				Codec:      "h264",
+			},
+		},
+		LastSeenAt: time.Now().UTC(),
+		CreatedAt:  time.Now().UTC(),
+		UpdatedAt:  time.Now().UTC(),
 	}
 
 	// Generate API key
