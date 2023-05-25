@@ -53,7 +53,6 @@ func FindMovieByTmdbID(tmdbID int64) (*models.MovieWithFiles, error) {
 	var movie models.MovieWithFiles
 	err := MoviesLists.FindOne(context.TODO(), filter).Decode(&movie)
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to find movie by TMDb ID")
 		return nil, err
 	}
 

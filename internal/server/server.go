@@ -39,6 +39,7 @@ func New() *iris.Application {
 	// Register authenticated API routes
 	api.Get("/", handlers.RootHandler)
 	api.Get("/movies", movies.ListsHandler)
+	api.Get("/movies/{tmdb_id}/stream", movies.MovieStreamHandler)
 
 	// Return the application instance
 	return app

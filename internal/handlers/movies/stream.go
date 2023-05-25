@@ -22,7 +22,7 @@ func MovieStreamHandler(ctx iris.Context) {
 
 	movie, err := db.FindMovieByTmdbID(tmdbID)
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to find movie")
+		util.Logger.Error().Err(err).Msg("Failed to find movie by TMDb ID")
 		ctx.StopWithJSON(http.StatusNotFound, iris.Map{
 			"status":  http.StatusText(http.StatusNotFound),
 			"message": "Movie not found",
