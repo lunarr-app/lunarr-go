@@ -44,3 +44,18 @@ func InsertMovie(movie *TMDb.MovieDetails, file string) error {
 	util.Logger.Info().Msgf("Movie inserted successfully: %s", movie.Title)
 	return nil
 }
+
+func FindMovieByTmdbID(tmdbID int64) (*models.MovieWithFiles, error) {
+	filter := bson.M{
+		"movie.id": tmdbID,
+	}
+
+	var movie models.MovieWithFiles
+	err := MoviesLists.FindOne(context.TODO(), filter).Decode(&movie)
+	if err != nil {
+		util.Logger.Error().Err(err).Msg("Failed to find movie by TMDb ID")
+		return nil, err
+	}
+
+	return &movie, nil
+}
