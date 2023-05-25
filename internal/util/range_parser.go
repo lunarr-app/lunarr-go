@@ -26,7 +26,7 @@ type RangeParserOptions struct {
 // ParseRange parses the "Range" header `str` relative to the given file `size`.
 func ParseRange(size int, str string, options RangeParserOptions) (*RangeParserResult, error) {
 	if str == "" {
-		return nil, errors.New("argument str must be a string")
+		return nil, errors.New("argument str must be a non-empty string")
 	}
 
 	if len(str) <= 7 || str[:6] != "bytes=" {
