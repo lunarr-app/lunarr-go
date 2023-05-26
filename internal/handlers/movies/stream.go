@@ -32,7 +32,18 @@ func MovieStreamHandler(ctx iris.Context) {
 
 	filePath := movie.Files[0]
 
-	fileStat, err := os.Stat(filePath)
+	file, err := os.Open(filePath)
+	if err != nil {
+		util.Logger.Error().Err(err).Msg("Failed to open file")
+		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to open file",
+		})
+		return
+	}
+	defer file.Close()
+
+	fileStat, err := file.Stat()
 	if err != nil {
 		util.Logger.Error().Err(err).Msg("Failed to get file stats")
 		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
@@ -66,12 +77,11 @@ func MovieStreamHandler(ctx iris.Context) {
 		ctx.Header("Content-Length", strconv.FormatInt(int64(rangeValue.Ranges[0].End)-int64(rangeValue.Ranges[0].Start)+1, 10))
 		ctx.Header("Content-Range", "bytes "+strconv.FormatInt(int64(rangeValue.Ranges[0].Start), 10)+"-"+strconv.FormatInt(int64(rangeValue.Ranges[0].End), 10)+"/"+strconv.FormatInt(fileStat.Size(), 10))
 		ctx.StatusCode(http.StatusPartialContent)
-		// TO-DO: send stream with partial content
+		ctx.ServeContent(file, fileStat.Name(), fileStat.ModTime())
 		return
 	}
 
 	ctx.Header("Content-Length", strconv.FormatInt(fileStat.Size(), 10))
 	ctx.StatusCode(http.StatusOK)
-	// TO-DO: send stream with full content
-
+	ctx.ServeContent(file, fileStat.Name(), fileStat.ModTime())
 }
