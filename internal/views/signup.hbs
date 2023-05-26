@@ -1,0 +1,210 @@
+<!-- signup.hbs -->
+<html>
+<head>
+    <title>Signup | Lunarr</title>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .signup-container {
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .signup-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            border: none;
+            background-color: #3e3e3e;
+            color: #fff;
+        }
+
+        .signup-form select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            border: none;
+            background-color: #3e3e3e;
+            color: #fff;
+        }
+
+        .signup-form button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 3px;
+            border: none;
+            background-color: #0070f3;
+            color: #fff;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .signup-form button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .signup-form .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        .error-message {
+            color: red;
+            display: none;
+        }
+
+        .success-message {
+            color: green;
+            display: none;
+        }
+
+        .signup-form h1 {
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .login-text {
+            margin-top: 10px;
+            color: #fff;
+        }
+
+        .login-link, .signup-link {
+            color: #0070f3;
+            text-decoration: none;
+        }
+
+        .gender-selection {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .gender-selection label {
+            margin-right: 5px;
+        }
+
+        .gender-selection input[type="radio"] {
+            display: none;
+        }
+
+        .gender-selection input[type="radio"] + label {
+            padding: 5px 10px;
+            border-radius: 3px;
+            background-color: #3e3e3e;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .gender-selection input[type="radio"]:checked + label {
+            background-color: #0070f3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="signup-container">
+        <div class="signup-form">
+            <h1>Create an Account</h1>
+            <form id="signup-form">
+                <input type="text" name="displayname" placeholder="Display Name" required>
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <div class="gender-selection">
+                    <label>Gender:</label>
+                    <input type="radio" name="sex" id="male" value="male" required>
+                    <label for="male">Male</label>
+                    <input type="radio" name="sex" id="female" value="female" required>
+                    <label for="female">Female</label>
+                    <input type="radio" name="sex" id="unknown" value="unknown" required>
+                    <label for="unknown">Unknown</label>
+                </div>
+                <button type="submit">Signup
+                    <div class="loader"></div>
+                </button>
+            </form>
+            <div id="error-message" class="error-message"></div>
+            <div id="success-message" class="success-message"></div>
+            <p class="login-text">Already have an account? <a class="login-link" href="/login">Login</a></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const signupForm = document.getElementById('signup-form');
+            const signupButton = signupForm.querySelector('button');
+            const loader = signupButton.querySelector('.loader');
+            const errorMessage = document.getElementById('error-message');
+            const successMessage = document.getElementById('success-message');
+
+            signupForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const displayname = event.target.displayname.value;
+                const username = event.target.username.value;
+                const password = event.target.password.value;
+                const sex = event.target.sex.value;
+
+                // Disable the signup button and show the loader
+                signupButton.disabled = true;
+                loader.style.display = 'block';
+
+                // Perform signup request
+                fetch('/auth/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ displayname, username, password, sex })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Successful signup
+                        successMessage.style.display = 'block';
+                        successMessage.textContent = data.message || 'Account created successfully!';
+                    } else {
+                        // Failed signup
+                        errorMessage.style.display = 'block';
+                        errorMessage.textContent = data.message || 'An error occurred. Please try again later.';
+                    }
+                })
+                .catch(error => {
+                    // Error occurred during signup request
+                    errorMessage.style.display = 'block';
+                    errorMessage.textContent = 'An error occurred. Please try again later.';
+                })
+                .finally(() => {
+                    // Enable the signup button and hide the loader
+                    signupButton.disabled = false;
+                    loader.style.display = 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

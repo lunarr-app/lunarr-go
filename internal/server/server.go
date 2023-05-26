@@ -31,6 +31,7 @@ func New() *iris.Application {
 	tmpl := iris.Handlebars("./internal/views", ".hbs")
 	app.RegisterView(tmpl)
 	app.Get("/login", LoginPage)
+	app.Get("/signup", SignupPage)
 
 	// Create a sub-router for auth
 	ha := app.Party("/auth")
