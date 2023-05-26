@@ -1,0 +1,158 @@
+<!-- login.hbs -->
+<html>
+<head>
+    <title>Login | Lunarr</title>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .login-container {
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            border: none;
+            background-color: #3e3e3e;
+            color: #fff;
+        }
+
+        .login-form button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 3px;
+            border: none;
+            background-color: #0070f3;
+            color: #fff;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .login-form button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .login-form .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        .error-message {
+            color: red;
+            display: none;
+        }
+
+        .login-form h1 {
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .signup-text {
+            margin-top: 10px;
+            color: #fff;
+        }
+
+        .signup-link {
+            color: #0070f3;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-form">
+            <h1>Welcome to Lunarr</h1>
+            <form id="login-form">
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">Login
+                    <div class="loader"></div>
+                </button>
+            </form>
+            <div id="error-message" class="error-message"></div>
+            <p class="signup-text">Don't have an account? <a class="signup-link" href="/signup">Signup</a></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('login-form');
+            const loginButton = loginForm.querySelector('button');
+            const loader = loginButton.querySelector('.loader');
+            const errorMessage = document.getElementById('error-message');
+
+            loginForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const username = event.target.username.value;
+                const password = event.target.password.value;
+
+                // Disable the login button and show the loader
+                loginButton.disabled = true;
+                loader.style.display = 'block';
+
+                // Perform login request
+                fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.api_key) {
+                        // Successful login
+                        window.location.href = '/dashboard'; // Redirect to dashboard page
+                    } else {
+                        // Failed login
+                        errorMessage.style.display = 'block';
+                        errorMessage.textContent = data.message;
+                    }
+                })
+                .catch(error => {
+                    // Error occurred during login request
+                    errorMessage.style.display = 'block';
+                    errorMessage.textContent = 'An error occurred. Please try again later.';
+                })
+                .finally(() => {
+                    // Enable the login button and hide the loader
+                    loginButton.disabled = false;
+                    loader.style.display = 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
