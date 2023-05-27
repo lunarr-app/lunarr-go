@@ -8,6 +8,7 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/handlers/auth"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/movies"
 	"github.com/lunarr-app/lunarr-go/internal/server/middleware"
+	"github.com/lunarr-app/lunarr-go/internal/tmdb"
 )
 
 func New() *iris.Application {
@@ -36,6 +37,7 @@ func New() *iris.Application {
 
 	// Register web routes
 	web := app.Party("/")
+	web.Get("/", MoviePage)
 	web.Get("/login", LoginPage)
 	web.Get("/signup", SignupPage)
 
@@ -56,6 +58,10 @@ func New() *iris.Application {
 	// // Route to render error pages
 	app.OnErrorCode(iris.StatusNotFound, NotFoundPage)
 	app.OnErrorCode(iris.StatusInternalServerError, InternalServerErrorPage)
+
+	// Define handlebars helper functions
+	tmpl.AddFunc("TMDbGetImageURL", tmdb.GetImageURL)
+	tmpl.AddFunc("TMDbFormatReleaseDate", tmdb.FormatReleaseDate)
 
 	// Return the application instance
 	return app
