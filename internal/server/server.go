@@ -27,15 +27,17 @@ func New() *iris.Application {
 	// Register the custom logger as middleware
 	app.Use(customLogger)
 
-	// Register web routes
-	web := app.Party("/")
+	// Register view engine
 	tmpl := iris.Handlebars("./views", ".hbs")
-	web.RegisterView(tmpl)
-	web.Get("/login", LoginPage)
-	web.Get("/signup", SignupPage)
+	app.RegisterView(tmpl)
 
 	// Serve static files
 	app.HandleDir("/assets", iris.Dir("./assets"))
+
+	// Register web routes
+	web := app.Party("/")
+	web.Get("/login", LoginPage)
+	web.Get("/signup", SignupPage)
 
 	// Create a sub-router for auth
 	ha := app.Party("/auth")
