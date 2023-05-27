@@ -33,6 +33,9 @@ func New() *iris.Application {
 	app.Get("/login", LoginPage)
 	app.Get("/signup", SignupPage)
 
+	// Serve static files
+	app.HandleDir("/assets", iris.Dir("./assets"))
+
 	// Create a sub-router for auth
 	ha := app.Party("/auth")
 	ha.Post("/signup", auth.SignupHandler)
