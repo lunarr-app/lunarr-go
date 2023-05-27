@@ -28,7 +28,7 @@ func New() *iris.Application {
 	app.Use(customLogger)
 
 	// Register web routes
-	tmpl := iris.Handlebars("./internal/views", ".hbs")
+	tmpl := iris.Handlebars("./views", ".hbs")
 	app.RegisterView(tmpl)
 	app.Get("/login", LoginPage)
 	app.Get("/signup", SignupPage)
