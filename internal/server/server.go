@@ -28,18 +28,11 @@ func New() *iris.Application {
 	app.Use(customLogger)
 
 	// Register web routes
+	web := app.Party("/")
 	tmpl := iris.Handlebars("./views", ".hbs")
-	app.RegisterView(tmpl)
-	app.Get("/login", LoginPage)
-	app.Get("/signup", SignupPage)
-
-	// Route to render error pages
-	app.OnErrorCode(iris.StatusNotFound, func(ctx iris.Context) {
-		ctx.View("404.hbs")
-	})
-	app.OnErrorCode(iris.StatusInternalServerError, func(ctx iris.Context) {
-		ctx.View("500.hbs")
-	})
+	web.RegisterView(tmpl)
+	web.Get("/login", LoginPage)
+	web.Get("/signup", SignupPage)
 
 	// Serve static files
 	app.HandleDir("/assets", iris.Dir("./assets"))
@@ -57,6 +50,10 @@ func New() *iris.Application {
 	api.Get("/", handlers.RootHandler)
 	api.Get("/movies", movies.ListsHandler)
 	api.Get("/movies/{tmdb_id}/stream", movies.MovieStreamHandler)
+
+	// // Route to render error pages
+	app.OnErrorCode(iris.StatusNotFound, NotFoundPage)
+	app.OnErrorCode(iris.StatusInternalServerError, InternalServerErrorPage)
 
 	// Return the application instance
 	return app
