@@ -1,0 +1,45 @@
+body {
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.container-top {
+  padding-bottom: 20px;
+}
+
+.container-bottom {
+  padding-top: 20px;
+}
+
+.title {
+  font-family: "spartan";
+  font-size: 46px;
+  opacity: 0.9;
+}
+
+.info {
+  font-family: "spartan";
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+.note {
+  font-family: "spartan";
+  color: gray;
+  font-size: 14px;
+}
+
+.link-text {
+  font-family: "spartan";
+  color: lightblue;
+  font-size: 16px;
+  opacity: 0.9;
+}

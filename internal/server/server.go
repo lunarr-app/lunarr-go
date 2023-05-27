@@ -33,6 +33,11 @@ func New() *iris.Application {
 	app.Get("/login", LoginPage)
 	app.Get("/signup", SignupPage)
 
+	// Define route to render the 404 error page
+	app.OnErrorCode(iris.StatusNotFound, func(ctx iris.Context) {
+		ctx.View("404.hbs")
+	})
+
 	// Serve static files
 	app.HandleDir("/assets", iris.Dir("./assets"))
 
