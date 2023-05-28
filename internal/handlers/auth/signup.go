@@ -20,8 +20,8 @@ func SignupHandler(ctx iris.Context) {
 	var userReq models.UserSignup
 	if err := ctx.ReadJSON(&userReq); err != nil {
 		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
-			"status": http.StatusText(http.StatusBadRequest),
-			"error":  err.Error(),
+			"status":  http.StatusText(http.StatusBadRequest),
+			"message": err.Error(),
 		})
 		return
 	}
@@ -30,8 +30,8 @@ func SignupHandler(ctx iris.Context) {
 	validate := validator.New()
 	if err := validate.Struct(userReq); err != nil {
 		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
-			"status": http.StatusText(http.StatusBadRequest),
-			"error":  err.Error(),
+			"status":  http.StatusText(http.StatusBadRequest),
+			"message": err.Error(),
 		})
 		return
 	}
@@ -40,8 +40,8 @@ func SignupHandler(ctx iris.Context) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userReq.Password), bcrypt.DefaultCost)
 	if err != nil {
 		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
-			"status": http.StatusText(http.StatusInternalServerError),
-			"error":  "Failed to hash password",
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to hash password",
 		})
 		return
 	}
@@ -51,15 +51,15 @@ func SignupHandler(ctx iris.Context) {
 	err = db.UsersAccounts.FindOne(context.Background(), bson.M{"username": userReq.Username}).Decode(&existingUser)
 	if err != nil && err != mongo.ErrNoDocuments {
 		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
-			"status": http.StatusText(http.StatusInternalServerError),
-			"error":  "Failed to check username availability",
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to check username availability",
 		})
 		return
 	}
 	if existingUser.Username != "" {
 		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
-			"status": http.StatusText(http.StatusBadRequest),
-			"error":  "Username already exists",
+			"status":  http.StatusText(http.StatusBadRequest),
+			"message": "Username already exists",
 		})
 		return
 	}
@@ -68,8 +68,8 @@ func SignupHandler(ctx iris.Context) {
 	count, err := db.UsersAccounts.CountDocuments(context.Background(), bson.M{})
 	if err != nil {
 		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
-			"status": http.StatusText(http.StatusInternalServerError),
-			"error":  "Failed to check database",
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to check database",
 		})
 		return
 	}
@@ -111,8 +111,8 @@ func SignupHandler(ctx iris.Context) {
 	apiKey, err := util.GenerateAPIKey()
 	if err != nil {
 		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
-			"status": http.StatusText(http.StatusInternalServerError),
-			"error":  "Failed to generate API key",
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to generate API key",
 		})
 		return
 	}
@@ -121,8 +121,8 @@ func SignupHandler(ctx iris.Context) {
 	// Insert new user into database
 	if err := db.InsertUser(newUser); err != nil {
 		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
-			"status": http.StatusText(http.StatusInternalServerError),
-			"error":  "Failed to create user",
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to create user",
 		})
 		return
 	}
