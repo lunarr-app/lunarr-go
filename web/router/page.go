@@ -8,6 +8,10 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
+func RootRedirect(ctx iris.Context) {
+	ctx.Redirect("/movies", http.StatusTemporaryRedirect)
+}
+
 func MoviePage(ctx iris.Context) {
 	// Retrieve popular movies from TMDb
 	popularMovies, err := tmdb.TmdbClient.GetMoviePopular(nil)
