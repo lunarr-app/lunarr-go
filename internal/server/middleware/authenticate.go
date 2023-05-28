@@ -9,16 +9,32 @@ import (
 )
 
 // Authenticate middleware checks if a valid API key is provided in the header
-// and if it belongs to a valid user in the database
+// or as a cookie and if it belongs to a valid user in the database
 func Authenticate(ctx iris.Context) {
 	// Get the API key from the header
 	apiKey := ctx.GetHeader("x-api-key")
+
+	// Check if the API key is empty
 	if apiKey == "" {
-		ctx.StopWithJSON(http.StatusUnauthorized, iris.Map{
-			"status":  http.StatusText(http.StatusUnauthorized),
-			"message": "API key not provided",
-		})
-		return
+		// Get the API key from the cookie
+		cookie, err := ctx.Request().Cookie("api_key")
+		if err != nil {
+			if err == http.ErrNoCookie {
+				ctx.StopWithJSON(http.StatusUnauthorized, iris.Map{
+					"status":  http.StatusText(http.StatusUnauthorized),
+					"message": "API key not provided",
+				})
+				return
+			}
+
+			ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+				"status":  http.StatusText(http.StatusInternalServerError),
+				"message": "Failed to authenticate",
+			})
+			return
+		}
+
+		apiKey = cookie.Value
 	}
 
 	// Get the user associated with the API key

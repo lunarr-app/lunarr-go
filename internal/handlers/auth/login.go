@@ -59,6 +59,16 @@ func LoginHandler(ctx iris.Context) {
 		return
 	}
 
+	// Set API key on a cookie
+	ctx.SetCookie(&http.Cookie{
+		Name:     "api_key",
+		Value:    user.APIKey,
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   86400 * 30, // 30 days in seconds
+		SameSite: http.SameSiteStrictMode,
+	})
+
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(map[string]string{"status": http.StatusText(http.StatusOK), "api_key": user.APIKey})
 }
