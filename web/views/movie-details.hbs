@@ -1,0 +1,42 @@
+<!-- movies-details.hbs -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{Movie.Title}} | Lunarr</title>
+    <link rel="stylesheet" href="/assets/css/movie-details.css" />
+  </head>
+
+  <body>
+    {{render "partials/header.hbs"}}
+
+    <div class="container">
+      <div class="main-content">
+        <div class="movie-details-container">
+          <div class="movie-poster">
+            <img src="{{TMDbGetImageURL Movie.PosterPath}}" alt="{{Movie.Title}}" />
+            <a href="#" class="play-button">&#9658;</a>
+          </div>
+          <div class="movie-details">
+            <h1 class="movie-title">{{Movie.Title}}</h1>
+            <div class="movie-info">
+              <span class="movie-release-date">{{TMDbFormatReleaseDate Movie.ReleaseDate}}</span>
+            </div>
+            <div class="movie-overview">
+              <h2 class="section-title">Overview</h2>
+              <p>{{Movie.Overview}}</p>
+            </div>
+            <div class="movie-genres">
+              <h2 class="section-title">Genres</h2>
+              <ul>
+                {{#each Movie.Genres}}
+                  <li>{{this.Name}}</li>
+                {{/each}}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

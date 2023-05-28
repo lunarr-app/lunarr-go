@@ -47,6 +47,7 @@ func New() *iris.Application {
 	// Register authenticated web routes
 	web.Get("/", router.RootRedirect)
 	web.Get("/movies", router.MoviePage)
+	web.Get("/movies/{tmdb_id}", router.MovieDetailsPage)
 
 	// Create a sub-router for auth
 	ha := app.Party("/auth")

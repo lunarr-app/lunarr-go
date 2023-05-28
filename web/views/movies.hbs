@@ -1,11 +1,13 @@
 <!-- movies.hbs -->
-
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Movie List | Lunarr</title>
     <link rel="stylesheet" href="/assets/css/movies.css" />
+    <script>
+      function openMovieDetails(id) { window.location.href = '/movies/' + id; }
+    </script>
   </head>
 
   <body>
@@ -15,7 +17,7 @@
       <div class="main-content">
         <div class="movie-container">
           {{#each movies}}
-            <div class="movie-item">
+            <div class="movie-item" onclick="openMovieDetails('{{this.ID}}')">
               <div class="movie-poster">
                 <img src="{{TMDbGetImageURL PosterPath}}" alt="{{Title}}" />
               </div>

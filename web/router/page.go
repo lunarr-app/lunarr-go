@@ -31,3 +31,32 @@ func MoviePage(ctx iris.Context) {
 		return
 	}
 }
+
+func MovieDetailsPage(ctx iris.Context) {
+	// Get the movie ID from the URL parameter
+	movieID, err := ctx.Params().GetInt("tmdb_id")
+	if err != nil {
+		util.Logger.Error().Err(err).Msg("Invalid movie ID")
+		ctx.StatusCode(http.StatusBadRequest)
+		// BadRequestPage(ctx)
+		return
+	}
+
+	// Retrieve movie details from TMDb
+	movieDetails, err := tmdb.TmdbClient.GetMovieDetails(movieID, nil)
+	if err != nil {
+		util.Logger.Error().Err(err).Msg("Failed to get movie details from TMDb")
+		ctx.StatusCode(http.StatusInternalServerError)
+		InternalServerErrorPage(ctx)
+		return
+	}
+
+	// Render the view template
+	err = ctx.View("movie-details.hbs", iris.Map{"Movie": movieDetails})
+	if err != nil {
+		util.Logger.Error().Err(err).Msg("Failed to render the view template")
+		ctx.StatusCode(http.StatusInternalServerError)
+		InternalServerErrorPage(ctx)
+		return
+	}
+}
