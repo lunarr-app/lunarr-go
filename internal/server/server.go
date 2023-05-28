@@ -70,6 +70,7 @@ func New() *iris.Application {
 	// Define handlebars helper functions
 	tmpl.AddFunc("TMDbGetImageURL", tmdb.GetImageURL)
 	tmpl.AddFunc("TMDbFormatReleaseDate", tmdb.FormatReleaseDate)
+	tmpl.AddFunc("IncludeFile", IncludeFile)
 
 	// Return the application instance
 	return app

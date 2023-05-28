@@ -1,36 +1,40 @@
 <!-- signup.hbs -->
 <html>
-<head>
+  <head>
     <title>Signup | Lunarr</title>
-    <link rel="stylesheet" type="text/css" href="assets/css/signup.css">
-    <script src="/assets/js/signup.js"></script>
-</head>
+    <style>
+      {{IncludeFile "css/signup.css"}}
+    </style>
+    <script>
+      {{IncludeFile "js/signup.js"}}
+    </script>
+  </head>
 
-<body>
+  <body>
     <div class="signup-container">
-        <div class="signup-form">
-            <h1>Create an Account</h1>
-            <form id="signup-form">
-                <input type="text" name="displayname" placeholder="Display Name" required>
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="password" name="password" placeholder="Password" required>
-                <div class="gender-selection">
-                    <label>Gender:</label>
-                    <input type="radio" name="sex" id="male" value="male" required>
-                    <label for="male">Male</label>
-                    <input type="radio" name="sex" id="female" value="female" required>
-                    <label for="female">Female</label>
-                    <input type="radio" name="sex" id="unknown" value="unknown" required>
-                    <label for="unknown">Unknown</label>
-                </div>
-                <button type="submit">Signup
-                    <div class="loader"></div>
-                </button>
-            </form>
-            <div id="error-message" class="error-message"></div>
-            <div id="success-message" class="success-message"></div>
-            <p class="login-text">Already have an account? <a class="login-link" href="/login">Login</a></p>
-        </div>
+      <div class="signup-form">
+        <h1>Create an Account</h1>
+        <form id="signup-form">
+          <input type="text" name="displayname" placeholder="Display Name" required />
+          <input type="text" name="username" placeholder="Username" required />
+          <input type="password" name="password" placeholder="Password" required />
+          <div class="gender-selection">
+            <label>Gender:</label>
+            <input type="radio" name="sex" id="male" value="male" required />
+            <label for="male">Male</label>
+            <input type="radio" name="sex" id="female" value="female" required />
+            <label for="female">Female</label>
+            <input type="radio" name="sex" id="unknown" value="unknown" required />
+            <label for="unknown">Unknown</label>
+          </div>
+          <button type="submit">Signup
+            <div class="loader"></div>
+          </button>
+        </form>
+        <div id="error-message" class="error-message"></div>
+        <div id="success-message" class="success-message"></div>
+        <p class="login-text">Already have an account? <a class="login-link" href="/login">Login</a></p>
+      </div>
     </div>
-</body>
+  </body>
 </html>

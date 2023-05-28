@@ -1,25 +1,30 @@
 <!-- login.hbs -->
 <html>
-<head>
+  <head>
     <title>Login | Lunarr</title>
-    <link rel="stylesheet" type="text/css" href="assets/css/login.css">
-    <script src="/assets/js/login.js"></script>
-</head>
+    <link rel="stylesheet" type="text/css" href="assets/css/login.css" />
+    <style>
+      {{IncludeFile "css/login.css"}}
+    </style>
+    <script>
+      {{IncludeFile "js/login.js"}}
+    </script>
+  </head>
 
-<body>
+  <body>
     <div class="login-container">
-        <div class="login-form">
-            <h1>Welcome to Lunarr</h1>
-            <form id="login-form">
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="password" name="password" placeholder="Password" required>
-                <button type="submit">Login
-                    <div class="loader"></div>
-                </button>
-            </form>
-            <div id="error-message" class="error-message"></div>
-            <p class="signup-text">Don't have an account? <a class="signup-link" href="/signup">Signup</a></p>
-        </div>
+      <div class="login-form">
+        <h1>Welcome to Lunarr</h1>
+        <form id="login-form">
+          <input type="text" name="username" placeholder="Username" required />
+          <input type="password" name="password" placeholder="Password" required />
+          <button type="submit">Login
+            <div class="loader"></div>
+          </button>
+        </form>
+        <div id="error-message" class="error-message"></div>
+        <p class="signup-text">Don't have an account? <a class="signup-link" href="/signup">Signup</a></p>
+      </div>
     </div>
-</body>
+  </body>
 </html>
