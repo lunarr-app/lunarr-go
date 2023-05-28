@@ -6,6 +6,7 @@ require (
 	github.com/go-playground/validator/v10 v10.13.0
 	github.com/kataras/iris/v12 v12.2.0
 	github.com/lunarr-app/golang-tmdb v1.5.1
+	github.com/middelink/go-parse-torrent-name v0.0.0-20190301154245-3ff4efacd4c4
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.2
 	go.mongodb.org/mongo-driver v1.11.4
