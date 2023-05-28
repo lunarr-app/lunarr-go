@@ -9,7 +9,15 @@ import (
 )
 
 func RootRedirect(ctx iris.Context) {
-	ctx.Redirect("/movies", http.StatusTemporaryRedirect)
+	// Check if the user is logged in
+	if user := ctx.Values().Get("user"); user != nil {
+		// User is logged in, redirect to /movies
+		ctx.Redirect("/movies", http.StatusFound)
+		return
+	}
+
+	// User is not logged in, redirect to /login
+	ctx.Redirect("/login", http.StatusFound)
 }
 
 func MoviePage(ctx iris.Context) {
