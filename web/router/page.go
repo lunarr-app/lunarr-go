@@ -1,4 +1,4 @@
-package webpages
+package router
 
 import (
 	"net/http"

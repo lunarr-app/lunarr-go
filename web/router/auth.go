@@ -1,4 +1,4 @@
-package webpages
+package router
 
 import (
 	"github.com/kataras/iris/v12"
