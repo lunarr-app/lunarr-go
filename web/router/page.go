@@ -18,5 +18,12 @@ func MoviePage(ctx iris.Context) {
 		return
 	}
 
-	ctx.View("movies.hbs", iris.Map{"movies": popularMovies.Results})
+	// Render the view template
+	err = ctx.View("movies.hbs", iris.Map{"movies": popularMovies.Results})
+	if err != nil {
+		util.Logger.Error().Err(err).Msg("Failed to render the view template")
+		ctx.StatusCode(http.StatusInternalServerError)
+		InternalServerErrorPage(ctx)
+		return
+	}
 }
