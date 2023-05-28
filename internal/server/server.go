@@ -37,10 +37,16 @@ func New() *iris.Application {
 	app.HandleDir("/assets", iris.Dir("./web/assets"))
 
 	// Register web routes
+	app.Get("/", router.RootRedirect)
+	app.Get("/login", router.LoginPage)
+	app.Get("/signup", router.SignupPage)
+
+	// Create a sub-router for authenticated API routes
 	web := app.Party("/")
+	web.Use(middleware.Authenticate)
+
+	// Register authenticated web routes
 	web.Get("/movies", router.MoviePage)
-	web.Get("/login", router.LoginPage)
-	web.Get("/signup", router.SignupPage)
 
 	// Create a sub-router for auth
 	ha := app.Party("/auth")
