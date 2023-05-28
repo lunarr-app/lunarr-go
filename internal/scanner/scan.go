@@ -8,9 +8,6 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
-// List of valid video file extensions
-var videoExtensions = []string{".mp4", ".mov", ".avi", ".mkv", ".webm"}
-
 func ScanMediaDirectory(directory string) {
 	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -28,7 +25,7 @@ func ScanMediaDirectory(directory string) {
 			if db.CheckMovieExists(path) {
 				util.Logger.Info().Str("path", path).Msg("Movie already exists in the database")
 			} else {
-				// To-do
+				// To-do: Add movie to database
 			}
 		}
 
