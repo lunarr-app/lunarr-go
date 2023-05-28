@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
       .then((data) => {
         if (data.api_key) {
           // Successful login
-          window.location.href = "/dashboard"; // Redirect to dashboard page
+          window.location.href = "/movies"; // Redirect to movies page
         } else {
           // Failed login
           errorMessage.style.display = "block";
@@ -35,8 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch((err) => {
         // Error occurred during login request
         errorMessage.style.display = "block";
-        errorMessage.textContent =
-          err.message || "An error occurred. Please try again later.";
+        errorMessage.textContent = err.message || "An error occurred. Please try again later.";
       })
       .finally(() => {
         // Enable the login button and hide the loader

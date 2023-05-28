@@ -29,20 +29,18 @@ document.addEventListener("DOMContentLoaded", function () {
         if (data.status === "success") {
           // Successful signup
           successMessage.style.display = "block";
-          successMessage.textContent =
-            data.message || "Account created successfully!";
+          successMessage.textContent = data.message || "Account created successfully!";
+          window.location.href = "/login"; // Redirect to login page
         } else {
           // Failed signup
           errorMessage.style.display = "block";
-          errorMessage.textContent =
-            data.message || "An error occurred. Please try again later.";
+          errorMessage.textContent = data.message || "An error occurred. Please try again later.";
         }
       })
       .catch((err) => {
         // Error occurred during signup request
         errorMessage.style.display = "block";
-        errorMessage.textContent =
-          err.message || "An error occurred. Please try again later.";
+        errorMessage.textContent = err.message || "An error occurred. Please try again later.";
       })
       .finally(() => {
         // Enable the signup button and hide the loader
