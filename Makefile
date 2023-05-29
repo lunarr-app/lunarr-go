@@ -10,7 +10,7 @@ BINARY_NAME = lunarr-go
 
 # Build the binary
 build:
-	$(GOBUILD) -o $(BINARY_NAME) cmd/main.go
+	$(GOBUILD) -ldflags "-s -w" -o $(BINARY_NAME) cmd/main.go
 
 # Clean build files
 clean:
