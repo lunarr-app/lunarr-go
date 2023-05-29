@@ -1,6 +1,8 @@
 package server
 
 import (
+	"io/fs"
+
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/logger"
 
@@ -9,6 +11,8 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/handlers/movies"
 	"github.com/lunarr-app/lunarr-go/internal/server/middleware"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
+	"github.com/lunarr-app/lunarr-go/internal/util"
+	"github.com/lunarr-app/lunarr-go/web"
 	"github.com/lunarr-app/lunarr-go/web/router"
 )
 
@@ -30,24 +34,28 @@ func New() *iris.Application {
 	app.Use(customLogger)
 
 	// Register view engine
-	tmpl := iris.Handlebars("./web/views", ".hbs")
+	views, err := fs.Sub(web.ViewsFS, "views")
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to load web/views")
+	}
+	tmpl := iris.Handlebars(views, ".hbs")
 	app.RegisterView(tmpl)
 
 	// Serve static files
-	app.HandleDir("/assets", iris.Dir("./web/assets"))
+	app.HandleDir("/assets", web.AssetsFS)
 
 	// Register web routes
 	app.Get("/login", router.LoginPage)
 	app.Get("/signup", router.SignupPage)
 
-	// Create a sub-router for authenticated API routes
-	web := app.Party("/")
-	web.Use(middleware.AuthenticateWeb)
+	// Create a sub-router for authenticated web routes
+	fe := app.Party("/")
+	fe.Use(middleware.AuthenticateWeb)
 
 	// Register authenticated web routes
-	web.Get("/", router.RootRedirect)
-	web.Get("/movies", router.MoviePage)
-	web.Get("/movies/{tmdb_id}", router.MovieDetailsPage)
+	fe.Get("/", router.RootRedirect)
+	fe.Get("/movies", router.MoviePage)
+	fe.Get("/movies/{tmdb_id}", router.MovieDetailsPage)
 
 	// Create a sub-router for auth
 	ha := app.Party("/auth")
@@ -70,7 +78,7 @@ func New() *iris.Application {
 	// Define handlebars helper functions
 	tmpl.AddFunc("TMDbGetImageURL", tmdb.GetImageURL)
 	tmpl.AddFunc("TMDbFormatReleaseDate", tmdb.FormatReleaseDate)
-	tmpl.AddFunc("IncludeFile", IncludeFile)
+	tmpl.AddFunc("IncludeFile", web.IncludeFile)
 
 	// Return the application instance
 	return app
