@@ -3,7 +3,6 @@ package movies
 import (
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/kataras/iris/v12"
 	"github.com/lunarr-app/lunarr-go/internal/db"
@@ -53,35 +52,8 @@ func MovieStreamHandler(ctx iris.Context) {
 		return
 	}
 
-	rangeHeader := ctx.GetHeader("Range")
-	var rangeValue *util.RangeParserResult
-	if rangeHeader != "" {
-		rangeValue, err = util.ParseRange(int(fileStat.Size()), rangeHeader, util.RangeParserOptions{Combine: true})
-		if err != nil {
-			util.Logger.Error().Err(err).Msg("Failed to parse range header")
-			ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
-				"status":  http.StatusText(http.StatusBadRequest),
-				"message": "Invalid range header",
-			})
-			return
-		}
-	}
-
-	ctx.Header("Accept-Ranges", "bytes")
-	ctx.Header("Content-Type", "application/octet-stream")
+	util.Logger.Info().Msgf("Streaming: %s", filePath)
 	ctx.Header("transferMode.dlna.org", "Streaming")
 	ctx.Header("contentFeatures.dlna.org", "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000")
-
-	util.Logger.Info().Msgf("Streaming: %s", filePath)
-	if rangeValue != nil {
-		ctx.Header("Content-Length", strconv.FormatInt(int64(rangeValue.Ranges[0].End)-int64(rangeValue.Ranges[0].Start)+1, 10))
-		ctx.Header("Content-Range", "bytes "+strconv.FormatInt(int64(rangeValue.Ranges[0].Start), 10)+"-"+strconv.FormatInt(int64(rangeValue.Ranges[0].End), 10)+"/"+strconv.FormatInt(fileStat.Size(), 10))
-		ctx.StatusCode(http.StatusPartialContent)
-		ctx.ServeContent(file, fileStat.Name(), fileStat.ModTime())
-		return
-	}
-
-	ctx.Header("Content-Length", strconv.FormatInt(fileStat.Size(), 10))
-	ctx.StatusCode(http.StatusOK)
 	ctx.ServeContent(file, fileStat.Name(), fileStat.ModTime())
 }
