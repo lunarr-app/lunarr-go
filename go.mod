@@ -8,7 +8,7 @@ require (
 	github.com/lunarr-app/golang-tmdb v1.5.1
 	github.com/middelink/go-parse-torrent-name v0.0.0-20190301154245-3ff4efacd4c4
 	github.com/rs/zerolog v1.29.1
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	go.mongodb.org/mongo-driver v1.11.4
 	golang.org/x/crypto v0.9.0
 )
