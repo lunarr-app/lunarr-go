@@ -17,6 +17,7 @@ func main() {
 	util.InitLogger()
 
 	// Parse command-line flags
+	config.InitConfig()
 	config.ParseFlags()
 
 	// Initialize the database

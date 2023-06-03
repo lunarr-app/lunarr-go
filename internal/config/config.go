@@ -23,7 +23,7 @@ type Config struct {
 	}
 }
 
-func init() {
+func InitConfig() {
 	// Initialize the default configuration values
 	cfg = &Config{
 		Server: struct {
