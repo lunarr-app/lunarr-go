@@ -10,13 +10,18 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/handlers/movies"
 	"github.com/lunarr-app/lunarr-go/internal/server/middleware"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 	"github.com/lunarr-app/lunarr-go/web"
 	"github.com/lunarr-app/lunarr-go/web/router"
 )
 
 func New() *fiber.App {
 	// Create a new Fiber application
-	engine := handlebars.NewFileSystem(web.GetViewsFS(), ".hbs")
+	views, err := web.GetViewsFS()
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to load web views")
+	}
+	engine := handlebars.NewFileSystem(views, ".hbs")
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})

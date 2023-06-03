@@ -2,6 +2,7 @@ package web
 
 import (
 	"embed"
+	"io/fs"
 	"net/http"
 )
 
@@ -11,6 +12,10 @@ var AssetsFS embed.FS
 //go:embed all:views
 var ViewsFS embed.FS
 
-func GetViewsFS() http.FileSystem {
-	return http.FS(ViewsFS)
+func GetViewsFS() (http.FileSystem, error) {
+	fs, err := fs.Sub(ViewsFS, "views")
+	if err != nil {
+		return nil, err
+	}
+	return http.FS(fs), nil
 }
