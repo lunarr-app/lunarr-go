@@ -17,6 +17,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    services:
+      mongodb:
+        image: mongo
+        ports:
+          - 27017:27017
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
