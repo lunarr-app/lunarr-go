@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/kataras/iris/v12"
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
@@ -16,62 +16,56 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
-func SignupHandler(ctx iris.Context) {
+func SignupHandler(c *fiber.Ctx) error {
 	var userReq models.UserSignup
-	if err := ctx.ReadJSON(&userReq); err != nil {
-		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
+	if err := c.BodyParser(&userReq); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": err.Error(),
 		})
-		return
 	}
 
 	// Validate user input
 	validate := validator.New()
 	if err := validate.Struct(userReq); err != nil {
-		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": err.Error(),
 		})
-		return
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userReq.Password), bcrypt.DefaultCost)
 	if err != nil {
-		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to hash password",
 		})
-		return
 	}
 
 	// Check if the username already exists in the database
 	var existingUser models.UserSignup
 	err = db.UsersAccounts.FindOne(context.Background(), bson.M{"username": userReq.Username}).Decode(&existingUser)
 	if err != nil && err != mongo.ErrNoDocuments {
-		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to check username availability",
 		})
-		return
 	}
 	if existingUser.Username != "" {
-		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": "Username already exists",
 		})
-		return
 	}
 
 	// Check if the database is empty
 	count, err := db.UsersAccounts.CountDocuments(context.Background(), bson.M{})
 	if err != nil {
-		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to check database",
 		})
-		return
 	}
 
 	var role models.UserRole
@@ -110,25 +104,22 @@ func SignupHandler(ctx iris.Context) {
 	// Generate API key
 	apiKey, err := util.GenerateAPIKey()
 	if err != nil {
-		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to generate API key",
 		})
-		return
 	}
 	newUser.APIKey = apiKey
 
 	// Insert new user into database
 	if err := db.InsertUser(newUser); err != nil {
-		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to create user",
 		})
-		return
 	}
 
-	ctx.StatusCode(http.StatusCreated)
-	ctx.JSON(iris.Map{
+	return c.Status(http.StatusCreated).JSON(fiber.Map{
 		"status":  http.StatusText(http.StatusCreated),
 		"message": "User created successfully",
 	})
