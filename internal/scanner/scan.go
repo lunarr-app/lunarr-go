@@ -77,7 +77,12 @@ func ScanMediaDirectory(directory string) {
 		}
 
 		//  Add movie to the database
-		db.InsertMovie(movie, path)
+		if _, err := db.InsertMovie(movie, path); err != nil {
+			util.Logger.Err(err).Str("path", path).Msg("Failed to insert movie into MongoDB")
+			return nil
+		}
+
+		util.Logger.Info().Msgf("Movie inserted successfully: %s", movie.Title)
 		return nil
 	})
 

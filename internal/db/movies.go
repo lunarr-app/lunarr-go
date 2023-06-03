@@ -6,8 +6,8 @@ import (
 
 	TMDb "github.com/lunarr-app/golang-tmdb"
 	"github.com/lunarr-app/lunarr-go/internal/models"
-	"github.com/lunarr-app/lunarr-go/internal/util"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func CheckMovieExists(filePath string) bool {
@@ -24,7 +24,7 @@ func CheckMovieExists(filePath string) bool {
 	return result != nil
 }
 
-func InsertMovie(movie *TMDb.MovieDetails, file string) error {
+func InsertMovie(movie *TMDb.MovieDetails, file string) (*mongo.InsertOneResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -35,14 +35,12 @@ func InsertMovie(movie *TMDb.MovieDetails, file string) error {
 		UpdatedAt: time.Now().UTC(),
 	}
 
-	_, err := MoviesLists.InsertOne(ctx, movieWithFiles)
+	result, err := MoviesLists.InsertOne(ctx, movieWithFiles)
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to insert movie into MongoDB")
-		return err
+		return nil, err
 	}
 
-	util.Logger.Info().Msgf("Movie inserted successfully: %s", movie.Title)
-	return nil
+	return result, nil
 }
 
 func FindMovieByTmdbID(tmdbID int64) (*models.MovieWithFiles, error) {
