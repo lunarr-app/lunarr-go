@@ -16,7 +16,7 @@ import (
 
 func New() *fiber.App {
 	// Create a new Fiber application
-	engine := handlebars.New("./web/views", ".hbs")
+	engine := handlebars.NewFileSystem(web.GetViewsFS(), ".hbs")
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
