@@ -9,9 +9,13 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/server"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
 func main() {
+	// Initialize logger instance
+	util.InitLogger()
+
 	// Parse command-line flags
 	config.ParseFlags()
 

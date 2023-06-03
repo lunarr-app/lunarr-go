@@ -9,7 +9,7 @@ import (
 
 var Logger zerolog.Logger
 
-func init() {
+func InitLogger() {
 	// Set up logger
 	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.DateTime}
 	Logger = zerolog.New(output).With().Timestamp().Logger()
