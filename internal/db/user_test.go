@@ -8,11 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
 
 func TestUserMongo(t *testing.T) {
 	// Initialize the database
+	config.InitConfig()
 	InitDatabase()
 
 	// Initialize a new test user
