@@ -1,11 +1,9 @@
 package handlers
 
-import (
-	"github.com/kataras/iris/v12"
-)
+import "github.com/gofiber/fiber/v2"
 
-func RootHandler(ctx iris.Context) {
-	ctx.JSON(iris.Map{
+func RootHandler(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{
 		"hello": "world",
 	})
 }
