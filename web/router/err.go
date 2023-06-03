@@ -1,13 +1,13 @@
 package router
 
 import (
-	"github.com/kataras/iris/v12"
+	"github.com/gofiber/fiber/v2"
 )
 
-func NotFoundPage(ctx iris.Context) {
-	ctx.View("404.hbs")
+func NotFoundPage(c *fiber.Ctx) error {
+	return c.Render("404", nil)
 }
 
-func InternalServerErrorPage(ctx iris.Context) {
-	ctx.View("500.hbs")
+func InternalServerErrorPage(c *fiber.Ctx) error {
+	return c.Render("500", nil)
 }

@@ -1,13 +1,13 @@
 package router
 
 import (
-	"github.com/kataras/iris/v12"
+	"github.com/gofiber/fiber/v2"
 )
 
-func LoginPage(ctx iris.Context) {
-	ctx.View("login.hbs")
+func LoginPage(c *fiber.Ctx) error {
+	return c.Render("login", nil)
 }
 
-func SignupPage(ctx iris.Context) {
-	ctx.View("signup.hbs")
+func SignupPage(c *fiber.Ctx) error {
+	return c.Render("signup", nil)
 }
