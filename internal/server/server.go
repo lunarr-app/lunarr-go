@@ -15,13 +15,26 @@ import (
 	"github.com/lunarr-app/lunarr-go/web/router"
 )
 
+// New creates a new Fiber application
 func New() *fiber.App {
-	// Create a new Fiber application
+	// Define custom template functions
+	templateFuncs := map[string]interface{}{
+		"TMDbGetImageURL":       tmdb.GetImageURL,
+		"TMDbFormatReleaseDate": tmdb.FormatReleaseDate,
+		"IncludeFile":           web.IncludeFile,
+	}
+
+	// Load views using embed FS
 	views, err := web.GetViewsFS()
 	if err != nil {
 		util.Logger.Fatal().Err(err).Msg("Failed to load web views")
 	}
+
+	// Create the handlebars engine with the views file systemand template functions
 	engine := handlebars.NewFileSystem(views, ".hbs")
+	engine.AddFuncMap(templateFuncs)
+
+	// Create a new Fiber application
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
@@ -68,11 +81,6 @@ func New() *fiber.App {
 	// Route to render error pages
 	app.Use(router.NotFoundPage)
 	app.Use(router.InternalServerErrorPage)
-
-	// Define custom template functions
-	engine.AddFunc("TMDbGetImageURL", tmdb.GetImageURL)
-	engine.AddFunc("TMDbFormatReleaseDate", tmdb.FormatReleaseDate)
-	engine.AddFunc("IncludeFile", web.IncludeFile)
 
 	// Return the application instance
 	return app
