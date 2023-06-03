@@ -14,6 +14,7 @@ func TestParseFlags(t *testing.T) {
 	os.Args = []string{"test", "-host", "example.com", "-port", "8080", "-database-uri", "mongodb://db.example.com/lunarr-test"}
 
 	// Parse the flags
+	config.InitConfig()
 	config.ParseFlags()
 
 	// Check that the values have been updated
