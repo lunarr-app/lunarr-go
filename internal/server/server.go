@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/template/handlebars/v2"
 
+	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/lunarr-app/lunarr-go/internal/handlers"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/auth"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/movies"
@@ -48,8 +49,16 @@ func New() *fiber.App {
 	// Register the custom logger as middleware
 	app.Use(customLogger)
 
+	// Load assets using embed FS
+	assets, err := web.GetAssetsFS()
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to load web assets")
+	}
+
 	// Serve static files
-	app.Static("/assets", "./assets")
+	app.Use("/assets", filesystem.New(filesystem.Config{
+		Root: assets,
+	}))
 
 	// Register web routes
 	app.Get("/login", router.LoginPage)

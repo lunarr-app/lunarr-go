@@ -19,3 +19,11 @@ func GetViewsFS() (http.FileSystem, error) {
 	}
 	return http.FS(fs), nil
 }
+
+func GetAssetsFS() (http.FileSystem, error) {
+	fs, err := fs.Sub(AssetsFS, "assets")
+	if err != nil {
+		return nil, err
+	}
+	return http.FS(fs), nil
+}
