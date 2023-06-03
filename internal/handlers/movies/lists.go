@@ -3,7 +3,7 @@ package movies
 import (
 	"net/http"
 
-	"github.com/kataras/iris/v12"
+	"github.com/gofiber/fiber/v2"
 	tmdb "github.com/lunarr-app/golang-tmdb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -13,14 +13,13 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
-func ListsHandler(ctx iris.Context) {
+func ListsHandler(c *fiber.Ctx) error {
 	var query models.SearchQueryParams
-	if err := ctx.ReadQuery(&query); err != nil {
-		ctx.StopWithJSON(http.StatusBadRequest, iris.Map{
+	if err := c.QueryParser(&query); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": err.Error(),
 		})
-		return
 	}
 
 	// Build query object based on search query and filters
@@ -31,39 +30,35 @@ func ListsHandler(ctx iris.Context) {
 	opts.SetSkip(int64(query.Limit * (query.Page - 1)))
 	opts.SetLimit(int64(query.Limit))
 
-	totalMovies, err := db.MoviesLists.CountDocuments(ctx.Request().Context(), search)
+	totalMovies, err := db.MoviesLists.CountDocuments(c.Context(), search)
 	if err != nil {
-		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to count movies",
 		})
-		return
 	}
 
-	cur, err := db.MoviesLists.Find(ctx.Request().Context(), search, opts)
+	cur, err := db.MoviesLists.Find(c.Context(), search, opts)
 	if err != nil {
-		ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to find movies",
 		})
-		return
 	}
 
 	var movieList []tmdb.MovieDetails
-	for cur.Next(ctx.Request().Context()) {
+	for cur.Next(c.Context()) {
 		var movie tmdb.MovieDetails
 		if err := cur.Decode(&movie); err != nil {
-			ctx.StopWithJSON(http.StatusInternalServerError, iris.Map{
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"status":  http.StatusText(http.StatusInternalServerError),
 				"message": "Failed to decode movie",
 			})
-			return
 		}
 		movieList = append(movieList, movie)
 	}
 
-	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(map[string]interface{}{
+	return c.Status(http.StatusOK).JSON(fiber.Map{
 		"results": movieList,
 		"limit":   query.Limit,
 		"page":    query.Page,
