@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/db"
@@ -30,5 +31,5 @@ func main() {
 	// Start the server on the specified port
 	cfg := config.Get()
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	app.Listen(addr)
+	log.Fatal(app.Listen(addr))
 }
