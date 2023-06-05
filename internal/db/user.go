@@ -5,6 +5,16 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
+// CountUsers counts the number of users in the database.
+func CountUsers() (int64, error) {
+	var count int64
+	err := DB.Model(&models.UserAccount{}).Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // InsertUser inserts a new user into the users table
 func InsertUser(user *models.UserAccount) error {
 	err := DB.Create(user).Error
