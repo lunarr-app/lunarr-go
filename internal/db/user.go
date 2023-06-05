@@ -1,72 +1,48 @@
 package db
 
 import (
-	"context"
-	"time"
-
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// InsertUserMongo inserts a new user into the users.accounts collection
-func InsertUser(user *models.UserMongo) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	_, err := UsersAccounts.InsertOne(ctx, user)
+// InsertUser inserts a new user into the users table
+func InsertUser(user *models.UserAccount) error {
+	err := DB.Create(user).Error
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to insert user into MongoDB")
+		util.Logger.Error().Err(err).Msg("Failed to insert user into database")
 		return err
 	}
 
 	return nil
 }
 
-// UpdateUserMongo updates an existing user in the users.accounts collection
-func UpdateUser(username string, updates bson.M) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	filter := bson.M{"username": username}
-	update := bson.M{"$set": updates}
-	_, err := UsersAccounts.UpdateOne(ctx, filter, update)
+// UpdateUser updates an existing user in the users table
+func UpdateUser(username string, updates map[string]interface{}) error {
+	err := DB.Model(&models.UserAccount{}).Where("username = ?", username).Updates(updates).Error
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to update user in MongoDB")
+		util.Logger.Error().Err(err).Msg("Failed to update user in database")
 		return err
 	}
 
 	return nil
 }
 
-// FindUserByUsername finds a user in the users.accounts collection by username
-func FindUserByUsername(username string) (*models.UserMongo, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	filter := bson.M{"username": username}
-	var user models.UserMongo
-	err := UsersAccounts.FindOne(ctx, filter).Decode(&user)
+// FindUserByUsername finds a user in the users table by username
+func FindUserByUsername(username string) (*models.UserAccount, error) {
+	var user models.UserAccount
+	err := DB.Where("username = ?", username).First(&user).Error
 	if err != nil {
-		util.Logger.Error().Err(err).Msgf("Failed to find user %s in MongoDB", username)
+		util.Logger.Error().Err(err).Msgf("Failed to find user %s in database", username)
 		return nil, err
 	}
 
 	return &user, nil
 }
 
-// GetUserByAPIKey returns a user from the users.accounts collection by API key
-func GetUserByAPIKey(apiKey string) (*models.UserMongo, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	filter := bson.M{"api_key": apiKey}
-	projection := bson.M{"password": 0}
-	opts := options.FindOne().SetProjection(projection)
-
-	var user models.UserMongo
-	err := UsersAccounts.FindOne(ctx, filter, opts).Decode(&user)
+// GetUserByAPIKey returns a user from the users table by API key
+func GetUserByAPIKey(apiKey string) (*models.UserAccount, error) {
+	var user models.UserAccount
+	err := DB.Where("api_key = ?", apiKey).Select("password").First(&user).Error
 	if err != nil {
 		return nil, err
 	}

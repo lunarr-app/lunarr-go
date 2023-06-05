@@ -1,40 +1,34 @@
 package db
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
 
-func TestUserMongo(t *testing.T) {
+func TestUserGORM(t *testing.T) {
 	// Initialize the database
 	config.InitConfig()
 	InitDatabase()
 
 	// Initialize a new test user
-	testUser := models.UserMongo{
+	testUser := models.UserAccount{
 		Displayname:   "Test User",
 		Username:      "testuser",
 		Password:      "testpassword",
 		Sex:           "males",
 		Role:          "subscriber",
 		APIKey:        "testapikey",
-		CreatedAt:     time.Now().UTC(),
-		UpdatedAt:     time.Now().UTC(),
 		LastSeenAt:    time.Now().UTC(),
 		CurrentStatus: "active",
 	}
 
 	// Insert the test user into the database
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	_, err := UsersAccounts.InsertOne(ctx, testUser)
+	err := InsertUser(&testUser)
 	assert.NoError(t, err)
 
 	// Retrieve the test user from the database
@@ -51,7 +45,21 @@ func TestUserMongo(t *testing.T) {
 	assert.WithinDuration(t, testUser.LastSeenAt, retrievedUser.LastSeenAt, time.Second)
 	assert.Equal(t, testUser.CurrentStatus, retrievedUser.CurrentStatus)
 
+	// Update the test user in the database
+	updates := map[string]interface{}{
+		"password": "updatedpassword",
+		"role":     "admin",
+	}
+	err = UpdateUser(testUser.Username, updates)
+	assert.NoError(t, err)
+
+	// Retrieve the updated test user from the database
+	updatedUser, err := FindUserByUsername(testUser.Username)
+	assert.NoError(t, err)
+	assert.Equal(t, "updatedpassword", updatedUser.Password)
+	assert.Equal(t, "admin", updatedUser.Role)
+
 	// Clean up the test user from the database
-	_, err = UsersAccounts.DeleteOne(ctx, bson.M{"username": testUser.Username})
+	err = DB.Delete(&testUser).Error
 	assert.NoError(t, err)
 }
