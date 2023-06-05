@@ -1,6 +1,9 @@
 package db
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
@@ -14,8 +17,18 @@ var DB *gorm.DB
 func InitDatabase() {
 	util.Logger.Info().Msg("Connecting to the SQLite database")
 
+	// Extract the folder path from the database location URI
+	dbURI := config.Get().Database.URI
+	dbPath := filepath.Dir(dbURI)
+
+	// Create the data folder if it doesn't exist
+	err := os.MkdirAll(dbPath, 0755)
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to create data folder for database")
+	}
+
 	// Connect to the SQLite database
-	db, err := gorm.Open(sqlite.Open(config.Get().Database.URI), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(dbURI), &gorm.Config{})
 	if err != nil {
 		util.Logger.Fatal().Err(err).Msg("Failed to connect to the SQLite database")
 	}
