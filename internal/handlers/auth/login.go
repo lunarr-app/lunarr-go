@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
@@ -33,17 +32,11 @@ func LoginHandler(c *fiber.Ctx) error {
 	// Find user in database
 	user, err := db.FindUserByUsername(loginReq.Username)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-				"status":  http.StatusText(http.StatusBadRequest),
-				"message": "Invalid username or password",
-			})
-		} else {
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-				"status":  http.StatusText(http.StatusInternalServerError),
-				"message": "Failed to find user",
-			})
-		}
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"status":  http.StatusText(http.StatusInternalServerError),
+			"message": "Failed to find user",
+		})
+
 	}
 
 	// Compare password hash
