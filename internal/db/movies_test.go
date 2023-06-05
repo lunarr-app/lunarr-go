@@ -13,9 +13,11 @@ func TestInsertMovie(t *testing.T) {
 	tmdb.InitTMDBClient()
 	InitDatabase()
 
+	// Set movie ID
+	var movieID int32 = 603692
+
 	// Retrieve the movie details from the TMDb API
-	movieID := 603692
-	movie, err := tmdb.TmdbClient.GetMovieDetails(movieID, nil)
+	movie, err := tmdb.TmdbClient.GetMovieDetails(int(movieID), nil)
 	assert.NoError(t, err)
 
 	// Define a sample file path
@@ -30,16 +32,16 @@ func TestInsertMovie(t *testing.T) {
 	assert.True(t, exists)
 
 	// Retrieve the inserted movie from the database
-	insertedMovie, err := FindMovieByTmdbID(movieID)
+	insertedMovie, err := FindMovieByTmdbID(int(movieID))
 	assert.NoError(t, err)
 	assert.NotNil(t, insertedMovie)
 
 	// Verify fields of the inserted movie
-	assert.Equal(t, movieID, insertedMovie.TMDbID)
+	assert.Equal(t, int32(movieID), insertedMovie.TMDbID)
 	assert.Equal(t, filePath, insertedMovie.Location)
 
 	// Clean up the movie from the database
-	err = DeleteMovieByTmdbID(movieID)
+	err = DeleteMovieByTmdbID(int(movieID))
 	assert.NoError(t, err)
 
 	// Check if the movie exists after deletion

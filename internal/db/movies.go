@@ -13,7 +13,7 @@ func CheckMovieExists(filePath string) bool {
 
 func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 	movieWithFiles := models.MovieWithFiles{
-		TMDbID:   movie.ID,
+		TMDbID:   int32(movie.ID),
 		Location: path,
 	}
 
