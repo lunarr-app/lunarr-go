@@ -11,7 +11,7 @@ import (
 
 func TestParseFlags(t *testing.T) {
 	// Set up the command-line arguments
-	os.Args = []string{"test", "-host", "example.com", "-port", "8080", "-database-uri", "path/to/database.db"}
+	os.Args = []string{"test", "-host", "example.com", "-port", "8080"}
 
 	// Parse the flags
 	config.InitConfig()
@@ -21,5 +21,4 @@ func TestParseFlags(t *testing.T) {
 	cfg := config.Get()
 	assert.Equal(t, "example.com", cfg.Server.Host)
 	assert.Equal(t, 8080, cfg.Server.Port)
-	assert.Equal(t, "path/to/database.db", cfg.Database.URI)
 }

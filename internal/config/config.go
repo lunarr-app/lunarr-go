@@ -2,6 +2,8 @@ package config
 
 import (
 	"flag"
+	"os"
+	"path/filepath"
 
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
@@ -33,38 +35,52 @@ func InitConfig() {
 			Host: "127.0.0.1",
 			Port: 3000,
 		},
-		Database: struct {
-			URI string
-		}{
-			URI: "data/sqlite.db",
-		},
 		TMDb: struct {
 			APIKey string
 		}{
 			APIKey: "", // Default empty value
 		},
 	}
+
+	// Set the SQLite database path based on the OS-specific data directory
+	cfg.Database.URI = getSQLitePath()
 }
 
 func ParseFlags() {
 	// Define the command-line flags
 	serverHost := flag.String("host", cfg.Server.Host, "The hostname or IP address that the server should bind to.")
 	serverPort := flag.Int("port", cfg.Server.Port, "The port number that the server should listen on.")
-	dbURI := flag.String("database-uri", cfg.Database.URI, "The path to the SQLite database file")
 
 	flag.Parse()
 
 	// Update the configuration values with the parsed flags
 	cfg.Server.Host = *serverHost
 	cfg.Server.Port = *serverPort
-	cfg.Database.URI = *dbURI
 
 	// Log information
 	util.Logger.Info().Msgf("Server port: %d", *serverPort)
 	util.Logger.Info().Msgf("Server bind IP address: %s", *serverHost)
-	util.Logger.Info().Msgf("SQLite database file path: %s", *dbURI)
 }
 
 func Get() *Config {
 	return cfg
+}
+
+func getSQLitePath() string {
+	dataDir, err := os.UserConfigDir()
+	if err != nil {
+		util.Logger.Error().Msgf("Failed to get user configuration directory: %v", err)
+		return ""
+	}
+
+	appDir := filepath.Join(dataDir, "Lunarr")
+	if err := os.MkdirAll(appDir, 0700); err != nil {
+		util.Logger.Fatal().Msgf("Failed to create app directory: %v", err)
+	}
+
+	dbPath := filepath.Join(appDir, "sqlite.db")
+	util.Logger.Info().Msg("SQLite database file path:")
+	util.Logger.Info().Msgf("  %s", dbPath)
+
+	return dbPath
 }
