@@ -30,11 +30,8 @@ func TestInsertMovie(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, insertedMovie)
 
-	// Verify movie field of the inserted movie
-	assert.Equal(t, movieID, insertedMovie.Movie.ID)
-	assert.Equal(t, movie.Title, insertedMovie.Movie.Title)
-
-	// Verify files field of the inserted movie
+	// Verify fields of the inserted movie
+	assert.Equal(t, movieID, insertedMovie.TMDbID)
 	assert.Len(t, insertedMovie.Files, 1)
 	assert.Equal(t, filePath, insertedMovie.Files[0])
 
