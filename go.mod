@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/glebarez/sqlite v1.8.0
-	github.com/go-playground/validator/v10 v10.14.0
+	github.com/go-playground/validator/v10 v10.14.1
 	github.com/gofiber/fiber/v2 v2.46.0
 	github.com/gofiber/template/handlebars/v2 v2.1.0
 	github.com/lunarr-app/golang-tmdb v1.5.1
