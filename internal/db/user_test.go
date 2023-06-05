@@ -21,7 +21,7 @@ func TestUserGORM(t *testing.T) {
 		Username:      "testuser",
 		Password:      "testpassword",
 		Sex:           "males",
-		Role:          "subscriber",
+		Role:          models.UserRole("subscriber"),
 		APIKey:        "testapikey",
 		LastSeenAt:    time.Now().UTC(),
 		CurrentStatus: "active",
@@ -48,7 +48,7 @@ func TestUserGORM(t *testing.T) {
 	// Update the test user in the database
 	updates := map[string]interface{}{
 		"password": "updatedpassword",
-		"role":     "admin",
+		"role":     models.UserRole("admin"),
 	}
 	err = UpdateUser(testUser.Username, updates)
 	assert.NoError(t, err)
@@ -57,7 +57,7 @@ func TestUserGORM(t *testing.T) {
 	updatedUser, err := FindUserByUsername(testUser.Username)
 	assert.NoError(t, err)
 	assert.Equal(t, "updatedpassword", updatedUser.Password)
-	assert.Equal(t, "admin", updatedUser.Role)
+	assert.Equal(t, models.UserRole("admin"), updatedUser.Role)
 
 	// Clean up the test user from the database
 	err = DB.Delete(&testUser).Error
