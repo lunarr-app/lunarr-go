@@ -26,6 +26,12 @@ func InitDatabase() {
 	// AutoMigrate the tables
 	MigrateTables()
 
+	// Create text search index
+	err = db.Exec("CREATE FULLTEXT INDEX idx_movie_text_search ON movie_with_files (movie_title, movie_original_title, movie_belongs_to_collection_name, files)").Error
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to create text search index")
+	}
+
 	util.Logger.Info().Msg("Database initialization complete")
 }
 
