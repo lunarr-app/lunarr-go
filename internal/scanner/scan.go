@@ -67,7 +67,7 @@ func ScanMediaDirectory(directory string) {
 
 		util.Logger.Info().Int("count", int(movies.TotalResults)).Str("path", path).Msg("Found matching movies on TMDb")
 
-		//  Get details for result on TMDb
+		// Get details for result on TMDb
 		movie, err := tmdb.TmdbClient.GetMovieDetails(int(movies.Results[0].ID), map[string]string{
 			"append_to_response": "keywords,alternative_titles,changes,credits,images,keywords,lists,releases,reviews,similar,translations,videos",
 		})
@@ -76,8 +76,9 @@ func ScanMediaDirectory(directory string) {
 			return nil
 		}
 
-		//  Add movie to the database
-		if _, err := db.InsertMovie(movie, path); err != nil {
+		// Add movie to the database
+		err = db.InsertMovie(movie, path)
+		if err != nil {
 			util.Logger.Err(err).Str("path", path).Msg("Failed to insert movie into MongoDB")
 			return nil
 		}

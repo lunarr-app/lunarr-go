@@ -1,58 +1,45 @@
 package db
 
 import (
-	"context"
-	"time"
-
 	TMDb "github.com/lunarr-app/golang-tmdb"
 	"github.com/lunarr-app/lunarr-go/internal/models"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func CheckMovieExists(filePath string) bool {
-	filter := bson.M{
-		"files": filePath,
-	}
-
-	var result bson.M
-	err := MoviesLists.FindOne(context.TODO(), filter).Decode(&result)
-	if err != nil {
-		return false
-	}
-
-	return result != nil
+	var count int64
+	DB.Model(&models.MovieWithFiles{}).Where("location = ?", filePath).Count(&count)
+	return count > 0
 }
 
-func InsertMovie(movie *TMDb.MovieDetails, file string) (*mongo.InsertOneResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
+func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 	movieWithFiles := models.MovieWithFiles{
-		Movie:     movie,
-		Files:     []string{file},
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		TMDbID:   int32(movie.ID),
+		Location: path,
 	}
 
-	result, err := MoviesLists.InsertOne(ctx, movieWithFiles)
+	err := DB.Create(&movieWithFiles).Error
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return result, nil
+	return nil
 }
 
-func FindMovieByTmdbID(tmdbID int64) (*models.MovieWithFiles, error) {
-	filter := bson.M{
-		"movie.id": tmdbID,
-	}
-
+func FindMovieByTmdbID(tmdbID int) (*models.MovieWithFiles, error) {
 	var movie models.MovieWithFiles
-	err := MoviesLists.FindOne(context.TODO(), filter).Decode(&movie)
+	err := DB.Where("tmdb_id = ?", tmdbID).First(&movie).Error
 	if err != nil {
 		return nil, err
 	}
 
 	return &movie, nil
+}
+
+func DeleteMovieByTmdbID(tmdbID int) error {
+	err := DB.Delete(&models.MovieWithFiles{}, "tmdb_id = ?", tmdbID).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

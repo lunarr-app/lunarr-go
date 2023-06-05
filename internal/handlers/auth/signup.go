@@ -1,14 +1,11 @@
 package auth
 
 import (
-	"context"
 	"net/http"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
@@ -44,15 +41,14 @@ func SignupHandler(c *fiber.Ctx) error {
 	}
 
 	// Check if the username already exists in the database
-	var existingUser models.UserSignup
-	err = db.UsersAccounts.FindOne(context.Background(), bson.M{"username": userReq.Username}).Decode(&existingUser)
-	if err != nil && err != mongo.ErrNoDocuments {
+	existingUser, err := db.FindUserByUsername(userReq.Username)
+	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to check username availability",
 		})
 	}
-	if existingUser.Username != "" {
+	if existingUser != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": "Username already exists",
@@ -60,7 +56,7 @@ func SignupHandler(c *fiber.Ctx) error {
 	}
 
 	// Check if the database is empty
-	count, err := db.UsersAccounts.CountDocuments(context.Background(), bson.M{})
+	count, err := db.CountUsers()
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
@@ -76,7 +72,7 @@ func SignupHandler(c *fiber.Ctx) error {
 	}
 
 	// Create new user
-	newUser := &models.UserMongo{
+	newUser := &models.UserAccount{
 		Displayname:   userReq.Displayname,
 		Username:      userReq.Username,
 		Password:      string(hashedPassword),
@@ -97,8 +93,6 @@ func SignupHandler(c *fiber.Ctx) error {
 			},
 		},
 		LastSeenAt: time.Now().UTC(),
-		CreatedAt:  time.Now().UTC(),
-		UpdatedAt:  time.Now().UTC(),
 	}
 
 	// Generate API key

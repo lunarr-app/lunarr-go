@@ -1,42 +1,53 @@
 package db
 
 import (
-	"context"
-	"time"
+	"os"
+	"path/filepath"
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
+	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 )
 
-var UsersAccounts *mongo.Collection
-var MoviesLists *mongo.Collection
-var TvShowsLists *mongo.Collection
-var WatchHistory *mongo.Collection
+var DB *gorm.DB
 
 func InitDatabase() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	util.Logger.Info().Msg("Connecting to the SQLite database")
 
-	util.Logger.Info().Msg("Creating new MongoClient instance")
-	clientOptions := options.Client().ApplyURI(config.Get().Database.URI)
-	mongoClient, err := mongo.Connect(ctx, clientOptions)
+	// Extract the folder path from the database location URI
+	dbURI := config.Get().Database.URI
+	dbPath := filepath.Dir(dbURI)
+
+	// Create the data folder if it doesn't exist
+	err := os.MkdirAll(dbPath, 0755)
 	if err != nil {
-		util.Logger.Fatal().Err(err).Msg("Failed to connect to MongoDB")
-	}
-	err = mongoClient.Ping(ctx, nil)
-	if err != nil {
-		util.Logger.Fatal().Err(err).Msg("Failed to ping MongoDB")
+		util.Logger.Fatal().Err(err).Msg("Failed to create data folder for database")
 	}
 
-	util.Logger.Info().Msg("Exporting MongoDB collections as typed objects")
-	UsersAccounts = mongoClient.Database("lunarr").Collection("users.accounts")
-	MoviesLists = mongoClient.Database("lunarr").Collection("movies.lists")
-	TvShowsLists = mongoClient.Database("lunarr").Collection("tv_shows.lists")
-	WatchHistory = mongoClient.Database("lunarr").Collection("watch.history")
+	// Connect to the SQLite database
+	db, err := gorm.Open(sqlite.Open(dbURI), &gorm.Config{})
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to connect to the SQLite database")
+	}
 
-	// Generate index
-	CreateIndexes()
+	// Set the database connection in the DB variable
+	DB = db
+
+	// AutoMigrate the tables
+	MigrateTables()
+
+	util.Logger.Info().Msg("Database initialization complete")
+}
+
+func MigrateTables() {
+	err := DB.AutoMigrate(
+		&models.UserAccount{},
+		&models.MovieWithFiles{},
+	)
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to perform auto migration")
+	}
 }

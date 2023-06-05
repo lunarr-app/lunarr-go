@@ -5,8 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	tmdb "github.com/lunarr-app/golang-tmdb"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
@@ -22,15 +21,12 @@ func ListsHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	// Build query object based on search query and filters
-	search := util.BuildSearchQuery(&query)
+	// Build search query
+	searchQuery := util.BuildSearchQueryMovies(&query)
 
-	// Find movies in the database based on query and pagination
-	opts := options.Find().SetSort(bson.M{"title": 1})
-	opts.SetSkip(int64(query.Limit * (query.Page - 1)))
-	opts.SetLimit(int64(query.Limit))
-
-	totalMovies, err := db.MoviesLists.CountDocuments(c.Context(), search)
+	// Count the total number of movies matching the search query
+	var totalMovies int64
+	err := db.DB.Model(&models.MovieWithFiles{}).Scopes(searchQuery).Count(&totalMovies).Error
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
@@ -38,24 +34,28 @@ func ListsHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	cur, err := db.MoviesLists.Find(c.Context(), search, opts)
-	if err != nil {
+	// If no movies found, return an empty response
+	if totalMovies == 0 {
+		return c.Status(http.StatusOK).JSON(fiber.Map{
+			"results": []tmdb.MovieDetails{},
+			"limit":   query.Limit,
+			"page":    query.Page,
+			"total":   0,
+		})
+	}
+
+	// Find movies in the database based on query and pagination
+	var movieList []tmdb.MovieDetails
+	err = db.DB.Scopes(searchQuery).
+		Order("title").
+		Limit(query.Limit).
+		Offset((query.Page - 1) * query.Limit).
+		Find(&movieList).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to find movies",
 		})
-	}
-
-	var movieList []tmdb.MovieDetails
-	for cur.Next(c.Context()) {
-		var movie tmdb.MovieDetails
-		if err := cur.Decode(&movie); err != nil {
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-				"status":  http.StatusText(http.StatusInternalServerError),
-				"message": "Failed to decode movie",
-			})
-		}
-		movieList = append(movieList, movie)
 	}
 
 	return c.Status(http.StatusOK).JSON(fiber.Map{
