@@ -40,7 +40,9 @@ func UpdateUser(username string, updates map[string]interface{}) error {
 // FindUserByUsername finds a user in the users table by username
 func FindUserByUsername(username string) (*models.UserAccount, error) {
 	var user models.UserAccount
-	err := DB.Where("username = ?", username).First(&user).Error
+	err := DB.Select("displayname, username, sex, role, api_key, created_at, updated_at, last_seen_at, current_status").
+		Where("username = ?", username).
+		First(&user).Error
 	if err != nil {
 		util.Logger.Error().Err(err).Msgf("Failed to find user %s in database", username)
 		return nil, err
@@ -52,7 +54,9 @@ func FindUserByUsername(username string) (*models.UserAccount, error) {
 // GetUserByAPIKey returns a user from the users table by API key
 func GetUserByAPIKey(apiKey string) (*models.UserAccount, error) {
 	var user models.UserAccount
-	err := DB.Where("api_key = ?", apiKey).Select("password").First(&user).Error
+	err := DB.Select("displayname, username, sex, role, api_key, created_at, updated_at, last_seen_at, current_status").
+		Where("api_key = ?", apiKey).
+		First(&user).Error
 	if err != nil {
 		return nil, err
 	}

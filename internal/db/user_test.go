@@ -20,7 +20,7 @@ func TestUserGORM(t *testing.T) {
 		Displayname:   "Test User",
 		Username:      "testuser",
 		Password:      "testpassword",
-		Sex:           "males",
+		Sex:           "male",
 		Role:          models.UserRole("subscriber"),
 		APIKey:        "testapikey",
 		LastSeenAt:    time.Now().UTC(),
@@ -36,7 +36,7 @@ func TestUserGORM(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, testUser.Displayname, retrievedUser.Displayname)
 	assert.Equal(t, testUser.Username, retrievedUser.Username)
-	assert.Equal(t, testUser.Password, retrievedUser.Password)
+	assert.Empty(t, retrievedUser.Password)
 	assert.Equal(t, testUser.Sex, retrievedUser.Sex)
 	assert.Equal(t, testUser.Role, retrievedUser.Role)
 	assert.Equal(t, testUser.APIKey, retrievedUser.APIKey)
@@ -47,8 +47,8 @@ func TestUserGORM(t *testing.T) {
 
 	// Update the test user in the database
 	updates := map[string]interface{}{
-		"password": "updatedpassword",
-		"role":     models.UserRole("admin"),
+		"sex":  "female",
+		"role": models.UserRole("admin"),
 	}
 	err = UpdateUser(testUser.Username, updates)
 	assert.NoError(t, err)
@@ -56,8 +56,21 @@ func TestUserGORM(t *testing.T) {
 	// Retrieve the updated test user from the database
 	updatedUser, err := FindUserByUsername(testUser.Username)
 	assert.NoError(t, err)
-	assert.Equal(t, "updatedpassword", updatedUser.Password)
+	assert.Equal(t, "female", updatedUser.Sex)
 	assert.Equal(t, models.UserRole("admin"), updatedUser.Role)
+
+	// Test finding a user by API key
+	foundUser, err := GetUserByAPIKey(testUser.APIKey)
+	assert.NoError(t, err)
+	assert.Equal(t, testUser.Displayname, foundUser.Displayname)
+	assert.Equal(t, testUser.Username, foundUser.Username)
+	assert.Empty(t, foundUser.Password)
+	assert.Equal(t, updatedUser.Sex, foundUser.Sex)
+	assert.Equal(t, updatedUser.Role, foundUser.Role)
+	assert.WithinDuration(t, testUser.CreatedAt, foundUser.CreatedAt, time.Second)
+	assert.WithinDuration(t, testUser.UpdatedAt, foundUser.UpdatedAt, time.Second)
+	assert.WithinDuration(t, testUser.LastSeenAt, foundUser.LastSeenAt, time.Second)
+	assert.Equal(t, testUser.CurrentStatus, foundUser.CurrentStatus)
 
 	// Clean up the test user from the database
 	err = DB.Delete(&testUser).Error
