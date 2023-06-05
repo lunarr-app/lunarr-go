@@ -26,13 +26,11 @@ func MovieStreamHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	filePath := movie.Files[0]
-
-	util.Logger.Info().Msgf("Streaming: %s", filePath)
+	util.Logger.Info().Msgf("Streaming: %s", movie.Location)
 
 	// TODO: Implement partial content streaming here
 	// For now, send the entire file
-	err = c.SendFile(filePath)
+	err = c.SendFile(movie.Location)
 	if err != nil {
 		util.Logger.Error().Err(err).Msg("Failed to send file for streaming")
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{

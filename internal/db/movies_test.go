@@ -3,14 +3,18 @@ package db
 import (
 	"testing"
 
+	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInsertMovie(t *testing.T) {
-	movieID := 603692
+	config.InitConfig()
+	tmdb.InitTMDBClient()
+	InitDatabase()
 
 	// Retrieve the movie details from the TMDb API
+	movieID := 603692
 	movie, err := tmdb.TmdbClient.GetMovieDetails(movieID, nil)
 	assert.NoError(t, err)
 
@@ -32,8 +36,7 @@ func TestInsertMovie(t *testing.T) {
 
 	// Verify fields of the inserted movie
 	assert.Equal(t, movieID, insertedMovie.TMDbID)
-	assert.Len(t, insertedMovie.Files, 1)
-	assert.Equal(t, filePath, insertedMovie.Files[0])
+	assert.Equal(t, filePath, insertedMovie.Location)
 
 	// Clean up the movie from the database
 	err = DeleteMovieByTmdbID(movieID)

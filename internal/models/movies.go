@@ -6,6 +6,6 @@ import (
 
 type MovieWithFiles struct {
 	gorm.Model
-	TMDbID int64    `gorm:"column:tmdb_id" json:"tmdb_id"`
-	Files  []string `gorm:"type:text[]" json:"files"`
+	TMDbID   int64  `gorm:"column:tmdb_id" json:"tmdb_id"`
+	Location string `gorm:"column:location" json:"location"`
 }

@@ -7,14 +7,14 @@ import (
 
 func CheckMovieExists(filePath string) bool {
 	var count int64
-	DB.Model(&models.MovieWithFiles{}).Where("files = ?", filePath).Count(&count)
+	DB.Model(&models.MovieWithFiles{}).Where("location = ?", filePath).Count(&count)
 	return count > 0
 }
 
-func InsertMovie(movie *TMDb.MovieDetails, file string) error {
+func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 	movieWithFiles := models.MovieWithFiles{
-		TMDbID: movie.ID,
-		Files:  []string{file},
+		TMDbID:   movie.ID,
+		Location: path,
 	}
 
 	err := DB.Create(&movieWithFiles).Error
@@ -27,7 +27,7 @@ func InsertMovie(movie *TMDb.MovieDetails, file string) error {
 
 func FindMovieByTmdbID(tmdbID int) (*models.MovieWithFiles, error) {
 	var movie models.MovieWithFiles
-	err := DB.Where("movie.id = ?", tmdbID).First(&movie).Error
+	err := DB.Where("tmdb_id = ?", tmdbID).First(&movie).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func FindMovieByTmdbID(tmdbID int) (*models.MovieWithFiles, error) {
 }
 
 func DeleteMovieByTmdbID(tmdbID int) error {
-	err := DB.Delete(&models.MovieWithFiles{}, "movie.id = ?", tmdbID).Error
+	err := DB.Delete(&models.MovieWithFiles{}, "tmdb_id = ?", tmdbID).Error
 	if err != nil {
 		return err
 	}
