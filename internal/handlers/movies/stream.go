@@ -17,7 +17,7 @@ func MovieStreamHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	movie, err := db.FindMovieByTmdbID(int64(tmdbID))
+	movie, err := db.FindMovieByTmdbID(tmdbID)
 	if err != nil {
 		util.Logger.Error().Err(err).Msg("Failed to find movie by TMDb ID")
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
