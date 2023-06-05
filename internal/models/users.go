@@ -29,11 +29,11 @@ type UserSignup struct {
 type UserAccount struct {
 	gorm.Model
 	Displayname   string       `gorm:"column:displayname;not null;size:48" json:"displayname"`
-	Username      string       `gorm:"column:username;not null;uniqueIndex;size:16" json:"username"`
+	Username      string       `gorm:"column:username;uniqueIndex:idx_username;not null;size:16" json:"username"`
 	Password      string       `gorm:"column:password;not null;size:32" json:"password"`
 	Sex           string       `gorm:"column:sex;not null;size:10" json:"sex"`
 	Role          UserRole     `gorm:"column:role;not null;size:15" json:"role"`
-	APIKey        string       `gorm:"column:api_key;not null;size:32" json:"api_key"`
+	APIKey        string       `gorm:"column:api_key;uniqueIndex:idx_api_key;not null;size:32" json:"api_key"`
 	CurrentStatus string       `gorm:"column:current_status;size:15;default:''" json:"current_status"`
 	Settings      UserSettings `gorm:"embedded" json:"settings"`
 	LastSeenAt    time.Time    `gorm:"column:last_seen_at" json:"last_seen_at"`
