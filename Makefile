@@ -19,7 +19,7 @@ clean:
 
 # Run tests
 test:
-	$(GOTEST) -v ./...
+	TEST_ENV=true $(GOTEST) -v ./...
 
 # Default target
 default: build

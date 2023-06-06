@@ -43,7 +43,11 @@ func InitConfig() {
 	}
 
 	// Set the SQLite database path based on the OS-specific data directory
-	cfg.Database.URI = getSQLitePath()
+	if os.Getenv("TEST_ENV") == "true" {
+		cfg.Database.URI = ":memory:" // In-memory SQLite database
+	} else {
+		cfg.Database.URI = getSQLitePath()
+	}
 }
 
 func ParseFlags() {
