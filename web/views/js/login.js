@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
       .then((data) => {
         if (data.api_key) {
           // Successful login
-          window.location.href = "/movies"; // Redirect to movies page
+          window.location.href = "/app/movies"; // Redirect to movies page
         } else {
           // Failed login
           errorMessage.style.display = "block";
