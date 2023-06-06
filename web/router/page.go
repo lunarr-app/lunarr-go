@@ -9,7 +9,7 @@ import (
 )
 
 func RootRedirect(c *fiber.Ctx) error {
-	return c.Redirect("/movies", http.StatusFound)
+	return c.Redirect("/app/movies", http.StatusFound)
 }
 
 func MoviePage(c *fiber.Ctx) error {

@@ -69,12 +69,12 @@ func New() *fiber.App {
 	fe := app.Group("/app")
 
 	// Web routes to render error pages
+	fe.Get("/", router.RootRedirect) // This will be updated later when all features will be available
 	fe.Use(router.NotFoundPage)
 	fe.Use(router.InternalServerErrorPage)
 
 	// Register authenticated web routes
 	fe.Use(middleware.AuthenticateWeb)
-	fe.Get("/", router.RootRedirect)
 	fe.Get("/movies", router.MoviePage)
 	fe.Get("/movies/:tmdb_id", router.MovieDetailsPage)
 
