@@ -72,6 +72,13 @@ func TestUserGORM(t *testing.T) {
 	assert.WithinDuration(t, testUser.LastSeenAt, foundUser.LastSeenAt, time.Second)
 	assert.Equal(t, testUser.CurrentStatus, foundUser.CurrentStatus)
 
+	// Verify the user's password
+	validPassword := "testpassword"
+	invalidPassword := "wrongpassword"
+
+	assert.True(t, VerifyUserPassword(testUser.Username, validPassword))
+	assert.False(t, VerifyUserPassword(testUser.Username, invalidPassword))
+
 	// Clean up the test user from the database
 	err = DB.Delete(&testUser).Error
 	assert.NoError(t, err)

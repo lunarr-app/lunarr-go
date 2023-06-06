@@ -21,7 +21,14 @@ func CountUsers() (int64, error) {
 
 // InsertUser inserts a new user into the users table
 func InsertUser(user *models.UserAccount) error {
-	err := DB.Create(user).Error
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.Password = string(hashedPassword)
+
+	err = DB.Create(user).Error
 	if err != nil {
 		util.Logger.Error().Err(err).Msg("Failed to insert user into database")
 		return err
@@ -80,9 +87,9 @@ func VerifyUserPassword(username, password string) bool {
 	err := DB.Select("password").
 		Where("username = ?", username).
 		First(&user).Error
-	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
+	if err != nil {
 		return false
 	}
 
-	return true
+	return bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) == nil
 }

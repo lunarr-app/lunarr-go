@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
@@ -28,15 +27,6 @@ func SignupHandler(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": err.Error(),
-		})
-	}
-
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userReq.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to hash password",
 		})
 	}
 
@@ -75,7 +65,7 @@ func SignupHandler(c *fiber.Ctx) error {
 	newUser := &models.UserAccount{
 		Displayname:   userReq.Displayname,
 		Username:      userReq.Username,
-		Password:      string(hashedPassword),
+		Password:      userReq.Password,
 		Sex:           userReq.Sex,
 		Role:          role,
 		APIKey:        "",
