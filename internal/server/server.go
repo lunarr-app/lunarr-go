@@ -61,14 +61,19 @@ func New() *fiber.App {
 	}))
 
 	// Register web routes
+	app.Get("/", handlers.RootHandlerWeb)
 	app.Get("/login", router.LoginPage)
 	app.Get("/signup", router.SignupPage)
 
 	// Create a sub-router for authenticated web routes
-	fe := app.Group("/")
-	fe.Use(middleware.AuthenticateWeb)
+	fe := app.Group("/app")
+
+	// Web routes to render error pages
+	fe.Use(router.NotFoundPage)
+	fe.Use(router.InternalServerErrorPage)
 
 	// Register authenticated web routes
+	fe.Use(middleware.AuthenticateWeb)
 	fe.Get("/", router.RootRedirect)
 	fe.Get("/movies", router.MoviePage)
 	fe.Get("/movies/:tmdb_id", router.MovieDetailsPage)
@@ -83,13 +88,9 @@ func New() *fiber.App {
 	api.Use(middleware.AuthenticateAPI)
 
 	// Register authenticated API routes
-	api.Get("/", handlers.RootHandler)
+	api.Get("/", handlers.RootHandlerAPI)
 	api.Get("/movies", movies.ListsHandler)
 	api.Get("/movies/:tmdb_id/stream", movies.MovieStreamHandler)
-
-	// Route to render error pages
-	app.Use(router.NotFoundPage)
-	app.Use(router.InternalServerErrorPage)
 
 	// Return the application instance
 	return app
