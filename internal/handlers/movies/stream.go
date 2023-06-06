@@ -9,6 +9,7 @@ import (
 )
 
 // MovieStreamHandler handles the movie streaming request.
+// TODO: Implement transcode-based streaming later.
 func MovieStreamHandler(c *fiber.Ctx) error {
 	// Get the tmdb_id parameter from the request
 	tmdbID, err := c.ParamsInt("tmdb_id")
@@ -32,6 +33,5 @@ func MovieStreamHandler(c *fiber.Ctx) error {
 	// Log the movie streaming information
 	util.Logger.Info().Msgf("Streaming: %s", movie.Location)
 
-	// TODO: Implement transcode-based streaming later.
-	return movieStreamDirect(c, movie)
+	return movieStreamDirect(c, movie.Location)
 }
