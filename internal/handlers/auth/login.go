@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
@@ -40,7 +39,7 @@ func LoginHandler(c *fiber.Ctx) error {
 	}
 
 	// Compare password hash
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginReq.Password)); err != nil {
+	if !db.VerifyUserPassword(loginReq.Username, loginReq.Password) {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": "Invalid username or password",

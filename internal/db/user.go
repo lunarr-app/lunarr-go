@@ -5,6 +5,7 @@ import (
 
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -71,4 +72,17 @@ func GetUserByAPIKey(apiKey string) (*models.UserAccount, error) {
 	}
 
 	return &user, nil
+}
+
+// VerifyUserPassword verifies the password for a given username
+func VerifyUserPassword(username, password string) bool {
+	var user models.UserAccount
+	err := DB.Select("password").
+		Where("username = ?", username).
+		First(&user).Error
+	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
+		return false
+	}
+
+	return true
 }
