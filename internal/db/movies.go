@@ -5,6 +5,12 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
 
+func CountMovies() int64 {
+	var count int64
+	DB.Model(&models.MovieWithFiles{}).Count(&count)
+	return count
+}
+
 func CheckMovieExists(filePath string) bool {
 	var count int64
 	DB.Model(&models.MovieWithFiles{}).Where("location = ?", filePath).Count(&count)
