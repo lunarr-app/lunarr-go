@@ -1,1 +1,46 @@
-.idea
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Executable
+lunarr-go
+
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# macOS specific
+._*
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# SQLite database files
+*.sqlite3
+*.sqlite
+*.db
+
+# Log files
+*.log
+
+# Build output directories
+/dist/
+/bin/
+/build/
+
+# IDE-specific files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
