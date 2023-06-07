@@ -38,6 +38,8 @@ func SignupHandler(c *fiber.Ctx) error {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// The username is available, continue with user creation
 		} else {
+			util.Logger.Error().Err(err).Msgf("Failed to find user %s in database", userReq.Username)
+
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"status":  http.StatusText(http.StatusInternalServerError),
 				"message": "Failed to check username availability",

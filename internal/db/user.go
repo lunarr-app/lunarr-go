@@ -52,7 +52,6 @@ func FindUserByUsername(username string) (*models.UserAccount, error) {
 		Where("username = ?", username).
 		First(&user).Error
 	if err != nil {
-		util.Logger.Error().Err(err).Msgf("Failed to find user %s in database", username)
 		return nil, err
 	}
 

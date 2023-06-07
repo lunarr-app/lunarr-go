@@ -10,6 +10,7 @@ import (
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
 func LoginHandler(c *fiber.Ctx) error {
@@ -39,6 +40,8 @@ func LoginHandler(c *fiber.Ctx) error {
 				"message": "User not found",
 			})
 		}
+
+		util.Logger.Error().Err(err).Msgf("Failed to find user %s in database", loginReq.Username)
 
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
