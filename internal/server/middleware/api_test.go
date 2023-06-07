@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -56,7 +56,7 @@ func TestAuthenticateAPI(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		// Read the response body
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		assert.NoError(t, err)
 
 		// Assert the response body as JSON
@@ -74,7 +74,7 @@ func TestAuthenticateAPI(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 
 		// Read the response body
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		assert.NoError(t, err)
 
 		// Assert the response body as JSON
@@ -94,7 +94,7 @@ func TestAuthenticateAPI(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 
 		// Read the response body
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		assert.NoError(t, err)
 
 		// Assert the response body as JSON
@@ -112,7 +112,7 @@ func TestAuthenticateAPI(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		// Read the response body
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		assert.NoError(t, err)
 
 		// Assert the response body as JSON
