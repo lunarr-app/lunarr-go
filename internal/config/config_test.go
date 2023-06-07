@@ -1,12 +1,10 @@
-package config_test
+package config
 
 import (
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/lunarr-app/lunarr-go/internal/config"
 )
 
 func TestParseFlags(t *testing.T) {
@@ -14,11 +12,20 @@ func TestParseFlags(t *testing.T) {
 	os.Args = []string{"test", "-host", "example.com", "-port", "8080"}
 
 	// Parse the flags
-	config.InitConfig()
-	config.ParseFlags()
+	InitConfig()
+	ParseFlags()
 
 	// Check that the values have been updated
-	cfg := config.Get()
+	cfg := Get()
 	assert.Equal(t, "example.com", cfg.Server.Host)
 	assert.Equal(t, 8080, cfg.Server.Port)
+}
+
+func TestGetSQLitePath(t *testing.T) {
+	// Retrieve the SQLite path
+	dbPath := getSQLitePath()
+
+	// Check that the path is not empty and matches the expected format
+	assert.NotEmpty(t, dbPath)
+	assert.Contains(t, dbPath, "sqlite.db")
 }
