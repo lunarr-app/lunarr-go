@@ -1,11 +1,13 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
@@ -33,10 +35,15 @@ func SignupHandler(c *fiber.Ctx) error {
 	// Check if the username already exists in the database
 	existingUser, err := db.FindUserByUsername(userReq.Username)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to check username availability",
-		})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// The username is available, continue with user creation
+		} else {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"status":  http.StatusText(http.StatusInternalServerError),
+				"message": "Failed to check username availability",
+			})
+		}
+
 	}
 	if existingUser != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{

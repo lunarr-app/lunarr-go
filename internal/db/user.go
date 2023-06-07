@@ -1,12 +1,9 @@
 package db
 
 import (
-	"errors"
-
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 // CountUsers counts the number of users in the database.
@@ -55,9 +52,6 @@ func FindUserByUsername(username string) (*models.UserAccount, error) {
 		Where("username = ?", username).
 		First(&user).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
 		util.Logger.Error().Err(err).Msgf("Failed to find user %s in database", username)
 		return nil, err
 	}
@@ -72,9 +66,6 @@ func GetUserByAPIKey(apiKey string) (*models.UserAccount, error) {
 		Where("api_key = ?", apiKey).
 		First(&user).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
 		return nil, err
 	}
 

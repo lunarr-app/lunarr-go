@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
@@ -31,6 +33,13 @@ func LoginHandler(c *fiber.Ctx) error {
 	// Find user in database
 	user, err := db.FindUserByUsername(loginReq.Username)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(http.StatusNotFound).JSON(fiber.Map{
+				"status":  http.StatusText(http.StatusNotFound),
+				"message": "User not found",
+			})
+		}
+
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
 			"message": "Failed to find user",
