@@ -1,8 +1,10 @@
 package db
 
 import (
+	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/models"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
@@ -28,7 +31,18 @@ func InitDatabase() {
 	}
 
 	// Connect to the SQLite database
-	db, err := gorm.Open(sqlite.Open(dbURI), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(dbURI), &gorm.Config{
+		Logger: logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             time.Second,
+				LogLevel:                  logger.Warn,
+				IgnoreRecordNotFoundError: true,
+				ParameterizedQueries:      false,
+				Colorful:                  true,
+			},
+		),
+	})
 	if err != nil {
 		util.Logger.Fatal().Err(err).Msg("Failed to connect to the SQLite database")
 	}
