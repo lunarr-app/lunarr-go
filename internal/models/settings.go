@@ -6,8 +6,8 @@ import (
 
 type AppSettings struct {
 	gorm.Model
-	MovieLocations  []string           `json:"movie_locations" gorm:"column:movie_locations"`
-	TVShowLocations []string           `json:"tv_show_locations" gorm:"column:tv_show_locations"`
+	MovieLocations  StringArray        `json:"movie_locations" gorm:"column:movie_locations;type:text[]"`
+	TVShowLocations StringArray        `json:"tv_show_locations" gorm:"column:tv_show_locations;type:text[]"`
 	EmailSMTP       *EmailSMTPSettings `json:"email_smtp" gorm:"embedded"`
 }
 

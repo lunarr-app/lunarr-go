@@ -44,6 +44,7 @@ func InitDatabase() {
 
 func MigrateTables() {
 	err := DB.AutoMigrate(
+		&models.AppSettings{},
 		&models.UserAccount{},
 		&models.MovieWithFiles{},
 	)
