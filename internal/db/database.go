@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+var GormDB *gorm.DB
 var BadgerDB *badger.DB
 
 func InitDatabase() {
@@ -24,7 +24,7 @@ func InitDatabase() {
 }
 
 func MigrateTables() {
-	err := DB.AutoMigrate(
+	err := GormDB.AutoMigrate(
 		&models.AppSettings{},
 		&models.UserAccount{},
 		&models.MovieWithFiles{},

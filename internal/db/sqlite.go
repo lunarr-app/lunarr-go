@@ -41,5 +41,5 @@ func initSQLite(dataDir string) {
 	}
 
 	// Set the database connection in the DB variable
-	DB = db
+	GormDB = db
 }

@@ -10,7 +10,7 @@ import (
 func TestReadWriteSQLite(t *testing.T) {
 	// Initialize the SQLite database
 	initSQLite("")
-	err := DB.AutoMigrate(
+	err := GormDB.AutoMigrate(
 		&models.MovieWithFiles{},
 	)
 	assert.NoError(t, err)
@@ -28,7 +28,7 @@ func TestReadWriteSQLite(t *testing.T) {
 func writeToSQLite() error {
 	// Perform write operation
 	data := &models.MovieWithFiles{}
-	result := DB.Create(data)
+	result := GormDB.Create(data)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -38,7 +38,7 @@ func writeToSQLite() error {
 func readFromSQLite() (*models.MovieWithFiles, error) {
 	// Perform read operation
 	var data models.MovieWithFiles
-	result := DB.First(&data)
+	result := GormDB.First(&data)
 	if result.Error != nil {
 		return nil, result.Error
 	}

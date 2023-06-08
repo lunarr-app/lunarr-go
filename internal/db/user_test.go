@@ -80,6 +80,6 @@ func TestUserGORM(t *testing.T) {
 	assert.False(t, VerifyUserPassword(testUser.Username, invalidPassword))
 
 	// Clean up the test user from the database
-	err = DB.Delete(&testUser).Error
+	err = GormDB.Delete(&testUser).Error
 	assert.NoError(t, err)
 }
