@@ -29,7 +29,7 @@ func ScanMediaDirectory(directory string) {
 			return nil
 		}
 
-		if db.CheckMovieExists(filename) {
+		if db.CheckMovieExists(path) {
 			util.Logger.Info().Str("filename", filename).Msg("Movie already exists in the database")
 			return nil
 		}
