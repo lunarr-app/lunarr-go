@@ -35,7 +35,7 @@ func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 
 	// Store the movie data in Badger
 	err = BadgerDB.Update(func(txn *badger.Txn) error {
-		key := strconv.Itoa(int(movie.ID))
+		key := "tmdb_movie:" + strconv.FormatInt(movie.ID, 10)
 		return txn.Set([]byte(key), movieData)
 	})
 	if err != nil {
