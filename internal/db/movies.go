@@ -35,7 +35,7 @@ func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 
 	// Store the movie data in Badger
 	err = BadgerDB.Update(func(txn *badger.Txn) error {
-		key := strconv.Itoa(int(movie.ID))
+		key := "tmdb_movie:" + strconv.FormatInt(movie.ID, 10)
 		return txn.Set([]byte(key), movieData)
 	})
 	if err != nil {
@@ -59,6 +59,28 @@ func FindMovieByTmdbID(tmdbID int) (*models.MovieWithFiles, error) {
 	}
 
 	return &movie, nil
+}
+
+func FindMovieMetadata(tmdbID int) (*TMDb.MovieDetails, error) {
+	// Retrieve the movie data from Badger using the key format "tmdb_movie:<tmdbID>"
+	var movieData *TMDb.MovieDetails
+	err := BadgerDB.View(func(txn *badger.Txn) error {
+		key := "tmdb_movie:" + strconv.Itoa(tmdbID)
+		item, err := txn.Get([]byte(key))
+		if err != nil {
+			return err
+		}
+
+		err = item.Value(func(val []byte) error {
+			return json.Unmarshal(val, &movieData)
+		})
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return movieData, nil
 }
 
 func DeleteMovieByTmdbID(tmdbID int) error {
