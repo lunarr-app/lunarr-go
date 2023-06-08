@@ -17,12 +17,10 @@ type Config struct {
 		Host string
 		Port int
 	}
-	Database struct {
-		URI string
-	}
 	TMDb struct {
 		APIKey string
 	}
+	AppDataDir string
 }
 
 func InitConfig() {
@@ -42,12 +40,8 @@ func InitConfig() {
 		},
 	}
 
-	// Set the SQLite database path based on the OS-specific data directory
-	if os.Getenv("TEST_ENV") == "true" {
-		cfg.Database.URI = ":memory:" // In-memory SQLite database
-	} else {
-		cfg.Database.URI = getSQLitePath()
-	}
+	// Set the app data directory
+	cfg.AppDataDir = getAppDataDir()
 }
 
 func ParseFlags() {
@@ -70,7 +64,7 @@ func Get() *Config {
 	return cfg
 }
 
-func getSQLitePath() string {
+func getAppDataDir() string {
 	dataDir, err := os.UserConfigDir()
 	if err != nil {
 		util.Logger.Error().Msgf("Failed to get user configuration directory: %v", err)
@@ -82,9 +76,5 @@ func getSQLitePath() string {
 		util.Logger.Fatal().Msgf("Failed to create app directory: %v", err)
 	}
 
-	dbPath := filepath.Join(appDir, "sqlite.db")
-	util.Logger.Info().Msg("SQLite database file path:")
-	util.Logger.Info().Msgf("  %s", dbPath)
-
-	return dbPath
+	return appDir
 }

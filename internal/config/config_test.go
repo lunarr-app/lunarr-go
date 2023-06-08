@@ -21,11 +21,13 @@ func TestParseFlags(t *testing.T) {
 	assert.Equal(t, 8080, cfg.Server.Port)
 }
 
-func TestGetSQLitePath(t *testing.T) {
-	// Retrieve the SQLite path
-	dbPath := getSQLitePath()
+func TestGetAppDataDir(t *testing.T) {
+	// Retrieve the app data directory
+	appDataDir := getAppDataDir()
 
-	// Check that the path is not empty and matches the expected format
-	assert.NotEmpty(t, dbPath)
-	assert.Contains(t, dbPath, "sqlite.db")
+	// Check that the directory path is not empty
+	assert.NotEmpty(t, appDataDir)
+
+	// Check if the directory path contains the keyword "Lunarr"
+	assert.Contains(t, appDataDir, "Lunarr")
 }

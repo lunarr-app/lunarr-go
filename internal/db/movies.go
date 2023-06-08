@@ -1,6 +1,10 @@
 package db
 
 import (
+	"encoding/json"
+	"strconv"
+
+	"github.com/dgraph-io/badger/v4"
 	TMDb "github.com/lunarr-app/golang-tmdb"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
@@ -23,7 +27,23 @@ func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 		Location: path,
 	}
 
-	err := DB.Create(&movieWithFiles).Error
+	// Encode movie data into JSON
+	movieData, err := json.Marshal(movie)
+	if err != nil {
+		return err
+	}
+
+	// Store the movie data in Badger
+	err = BadgerDB.Update(func(txn *badger.Txn) error {
+		key := strconv.Itoa(int(movie.ID))
+		return txn.Set([]byte(key), movieData)
+	})
+	if err != nil {
+		return err
+	}
+
+	// Create the movie record in SQLite
+	err = DB.Create(&movieWithFiles).Error
 	if err != nil {
 		return err
 	}

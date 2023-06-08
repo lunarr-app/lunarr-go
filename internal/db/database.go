@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
@@ -16,22 +17,24 @@ import (
 )
 
 var DB *gorm.DB
+var BadgerDB *badger.DB
 
 func InitDatabase() {
 	util.Logger.Info().Msg("Connecting to the SQLite database")
 
-	// Extract the folder path from the database location URI
-	dbURI := config.Get().Database.URI
-	dbPath := filepath.Dir(dbURI)
+	// Get the app data directory from the configuration
+	appDataDir := config.Get().AppDataDir
 
-	// Create the data folder if it doesn't exist
-	err := os.MkdirAll(dbPath, 0755)
-	if err != nil {
-		util.Logger.Fatal().Err(err).Msg("Failed to create data folder for database")
+	// Set the SQLite database path
+	var sqlitePath string
+	if os.Getenv("TEST_ENV") == "true" {
+		sqlitePath = ":memory:"
+	} else {
+		sqlitePath = filepath.Join(appDataDir, "sqlite.db")
 	}
 
 	// Connect to the SQLite database
-	db, err := gorm.Open(sqlite.Open(dbURI), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(sqlitePath), &gorm.Config{
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
 			logger.Config{
@@ -49,6 +52,20 @@ func InitDatabase() {
 
 	// Set the database connection in the DB variable
 	DB = db
+
+	// Open Badger database
+	var badgerDB *badger.DB
+	if os.Getenv("TEST_ENV") == "true" {
+		badgerDB, err = badger.Open(badger.DefaultOptions("").WithInMemory(true))
+	} else {
+		badgerPath := filepath.Join(appDataDir, "badger")
+		badgerDB, err = badger.Open(badger.DefaultOptions(badgerPath).WithSyncWrites(true))
+	}
+
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to open Badger database")
+	}
+	BadgerDB = badgerDB
 
 	// AutoMigrate the tables
 	MigrateTables()
