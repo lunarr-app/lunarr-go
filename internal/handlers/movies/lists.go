@@ -26,7 +26,7 @@ func ListsHandler(c *fiber.Ctx) error {
 
 	// Count the total number of movies matching the search query
 	var totalMovies int64
-	err := db.DB.Model(&models.MovieWithFiles{}).Scopes(searchQuery).Count(&totalMovies).Error
+	err := db.GormDB.Model(&models.MovieWithFiles{}).Scopes(searchQuery).Count(&totalMovies).Error
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
@@ -46,7 +46,7 @@ func ListsHandler(c *fiber.Ctx) error {
 
 	// Find movies in the database based on query and pagination
 	var movieList []tmdb.MovieDetails
-	err = db.DB.Scopes(searchQuery).
+	err = db.GormDB.Scopes(searchQuery).
 		Order("title").
 		Limit(query.Limit).
 		Offset((query.Page - 1) * query.Limit).
