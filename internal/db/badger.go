@@ -2,13 +2,35 @@ package db
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
 	TMDb "github.com/lunarr-app/golang-tmdb"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
+	"github.com/lunarr-app/lunarr-go/internal/util"
 )
+
+func initBadger(dataDir string) {
+	util.Logger.Info().Msg("Opening Badger database")
+
+	// Open Badger database
+	var badgerDB *badger.DB
+	var err error
+	if os.Getenv("TEST_ENV") == "true" {
+		badgerDB, err = badger.Open(badger.DefaultOptions("").WithInMemory(true))
+	} else {
+		badgerPath := filepath.Join(dataDir, "badger")
+		badgerDB, err = badger.Open(badger.DefaultOptions(badgerPath).WithSyncWrites(true))
+	}
+
+	if err != nil {
+		util.Logger.Fatal().Err(err).Msg("Failed to open Badger database")
+	}
+	BadgerDB = badgerDB
+}
 
 func FindMovieMetadata(tmdbID int) (*TMDb.MovieDetails, error) {
 	// Check if the movie data exists in Badger
