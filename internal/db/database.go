@@ -28,7 +28,7 @@ func MigrateTables() {
 		&models.MovieWithFiles{},
 
 		// TMDb models
-		&models.TMdbBelongsToCollection{},
+		&models.TMDbBelongsToCollection{},
 		&models.TMDbGenre{},
 		&models.TMDbSpokenLanguage{},
 	)

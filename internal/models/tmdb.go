@@ -14,7 +14,7 @@ type TMDbSpokenLanguage struct {
 	Name     string `gorm:"column:language_name" json:"name"`
 }
 
-type TMdbBelongsToCollection struct {
+type TMDbBelongsToCollection struct {
 	gorm.Model
 	ID           int64  `gorm:"column:collection_id" json:"id"`
 	Name         string `gorm:"column:collection_name" json:"name"`
@@ -25,7 +25,7 @@ type TMdbBelongsToCollection struct {
 type MovieMetadata struct {
 	Adult               bool                    `gorm:"column:adult" json:"adult"`
 	BackdropPath        string                  `gorm:"column:backdrop_path" json:"backdrop_path"`
-	BelongsToCollection TMdbBelongsToCollection `gorm:"foreignKey:collection_id" json:"belongs_to_collection"`
+	BelongsToCollection TMDbBelongsToCollection `gorm:"foreignKey:collection_id" json:"belongs_to_collection"`
 	Genres              []TMDbGenre             `gorm:"foreignKey:genre_id" json:"genres"`
 	Homepage            string                  `gorm:"column:homepage" json:"homepage"`
 	IMDbID              string                  `gorm:"column:imdb_id" json:"imdb_id"`
