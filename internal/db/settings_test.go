@@ -25,7 +25,7 @@ func TestSettings(t *testing.T) {
 	}
 
 	// Insert settings into the database
-	err := InsertSettings(settings)
+	_, err := InsertSettings(settings)
 	assert.NoError(t, err)
 
 	// Retrieve settings from the database

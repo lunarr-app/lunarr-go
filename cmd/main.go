@@ -36,18 +36,15 @@ func main() {
 	// If settings don't exist, create new settings and insert into the database
 	if settings == nil {
 		util.Logger.Info().Msg("No settings found, creating new settings")
-		newSettings := &models.AppSettings{
+		settings, err = db.InsertSettings(&models.AppSettings{
 			MovieLocations:  models.StringArray{},
 			TVShowLocations: models.StringArray{},
-		}
-
-		err := db.InsertSettings(newSettings)
+		})
 		if err != nil {
 			util.Logger.Fatal().Err(err).Msg("Failed to insert new settings")
 		}
 
 		util.Logger.Info().Msg("Created new settings")
-		settings = newSettings
 	}
 
 	// Scan all movie locations if they exist

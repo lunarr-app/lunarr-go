@@ -7,13 +7,13 @@ import (
 )
 
 // InsertSettings inserts the application settings into the settings table
-func InsertSettings(settings *models.AppSettings) error {
+func InsertSettings(settings *models.AppSettings) (*models.AppSettings, error) {
 	err := GormDB.Create(settings).Error
 	if err != nil {
 		util.Logger.Error().Err(err).Msg("Failed to insert settings into database")
-		return err
+		return nil, err
 	}
-	return nil
+	return settings, nil
 }
 
 // UpdateSettings updates the application settings in the settings table
