@@ -6,6 +6,7 @@ import (
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/db"
+	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/scanner"
 	"github.com/lunarr-app/lunarr-go/internal/server"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
@@ -32,8 +33,25 @@ func main() {
 		util.Logger.Fatal().Err(err).Msg("Failed to get settings")
 	}
 
+	// If settings don't exist, create new settings and insert into the database
+	if settings == nil {
+		util.Logger.Info().Msg("No settings found, creating new settings")
+		newSettings := &models.AppSettings{
+			MovieLocations:  models.StringArray{},
+			TVShowLocations: models.StringArray{},
+		}
+
+		err := db.InsertSettings(newSettings)
+		if err != nil {
+			util.Logger.Fatal().Err(err).Msg("Failed to insert new settings")
+		}
+
+		util.Logger.Info().Msg("Created new settings")
+		settings = newSettings
+	}
+
 	// Scan all movie locations if they exist
-	if settings != nil {
+	if len(settings.MovieLocations) > 0 {
 		// Create a channel to wait for all goroutines to finish
 		done := make(chan struct{})
 
