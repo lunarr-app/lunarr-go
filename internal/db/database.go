@@ -25,9 +25,15 @@ func InitDatabase() {
 
 func MigrateTables() {
 	err := GormDB.AutoMigrate(
+		// Lunarr models
 		&models.AppSettings{},
 		&models.UserAccount{},
 		&models.MovieWithFiles{},
+
+		// TMDb models
+		&models.TMdbBelongsToCollection{},
+		&models.TMDbGenre{},
+		&models.TMDbSpokenLanguage{},
 	)
 	if err != nil {
 		util.Logger.Fatal().Err(err).Msg("Failed to perform auto migration")

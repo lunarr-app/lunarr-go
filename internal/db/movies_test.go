@@ -40,14 +40,9 @@ func TestInsertMovie(t *testing.T) {
 	assert.Equal(t, int32(movieID), insertedMovie.TMDbID)
 	assert.Equal(t, filePath, insertedMovie.Location)
 
-	// Retrieve the movie metadata from Badger
-	metadata, err := FindMovieMetadata(int(movieID))
-	assert.NoError(t, err)
-	assert.NotNil(t, metadata)
-
 	// Verify the metadata
-	assert.Equal(t, movie.ID, metadata.ID)
-	assert.Equal(t, movie.Title, metadata.Title)
+	assert.NotNil(t, insertedMovie.Metadata)
+	assert.Equal(t, movie.Title, insertedMovie.Metadata.Title)
 
 	// Clean up the movie from the database
 	err = DeleteMovieByTmdbID(int(movieID))
