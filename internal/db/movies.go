@@ -43,7 +43,7 @@ func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 		Metadata: models.MovieMetadata{
 			Adult:        movie.Adult,
 			BackdropPath: movie.BackdropPath,
-			BelongsToCollection: models.TMdbBelongsToCollection{
+			BelongsToCollection: models.TMDbBelongsToCollection{
 				ID:           int64(movie.BelongsToCollection.ID),
 				Name:         movie.BelongsToCollection.Name,
 				PosterPath:   movie.BelongsToCollection.PosterPath,
