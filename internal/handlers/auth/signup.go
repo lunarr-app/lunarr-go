@@ -21,8 +21,8 @@ import (
 // @Produce json
 // @Param userReq body UserSignup true "User Signup Request"
 // @Success 201 {object} UserSignupResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
 // @Router /auth/signup [post]
 func SignupHandler(c *fiber.Ctx) error {
 	var userReq UserSignup

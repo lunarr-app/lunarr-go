@@ -19,7 +19,7 @@ import (
 // @Produce json
 // @Param loginReq body UserLogin true "Login Request"
 // @Success 200 {object} UserLoginResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 400 {object} handlers.ErrorResponse
 // @Router /auth/login [post]
 func LoginHandler(c *fiber.Ctx) error {
 	var loginReq UserLogin

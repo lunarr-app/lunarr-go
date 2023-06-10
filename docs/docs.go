@@ -16,6 +16,80 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api": {
+            "get": {
+                "description": "Middleware to authenticate API requests with an API key",
+                "summary": "Authenticate API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key",
+                        "name": "x-api-key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/movies": {
+            "get": {
+                "description": "Get a list of movies based on the search query and pagination parameters.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "movies"
+                ],
+                "summary": "Get Movie Lists",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Number of movies per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/movies.ListsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login",
@@ -50,7 +124,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -90,13 +164,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -127,17 +201,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "auth.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
         "auth.UserLogin": {
             "type": "object",
             "required": [
@@ -216,10 +279,168 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.ResponseHello": {
             "type": "object",
             "properties": {
                 "hello": {
+                    "type": "string"
+                }
+            }
+        },
+        "movies.ListsResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/movies.MovieDetails"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "movies.MovieDetails": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/movies.MovieMetadata"
+                },
+                "tmdb_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "movies.MovieMetadata": {
+            "type": "object",
+            "properties": {
+                "adult": {
+                    "type": "boolean"
+                },
+                "backdrop_path": {
+                    "type": "string"
+                },
+                "belongs_to_collection": {
+                    "$ref": "#/definitions/movies.TMDbBelongsToCollection"
+                },
+                "genres": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/movies.TMDbGenre"
+                    }
+                },
+                "homepage": {
+                    "type": "string"
+                },
+                "imdb_id": {
+                    "type": "string"
+                },
+                "original_language": {
+                    "type": "string"
+                },
+                "original_title": {
+                    "type": "string"
+                },
+                "overview": {
+                    "type": "string"
+                },
+                "popularity": {
+                    "type": "number"
+                },
+                "poster_path": {
+                    "type": "string"
+                },
+                "release_date": {
+                    "type": "string"
+                },
+                "revenue": {
+                    "type": "integer"
+                },
+                "runtime": {
+                    "type": "integer"
+                },
+                "spoken_languages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/movies.TMDbSpokenLanguage"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tagline": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "video": {
+                    "type": "boolean"
+                },
+                "vote_average": {
+                    "type": "number"
+                },
+                "vote_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "movies.TMDbBelongsToCollection": {
+            "type": "object",
+            "properties": {
+                "backdrop_path": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "poster_path": {
+                    "type": "string"
+                }
+            }
+        },
+        "movies.TMDbGenre": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "movies.TMDbSpokenLanguage": {
+            "type": "object",
+            "properties": {
+                "iso_639_1": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }

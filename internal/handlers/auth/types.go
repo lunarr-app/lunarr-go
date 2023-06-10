@@ -22,8 +22,3 @@ type UserSignupResponse struct {
 	Status  int    `json:"status"`
 	Message string `json:"message"`
 }
-
-type ErrorResponse struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
-}

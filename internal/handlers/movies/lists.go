@@ -12,6 +12,17 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
+// @Summary Get Movie Lists
+// @Description Get a list of movies based on the search query and pagination parameters.
+// @Tags movies
+// @Accept json
+// @Produce json
+// @Param page query integer false "Page number" default(1)
+// @Param limit query integer false "Number of movies per page" default(20)
+// @Success 200 {object} ListsResponse
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /api/movies [get]
 func ListsHandler(c *fiber.Ctx) error {
 	var query models.SearchQueryParams
 	if err := c.QueryParser(&query); err != nil {
