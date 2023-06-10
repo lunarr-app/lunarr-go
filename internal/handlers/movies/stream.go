@@ -10,6 +10,17 @@ import (
 
 // MovieStreamHandler handles the movie streaming request.
 // TODO: Implement transcode-based streaming later.
+// @Summary Stream a movie
+// @Description Stream a movie based on the TMDb ID.
+// @Tags movies
+// @Accept json
+// @Produce octet-stream
+// @Param x-api-key header string true "API Key"
+// @Param tmdb_id path int true "TMDb ID"
+// @Success 200 {file} octet-stream
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/movies/{tmdb_id}/stream [get]
 func MovieStreamHandler(c *fiber.Ctx) error {
 	// Get the tmdb_id parameter from the request
 	tmdbID, err := c.ParamsInt("tmdb_id")

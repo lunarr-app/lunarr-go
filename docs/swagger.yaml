@@ -210,6 +210,40 @@ paths:
       summary: Get Movie Lists
       tags:
       - movies
+  /api/movies/{tmdb_id}/stream:
+    get:
+      consumes:
+      - application/json
+      description: Stream a movie based on the TMDb ID.
+      parameters:
+      - description: API Key
+        in: header
+        name: x-api-key
+        required: true
+        type: string
+      - description: TMDb ID
+        in: path
+        name: tmdb_id
+        required: true
+        type: integer
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Stream a movie
+      tags:
+      - movies
   /auth/login:
     post:
       consumes:
