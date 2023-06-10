@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
+	"github.com/lunarr-app/lunarr-go/internal/handlers"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
@@ -19,7 +20,7 @@ import (
 // @Param x-api-key header string true "API Key"
 // @Param page query integer false "Page number" default(1)
 // @Param limit query integer false "Number of movies per page" default(20)
-// @Success 200 {object} ListsResponse
+// @Success 200 {object} handlers.ListsResponse
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/movies [get]
@@ -47,11 +48,11 @@ func ListsHandler(c *fiber.Ctx) error {
 
 	// If no movies found, return an empty response
 	if totalMovies == 0 {
-		return c.Status(http.StatusOK).JSON(fiber.Map{
-			"results": []models.MovieWithFiles{},
-			"limit":   query.Limit,
-			"page":    query.Page,
-			"total":   0,
+		return c.Status(http.StatusOK).JSON(handlers.ListsResponse{
+			Results:     []models.MovieWithFiles{},
+			Limit:       query.Limit,
+			CurrentPage: query.Page,
+			TotalPage:   0,
 		})
 	}
 
@@ -69,10 +70,10 @@ func ListsHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(http.StatusOK).JSON(fiber.Map{
-		"results": movieList,
-		"limit":   query.Limit,
-		"page":    query.Page,
-		"total":   int(totalMovies)/query.Limit + 1,
+	return c.Status(http.StatusOK).JSON(handlers.ListsResponse{
+		Results:     movieList,
+		Limit:       query.Limit,
+		CurrentPage: query.Page,
+		TotalPage:   int(totalMovies)/query.Limit + 1,
 	})
 }
