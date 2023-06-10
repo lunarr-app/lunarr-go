@@ -5,12 +5,19 @@ GOCLEAN = $(GOCMD) clean
 GOTEST = $(GOCMD) test
 GOGET = $(GOCMD) get
 
-# Name of your binary
+# Name of binary
 BINARY_NAME = lunarr-go
+
+# Swaggo parameters
+SWAGCMD = swag
 
 # Build the binary
 build:
 	CGO_ENABLED=0 $(GOBUILD) -ldflags "-s -w" -o $(BINARY_NAME) cmd/main.go
+
+# Generate Swagger docs
+swagger:
+	$(SWAGCMD) init -g internal/server/server.go
 
 # Clean build files
 clean:
@@ -24,4 +31,4 @@ test:
 # Default target
 default: build
 
-.PHONY: build clean test
+.PHONY: build clean test swagger
