@@ -1,81 +1,5 @@
 basePath: /
 definitions:
-  auth.UserLogin:
-    properties:
-      password:
-        maxLength: 32
-        minLength: 6
-        type: string
-      username:
-        maxLength: 16
-        minLength: 2
-        type: string
-    required:
-    - password
-    - username
-    type: object
-  auth.UserLoginResponse:
-    properties:
-      api_key:
-        type: string
-      status:
-        type: string
-    type: object
-  auth.UserSignup:
-    properties:
-      displayname:
-        maxLength: 48
-        minLength: 1
-        type: string
-      email:
-        type: string
-      password:
-        maxLength: 32
-        minLength: 6
-        type: string
-      sex:
-        enum:
-        - male
-        - female
-        - unknown
-        type: string
-      username:
-        maxLength: 16
-        minLength: 2
-        type: string
-    required:
-    - displayname
-    - email
-    - password
-    - username
-    type: object
-  auth.UserSignupResponse:
-    properties:
-      message:
-        type: string
-      status:
-        type: integer
-    type: object
-  handlers.ErrorResponse:
-    properties:
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  handlers.ListsResponse:
-    properties:
-      limit:
-        type: integer
-      page_current:
-        type: integer
-      page_total:
-        type: integer
-      results:
-        items:
-          $ref: '#/definitions/models.MovieWithFiles'
-        type: array
-    type: object
   handlers.ResponseHello:
     properties:
       hello:
@@ -150,6 +74,13 @@ definitions:
       tmdb_id:
         type: integer
     type: object
+  models.SubtitleSettings:
+    properties:
+      enabled:
+        type: boolean
+      language:
+        type: string
+    type: object
   models.TMDbGenre:
     properties:
       id:
@@ -163,6 +94,133 @@ definitions:
         type: string
       name:
         type: string
+    type: object
+  models.TranscodingSettings:
+    properties:
+      bitrate:
+        type: integer
+      codec:
+        type: string
+      resolution:
+        type: string
+    type: object
+  models.UserAccounts:
+    properties:
+      api_key:
+        type: string
+      current_status:
+        type: string
+      displayname:
+        type: string
+      email:
+        type: string
+      last_seen_at:
+        type: string
+      password:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+      settings:
+        $ref: '#/definitions/models.UserSettings'
+      sex:
+        type: string
+      username:
+        type: string
+    type: object
+  models.UserRole:
+    enum:
+    - admin
+    - superuser
+    - subscriber
+    type: string
+    x-enum-varnames:
+    - UserRoleAdmin
+    - UserRoleSuperuser
+    - UserRoleSubscriber
+  models.UserSettings:
+    properties:
+      subtitle:
+        $ref: '#/definitions/models.SubtitleSettings'
+      theme:
+        type: string
+      transcoding:
+        $ref: '#/definitions/models.TranscodingSettings'
+    type: object
+  schema.ErrorResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  schema.ListsResponse:
+    properties:
+      limit:
+        type: integer
+      page_current:
+        type: integer
+      page_total:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/models.MovieWithFiles'
+        type: array
+    type: object
+  schema.UserLogin:
+    properties:
+      password:
+        maxLength: 32
+        minLength: 6
+        type: string
+      username:
+        maxLength: 16
+        minLength: 2
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  schema.UserLoginResponse:
+    properties:
+      api_key:
+        type: string
+      status:
+        type: string
+    type: object
+  schema.UserSignup:
+    properties:
+      displayname:
+        maxLength: 48
+        minLength: 1
+        type: string
+      email:
+        type: string
+      password:
+        maxLength: 32
+        minLength: 6
+        type: string
+      sex:
+        enum:
+        - male
+        - female
+        - unknown
+        type: string
+      username:
+        maxLength: 16
+        minLength: 2
+        type: string
+    required:
+    - displayname
+    - email
+    - password
+    - username
+    type: object
+  schema.UserSignupResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: integer
     type: object
 host: 127.0.0.1:3000
 info:
@@ -198,15 +256,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.ListsResponse'
+            $ref: '#/definitions/schema.ListsResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
+            $ref: '#/definitions/schema.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
+            $ref: '#/definitions/schema.ErrorResponse'
       summary: Get Movie Lists
       tags:
       - movies
@@ -236,14 +294,64 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
+            $ref: '#/definitions/schema.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
+            $ref: '#/definitions/schema.ErrorResponse'
       summary: Stream a movie
       tags:
       - movies
+  /api/users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all users.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.UserAccounts'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      summary: Get All Users
+      tags:
+      - users
+  /api/users/me:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the user data for the authenticated user.
+      parameters:
+      - description: API Key
+        in: header
+        name: x-api-key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserAccounts'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      summary: Get User Data
+      tags:
+      - users
   /auth/login:
     post:
       consumes:
@@ -255,18 +363,18 @@ paths:
         name: loginReq
         required: true
         schema:
-          $ref: '#/definitions/auth.UserLogin'
+          $ref: '#/definitions/schema.UserLogin'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.UserLoginResponse'
+            $ref: '#/definitions/schema.UserLoginResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
+            $ref: '#/definitions/schema.ErrorResponse'
       summary: Login
       tags:
       - auth
@@ -281,22 +389,22 @@ paths:
         name: userReq
         required: true
         schema:
-          $ref: '#/definitions/auth.UserSignup'
+          $ref: '#/definitions/schema.UserSignup'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/auth.UserSignupResponse'
+            $ref: '#/definitions/schema.UserSignupResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
+            $ref: '#/definitions/schema.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
+            $ref: '#/definitions/schema.ErrorResponse'
       summary: User Signup
       tags:
       - auth
