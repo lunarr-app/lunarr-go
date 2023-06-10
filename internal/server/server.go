@@ -9,6 +9,7 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/handlers"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/auth"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/movies"
+	"github.com/lunarr-app/lunarr-go/internal/handlers/users"
 	"github.com/lunarr-app/lunarr-go/internal/server/middleware"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
 	"github.com/lunarr-app/lunarr-go/internal/util"
@@ -103,6 +104,8 @@ func New() *fiber.App {
 	// Register authenticated API routes
 	api.Get("/movies", movies.MovieRootHandler)
 	api.Get("/movies/:tmdb_id/stream", movies.MovieStreamHandler)
+	api.Get("/users", users.UserRootHandler)
+	api.Get("/users/me", users.GetMeHandler)
 
 	// Return the application instance
 	return app

@@ -1,4 +1,4 @@
-package auth
+package schema
 
 type UserLogin struct {
 	Username string `json:"username" validate:"required,min=2,max=16,alphanum"`

@@ -11,8 +11,8 @@ import (
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/db"
-	"github.com/lunarr-app/lunarr-go/internal/handlers"
 	"github.com/lunarr-app/lunarr-go/internal/models"
+	"github.com/lunarr-app/lunarr-go/internal/schema"
 )
 
 func TestMovieRootHandler(t *testing.T) {
@@ -35,14 +35,14 @@ func TestMovieRootHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
 	// Decode the response body
-	var response handlers.ListsResponse
+	var response schema.ListsResponse
 	err = json.NewDecoder(res.Body).Decode(&response)
 
 	// Assert that there's no error during the decoding
 	assert.NoError(t, err)
 
 	// Assert the expected response values
-	expectedResponse := handlers.ListsResponse{
+	expectedResponse := schema.ListsResponse{
 		Results:     []models.MovieWithFiles{},
 		Limit:       20,
 		CurrentPage: 1,

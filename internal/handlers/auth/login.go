@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
+	"github.com/lunarr-app/lunarr-go/internal/schema"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
@@ -17,12 +18,12 @@ import (
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param loginReq body UserLogin true "Login Request"
-// @Success 200 {object} UserLoginResponse
-// @Failure 400 {object} handlers.ErrorResponse
+// @Param loginReq body schema.UserLogin true "Login Request"
+// @Success 200 {object} schema.UserLoginResponse
+// @Failure 400 {object} schema.ErrorResponse
 // @Router /auth/login [post]
 func LoginHandler(c *fiber.Ctx) error {
-	var loginReq UserLogin
+	var loginReq schema.UserLogin
 	if err := c.BodyParser(&loginReq); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),

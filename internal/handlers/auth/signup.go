@@ -11,6 +11,7 @@ import (
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
+	"github.com/lunarr-app/lunarr-go/internal/schema"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
@@ -19,13 +20,13 @@ import (
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param userReq body UserSignup true "User Signup Request"
-// @Success 201 {object} UserSignupResponse
-// @Failure 400 {object} handlers.ErrorResponse
-// @Failure 500 {object} handlers.ErrorResponse
+// @Param userReq body schema.UserSignup true "User Signup Request"
+// @Success 201 {object} schema.UserSignupResponse
+// @Failure 400 {object} schema.ErrorResponse
+// @Failure 500 {object} schema.ErrorResponse
 // @Router /auth/signup [post]
 func SignupHandler(c *fiber.Ctx) error {
-	var userReq UserSignup
+	var userReq schema.UserSignup
 	if err := c.BodyParser(&userReq); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),

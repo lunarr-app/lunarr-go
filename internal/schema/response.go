@@ -1,4 +1,4 @@
-package handlers
+package schema
 
 import "github.com/lunarr-app/lunarr-go/internal/models"
 

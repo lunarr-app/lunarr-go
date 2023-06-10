@@ -71,6 +71,18 @@ func GetUserByAPIKey(apiKey string) (*models.UserAccounts, error) {
 	return &user, nil
 }
 
+// FindAllUsers retrieves all users from the users table
+func FindAllUsers() ([]models.UserAccounts, error) {
+	var users []models.UserAccounts
+	err := GormDB.Select("displayname, username, email, sex, role, api_key, created_at, updated_at, last_seen_at, current_status").
+		Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 // VerifyUserPassword verifies the password for a given username
 func VerifyUserPassword(username, password string) bool {
 	var user models.UserAccounts
