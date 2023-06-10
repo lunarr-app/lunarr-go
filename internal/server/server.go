@@ -14,9 +14,16 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/util"
 	"github.com/lunarr-app/lunarr-go/web"
 	"github.com/lunarr-app/lunarr-go/web/router"
+
+	"github.com/gofiber/swagger"
+	_ "github.com/lunarr-app/lunarr-go/docs"
 )
 
-// New creates a new Fiber application
+// @title Lunarr API
+// @version 1.0
+// @description Swagger for Lunarr API endpoints
+// @host 127.0.0.1:3000
+// @BasePath /
 func New() *fiber.App {
 	// Define custom template functions
 	templateFuncs := map[string]interface{}{
@@ -48,6 +55,9 @@ func New() *fiber.App {
 
 	// Register the custom logger as middleware
 	app.Use(customLogger)
+
+	// Swagger UI
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// Load assets using embed FS
 	assets, err := web.GetAssetsFS()

@@ -1,0 +1,9 @@
+basePath: /
+host: 127.0.0.1:3000
+info:
+  contact: {}
+  description: Swagger for Lunarr API endpoints
+  title: Lunarr API
+  version: "1.0"
+paths: {}
+swagger: "2.0"
