@@ -24,7 +24,7 @@ import (
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/movies [get]
-func ListsHandler(c *fiber.Ctx) error {
+func MovieRootHandler(c *fiber.Ctx) error {
 	var query models.SearchQueryParams
 	if err := c.QueryParser(&query); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{

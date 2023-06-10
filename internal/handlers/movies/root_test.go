@@ -15,13 +15,13 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
 
-func TestListsHandler(t *testing.T) {
+func TestMovieRootHandler(t *testing.T) {
 	config.InitConfig()
 	db.InitDatabase()
 
 	app := fiber.New()
 
-	app.Get("/api/movies", ListsHandler)
+	app.Get("/api/movies", MovieRootHandler)
 
 	// Mock the request
 	req := httptest.NewRequest(http.MethodGet, "/api/movies?limit=20&page=1", nil)
