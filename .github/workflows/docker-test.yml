@@ -1,0 +1,32 @@
+name: Docker Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build Docker image
+        run: docker build -t lunarr-app .
+
+      - name: Run Docker container
+        run: docker run -d -p 3000:3000 --name lunarr-container lunarr-app
+
+      - name: Wait for container to start
+        run: sleep 5s
+
+      - name: Send curl request
+        run: curl http://127.0.0.1:3000/hello
+
+      - name: Stop and remove container
+        run: docker stop lunarr-container && docker rm lunarr-container
