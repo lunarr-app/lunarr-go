@@ -35,7 +35,7 @@ type UserAccount struct {
 	Role          UserRole     `gorm:"column:role;not null;size:15" json:"role"`
 	APIKey        string       `gorm:"column:api_key;uniqueIndex:idx_api_key;not null;size:32" json:"api_key"`
 	CurrentStatus string       `gorm:"column:current_status;size:15;default:''" json:"current_status"`
-	Settings      UserSettings `gorm:"embedded" json:"settings"`
+	Settings      UserSettings `gorm:"embedded;embeddedPrefix:setting_" json:"settings"`
 	LastSeenAt    time.Time    `gorm:"column:last_seen_at" json:"last_seen_at"`
 }
 
