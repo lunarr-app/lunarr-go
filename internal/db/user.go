@@ -9,7 +9,7 @@ import (
 // CountUsers counts the number of users in the database.
 func CountUsers() (int64, error) {
 	var count int64
-	err := GormDB.Model(&models.UserAccount{}).Count(&count).Error
+	err := GormDB.Model(&models.UserAccounts{}).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -17,7 +17,7 @@ func CountUsers() (int64, error) {
 }
 
 // InsertUser inserts a new user into the users table
-func InsertUser(user *models.UserAccount) error {
+func InsertUser(user *models.UserAccounts) error {
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -36,7 +36,7 @@ func InsertUser(user *models.UserAccount) error {
 
 // UpdateUser updates an existing user in the users table
 func UpdateUser(username string, updates map[string]interface{}) error {
-	err := GormDB.Model(&models.UserAccount{}).Where("username = ?", username).Updates(updates).Error
+	err := GormDB.Model(&models.UserAccounts{}).Where("username = ?", username).Updates(updates).Error
 	if err != nil {
 		util.Logger.Error().Err(err).Msg("Failed to update user in database")
 		return err
@@ -46,9 +46,9 @@ func UpdateUser(username string, updates map[string]interface{}) error {
 }
 
 // FindUserByUsername finds a user in the users table by username
-func FindUserByUsername(username string) (*models.UserAccount, error) {
-	var user models.UserAccount
-	err := GormDB.Select("displayname, username, sex, role, api_key, created_at, updated_at, last_seen_at, current_status").
+func FindUserByUsername(username string) (*models.UserAccounts, error) {
+	var user models.UserAccounts
+	err := GormDB.Select("displayname, username, email, sex, role, api_key, created_at, updated_at, last_seen_at, current_status").
 		Where("username = ?", username).
 		First(&user).Error
 	if err != nil {
@@ -59,9 +59,9 @@ func FindUserByUsername(username string) (*models.UserAccount, error) {
 }
 
 // GetUserByAPIKey returns a user from the users table by API key
-func GetUserByAPIKey(apiKey string) (*models.UserAccount, error) {
-	var user models.UserAccount
-	err := GormDB.Select("displayname, username, sex, role, api_key, created_at, updated_at, last_seen_at, current_status").
+func GetUserByAPIKey(apiKey string) (*models.UserAccounts, error) {
+	var user models.UserAccounts
+	err := GormDB.Select("displayname, username, email, sex, role, api_key, created_at, updated_at, last_seen_at, current_status").
 		Where("api_key = ?", apiKey).
 		First(&user).Error
 	if err != nil {
@@ -73,7 +73,7 @@ func GetUserByAPIKey(apiKey string) (*models.UserAccount, error) {
 
 // VerifyUserPassword verifies the password for a given username
 func VerifyUserPassword(username, password string) bool {
-	var user models.UserAccount
+	var user models.UserAccounts
 	err := GormDB.Select("password").
 		Where("username = ?", username).
 		First(&user).Error

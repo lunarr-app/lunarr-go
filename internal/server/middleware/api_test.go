@@ -21,7 +21,7 @@ func TestAuthenticateAPI(t *testing.T) {
 	app := fiber.New()
 
 	// Insert the test user into the database
-	err := db.InsertUser(&models.UserAccount{
+	err := db.InsertUser(&models.UserAccounts{
 		APIKey: "valid-api-key",
 	})
 	assert.NoError(t, err)

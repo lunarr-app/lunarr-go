@@ -71,9 +71,10 @@ func SignupHandler(c *fiber.Ctx) error {
 	}
 
 	// Create new user
-	newUser := &models.UserAccount{
+	newUser := &models.UserAccounts{
 		Displayname:   userReq.Displayname,
 		Username:      userReq.Username,
+		Email:         userReq.Email,
 		Password:      userReq.Password,
 		Sex:           userReq.Sex,
 		Role:          role,

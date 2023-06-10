@@ -20,16 +20,18 @@ type UserLogin struct {
 }
 
 type UserSignup struct {
-	Displayname string `json:"displayname" validate:"required,min=1,max=48" gorm:"column:displayname"`
-	Username    string `json:"username" validate:"required,min=2,max=16,alphanum" gorm:"column:username"`
-	Password    string `json:"password" validate:"required,min=6,max=32" gorm:"column:password"`
-	Sex         string `json:"sex,omitempty" validate:"oneof=male female unknown" gorm:"column:sex"`
+	Displayname string `json:"displayname" validate:"required,min=1,max=48"`
+	Username    string `json:"username" validate:"required,min=2,max=16,alphanum"`
+	Email       string `json:"email" validate:"required,email"`
+	Password    string `json:"password" validate:"required,min=6,max=32"`
+	Sex         string `json:"sex,omitempty" validate:"oneof=male female unknown"`
 }
 
-type UserAccount struct {
+type UserAccounts struct {
 	gorm.Model
 	Displayname   string       `gorm:"column:displayname;not null;size:48" json:"displayname"`
-	Username      string       `gorm:"column:username;uniqueIndex:idx_username;not null;size:16" json:"username"`
+	Username      string       `gorm:"column:username;uniqueIndex:idx_username_ua;not null;size:16" json:"username"`
+	Email         string       `gorm:"column:email;uniqueIndex:idx_email_ua;not null;size:128" json:"email"`
 	Password      string       `gorm:"column:password;not null;size:32" json:"password"`
 	Sex           string       `gorm:"column:sex;not null;size:10" json:"sex"`
 	Role          UserRole     `gorm:"column:role;not null;size:15" json:"role"`

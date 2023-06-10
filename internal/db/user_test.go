@@ -16,9 +16,10 @@ func TestUserGORM(t *testing.T) {
 	InitDatabase()
 
 	// Initialize a new test user
-	testUser := models.UserAccount{
+	testUser := models.UserAccounts{
 		Displayname:   "Test User",
 		Username:      "testuser",
+		Email:         "test@example.com",
 		Password:      "testpassword",
 		Sex:           "male",
 		Role:          models.UserRole("subscriber"),
@@ -36,6 +37,7 @@ func TestUserGORM(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, testUser.Displayname, retrievedUser.Displayname)
 	assert.Equal(t, testUser.Username, retrievedUser.Username)
+	assert.Equal(t, testUser.Email, retrievedUser.Email)
 	assert.Empty(t, retrievedUser.Password)
 	assert.Equal(t, testUser.Sex, retrievedUser.Sex)
 	assert.Equal(t, testUser.Role, retrievedUser.Role)

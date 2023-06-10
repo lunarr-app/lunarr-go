@@ -24,7 +24,7 @@ func MigrateTables() {
 	err := GormDB.AutoMigrate(
 		// Lunarr models
 		&models.AppSettings{},
-		&models.UserAccount{},
+		&models.UserAccounts{},
 		&models.MovieWithFiles{},
 
 		// TMDb models
