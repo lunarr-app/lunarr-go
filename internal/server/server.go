@@ -60,6 +60,9 @@ func New() *fiber.App {
 		Root: assets,
 	}))
 
+	// Register test route
+	app.Get("/hello", handlers.RootHandlerHello)
+
 	// Register web routes
 	app.Get("/", handlers.RootHandlerWeb)
 	app.Get("/login", router.LoginPage)
@@ -88,7 +91,6 @@ func New() *fiber.App {
 	api.Use(middleware.AuthenticateAPI)
 
 	// Register authenticated API routes
-	api.Get("/", handlers.RootHandlerAPI)
 	api.Get("/movies", movies.ListsHandler)
 	api.Get("/movies/:tmdb_id/stream", movies.MovieStreamHandler)
 

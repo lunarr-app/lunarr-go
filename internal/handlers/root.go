@@ -2,7 +2,7 @@ package handlers
 
 import "github.com/gofiber/fiber/v2"
 
-func RootHandlerAPI(c *fiber.Ctx) error {
+func RootHandlerHello(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"hello": "world",
 	})
