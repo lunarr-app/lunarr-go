@@ -56,7 +56,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/movies.ListsResponse"
+                            "$ref": "#/definitions/handlers.ListsResponse"
                         }
                     },
                     "400": {
@@ -325,6 +325,26 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.ListsResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "page_current": {
+                    "type": "integer"
+                },
+                "page_total": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.MovieWithFiles"
+                    }
+                }
+            }
+        },
         "handlers.ResponseHello": {
             "type": "object",
             "properties": {
@@ -333,41 +353,24 @@ const docTemplate = `{
                 }
             }
         },
-        "movies.ListsResponse": {
+        "models.BelongsToCollection": {
             "type": "object",
             "properties": {
-                "limit": {
-                    "type": "integer"
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "results": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/movies.MovieDetails"
-                    }
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "movies.MovieDetails": {
-            "type": "object",
-            "properties": {
-                "location": {
+                "backdrop_path": {
                     "type": "string"
                 },
-                "metadata": {
-                    "$ref": "#/definitions/movies.MovieMetadata"
-                },
-                "tmdb_id": {
+                "id": {
                     "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "poster_path": {
+                    "type": "string"
                 }
             }
         },
-        "movies.MovieMetadata": {
+        "models.MovieMetadata": {
             "type": "object",
             "properties": {
                 "adult": {
@@ -376,13 +379,10 @@ const docTemplate = `{
                 "backdrop_path": {
                     "type": "string"
                 },
-                "belongs_to_collection": {
-                    "$ref": "#/definitions/movies.TMDbBelongsToCollection"
-                },
                 "genres": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/movies.TMDbGenre"
+                        "$ref": "#/definitions/models.TMDbGenre"
                     }
                 },
                 "homepage": {
@@ -418,7 +418,7 @@ const docTemplate = `{
                 "spoken_languages": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/movies.TMDbSpokenLanguage"
+                        "$ref": "#/definitions/models.TMDbSpokenLanguage"
                     }
                 },
                 "status": {
@@ -441,35 +441,35 @@ const docTemplate = `{
                 }
             }
         },
-        "movies.TMDbBelongsToCollection": {
+        "models.MovieWithFiles": {
             "type": "object",
             "properties": {
-                "backdrop_path": {
+                "belongs_to_collection": {
+                    "$ref": "#/definitions/models.BelongsToCollection"
+                },
+                "location": {
                     "type": "string"
                 },
+                "metadata": {
+                    "$ref": "#/definitions/models.MovieMetadata"
+                },
+                "tmdb_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.TMDbGenre": {
+            "type": "object",
+            "properties": {
                 "id": {
                     "type": "integer"
                 },
                 "name": {
                     "type": "string"
-                },
-                "poster_path": {
-                    "type": "string"
                 }
             }
         },
-        "movies.TMDbGenre": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "movies.TMDbSpokenLanguage": {
+        "models.TMDbSpokenLanguage": {
             "type": "object",
             "properties": {
                 "iso_639_1": {

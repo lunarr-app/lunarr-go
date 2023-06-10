@@ -49,7 +49,7 @@ func ListsHandler(c *fiber.Ctx) error {
 	// If no movies found, return an empty response
 	if totalMovies == 0 {
 		return c.Status(http.StatusOK).JSON(handlers.ListsResponse{
-			Results:     []handlers.MovieWithFiles{},
+			Results:     []models.MovieWithFiles{},
 			Limit:       query.Limit,
 			CurrentPage: query.Page,
 			TotalPage:   0,
@@ -57,7 +57,7 @@ func ListsHandler(c *fiber.Ctx) error {
 	}
 
 	// Find movies in the database based on query and pagination
-	var movieList []handlers.MovieWithFiles
+	var movieList []models.MovieWithFiles
 	err = db.GormDB.Scopes(searchQuery).
 		Order("tmdb_id").
 		Limit(query.Limit).

@@ -63,44 +63,44 @@ definitions:
       status:
         type: string
     type: object
+  handlers.ListsResponse:
+    properties:
+      limit:
+        type: integer
+      page_current:
+        type: integer
+      page_total:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/models.MovieWithFiles'
+        type: array
+    type: object
   handlers.ResponseHello:
     properties:
       hello:
         type: string
     type: object
-  movies.ListsResponse:
+  models.BelongsToCollection:
     properties:
-      limit:
-        type: integer
-      page:
-        type: integer
-      results:
-        items:
-          $ref: '#/definitions/movies.MovieDetails'
-        type: array
-      total:
-        type: integer
-    type: object
-  movies.MovieDetails:
-    properties:
-      location:
+      backdrop_path:
         type: string
-      metadata:
-        $ref: '#/definitions/movies.MovieMetadata'
-      tmdb_id:
+      id:
         type: integer
+      name:
+        type: string
+      poster_path:
+        type: string
     type: object
-  movies.MovieMetadata:
+  models.MovieMetadata:
     properties:
       adult:
         type: boolean
       backdrop_path:
         type: string
-      belongs_to_collection:
-        $ref: '#/definitions/movies.TMDbBelongsToCollection'
       genres:
         items:
-          $ref: '#/definitions/movies.TMDbGenre'
+          $ref: '#/definitions/models.TMDbGenre'
         type: array
       homepage:
         type: string
@@ -124,7 +124,7 @@ definitions:
         type: integer
       spoken_languages:
         items:
-          $ref: '#/definitions/movies.TMDbSpokenLanguage'
+          $ref: '#/definitions/models.TMDbSpokenLanguage'
         type: array
       status:
         type: string
@@ -139,25 +139,25 @@ definitions:
       vote_count:
         type: integer
     type: object
-  movies.TMDbBelongsToCollection:
+  models.MovieWithFiles:
     properties:
-      backdrop_path:
+      belongs_to_collection:
+        $ref: '#/definitions/models.BelongsToCollection'
+      location:
         type: string
+      metadata:
+        $ref: '#/definitions/models.MovieMetadata'
+      tmdb_id:
+        type: integer
+    type: object
+  models.TMDbGenre:
+    properties:
       id:
         type: integer
       name:
         type: string
-      poster_path:
-        type: string
     type: object
-  movies.TMDbGenre:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
-  movies.TMDbSpokenLanguage:
+  models.TMDbSpokenLanguage:
     properties:
       iso_639_1:
         type: string
@@ -198,7 +198,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/movies.ListsResponse'
+            $ref: '#/definitions/handlers.ListsResponse'
         "400":
           description: Bad Request
           schema:
