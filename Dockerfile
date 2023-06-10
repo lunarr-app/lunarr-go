@@ -25,8 +25,8 @@ WORKDIR /app
 # Copy the binary from the builder stage
 COPY --from=builder /app/lunarr .
 
-# Expose default port
+# Expose the port
 EXPOSE 3000
 
-# Run the application
-CMD ["./lunarr"]
+# Run the application with the specified host and port
+CMD ["./lunarr", "-host", "0.0.0.0", "-port", "3000"]
