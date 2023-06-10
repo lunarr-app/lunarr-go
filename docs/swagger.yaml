@@ -1,9 +1,30 @@
 basePath: /
+definitions:
+  handlers.ResponseHello:
+    properties:
+      hello:
+        type: string
+    type: object
 host: 127.0.0.1:3000
 info:
   contact: {}
   description: Swagger for Lunarr API endpoints
   title: Lunarr API
   version: "1.0"
-paths: {}
+paths:
+  /hello:
+    get:
+      consumes:
+      - application/json
+      description: Hello
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHello'
+      summary: Hello
+      tags:
+      - root
 swagger: "2.0"
