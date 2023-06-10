@@ -23,7 +23,7 @@ jobs:
         run: docker run -d -p 3000:3000 --name lunarr-container lunarr-app
 
       - name: Wait for container to start
-        run: sleep 15s
+        run: sleep 5s
 
       - name: Send curl request
         run: curl http://127.0.0.1:3000/hello
