@@ -16,29 +16,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api": {
-            "get": {
-                "description": "Middleware to authenticate API requests with an API key",
-                "summary": "Authenticate API",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "API Key",
-                        "name": "x-api-key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/movies": {
             "get": {
                 "description": "Get a list of movies based on the search query and pagination parameters.",
@@ -53,6 +30,13 @@ const docTemplate = `{
                 ],
                 "summary": "Get Movie Lists",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key",
+                        "name": "x-api-key",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "default": 1,

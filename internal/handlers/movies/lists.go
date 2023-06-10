@@ -17,6 +17,7 @@ import (
 // @Tags movies
 // @Accept json
 // @Produce json
+// @Param x-api-key header string true "API Key"
 // @Param page query integer false "Page number" default(1)
 // @Param limit query integer false "Number of movies per page" default(20)
 // @Success 200 {object} ListsResponse

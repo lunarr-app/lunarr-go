@@ -9,13 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Authenticate middleware checks if a valid API key is provided in the header
-// and if it belongs to a valid user in the database
-// @Summary Authenticate API
-// @Description Middleware to authenticate API requests with an API key
-// @Param x-api-key header string true "API Key"
-// @Failure 401 {object} handlers.ErrorResponse
-// @Router /api [get]
 func AuthenticateAPI(ctx *fiber.Ctx) error {
 	// Get the API key from the header
 	apiKey := ctx.Get("x-api-key")

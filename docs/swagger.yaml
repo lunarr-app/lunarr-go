@@ -171,27 +171,17 @@ info:
   title: Lunarr API
   version: "1.0"
 paths:
-  /api:
-    get:
-      description: Middleware to authenticate API requests with an API key
-      parameters:
-      - description: API Key
-        in: header
-        name: x-api-key
-        required: true
-        type: string
-      responses:
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Authenticate API
   /api/movies:
     get:
       consumes:
       - application/json
       description: Get a list of movies based on the search query and pagination parameters.
       parameters:
+      - description: API Key
+        in: header
+        name: x-api-key
+        required: true
+        type: string
       - default: 1
         description: Page number
         in: query
