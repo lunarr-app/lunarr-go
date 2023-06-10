@@ -14,8 +14,18 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
+// @Summary User Signup
+// @Description Creates a new user account.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param userReq body UserSignup true "User Signup Request"
+// @Success 201 {object} UserSignupResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /auth/signup [post]
 func SignupHandler(c *fiber.Ctx) error {
-	var userReq models.UserSignup
+	var userReq UserSignup
 	if err := c.BodyParser(&userReq); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),

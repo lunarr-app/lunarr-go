@@ -14,19 +14,6 @@ const (
 	UserRoleSubscriber UserRole = "subscriber"
 )
 
-type UserLogin struct {
-	Username string `json:"username" validate:"required,min=2,max=16,alphanum"`
-	Password string `json:"password" validate:"required,min=6,max=32"`
-}
-
-type UserSignup struct {
-	Displayname string `json:"displayname" validate:"required,min=1,max=48"`
-	Username    string `json:"username" validate:"required,min=2,max=16,alphanum"`
-	Email       string `json:"email" validate:"required,email"`
-	Password    string `json:"password" validate:"required,min=6,max=32"`
-	Sex         string `json:"sex,omitempty" validate:"oneof=male female unknown"`
-}
-
 type UserAccounts struct {
 	gorm.Model
 	Displayname   string       `gorm:"column:displayname;not null;size:48" json:"displayname"`

@@ -1,5 +1,68 @@
 basePath: /
 definitions:
+  auth.ErrorResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  auth.UserLogin:
+    properties:
+      password:
+        maxLength: 32
+        minLength: 6
+        type: string
+      username:
+        maxLength: 16
+        minLength: 2
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  auth.UserLoginResponse:
+    properties:
+      api_key:
+        type: string
+      status:
+        type: string
+    type: object
+  auth.UserSignup:
+    properties:
+      displayname:
+        maxLength: 48
+        minLength: 1
+        type: string
+      email:
+        type: string
+      password:
+        maxLength: 32
+        minLength: 6
+        type: string
+      sex:
+        enum:
+        - male
+        - female
+        - unknown
+        type: string
+      username:
+        maxLength: 16
+        minLength: 2
+        type: string
+    required:
+    - displayname
+    - email
+    - password
+    - username
+    type: object
+  auth.UserSignupResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: integer
+    type: object
   handlers.ResponseHello:
     properties:
       hello:
@@ -12,6 +75,62 @@ info:
   title: Lunarr API
   version: "1.0"
 paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login
+      parameters:
+      - description: Login Request
+        in: body
+        name: loginReq
+        required: true
+        schema:
+          $ref: '#/definitions/auth.UserLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.UserLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account.
+      parameters:
+      - description: User Signup Request
+        in: body
+        name: userReq
+        required: true
+        schema:
+          $ref: '#/definitions/auth.UserSignup'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.UserSignupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: User Signup
+      tags:
+      - auth
   /hello:
     get:
       consumes:
