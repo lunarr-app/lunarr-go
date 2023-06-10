@@ -41,14 +41,8 @@ func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 		TMDbID:   int32(movie.ID),
 		Location: path,
 		Metadata: models.MovieMetadata{
-			Adult:        movie.Adult,
-			BackdropPath: movie.BackdropPath,
-			BelongsToCollection: models.TMDbBelongsToCollection{
-				ID:           int64(movie.BelongsToCollection.ID),
-				Name:         movie.BelongsToCollection.Name,
-				PosterPath:   movie.BelongsToCollection.PosterPath,
-				BackdropPath: movie.BelongsToCollection.BackdropPath,
-			},
+			Adult:            movie.Adult,
+			BackdropPath:     movie.BackdropPath,
 			Genres:           []models.TMDbGenre{},
 			Homepage:         movie.Homepage,
 			IMDbID:           movie.IMDbID,
@@ -68,13 +62,19 @@ func InsertMovie(movie *TMDb.MovieDetails, path string) error {
 			VoteAverage:      movie.VoteAverage,
 			VoteCount:        movie.VoteCount,
 		},
+		BelongsToCollection: models.BelongsToCollection{
+			ID:           int64(movie.BelongsToCollection.ID),
+			Name:         movie.BelongsToCollection.Name,
+			PosterPath:   movie.BelongsToCollection.PosterPath,
+			BackdropPath: movie.BelongsToCollection.BackdropPath,
+		},
 	}
 
 	// Convert genres to MovieGenre slice
 	for _, genre := range movie.Genres {
 		movieWithFiles.Metadata.Genres = append(movieWithFiles.Metadata.Genres, models.TMDbGenre{
-			ID:   int64(genre.ID),
-			Name: genre.Name,
+			GenreID: int64(genre.ID),
+			Name:    genre.Name,
 		})
 	}
 

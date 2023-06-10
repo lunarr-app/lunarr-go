@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	tmdb "github.com/lunarr-app/golang-tmdb"
 	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
@@ -49,7 +48,7 @@ func ListsHandler(c *fiber.Ctx) error {
 	// If no movies found, return an empty response
 	if totalMovies == 0 {
 		return c.Status(http.StatusOK).JSON(fiber.Map{
-			"results": []tmdb.MovieDetails{},
+			"results": []models.MovieWithFiles{},
 			"limit":   query.Limit,
 			"page":    query.Page,
 			"total":   0,
@@ -57,9 +56,9 @@ func ListsHandler(c *fiber.Ctx) error {
 	}
 
 	// Find movies in the database based on query and pagination
-	var movieList []tmdb.MovieDetails
+	var movieList []models.MovieWithFiles
 	err = db.GormDB.Scopes(searchQuery).
-		Order("title").
+		Order("tmdb_id").
 		Limit(query.Limit).
 		Offset((query.Page - 1) * query.Limit).
 		Find(&movieList).Error
