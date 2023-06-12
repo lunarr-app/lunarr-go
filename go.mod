@@ -8,7 +8,7 @@ require (
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/gofiber/fiber/v2 v2.46.0
 	github.com/gofiber/swagger v0.1.12
-	github.com/gofiber/template/handlebars/v2 v2.1.2
+	github.com/gofiber/template/handlebars/v2 v2.1.3
 	github.com/lunarr-app/golang-tmdb v1.5.1
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.4
