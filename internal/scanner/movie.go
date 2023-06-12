@@ -3,7 +3,7 @@ package scanner
 import (
 	"strconv"
 
-	PTN "github.com/middelink/go-parse-torrent-name"
+	PTN "github.com/Saoneth/go-parse-torrent-name"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"

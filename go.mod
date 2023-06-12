@@ -3,13 +3,13 @@ module github.com/lunarr-app/lunarr-go
 go 1.20
 
 require (
+	github.com/Saoneth/go-parse-torrent-name v0.0.0-20201105190658-d8aed5bad934
 	github.com/glebarez/sqlite v1.8.0
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/gofiber/fiber/v2 v2.46.0
 	github.com/gofiber/swagger v0.1.12
 	github.com/gofiber/template/handlebars/v2 v2.1.2
 	github.com/lunarr-app/golang-tmdb v1.5.1
-	github.com/middelink/go-parse-torrent-name v0.0.0-20190301154245-3ff4efacd4c4
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.4
 	github.com/swaggo/swag v1.16.1
