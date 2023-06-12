@@ -13,4 +13,7 @@ func InitLogger() {
 	// Set up logger
 	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.DateTime}
 	Logger = zerolog.New(output).With().Timestamp().Logger()
+
+	// Set log level to info
+	Logger = Logger.Level(zerolog.InfoLevel)
 }

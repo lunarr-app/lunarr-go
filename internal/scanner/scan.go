@@ -25,12 +25,12 @@ func ScanMediaDirectory(directory string) {
 		filename := filepath.Base(path)
 
 		if !IsValidVideoFile(filename) {
-			util.Logger.Warn().Str("filename", filename).Msg("Invalid video file, skipping")
+			util.Logger.Debug().Str("filename", filename).Msg("Invalid video file, skipping")
 			return nil
 		}
 
 		if db.CheckMovieExists(path) {
-			util.Logger.Info().Str("filename", filename).Msg("Movie already exists in the database")
+			util.Logger.Debug().Str("filename", filename).Msg("Movie already exists in the database")
 			return nil
 		}
 
@@ -46,8 +46,6 @@ func ScanMediaDirectory(directory string) {
 		isMovie := tor.Year >= 1888 && tor.Season == 0 && tor.Episode == 0
 		if isMovie {
 			processMovie(filename, tor, path)
-		} else {
-			util.Logger.Info().Str("filename", filename).Msg("Not a movie, skipping")
 		}
 
 		return nil

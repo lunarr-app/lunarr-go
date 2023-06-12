@@ -24,7 +24,7 @@ func processMovie(filename string, tor *PTN.TorrentInfo, path string) {
 	}
 
 	if movies.TotalResults == 0 {
-		util.Logger.Info().Str("filename", filename).Msg("No matching movies found on TMDb")
+		util.Logger.Warn().Str("filename", filename).Msg("No matching movies found on TMDb")
 		return
 	}
 
