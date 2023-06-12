@@ -49,22 +49,11 @@ func main() {
 
 	// Scan all movie locations if they exist
 	if len(settings.MovieLocations) > 0 {
-		// Create a channel to wait for all goroutines to finish
-		done := make(chan struct{})
-
 		for _, movieLocation := range settings.MovieLocations {
 			util.Logger.Info().Str("location", movieLocation).Msg("Scanning movie location")
 
 			// Start a goroutine to run ScanMediaDirectory in the background
-			go func(location string) {
-				scanner.ScanMediaDirectory(location)
-				done <- struct{}{} // Signal completion of the goroutine
-			}(movieLocation)
-		}
-
-		// Wait for all goroutines to finish
-		for range settings.MovieLocations {
-			<-done
+			go scanner.ScanMediaDirectory(movieLocation)
 		}
 	}
 
