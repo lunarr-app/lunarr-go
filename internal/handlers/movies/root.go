@@ -3,6 +3,7 @@ package movies
 import (
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
@@ -27,6 +28,15 @@ import (
 func MovieRootHandler(c *fiber.Ctx) error {
 	var query models.SearchQueryParams
 	if err := c.QueryParser(&query); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"status":  http.StatusText(http.StatusBadRequest),
+			"message": err.Error(),
+		})
+	}
+
+	// Validate search query input
+	validate := validator.New()
+	if err := validate.Struct(query); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": err.Error(),
