@@ -32,20 +32,35 @@ func TestUserGORM(t *testing.T) {
 	err := InsertUser(&testUser)
 	assert.NoError(t, err)
 
-	// Retrieve the test user from the database
-	retrievedUser, err := FindUserByUsername(testUser.Username)
+	// Retrieve the test user by username from the database
+	retrievedUserByUsername, err := FindUserByUsername(testUser.Username)
 	assert.NoError(t, err)
-	assert.Equal(t, testUser.Displayname, retrievedUser.Displayname)
-	assert.Equal(t, testUser.Username, retrievedUser.Username)
-	assert.Equal(t, testUser.Email, retrievedUser.Email)
-	assert.Empty(t, retrievedUser.Password)
-	assert.Equal(t, testUser.Sex, retrievedUser.Sex)
-	assert.Equal(t, testUser.Role, retrievedUser.Role)
-	assert.Equal(t, testUser.APIKey, retrievedUser.APIKey)
-	assert.WithinDuration(t, testUser.CreatedAt, retrievedUser.CreatedAt, time.Second)
-	assert.WithinDuration(t, testUser.UpdatedAt, retrievedUser.UpdatedAt, time.Second)
-	assert.WithinDuration(t, testUser.LastSeenAt, retrievedUser.LastSeenAt, time.Second)
-	assert.Equal(t, testUser.CurrentStatus, retrievedUser.CurrentStatus)
+	assert.Equal(t, testUser.Displayname, retrievedUserByUsername.Displayname)
+	assert.Equal(t, testUser.Username, retrievedUserByUsername.Username)
+	assert.Equal(t, testUser.Email, retrievedUserByUsername.Email)
+	assert.Empty(t, retrievedUserByUsername.Password)
+	assert.Equal(t, testUser.Sex, retrievedUserByUsername.Sex)
+	assert.Equal(t, testUser.Role, retrievedUserByUsername.Role)
+	assert.Equal(t, testUser.APIKey, retrievedUserByUsername.APIKey)
+	assert.WithinDuration(t, testUser.CreatedAt, retrievedUserByUsername.CreatedAt, time.Second)
+	assert.WithinDuration(t, testUser.UpdatedAt, retrievedUserByUsername.UpdatedAt, time.Second)
+	assert.WithinDuration(t, testUser.LastSeenAt, retrievedUserByUsername.LastSeenAt, time.Second)
+	assert.Equal(t, testUser.CurrentStatus, retrievedUserByUsername.CurrentStatus)
+
+	// Retrieve the test user by email from the database
+	retrievedUserByEmail, err := FindUserByEmailOrUsername(testUser.Email, "")
+	assert.NoError(t, err)
+	assert.Equal(t, testUser.Displayname, retrievedUserByEmail.Displayname)
+	assert.Equal(t, testUser.Username, retrievedUserByEmail.Username)
+	assert.Equal(t, testUser.Email, retrievedUserByEmail.Email)
+	assert.Empty(t, retrievedUserByEmail.Password)
+	assert.Equal(t, testUser.Sex, retrievedUserByEmail.Sex)
+	assert.Equal(t, testUser.Role, retrievedUserByEmail.Role)
+	assert.Equal(t, testUser.APIKey, retrievedUserByEmail.APIKey)
+	assert.WithinDuration(t, testUser.CreatedAt, retrievedUserByEmail.CreatedAt, time.Second)
+	assert.WithinDuration(t, testUser.UpdatedAt, retrievedUserByEmail.UpdatedAt, time.Second)
+	assert.WithinDuration(t, testUser.LastSeenAt, retrievedUserByEmail.LastSeenAt, time.Second)
+	assert.Equal(t, testUser.CurrentStatus, retrievedUserByEmail.CurrentStatus)
 
 	// Update the test user in the database
 	updates := map[string]interface{}{

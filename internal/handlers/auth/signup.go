@@ -43,8 +43,8 @@ func SignupHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check if the username already exists in the database
-	existingUser, err := db.FindUserByUsername(userReq.Username)
+	// Check if the email or username already exists in the database
+	existingUser, err := db.FindUserByEmailOrUsername(userReq.Email, userReq.Username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// The username is available, continue with user creation
@@ -61,7 +61,7 @@ func SignupHandler(c *fiber.Ctx) error {
 	if existingUser != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
-			"message": "Username already exists",
+			"message": "Username or email already exists",
 		})
 	}
 

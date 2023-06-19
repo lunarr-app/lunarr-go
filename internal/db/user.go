@@ -58,6 +58,19 @@ func FindUserByUsername(username string) (*models.UserAccounts, error) {
 	return &user, nil
 }
 
+// FindUserByEmailOrUsername finds a user in the users table by email or username
+func FindUserByEmailOrUsername(email string, username string) (*models.UserAccounts, error) {
+	var user models.UserAccounts
+	err := GormDB.Select("displayname, username, email, sex, role, api_key, created_at, updated_at, last_seen_at, current_status").
+		Where("email = ? OR username = ?", email, username).
+		First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 // GetUserByAPIKey returns a user from the users table by API key
 func GetUserByAPIKey(apiKey string) (*models.UserAccounts, error) {
 	var user models.UserAccounts
