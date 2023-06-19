@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/template/handlebars/v2"
 
@@ -56,6 +57,9 @@ func New() *fiber.App {
 
 	// Register the custom logger as middleware
 	app.Use(customLogger)
+
+	// Enable CORS with default options
+	app.Use(cors.New())
 
 	// Swagger UI
 	app.Get("/swagger/*", swagger.HandlerDefault)
