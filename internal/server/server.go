@@ -92,7 +92,6 @@ func New() *fiber.App {
 	fe.Use(router.InternalServerErrorPage)
 
 	// Register authenticated web routes
-	fe.Use(middleware.AuthenticateWeb)
 	fe.Get("/movies", router.MoviePage)
 	fe.Get("/movies/:tmdb_id", router.MovieDetailsPage)
 
