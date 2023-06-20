@@ -2,7 +2,7 @@
 
 Lunarr is a self-hosted media streaming platform for movies and TV shows, aiming to provide an alternative to Plex. This project is currently a work in progress, developed solely during my free time. The platform will enable users to easily stream media files from their own servers or cloud storage, with a focus on simplicity and user-friendliness.
 
-![Draft Screenshot](https://github.com/lunarr-app/lunarr-go/assets/14138401/ea195b36-b33e-4417-b50e-f8907157cdd4)
+![Draft Screenshot](https://github.com/lunarr-app/lunarr-go/assets/14138401/15339179-2388-40ee-8270-61c085faa134)
 
 ## Roadmap
 
