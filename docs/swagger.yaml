@@ -250,6 +250,14 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: Search by movie title
+        in: query
+        name: title
+        type: string
+      - description: Search by movie release year
+        in: query
+        name: year
+        type: string
       produces:
       - application/json
       responses:

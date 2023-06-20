@@ -1,6 +1,8 @@
 package util
 
 import (
+	"strings"
+
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"gorm.io/gorm"
 )
@@ -9,19 +11,12 @@ import (
 // based on the provided SearchQueryParams.
 func BuildSearchQueryMovies(query *models.SearchQueryParams) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		if query.Search != "" {
-			db = db.Where("title ILIKE ?", "%"+query.Search+"%")
+		if query.Title != "" {
+			db = db.Where("LOWER(metadata_title) LIKE ?", "%"+strings.ToLower(query.Title)+"%")
 		}
 
-		for _, filter := range query.Filters {
-			switch filter.Field {
-			case "title":
-				db = db.Where("title ILIKE ?", "%"+filter.Value+"%")
-			case "genres":
-				db = db.Where("genres @> ARRAY[?]", filter.Value)
-			case "year":
-				db = db.Where("release_date::text ILIKE ?", filter.Value+"%")
-			}
+		if query.Year != "" {
+			db = db.Where("metadata_release_date LIKE ?", query.Year+"%")
 		}
 
 		return db

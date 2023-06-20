@@ -21,6 +21,8 @@ import (
 // @Param x-api-key header string true "API Key"
 // @Param page query integer false "Page number" default(1)
 // @Param limit query integer false "Number of movies per page" default(20)
+// @Param title query string false "Search by movie title"
+// @Param year query string false "Search by movie release year"
 // @Success 200 {object} schema.ListsResponse
 // @Failure 400 {object} schema.ErrorResponse
 // @Failure 500 {object} schema.ErrorResponse

@@ -50,6 +50,18 @@ const docTemplate = `{
                         "description": "Number of movies per page",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by movie title",
+                        "name": "title",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by movie release year",
+                        "name": "year",
+                        "in": "query"
                     }
                 ],
                 "responses": {
