@@ -3,7 +3,6 @@ package movies
 import (
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
@@ -19,10 +18,11 @@ import (
 // @Accept json
 // @Produce json
 // @Param x-api-key header string true "API Key"
-// @Param page query integer false "Page number" default(1)
-// @Param limit query integer false "Number of movies per page" default(20)
+// @Param page query integer true "Page number" default(1)
+// @Param limit query integer true "Number of movies per page" default(20)
 // @Param title query string false "Search by movie title"
 // @Param year query string false "Search by movie release year"
+// @Param sortBy query string false "Sort by: recent, latest, popular" default("recent")
 // @Success 200 {object} schema.ListsResponse
 // @Failure 400 {object} schema.ErrorResponse
 // @Failure 500 {object} schema.ErrorResponse
@@ -37,8 +37,7 @@ func MovieRootHandler(c *fiber.Ctx) error {
 	}
 
 	// Validate search query input
-	validate := validator.New()
-	if err := validate.Struct(query); err != nil {
+	if err := query.Validate(); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusBadRequest),
 			"message": err.Error(),
@@ -71,7 +70,6 @@ func MovieRootHandler(c *fiber.Ctx) error {
 	// Find movies in the database based on query and pagination
 	var movieList []models.MovieWithFiles
 	err = db.GormDB.Scopes(searchQuery).
-		Order("tmdb_id").
 		Limit(query.Limit).
 		Offset((query.Page - 1) * query.Limit).
 		Find(&movieList).Error

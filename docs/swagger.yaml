@@ -244,11 +244,13 @@ paths:
         description: Page number
         in: query
         name: page
+        required: true
         type: integer
       - default: 20
         description: Number of movies per page
         in: query
         name: limit
+        required: true
         type: integer
       - description: Search by movie title
         in: query
@@ -257,6 +259,11 @@ paths:
       - description: Search by movie release year
         in: query
         name: year
+        type: string
+      - default: '"recent"'
+        description: 'Sort by: recent, latest, popular'
+        in: query
+        name: sortBy
         type: string
       produces:
       - application/json

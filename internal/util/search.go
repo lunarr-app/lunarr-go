@@ -19,6 +19,17 @@ func BuildSearchQueryMovies(query *models.SearchQueryParams) func(db *gorm.DB) *
 			db = db.Where("metadata_release_date LIKE ?", query.Year+"%")
 		}
 
+		switch query.SortBy {
+		case "recent":
+			db = db.Order("created_at DESC")
+		case "latest":
+			db = db.Order("metadata_release_date DESC")
+		case "popular":
+			db = db.Order("metadata_vote_average DESC, metadata_vote_count DESC")
+		default:
+			db = db.Order("tmdb_id ASC")
+		}
+
 		return db
 	}
 }

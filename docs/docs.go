@@ -42,14 +42,16 @@ const docTemplate = `{
                         "default": 1,
                         "description": "Page number",
                         "name": "page",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     },
                     {
                         "type": "integer",
                         "default": 20,
                         "description": "Number of movies per page",
                         "name": "limit",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     },
                     {
                         "type": "string",
@@ -61,6 +63,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Search by movie release year",
                         "name": "year",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "\"recent\"",
+                        "description": "Sort by: recent, latest, popular",
+                        "name": "sortBy",
                         "in": "query"
                     }
                 ],
