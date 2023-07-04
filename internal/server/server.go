@@ -106,6 +106,7 @@ func New() *fiber.App {
 
 	// Register authenticated API routes
 	api.Get("/movies", movies.MovieRootHandler)
+	api.Get("/movies/:tmdb_id", movies.MovieByIDHandler)
 	api.Get("/movies/:tmdb_id/stream", movies.MovieStreamHandler)
 
 	api.Get("/users", middleware.OnlyAdmin, users.UserRootHandler)
