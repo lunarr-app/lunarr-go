@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/Saoneth/go-parse-torrent-name v0.0.0-20201105190658-d8aed5bad934
-	github.com/glebarez/sqlite v1.8.0
+	github.com/glebarez/sqlite v1.9.0
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/gofiber/fiber/v2 v2.47.0
 	github.com/gofiber/swagger v0.1.12
@@ -24,7 +24,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
-	github.com/glebarez/go-sqlite v1.21.1 // indirect
+	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/spec v0.20.9 // indirect
