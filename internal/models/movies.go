@@ -1,11 +1,7 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
-
 type MovieWithFiles struct {
-	gorm.Model          `swaggerignore:"true"`
+	GormModel
 	TMDbID              int32               `gorm:"column:tmdb_id" json:"tmdb_id"`
 	Location            string              `gorm:"column:location" json:"location"`
 	Metadata            MovieMetadata       `gorm:"embedded;embeddedPrefix:metadata_" json:"metadata"`

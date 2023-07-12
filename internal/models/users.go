@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type UserRole string
@@ -15,7 +13,7 @@ const (
 )
 
 type UserAccounts struct {
-	gorm.Model    `swaggerignore:"true"`
+	GormModel
 	Displayname   string       `gorm:"column:displayname;not null;size:48" json:"displayname"`
 	Username      string       `gorm:"column:username;uniqueIndex:idx_username_ua;not null;size:16" json:"username"`
 	Email         string       `gorm:"column:email;uniqueIndex:idx_email_ua;not null;size:128" json:"email"`

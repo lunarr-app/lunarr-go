@@ -1,11 +1,7 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
-
 type AppSettings struct {
-	gorm.Model
+	GormModel
 	MovieLocations  StringArray        `json:"movie_locations" gorm:"column:movie_locations;type:text[]"`
 	TVShowLocations StringArray        `json:"tv_show_locations" gorm:"column:tv_show_locations;type:text[]"`
 	EmailSMTP       *EmailSMTPSettings `json:"email_smtp" gorm:"embedded"`

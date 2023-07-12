@@ -486,6 +486,12 @@ const docTemplate = `{
                 "belongs_to_collection": {
                     "$ref": "#/definitions/models.BelongsToCollection"
                 },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
                 "location": {
                     "type": "string"
                 },
@@ -494,6 +500,9 @@ const docTemplate = `{
                 },
                 "tmdb_id": {
                     "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -511,10 +520,16 @@ const docTemplate = `{
         "models.TMDbGenre": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -522,10 +537,19 @@ const docTemplate = `{
         "models.TMDbSpokenLanguage": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
                 "iso_639_1": {
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -550,6 +574,9 @@ const docTemplate = `{
                 "api_key": {
                     "type": "string"
                 },
+                "created_at": {
+                    "type": "string"
+                },
                 "current_status": {
                     "type": "string"
                 },
@@ -558,6 +585,9 @@ const docTemplate = `{
                 },
                 "email": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "last_seen_at": {
                     "type": "string"
@@ -572,6 +602,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/models.UserSettings"
                 },
                 "sex": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 },
                 "username": {

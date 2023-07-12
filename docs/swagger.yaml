@@ -67,12 +67,18 @@ definitions:
     properties:
       belongs_to_collection:
         $ref: '#/definitions/models.BelongsToCollection'
+      created_at:
+        type: string
+      id:
+        type: integer
       location:
         type: string
       metadata:
         $ref: '#/definitions/models.MovieMetadata'
       tmdb_id:
         type: integer
+      updated_at:
+        type: string
     type: object
   models.SubtitleSettings:
     properties:
@@ -83,16 +89,26 @@ definitions:
     type: object
   models.TMDbGenre:
     properties:
+      created_at:
+        type: string
       id:
         type: integer
       name:
         type: string
+      updated_at:
+        type: string
     type: object
   models.TMDbSpokenLanguage:
     properties:
+      created_at:
+        type: string
+      id:
+        type: integer
       iso_639_1:
         type: string
       name:
+        type: string
+      updated_at:
         type: string
     type: object
   models.TranscodingSettings:
@@ -108,12 +124,16 @@ definitions:
     properties:
       api_key:
         type: string
+      created_at:
+        type: string
       current_status:
         type: string
       displayname:
         type: string
       email:
         type: string
+      id:
+        type: integer
       last_seen_at:
         type: string
       password:
@@ -123,6 +143,8 @@ definitions:
       settings:
         $ref: '#/definitions/models.UserSettings'
       sex:
+        type: string
+      updated_at:
         type: string
       username:
         type: string

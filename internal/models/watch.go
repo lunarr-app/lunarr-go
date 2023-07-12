@@ -2,12 +2,10 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type WatchHistoryMovies struct {
-	gorm.Model
+	GormModel
 	UserID         string    `json:"user_id" gorm:"column:user_id;index;not null"`
 	TmdbID         string    `json:"tmdb_id" gorm:"column:tmdb_id;index;not null"`
 	WatchCount     int       `json:"watch_count" gorm:"column:watch_count"`
