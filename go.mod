@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/Saoneth/go-parse-torrent-name v0.0.0-20201105190658-d8aed5bad934
 	github.com/glebarez/sqlite v1.9.0
-	github.com/go-playground/validator/v10 v10.14.1
+	github.com/go-playground/validator/v10 v10.15.0
 	github.com/gofiber/fiber/v2 v2.48.0
 	github.com/gofiber/swagger v0.1.12
 	github.com/gofiber/template/handlebars/v2 v2.1.5
