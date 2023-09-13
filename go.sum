@@ -53,8 +53,8 @@ github.com/gofiber/swagger v0.1.13 h1:e7tMH/y34HIMklQ2+uv64Ai3E8TWCgbZyscIx+IzIn
 github.com/gofiber/swagger v0.1.13/go.mod h1:VtNHZdI5ksFlIR1R0vCcCX3/ruT8p9xNRX44958rsao=
 github.com/gofiber/template v1.8.2 h1:PIv9s/7Uq6m+Fm2MDNd20pAFFKt5wWs7ZBd8iV9pWwk=
 github.com/gofiber/template v1.8.2/go.mod h1:bs/2n0pSNPOkRa5VJ8zTIvedcI/lEYxzV3+YPXdBvq8=
-github.com/gofiber/template/handlebars/v2 v2.1.5 h1:YP5mp4Gd+a4AB26zEH5R+z2Ryfvghpjqw7oA+8UIdIM=
-github.com/gofiber/template/handlebars/v2 v2.1.5/go.mod h1:UBLPDISd5DLuwbyCgRm2GaAb+8Q5sKtdh+aJYh5C890=
+github.com/gofiber/template/handlebars/v2 v2.1.6 h1:+z9S2/L3RZueHpRtjxyMGpNHKIMUYkvyVEGHQrau+Po=
+github.com/gofiber/template/handlebars/v2 v2.1.6/go.mod h1:Kes9qTj4iD73xj1bq94HjJHNqhUhuyWpLvs9fyH5aMs=
 github.com/gofiber/utils v1.1.0 h1:vdEBpn7AzIUJRhe+CiTOJdUcTg4Q9RK+pEa0KPbLdrM=
 github.com/gofiber/utils v1.1.0/go.mod h1:poZpsnhBykfnY1Mc0KeEa6mSHrS3dV0+oBWyeQmb2e0=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
