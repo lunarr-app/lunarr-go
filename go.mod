@@ -7,7 +7,7 @@ require (
 	github.com/glebarez/sqlite v1.10.0
 	github.com/go-playground/validator/v10 v10.17.0
 	github.com/gofiber/fiber/v2 v2.52.0
-	github.com/gofiber/swagger v0.1.14
+	github.com/gofiber/swagger v1.0.0
 	github.com/gofiber/template/handlebars/v2 v2.1.7
 	github.com/lunarr-app/golang-tmdb v1.5.1
 	github.com/rs/zerolog v1.31.0
