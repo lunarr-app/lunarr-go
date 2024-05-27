@@ -10,7 +10,7 @@ require (
 	github.com/gofiber/swagger v1.0.0
 	github.com/gofiber/template/handlebars/v2 v2.1.9
 	github.com/lunarr-app/golang-tmdb v1.5.1
-	github.com/rs/zerolog v1.32.0
+	github.com/rs/zerolog v1.33.0
 	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/swag v1.16.3
 	golang.org/x/crypto v0.22.0
