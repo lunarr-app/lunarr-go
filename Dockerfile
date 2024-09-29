@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.20-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 
 # Download the dependencies
-RUN go mod download
+RUN go mod download && go mod verify
 
 # Copy the rest of the source code
 COPY . .
@@ -25,8 +25,12 @@ WORKDIR /app
 # Copy the binary from the builder stage
 COPY --from=builder /app/lunarr .
 
-# Expose the port
-EXPOSE 3000
+# Set environment variables for host and port
+ENV LUNARR_SERVER_HOST="0.0.0.0"
+ENV LUNARR_SERVER_PORT="8484"
 
-# Run the application with the specified host and port
-CMD ["./lunarr", "-host", "0.0.0.0", "-port", "3000"]
+# Expose the port
+EXPOSE 8484
+
+# Run the application (no command-line args needed, uses env vars)
+CMD ["./lunarr"]
