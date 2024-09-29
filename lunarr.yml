@@ -1,0 +1,20 @@
+# Lunarr configuration file
+
+server:
+  # The IP address or hostname the server binds to.
+  # Default is "127.0.0.1" (localhost).
+  host: "0.0.0.0"
+
+  # The port number the server listens on.
+  # Default is 8484.
+  port: 8484
+
+tmdb:
+  # The API key for accessing TMDb API.
+  # If not provided, a shared public read-only token will be used.
+  # It's recommended to generate your own API key (free) for more reliable access.
+  api_key: ""
+
+# Path to the directory where the app stores data.
+# Default is the user config directory if left blank.
+app_data_dir: ""
