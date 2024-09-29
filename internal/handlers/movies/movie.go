@@ -5,27 +5,31 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lunarr-app/lunarr-go/internal/db"
+	"github.com/lunarr-app/lunarr-go/internal/schema"
 	"gorm.io/gorm"
 )
 
 // @Summary Get Movie Details by ID
 // @Description Get movie details by ID.
 // @Tags movies
+// @Security ApiKeyAuth
+// @Security ApiKeyQuery
 // @Accept json
 // @Produce json
 // @Param x-api-key header string true "API Key"
-// @Param id path integer true "Movie ID"
+// @Param tmdb_id path integer true "Movie ID"
 // @Success 200 {object} models.MovieWithFiles
 // @Failure 400 {object} schema.ErrorResponse
+// @Failure 404 {object} schema.ErrorResponse
 // @Failure 500 {object} schema.ErrorResponse
-// @Router /api/movies/{id} [get]
+// @Router /api/movies/{tmdb_id} [get]
 func MovieByIDHandler(c *fiber.Ctx) error {
 	// Get the movie ID from the URL parameter
 	movieID, err := c.ParamsInt("tmdb_id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": err.Error(),
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: "Invalid movie ID",
 		})
 	}
 
@@ -33,17 +37,18 @@ func MovieByIDHandler(c *fiber.Ctx) error {
 	movie, err := db.FindMovieByTmdbID(movieID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return c.Status(http.StatusNotFound).JSON(fiber.Map{
-				"status":  http.StatusText(http.StatusNotFound),
-				"message": "Movie not found",
+			return c.Status(http.StatusNotFound).JSON(schema.ErrorResponse{
+				Status:  http.StatusText(http.StatusNotFound),
+				Message: "Movie not found",
 			})
 		}
 
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": err.Error(),
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: err.Error(),
 		})
 	}
 
+	// Return the movie object
 	return c.Status(http.StatusOK).JSON(movie)
 }

@@ -15,6 +15,8 @@ import (
 // @Summary Get Movie Lists
 // @Description Get a list of movies based on the search query and pagination parameters.
 // @Tags movies
+// @Security ApiKeyAuth
+// @Security ApiKeyQuery
 // @Accept json
 // @Produce json
 // @Param x-api-key header string true "API Key"
@@ -30,17 +32,17 @@ import (
 func MovieRootHandler(c *fiber.Ctx) error {
 	var query models.SearchQueryParams
 	if err := c.QueryParser(&query); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": err.Error(),
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: err.Error(),
 		})
 	}
 
 	// Validate search query input
 	if err := query.Validate(); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": err.Error(),
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: err.Error(),
 		})
 	}
 
@@ -51,9 +53,9 @@ func MovieRootHandler(c *fiber.Ctx) error {
 	var totalMovies int64
 	err := db.GormDB.Model(&models.MovieWithFiles{}).Scopes(searchQuery).Count(&totalMovies).Error
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to count movies",
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: "Failed to count movies",
 		})
 	}
 
@@ -74,9 +76,9 @@ func MovieRootHandler(c *fiber.Ctx) error {
 		Offset((query.Page - 1) * query.Limit).
 		Find(&movieList).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to find movies",
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: "Failed to find movies",
 		})
 	}
 

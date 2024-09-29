@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lunarr-app/lunarr-go/internal/db"
+	"github.com/lunarr-app/lunarr-go/internal/schema"
 	"github.com/rs/zerolog/log"
 )
 
@@ -20,14 +21,16 @@ import (
 // @Success 200 {file} octet-stream
 // @Failure 400 {object} schema.ErrorResponse
 // @Failure 404 {object} schema.ErrorResponse
+// @Security ApiKeyAuth
+// @Security ApiKeyQuery
 // @Router /api/movies/{tmdb_id}/stream [get]
 func MovieStreamHandler(c *fiber.Ctx) error {
 	// Get the tmdb_id parameter from the request
 	tmdbID, err := c.ParamsInt("tmdb_id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": "Invalid tmdb id",
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: "Invalid tmdb id",
 		})
 	}
 
@@ -35,9 +38,9 @@ func MovieStreamHandler(c *fiber.Ctx) error {
 	movie, err := db.FindMovieByTmdbID(tmdbID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to find movie by TMDb ID")
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusNotFound),
-			"message": "Movie not found",
+		return c.Status(http.StatusNotFound).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusNotFound),
+			Message: "Movie not found",
 		})
 	}
 
