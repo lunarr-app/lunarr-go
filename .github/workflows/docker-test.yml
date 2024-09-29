@@ -14,19 +14,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Build Docker image
         run: docker build -t lunarr-app .
 
       - name: Run Docker container
-        run: docker run -d -p 3000:3000 --name lunarr-container lunarr-app
+        run: docker run -d -p 8484:8484 --name lunarr-container lunarr-app
 
       - name: Wait for container to start
         run: sleep 5s
 
       - name: Send curl request
-        run: curl http://127.0.0.1:3000/hello
+        run: curl http://127.0.0.1:8484/hello
 
       - name: Stop and remove container
         run: docker stop lunarr-container && docker rm lunarr-container
