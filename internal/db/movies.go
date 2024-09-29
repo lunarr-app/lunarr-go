@@ -1,7 +1,7 @@
 package db
 
 import (
-	TMDb "github.com/lunarr-app/golang-tmdb"
+	TMDb "github.com/cyruzin/golang-tmdb"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
 

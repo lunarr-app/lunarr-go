@@ -6,12 +6,12 @@ toolchain go1.23.1
 
 require (
 	github.com/Saoneth/go-parse-torrent-name v0.0.0-20201105190658-d8aed5bad934
+	github.com/cyruzin/golang-tmdb v1.6.7
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gofiber/swagger v1.1.0
 	github.com/gofiber/template/handlebars/v2 v2.1.10
-	github.com/lunarr-app/golang-tmdb v1.5.1
 	github.com/rs/zerolog v1.33.0
 	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/swag v1.16.3

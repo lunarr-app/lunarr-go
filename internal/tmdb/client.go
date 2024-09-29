@@ -1,7 +1,7 @@
 package tmdb
 
 import (
-	tmdb "github.com/lunarr-app/golang-tmdb"
+	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/util"
 )
@@ -21,7 +21,7 @@ func InitTMDBClient() {
 	if cfg.TMDb.APIKey != "" {
 		client, err = tmdb.Init(cfg.TMDb.APIKey)
 	} else {
-		client, err = tmdb.InitWithAccessToken(accessToken)
+		client, err = tmdb.InitV4(accessToken)
 	}
 
 	if err != nil {
