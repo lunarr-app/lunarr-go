@@ -10,10 +10,12 @@ import (
 )
 
 func AuthenticateAPI(ctx *fiber.Ctx) error {
-	// Get the API key from the header
+	// Get the API key from the header or query parameter
 	apiKey := ctx.Get("x-api-key")
+	if apiKey == "" {
+		apiKey = ctx.Query("api_key")
+	}
 
-	// Check if the API key is empty
 	if apiKey == "" {
 		return ctx.Status(http.StatusUnauthorized).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusUnauthorized),
@@ -21,7 +23,6 @@ func AuthenticateAPI(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// Get the user associated with the API key
 	user, err := db.GetUserByAPIKey(apiKey)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

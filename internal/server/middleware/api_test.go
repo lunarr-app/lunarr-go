@@ -44,8 +44,8 @@ func TestAuthenticateAPI(t *testing.T) {
 		})
 	})
 
-	// Create a test case for the scenario when a valid API key is provided
-	t.Run("Valid API Key", func(t *testing.T) {
+	// Create a test case for the scenario when a valid API key is provided via the header
+	t.Run("Valid API Key in Header", func(t *testing.T) {
 		// Perform a GET request to the protected route with a valid API key in the header
 		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
 		req.Header.Set("x-api-key", "valid-api-key")
@@ -64,9 +64,28 @@ func TestAuthenticateAPI(t *testing.T) {
 		assert.JSONEq(t, expectedBody, string(body))
 	})
 
+	// Create a test case for the scenario when a valid API key is provided via the query parameter
+	t.Run("Valid API Key in Query", func(t *testing.T) {
+		// Perform a GET request to the protected route with a valid API key in the query parameter
+		req := httptest.NewRequest(http.MethodGet, "/protected?api_key=valid-api-key", nil)
+		resp, err := app.Test(req)
+
+		// Assert that the request was successful (200 OK)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// Read the response body
+		body, err := io.ReadAll(resp.Body)
+		assert.NoError(t, err)
+
+		// Assert the response body as JSON
+		expectedBody := `{"status":"OK","message":"Protected route"}`
+		assert.JSONEq(t, expectedBody, string(body))
+	})
+
 	// Create a test case for the scenario when an empty API key is provided
 	t.Run("Empty API Key", func(t *testing.T) {
-		// Perform a GET request to the protected route without an API key in the header
+		// Perform a GET request to the protected route without an API key in the header or query
 		resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/protected", nil))
 
 		// Assert that the request was unauthorized (401 Unauthorized)
@@ -82,14 +101,33 @@ func TestAuthenticateAPI(t *testing.T) {
 		assert.JSONEq(t, expectedBody, string(body))
 	})
 
-	// Create a test case for the scenario when an invalid API key is provided
-	t.Run("Invalid API Key", func(t *testing.T) {
+	// Create a test case for the scenario when an invalid API key is provided via the header
+	t.Run("Invalid API Key in Header", func(t *testing.T) {
 		// Perform a GET request to the protected route with an invalid API key in the header
 		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
 		req.Header.Set("x-api-key", "invalid-api-key")
 		resp, err := app.Test(req)
 
-		// Assert that the request resulted in an internal server error (500 Internal Server Error)
+		// Assert that the request was unauthorized (401 Unauthorized)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+
+		// Read the response body
+		body, err := io.ReadAll(resp.Body)
+		assert.NoError(t, err)
+
+		// Assert the response body as JSON
+		expectedBody := `{"status":"Unauthorized","message":"Invalid API key"}`
+		assert.JSONEq(t, expectedBody, string(body))
+	})
+
+	// Create a test case for the scenario when an invalid API key is provided via the query parameter
+	t.Run("Invalid API Key in Query", func(t *testing.T) {
+		// Perform a GET request to the protected route with an invalid API key in the query parameter
+		req := httptest.NewRequest(http.MethodGet, "/protected?api_key=invalid-api-key", nil)
+		resp, err := app.Test(req)
+
+		// Assert that the request was unauthorized (401 Unauthorized)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 

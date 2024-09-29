@@ -24,8 +24,17 @@ import (
 // @title Lunarr API
 // @version 1.0
 // @description Swagger for Lunarr API endpoints
-// @host 127.0.0.1:3000
+
+// @host 127.0.0.1:8484
 // @BasePath /
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name x-api-key
+
+// @securityDefinitions.apikey ApiKeyQuery
+// @in query
+// @name api_key
 func New() *fiber.App {
 	// Define custom template functions
 	templateFuncs := map[string]interface{}{
