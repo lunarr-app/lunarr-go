@@ -15,3 +15,17 @@ database:
     user: "testuser"
     password: "testpassword"
     dbname: "testdb"
+
+app_settings:
+  movie_locations:
+    - "/mnt/test_movies"
+  tv_show_locations:
+    - "/mnt/test_tvshows"
+
+  email_smtp:
+    smtp_server: "smtp.test.com"
+    port: 587
+    username: "test_smtp_user"
+    password: "test_smtp_password"
+
+  new_user_signup: true

@@ -32,3 +32,23 @@ database:
     user: "postgres"
     password: "yourpassword"
     dbname: "lunarrdb"
+
+# Application settings
+app_settings:
+  # Paths where movies are stored.
+  movie_locations:
+    - "/mnt/movies"
+
+  # Paths where TV shows are stored.
+  tv_show_locations:
+    - "/mnt/tvshows"
+
+  # Email SMTP settings
+  email_smtp:
+    smtp_server: "smtp.example.com"
+    port: 587
+    username: "your_smtp_username"
+    password: "your_smtp_password"
+
+  # Enable or disable new user signup
+  new_user_signup: true

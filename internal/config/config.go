@@ -36,6 +36,19 @@ type Config struct {
 			DBName   string `koanf:"dbname"`
 		} `koanf:"postgres"`
 	} `koanf:"database"`
+	AppSettings struct {
+		MovieLocations  []string           `koanf:"movie_locations"`
+		TVShowLocations []string           `koanf:"tv_show_locations"`
+		EmailSMTP       *EmailSMTPSettings `koanf:"email_smtp"`
+		NewUserSignup   bool               `koanf:"new_user_signup"`
+	} `koanf:"app_settings"`
+}
+
+type EmailSMTPSettings struct {
+	SMTPServer string `koanf:"smtp_server"`
+	Port       int    `koanf:"port"`
+	Username   string `koanf:"username"`
+	Password   string `koanf:"password"`
 }
 
 func InitConfig() {
@@ -45,16 +58,19 @@ func InitConfig() {
 
 	// Load default configuration values
 	k.Load(confmap.Provider(map[string]interface{}{
-		"server.host":                "127.0.0.1",
-		"server.port":                8484,
-		"tmdb.api_key":               "",
-		"app_data_dir":               defaultAppDataDir,
-		"database.driver":            "sqlite", // Default to SQLite
-		"database.postgres.host":     "localhost",
-		"database.postgres.port":     5432,
-		"database.postgres.user":     "postgres",
-		"database.postgres.password": "",
-		"database.postgres.dbname":   "lunarrdb",
+		"server.host":                    "127.0.0.1",
+		"server.port":                    8484,
+		"tmdb.api_key":                   "",
+		"app_data_dir":                   defaultAppDataDir,
+		"database.driver":                "sqlite",
+		"database.postgres.host":         "localhost",
+		"database.postgres.port":         5432,
+		"database.postgres.user":         "postgres",
+		"database.postgres.password":     "",
+		"database.postgres.dbname":       "lunarrdb",
+		"app_settings.movie_locations":   []string{},
+		"app_settings.tv_show_locations": []string{},
+		"app_settings.new_user_signup":   true,
 	}, "."), nil)
 
 	// Load configuration from YAML file (if provided)
@@ -91,6 +107,20 @@ func InitConfig() {
 			return "database.postgres.password"
 		case "lunarr_database_postgres_dbname":
 			return "database.postgres.dbname"
+		case "lunarr_appsettings_movie_locations":
+			return "app_settings.movie_locations"
+		case "lunarr_appsettings_tv_show_locations":
+			return "app_settings.tv_show_locations"
+		case "lunarr_appsettings_email_smtp_server":
+			return "app_settings.email_smtp.smtp_server"
+		case "lunarr_appsettings_email_smtp_port":
+			return "app_settings.email_smtp.port"
+		case "lunarr_appsettings_email_smtp_username":
+			return "app_settings.email_smtp.username"
+		case "lunarr_appsettings_email_smtp_password":
+			return "app_settings.email_smtp.password"
+		case "lunarr_appsettings_new_user_signup":
+			return "app_settings.new_user_signup"
 		default:
 			return s
 		}
@@ -100,6 +130,14 @@ func InitConfig() {
 	cfg = &Config{}
 	if err := k.Unmarshal("", cfg); err != nil {
 		log.Fatal().Msgf("Error unmarshalling configuration: %v", err)
+	}
+
+	// Handle comma-separated movie and TV show locations from environment variables
+	if movieLocations := os.Getenv("LUNARR_APPSETTINGS_MOVIE_LOCATIONS"); movieLocations != "" {
+		cfg.AppSettings.MovieLocations = strings.Split(movieLocations, ",")
+	}
+	if tvShowLocations := os.Getenv("LUNARR_APPSETTINGS_TV_SHOW_LOCATIONS"); tvShowLocations != "" {
+		cfg.AppSettings.TVShowLocations = strings.Split(tvShowLocations, ",")
 	}
 
 	// Set default app data directory if not provided
@@ -120,6 +158,10 @@ func InitConfig() {
 		log.Info().Msgf("Postgres DB User: %s", cfg.Database.Postgres.User)
 		log.Info().Msgf("Postgres DB Name: %s", cfg.Database.Postgres.DBName)
 	}
+
+	log.Info().Msgf("Movie locations: %v", cfg.AppSettings.MovieLocations)
+	log.Info().Msgf("TV show locations: %v", cfg.AppSettings.TVShowLocations)
+	log.Info().Msgf("New user signup enabled: %t", cfg.AppSettings.NewUserSignup)
 }
 
 func Get() *Config {
