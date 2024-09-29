@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 
+	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/schema"
@@ -41,17 +42,40 @@ func SignupHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	existingUser, err := db.FindUserByEmailOrUsername(userReq.Email, userReq.Username)
+	count, err := db.CountUsers()
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Username or email is available, proceed with user creation
-		} else {
-			log.Error().Err(err).Msgf("Failed to find user %s in the database", userReq.Username)
-			return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
-				Status:  http.StatusText(http.StatusInternalServerError),
-				Message: "Failed to check username availability",
-			})
-		}
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: "Failed to check user count in the database",
+		})
+	}
+
+	// Get app config to check if signup is allowed
+	settings := config.Get().AppSettings
+
+	// If new user signup is disabled and there are already users in the database, reject the request
+	if !settings.NewUserSignup && count > 0 {
+		return c.Status(http.StatusForbidden).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusForbidden),
+			Message: "User signup is disabled",
+		})
+	}
+
+	// If this is the first user, allow signup as an admin regardless of NewUserSignup setting
+	var role models.UserRole
+	if count == 0 {
+		role = models.UserRoleAdmin
+	} else {
+		role = models.UserRoleSubscriber
+	}
+
+	existingUser, err := db.FindUserByEmailOrUsername(userReq.Email, userReq.Username)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Error().Err(err).Msgf("Failed to check user %s in the database", userReq.Username)
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: "Failed to check username availability",
+		})
 	}
 	if existingUser != nil {
 		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
@@ -60,27 +84,11 @@ func SignupHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check if the database is empty
-	count, err := db.CountUsers()
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
-			Status:  http.StatusText(http.StatusInternalServerError),
-			Message: "Failed to check database",
-		})
-	}
-
-	var role models.UserRole
-	if count == 0 {
-		role = models.UserRoleAdmin
-	} else {
-		role = models.UserRoleSubscriber
-	}
-
 	newUser := &models.UserAccounts{
 		Displayname:   userReq.Displayname,
 		Username:      userReq.Username,
 		Email:         userReq.Email,
-		Password:      userReq.Password, // Password hashing is handled in InsertUser
+		Password:      userReq.Password, // Password hashing handled in InsertUser
 		Sex:           userReq.Sex,
 		Role:          role,
 		APIKey:        "",
