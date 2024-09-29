@@ -25,9 +25,8 @@ WORKDIR /app
 # Copy the binary from the builder stage
 COPY --from=builder /app/lunarr .
 
-# Set environment variables for host and port
-ENV LUNARR_SERVER_HOST="0.0.0.0"
-ENV LUNARR_SERVER_PORT="8484"
+# Copy the configuration file
+COPY lunarr.yml .
 
 # Expose the port
 EXPOSE 8484
