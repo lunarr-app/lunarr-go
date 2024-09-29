@@ -2,6 +2,10 @@ package handlers
 
 import "github.com/gofiber/fiber/v2"
 
+type ResponseHello struct {
+	Hello string `json:"hello"`
+}
+
 // @Summary Hello
 // @Description Hello
 // @Tags root
@@ -13,12 +17,4 @@ func RootHandlerHello(c *fiber.Ctx) error {
 	return c.JSON(ResponseHello{
 		Hello: "world",
 	})
-}
-
-func RootHandlerWeb(c *fiber.Ctx) error {
-	return c.Redirect("/app")
-}
-
-type ResponseHello struct {
-	Hello string `json:"hello"`
 }

@@ -4,18 +4,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/template/handlebars/v2"
-	"github.com/rs/zerolog/log"
 
-	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/lunarr-app/lunarr-go/internal/handlers"
-	"github.com/lunarr-app/lunarr-go/internal/handlers/auth"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/movies"
 	"github.com/lunarr-app/lunarr-go/internal/handlers/users"
 	"github.com/lunarr-app/lunarr-go/internal/server/middleware"
-	"github.com/lunarr-app/lunarr-go/internal/tmdb"
-	"github.com/lunarr-app/lunarr-go/web"
-	"github.com/lunarr-app/lunarr-go/web/router"
 
 	"github.com/gofiber/swagger"
 	_ "github.com/lunarr-app/lunarr-go/docs"
@@ -36,91 +29,36 @@ import (
 // @in query
 // @name api_key
 func New() *fiber.App {
-	// Define custom template functions
-	templateFuncs := map[string]interface{}{
-		"TMDbGetImageURL":       tmdb.GetImageURL,
-		"TMDbFormatReleaseDate": tmdb.FormatReleaseDate,
-		"IncludeFile":           web.IncludeFile,
-	}
+	app := fiber.New()
 
-	// Load views using embed FS
-	views, err := web.GetViewsFS()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to load web views")
-	}
-
-	// Create the handlebars engine with the views file systemand template functions
-	engine := handlebars.NewFileSystem(views, ".hbs")
-	engine.AddFuncMap(templateFuncs)
-
-	// Create a new Fiber application
-	app := fiber.New(fiber.Config{
-		Views: engine,
-	})
-
-	// Set up a custom logger
-	customLogger := logger.New(logger.Config{
+	app.Use(logger.New(logger.Config{
 		Format:     "${status} ${ip} ${method} ${path} - ${latency}\n",
 		TimeFormat: "2006-01-02 15:04:05",
-	})
+	}))
 
-	// Register the custom logger as middleware
-	app.Use(customLogger)
-
-	// Enable CORS with default options
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "*",
+		AllowCredentials: false,
+	}))
 
 	// Swagger UI
 	app.Get("/swagger/*", swagger.HandlerDefault)
 
-	// Load assets using embed FS
-	assets, err := web.GetAssetsFS()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to load web assets")
-	}
-
-	// Serve static files
-	app.Use("/assets", filesystem.New(filesystem.Config{
-		Root: assets,
-	}))
-
-	// Register test route
+	// Register root routes
 	app.Get("/hello", handlers.RootHandlerHello)
-
-	// Register web routes
-	app.Get("/", handlers.RootHandlerWeb)
-	app.Get("/login", router.LoginPage)
-	app.Get("/signup", router.SignupPage)
-
-	// Create a sub-router for authenticated web routes
-	fe := app.Group("/app")
-
-	// Web routes to render error pages
-	fe.Get("/", router.RootRedirect) // This will be updated later when all features will be available
-	fe.Use(router.NotFoundPage)
-	fe.Use(router.InternalServerErrorPage)
-
-	// Register authenticated web routes
-	fe.Get("/movies", router.MoviePage)
-	fe.Get("/movies/:tmdb_id", router.MovieDetailsPage)
-
-	// Create a sub-router for auth
-	ha := app.Group("/auth")
-	ha.Post("/signup", auth.SignupHandler)
-	ha.Post("/login", auth.LoginHandler)
 
 	// Create a sub-router for authenticated API routes
 	api := app.Group("/api")
 	api.Use(middleware.AuthenticateAPI)
 
-	// Register authenticated API routes
+	// Register user routes
+	api.Get("/users", middleware.OnlyAdmin, users.UserRootHandler)
+	api.Get("/users/me", users.GetMeHandler)
+
+	// Register movie routes
 	api.Get("/movies", movies.MovieRootHandler)
 	api.Get("/movies/:tmdb_id", movies.MovieByIDHandler)
 	api.Get("/movies/:tmdb_id/stream", movies.MovieStreamHandler)
 
-	api.Get("/users", middleware.OnlyAdmin, users.UserRootHandler)
-	api.Get("/users/me", users.GetMeHandler)
-
-	// Return the application instance
 	return app
 }
