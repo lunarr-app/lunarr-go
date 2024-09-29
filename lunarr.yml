@@ -16,6 +16,7 @@ tmdb:
 
   # TMDb v4 access token for authentication (Bearer token).
   # Only needed if the API key is not provided.
+  # IMPORTANT: The following access token is for production usage only and should NOT be shared or used in third-party repositories.
   access_token: "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzYzM0NTExNGUxNmZiNjM2NWFiMmQxZjA5Y2I5MjlhNyIsIm5iZiI6MTcyNzYwNzQ4OS43NzEwMDYsInN1YiI6IjVlMzVhMzdmNzZlZWNmMDAxNThmNjliZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.R3I6onOpLTybIMa0kRXWMz2fWIKFN0GNlsbQ2oHrUzE"
 
 # Path to the directory where the app stores data.
