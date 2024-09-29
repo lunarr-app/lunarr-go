@@ -8,20 +8,21 @@ import (
 
 var TmdbClient *tmdb.Client
 
-// IMPORTANT: The following access token is for production usage only and should NOT be shared or used in third-party repositories.
-const accessToken = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzYzM0NTExNGUxNmZiNjM2NWFiMmQxZjA5Y2I5MjlhNyIsIm5iZiI6MTcyNzU5Mzc3MS41ODU4NjYsInN1YiI6IjVlMzVhMzdmNzZlZWNmMDAxNThmNjliZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Kkgw_UxLJXe5OZeFGtNF-a3dLrdaSjDwMFNj56qiDDc"
-
 func InitTMDBClient() {
 	log.Info().Msg("Initializing TMDB client...")
-	cfg := config.Get()
+	tmdbConfig := config.Get().TMDb
 
 	var client *tmdb.Client
 	var err error
 
-	if cfg.TMDb.APIKey != "" {
-		client, err = tmdb.Init(cfg.TMDb.APIKey)
+	if tmdbConfig.APIKey != "" {
+		client, err = tmdb.Init(tmdbConfig.APIKey)
+		log.Info().Msg("Using TMDb API key for authentication.")
+	} else if tmdbConfig.AccessToken != "" {
+		client, err = tmdb.InitV4(tmdbConfig.AccessToken)
+		log.Info().Msg("Using TMDb access token for authentication.")
 	} else {
-		client, err = tmdb.InitV4(accessToken)
+		log.Fatal().Msg("No TMDb API key or access token found in the configuration.")
 	}
 
 	if err != nil {
