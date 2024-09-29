@@ -6,12 +6,15 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lunarr-app/lunarr-go/internal/db"
+	"github.com/lunarr-app/lunarr-go/internal/schema"
 	"gorm.io/gorm"
 )
 
 // @Summary Get User Data
 // @Description Retrieve the user data for the authenticated user.
 // @Tags users
+// @Security ApiKeyAuth
+// @Security ApiKeyQuery
 // @Accept json
 // @Produce json
 // @Param x-api-key header string true "API Key"
@@ -24,17 +27,18 @@ func GetMeHandler(c *fiber.Ctx) error {
 	user, err := db.GetUserByAPIKey(apiKey)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return c.Status(http.StatusNotFound).JSON(fiber.Map{
-				"status":  http.StatusText(http.StatusNotFound),
-				"message": "User not found",
+			return c.Status(http.StatusNotFound).JSON(schema.ErrorResponse{
+				Status:  http.StatusText(http.StatusNotFound),
+				Message: "User not found",
 			})
 		}
 
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": err.Error(),
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: err.Error(),
 		})
 	}
 
-	return c.JSON(user)
+	// Return the user object directly
+	return c.Status(http.StatusOK).JSON(user)
 }

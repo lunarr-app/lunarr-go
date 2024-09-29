@@ -6,11 +6,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
+	"github.com/lunarr-app/lunarr-go/internal/schema"
 )
 
 // @Summary Get All Users
 // @Description Retrieve all users.
 // @Tags users
+// @Security ApiKeyAuth
+// @Security ApiKeyQuery
 // @Accept json
 // @Produce json
 // @Success 200 {array} models.UserAccounts
@@ -19,11 +22,12 @@ import (
 func UserRootHandler(c *fiber.Ctx) error {
 	users, err := db.FindAllUsers()
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": err.Error(),
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: err.Error(),
 		})
 	}
 
-	return c.JSON(users)
+	// Return the list of users as an array of models.UserAccounts
+	return c.Status(http.StatusOK).JSON(users)
 }
