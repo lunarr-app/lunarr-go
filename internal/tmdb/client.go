@@ -9,7 +9,7 @@ import (
 var TmdbClient *tmdb.Client
 
 // IMPORTANT: The following access token is for production usage only and should NOT be shared or used in third-party repositories.
-const accessToken = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhMGVlMjVjNzg4OGQ3MGU4NTg3ODU5YzUwNjBhZmYwMCIsInN1YiI6IjVlMzVhMzdmNzZlZWNmMDAxNThmNjliZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ._Ati2D39oQJy6sSPwF4-1ooinjEjvuqqMbhXkPqDA6I"
+const accessToken = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzYzM0NTExNGUxNmZiNjM2NWFiMmQxZjA5Y2I5MjlhNyIsIm5iZiI6MTcyNzU5Mzc3MS41ODU4NjYsInN1YiI6IjVlMzVhMzdmNzZlZWNmMDAxNThmNjliZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Kkgw_UxLJXe5OZeFGtNF-a3dLrdaSjDwMFNj56qiDDc"
 
 func InitTMDBClient() {
 	util.Logger.Info().Msg("Initializing TMDB client...")
