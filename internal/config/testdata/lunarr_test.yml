@@ -4,6 +4,7 @@ server:
 
 tmdb:
   api_key: "dummy_api_key"
+  access_token: ""
 
 app_data_dir: "/tmp/lunarr_test_data"
 

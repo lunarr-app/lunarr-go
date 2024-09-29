@@ -23,7 +23,8 @@ type Config struct {
 		Port int    `koanf:"port"`
 	} `koanf:"server"`
 	TMDb struct {
-		APIKey string `koanf:"api_key"`
+		APIKey      string `koanf:"api_key"`
+		AccessToken string `koanf:"access_token"`
 	} `koanf:"tmdb"`
 	AppDataDir string `koanf:"app_data_dir"`
 	Database   struct {
@@ -61,6 +62,7 @@ func InitConfig() {
 		"server.host":                    "127.0.0.1",
 		"server.port":                    8484,
 		"tmdb.api_key":                   "",
+		"tmdb.access_token":              "",
 		"app_data_dir":                   defaultAppDataDir,
 		"database.driver":                "sqlite",
 		"database.postgres.host":         "localhost",
@@ -93,6 +95,8 @@ func InitConfig() {
 			return "server.port"
 		case "lunarr_tmdb_api_key":
 			return "tmdb.api_key"
+		case "lunarr_tmdb_access_token":
+			return "tmdb.access_token"
 		case "lunarr_app_data_dir":
 			return "app_data_dir"
 		case "lunarr_database_driver":
