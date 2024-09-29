@@ -11,10 +11,18 @@ import (
 var GormDB *gorm.DB
 
 func InitDatabase() {
-	// Get the app data directory from the configuration
-	appDataDir := config.Get().AppDataDir
+	cfg := config.Get()
 
-	initSQLite(appDataDir)
+	switch cfg.Database.Driver {
+	case "sqlite":
+		initSQLite(cfg.AppDataDir)
+	case "postgres":
+		initPostgres(cfg.Database.Postgres.Host, cfg.Database.Postgres.Port, cfg.Database.Postgres.User, cfg.Database.Postgres.Password, cfg.Database.Postgres.DBName)
+	default:
+		log.Fatal().Msg("Unsupported database driver")
+	}
+
+	// Migrate database tables
 	MigrateTables()
 
 	log.Info().Msg("Database initialization complete")
