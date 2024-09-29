@@ -12,16 +12,15 @@ import (
 // @Summary Get Movie Details by ID
 // @Description Get movie details by ID.
 // @Tags movies
-// @Security ApiKeyAuth
-// @Security ApiKeyQuery
 // @Accept json
 // @Produce json
-// @Param x-api-key header string true "API Key"
 // @Param tmdb_id path integer true "Movie ID"
 // @Success 200 {object} models.MovieWithFiles
 // @Failure 400 {object} schema.ErrorResponse
 // @Failure 404 {object} schema.ErrorResponse
 // @Failure 500 {object} schema.ErrorResponse
+// @Security ApiKeyAuth
+// @Security ApiKeyQuery
 // @Router /api/movies/{tmdb_id} [get]
 func MovieByIDHandler(c *fiber.Ctx) error {
 	// Get the movie ID from the URL parameter

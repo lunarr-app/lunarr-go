@@ -257,11 +257,6 @@ paths:
       - application/json
       description: Get a list of movies based on the search query and pagination parameters.
       parameters:
-      - description: API Key
-        in: header
-        name: x-api-key
-        required: true
-        type: string
       - default: 1
         description: Page number
         in: query
@@ -302,23 +297,21 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - ApiKeyQuery: []
       summary: Get Movie Lists
       tags:
       - movies
-  /api/movies/{id}:
+  /api/movies/{tmdb_id}:
     get:
       consumes:
       - application/json
       description: Get movie details by ID.
       parameters:
-      - description: API Key
-        in: header
-        name: x-api-key
-        required: true
-        type: string
       - description: Movie ID
         in: path
-        name: id
+        name: tmdb_id
         required: true
         type: integer
       produces:
@@ -332,10 +325,17 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/schema.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - ApiKeyQuery: []
       summary: Get Movie Details by ID
       tags:
       - movies
@@ -345,11 +345,6 @@ paths:
       - application/json
       description: Stream a movie based on the TMDb ID.
       parameters:
-      - description: API Key
-        in: header
-        name: x-api-key
-        required: true
-        type: string
       - description: TMDb ID
         in: path
         name: tmdb_id
@@ -370,6 +365,9 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - ApiKeyQuery: []
       summary: Stream a movie
       tags:
       - movies
@@ -391,6 +389,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - ApiKeyQuery: []
       summary: Get All Users
       tags:
       - users
@@ -399,12 +400,6 @@ paths:
       consumes:
       - application/json
       description: Retrieve the user data for the authenticated user.
-      parameters:
-      - description: API Key
-        in: header
-        name: x-api-key
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -420,6 +415,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - ApiKeyQuery: []
       summary: Get User Data
       tags:
       - users

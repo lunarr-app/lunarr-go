@@ -12,12 +12,12 @@ import (
 // @Summary Get All Users
 // @Description Retrieve all users.
 // @Tags users
-// @Security ApiKeyAuth
-// @Security ApiKeyQuery
 // @Accept json
 // @Produce json
 // @Success 200 {array} models.UserAccounts
 // @Failure 500 {object} schema.ErrorResponse
+// @Security ApiKeyAuth
+// @Security ApiKeyQuery
 // @Router /api/users [get]
 func UserRootHandler(c *fiber.Ctx) error {
 	users, err := db.FindAllUsers()

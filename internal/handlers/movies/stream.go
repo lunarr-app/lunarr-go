@@ -16,7 +16,6 @@ import (
 // @Tags movies
 // @Accept json
 // @Produce octet-stream
-// @Param x-api-key header string true "API Key"
 // @Param tmdb_id path int true "TMDb ID"
 // @Success 200 {file} octet-stream
 // @Failure 400 {object} schema.ErrorResponse

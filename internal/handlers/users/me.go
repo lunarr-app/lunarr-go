@@ -13,14 +13,13 @@ import (
 // @Summary Get User Data
 // @Description Retrieve the user data for the authenticated user.
 // @Tags users
-// @Security ApiKeyAuth
-// @Security ApiKeyQuery
 // @Accept json
 // @Produce json
-// @Param x-api-key header string true "API Key"
 // @Success 200 {object} models.UserAccounts
 // @Failure 404 {object} schema.ErrorResponse
 // @Failure 500 {object} schema.ErrorResponse
+// @Security ApiKeyAuth
+// @Security ApiKeyQuery
 // @Router /api/users/me [get]
 func GetMeHandler(c *fiber.Ctx) error {
 	apiKey := c.Get("x-api-key")

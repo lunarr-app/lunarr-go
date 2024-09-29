@@ -17,6 +17,14 @@ const docTemplate = `{
     "paths": {
         "/api/movies": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyQuery": []
+                    }
+                ],
                 "description": "Get a list of movies based on the search query and pagination parameters.",
                 "consumes": [
                     "application/json"
@@ -29,13 +37,6 @@ const docTemplate = `{
                 ],
                 "summary": "Get Movie Lists",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "API Key",
-                        "name": "x-api-key",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "default": 1,
@@ -94,8 +95,16 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/movies/{id}": {
+        "/api/movies/{tmdb_id}": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyQuery": []
+                    }
+                ],
                 "description": "Get movie details by ID.",
                 "consumes": [
                     "application/json"
@@ -109,16 +118,9 @@ const docTemplate = `{
                 "summary": "Get Movie Details by ID",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "API Key",
-                        "name": "x-api-key",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
                         "type": "integer",
                         "description": "Movie ID",
-                        "name": "id",
+                        "name": "tmdb_id",
                         "in": "path",
                         "required": true
                     }
@@ -136,6 +138,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/schema.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -147,6 +155,14 @@ const docTemplate = `{
         },
         "/api/movies/{tmdb_id}/stream": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyQuery": []
+                    }
+                ],
                 "description": "Stream a movie based on the TMDb ID.",
                 "consumes": [
                     "application/json"
@@ -159,13 +175,6 @@ const docTemplate = `{
                 ],
                 "summary": "Stream a movie",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "API Key",
-                        "name": "x-api-key",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "description": "TMDb ID",
@@ -198,6 +207,14 @@ const docTemplate = `{
         },
         "/api/users": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyQuery": []
+                    }
+                ],
                 "description": "Retrieve all users.",
                 "consumes": [
                     "application/json"
@@ -230,6 +247,14 @@ const docTemplate = `{
         },
         "/api/users/me": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyQuery": []
+                    }
+                ],
                 "description": "Retrieve the user data for the authenticated user.",
                 "consumes": [
                     "application/json"
@@ -241,15 +266,6 @@ const docTemplate = `{
                     "users"
                 ],
                 "summary": "Get User Data",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "API Key",
-                        "name": "x-api-key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
