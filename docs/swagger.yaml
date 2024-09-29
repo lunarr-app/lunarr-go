@@ -244,7 +244,7 @@ definitions:
       status:
         type: integer
     type: object
-host: 127.0.0.1:3000
+host: 127.0.0.1:8484
 info:
   contact: {}
   description: Swagger for Lunarr API endpoints
@@ -494,4 +494,13 @@ paths:
       summary: Hello
       tags:
       - root
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: x-api-key
+    type: apiKey
+  ApiKeyQuery:
+    in: query
+    name: api_key
+    type: apiKey
 swagger: "2.0"

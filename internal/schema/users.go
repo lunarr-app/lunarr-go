@@ -10,7 +10,7 @@ type UserSignup struct {
 	Username    string `json:"username" validate:"required,min=2,max=16,alphanum"`
 	Email       string `json:"email" validate:"required,email"`
 	Password    string `json:"password" validate:"required,min=6,max=32"`
-	Sex         string `json:"sex,omitempty" validate:"oneof=male female unknown"`
+	Sex         string `json:"sex,omitempty" validate:"omitempty,oneof=male female unknown"`
 }
 
 type UserLoginResponse struct {

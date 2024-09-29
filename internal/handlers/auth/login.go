@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
@@ -25,58 +24,45 @@ import (
 func LoginHandler(c *fiber.Ctx) error {
 	var loginReq schema.UserLogin
 	if err := c.BodyParser(&loginReq); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": err.Error(),
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: err.Error(),
 		})
 	}
 
-	// Validate user input
-	validate := validator.New()
-	if err := validate.Struct(loginReq); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": err.Error(),
+	if err := loginReq.Validate(); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: err.Error(),
 		})
 	}
 
-	// Find user in database
 	user, err := db.FindUserByUsername(loginReq.Username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return c.Status(http.StatusNotFound).JSON(fiber.Map{
-				"status":  http.StatusText(http.StatusNotFound),
-				"message": "User not found",
+			return c.Status(http.StatusNotFound).JSON(schema.ErrorResponse{
+				Status:  http.StatusText(http.StatusNotFound),
+				Message: "User not found",
 			})
 		}
 
 		log.Error().Err(err).Msgf("Failed to find user %s in database", loginReq.Username)
 
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to find user",
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: "Failed to find user",
 		})
-
 	}
 
-	// Compare password hash
 	if !db.VerifyUserPassword(loginReq.Username, loginReq.Password) {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": "Invalid username or password",
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: "Invalid username or password",
 		})
 	}
 
-	// Set API key on a cookie
-	cookie := fiber.Cookie{
-		Name:     "api_key",
-		Value:    user.APIKey,
-		Path:     "/",
-		HTTPOnly: true,
-		MaxAge:   86400 * 30, // 30 days in seconds
-		SameSite: "Strict",
-	}
-	c.Cookie(&cookie)
-
-	return c.Status(http.StatusOK).JSON(fiber.Map{"status": http.StatusText(http.StatusOK), "api_key": user.APIKey})
+	return c.Status(http.StatusOK).JSON(schema.UserLoginResponse{
+		Status: http.StatusText(http.StatusOK),
+		APIKey: user.APIKey,
+	})
 }

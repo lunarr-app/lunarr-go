@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
@@ -29,49 +28,44 @@ import (
 func SignupHandler(c *fiber.Ctx) error {
 	var userReq schema.UserSignup
 	if err := c.BodyParser(&userReq); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": err.Error(),
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: err.Error(),
 		})
 	}
 
-	// Validate user input
-	validate := validator.New()
-	if err := validate.Struct(userReq); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": err.Error(),
+	if err := userReq.Validate(); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: err.Error(),
 		})
 	}
 
-	// Check if the email or username already exists in the database
 	existingUser, err := db.FindUserByEmailOrUsername(userReq.Email, userReq.Username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// The username is available, continue with user creation
+			// Username or email is available, proceed with user creation
 		} else {
-			log.Error().Err(err).Msgf("Failed to find user %s in database", userReq.Username)
-
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-				"status":  http.StatusText(http.StatusInternalServerError),
-				"message": "Failed to check username availability",
+			log.Error().Err(err).Msgf("Failed to find user %s in the database", userReq.Username)
+			return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+				Status:  http.StatusText(http.StatusInternalServerError),
+				Message: "Failed to check username availability",
 			})
 		}
-
 	}
 	if existingUser != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusBadRequest),
-			"message": "Username or email already exists",
+		return c.Status(http.StatusBadRequest).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusBadRequest),
+			Message: "Username or email already exists",
 		})
 	}
 
 	// Check if the database is empty
 	count, err := db.CountUsers()
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to check database",
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: "Failed to check database",
 		})
 	}
 
@@ -82,12 +76,11 @@ func SignupHandler(c *fiber.Ctx) error {
 		role = models.UserRoleSubscriber
 	}
 
-	// Create new user
 	newUser := &models.UserAccounts{
 		Displayname:   userReq.Displayname,
 		Username:      userReq.Username,
 		Email:         userReq.Email,
-		Password:      userReq.Password,
+		Password:      userReq.Password, // Password hashing is handled in InsertUser
 		Sex:           userReq.Sex,
 		Role:          role,
 		APIKey:        "",
@@ -107,26 +100,24 @@ func SignupHandler(c *fiber.Ctx) error {
 		LastSeenAt: time.Now().UTC(),
 	}
 
-	// Generate API key
 	apiKey, err := util.GenerateAPIKey()
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to generate API key",
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: "Failed to generate API key",
 		})
 	}
 	newUser.APIKey = apiKey
 
-	// Insert new user into database
 	if err := db.InsertUser(newUser); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  http.StatusText(http.StatusInternalServerError),
-			"message": "Failed to create user",
+		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
+			Status:  http.StatusText(http.StatusInternalServerError),
+			Message: "Failed to create user",
 		})
 	}
 
-	return c.Status(http.StatusCreated).JSON(fiber.Map{
-		"status":  http.StatusText(http.StatusCreated),
-		"message": "User created successfully",
+	return c.Status(http.StatusCreated).JSON(schema.UserSignupResponse{
+		Status:  http.StatusCreated,
+		Message: "User created successfully",
 	})
 }

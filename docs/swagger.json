@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "127.0.0.1:3000",
+    "host": "127.0.0.1:8484",
     "basePath": "/",
     "paths": {
         "/api/movies": {
@@ -740,6 +740,18 @@
                     "type": "integer"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "x-api-key",
+            "in": "header"
+        },
+        "ApiKeyQuery": {
+            "type": "apiKey",
+            "name": "api_key",
+            "in": "query"
         }
     }
 }
