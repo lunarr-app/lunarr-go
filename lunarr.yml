@@ -18,3 +18,17 @@ tmdb:
 # Path to the directory where the app stores data.
 # Default is the user config directory if left blank.
 app_data_dir: ""
+
+# Database configuration.
+database:
+  # The database driver to use. Options are "sqlite" and "postgres".
+  # Default is "sqlite".
+  driver: "sqlite"
+
+  # PostgreSQL-specific configuration (only used if driver is "postgres").
+  postgres:
+    host: "localhost"
+    port: 5432
+    user: "postgres"
+    password: "yourpassword"
+    dbname: "lunarrdb"

@@ -1,0 +1,17 @@
+server:
+  host: "0.0.0.0"
+  port: 9090
+
+tmdb:
+  api_key: "dummy_api_key"
+
+app_data_dir: "/tmp/lunarr_test_data"
+
+database:
+  driver: "postgres"
+  postgres:
+    host: "localhost"
+    port: 5432
+    user: "testuser"
+    password: "testpassword"
+    dbname: "testdb"
