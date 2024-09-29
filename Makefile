@@ -11,6 +11,10 @@ BINARY_NAME = lunarr-go
 # Swaggo parameters
 SWAGCMD = swag
 
+# Configuration file path
+CONFIG_FILE = lunarr.yml
+LUNARR_YAML_PATH = $(shell pwd)/$(CONFIG_FILE)
+
 # Build the binary
 build:
 	CGO_ENABLED=0 $(GOBUILD) -ldflags "-s -w" -o $(BINARY_NAME) cmd/main.go
@@ -24,11 +28,19 @@ clean:
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
 
-# Run tests
+# Run tests with config
 test:
-	TEST_ENV=true $(GOTEST) -v ./...
+	LUNARR_YAML_PATH=$(LUNARR_YAML_PATH) TEST_ENV=true $(GOTEST) -v ./...
+
+# Lint the code
+lint:
+	golangci-lint run ./...
+
+# Install dependencies
+deps:
+	$(GOCMD) mod tidy
 
 # Default target
 default: build
 
-.PHONY: build clean test swagger
+.PHONY: build clean test swagger lint deps
