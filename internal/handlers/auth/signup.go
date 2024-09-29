@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
@@ -49,7 +50,7 @@ func SignupHandler(c *fiber.Ctx) error {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// The username is available, continue with user creation
 		} else {
-			util.Logger.Error().Err(err).Msgf("Failed to find user %s in database", userReq.Username)
+			log.Error().Err(err).Msgf("Failed to find user %s in database", userReq.Username)
 
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"status":  http.StatusText(http.StatusInternalServerError),

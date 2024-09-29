@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lunarr-app/lunarr-go/internal/db"
-	"github.com/lunarr-app/lunarr-go/internal/util"
+	"github.com/rs/zerolog/log"
 )
 
 // MovieStreamHandler handles the movie streaming request.
@@ -34,7 +34,7 @@ func MovieStreamHandler(c *fiber.Ctx) error {
 	// Find the movie by TMDb ID in the database
 	movie, err := db.FindMovieByTmdbID(tmdbID)
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to find movie by TMDb ID")
+		log.Error().Err(err).Msg("Failed to find movie by TMDb ID")
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusNotFound),
 			"message": "Movie not found",
@@ -42,7 +42,7 @@ func MovieStreamHandler(c *fiber.Ctx) error {
 	}
 
 	// Log the movie streaming information
-	util.Logger.Info().Msgf("Streaming: %s", movie.Location)
+	log.Info().Msgf("Streaming: %s", movie.Location)
 
 	return movieStreamDirect(c, movie.Location)
 }

@@ -1,45 +1,50 @@
 package db
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
+	slog "log"
+
 	"github.com/glebarez/sqlite"
-	"github.com/lunarr-app/lunarr-go/internal/util"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 func initSQLite(dataDir string) {
-	util.Logger.Info().Msg("Connecting to the SQLite database")
+	log.Info().Msg("Connecting to the SQLite database")
 
-	// Set the SQLite database path
-	var sqlitePath string
-	if os.Getenv("TEST_ENV") == "true" {
-		sqlitePath = ":memory:"
-	} else {
-		sqlitePath = filepath.Join(dataDir, "sqlite.db")
-	}
+	sqlitePath := getSQLitePath(dataDir)
+
+	gormLogger := logger.New(
+		slog.New(os.Stdout, "\r\n", slog.LstdFlags),
+		logger.Config{
+			SlowThreshold:             time.Second, // Log queries slower than this threshold
+			LogLevel:                  logger.Warn, // Log warnings and errors only
+			IgnoreRecordNotFoundError: true,        // Ignore "record not found" errors
+			ParameterizedQueries:      false,       // Don't log parameterized queries
+			Colorful:                  true,        // Enable colorful output
+		},
+	)
 
 	// Connect to the SQLite database
 	db, err := gorm.Open(sqlite.Open(sqlitePath), &gorm.Config{
-		Logger: logger.New(
-			log.New(os.Stdout, "\r\n", log.LstdFlags),
-			logger.Config{
-				SlowThreshold:             time.Second,
-				LogLevel:                  logger.Warn,
-				IgnoreRecordNotFoundError: true,
-				ParameterizedQueries:      false,
-				Colorful:                  true,
-			},
-		),
+		Logger: gormLogger,
 	})
 	if err != nil {
-		util.Logger.Fatal().Err(err).Msg("Failed to connect to the SQLite database")
+		log.Fatal().Err(err).Msg("Failed to connect to the SQLite database")
 	}
 
-	// Set the database connection in the DB variable
+	// Assign the connection to the global GormDB variable
 	GormDB = db
+}
+
+// getSQLitePath returns the path to the SQLite database, or in-memory for testing
+func getSQLitePath(dataDir string) string {
+	if os.Getenv("TEST_ENV") == "true" {
+		return ":memory:"
+	}
+	return filepath.Join(dataDir, "sqlite.db")
 }

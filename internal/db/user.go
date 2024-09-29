@@ -2,7 +2,7 @@ package db
 
 import (
 	"github.com/lunarr-app/lunarr-go/internal/models"
-	"github.com/lunarr-app/lunarr-go/internal/util"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,7 +27,7 @@ func InsertUser(user *models.UserAccounts) error {
 
 	err = GormDB.Create(user).Error
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to insert user into database")
+		log.Error().Err(err).Msg("Failed to insert user into database")
 		return err
 	}
 
@@ -38,7 +38,7 @@ func InsertUser(user *models.UserAccounts) error {
 func UpdateUser(username string, updates map[string]interface{}) error {
 	err := GormDB.Model(&models.UserAccounts{}).Where("username = ?", username).Updates(updates).Error
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to update user in database")
+		log.Error().Err(err).Msg("Failed to update user in database")
 		return err
 	}
 

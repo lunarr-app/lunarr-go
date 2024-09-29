@@ -2,7 +2,7 @@ package db
 
 import (
 	"github.com/lunarr-app/lunarr-go/internal/models"
-	"github.com/lunarr-app/lunarr-go/internal/util"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -10,7 +10,7 @@ import (
 func InsertSettings(settings *models.AppSettings) (*models.AppSettings, error) {
 	err := GormDB.Create(settings).Error
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to insert settings into database")
+		log.Error().Err(err).Msg("Failed to insert settings into database")
 		return nil, err
 	}
 	return settings, nil
@@ -20,7 +20,7 @@ func InsertSettings(settings *models.AppSettings) (*models.AppSettings, error) {
 func UpdateSettings(settings *models.AppSettings) error {
 	err := GormDB.Save(settings).Error
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to update settings in database")
+		log.Error().Err(err).Msg("Failed to update settings in database")
 		return err
 	}
 	return nil
@@ -34,7 +34,7 @@ func GetSettings() (*models.AppSettings, error) {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
-		util.Logger.Error().Err(err).Msg("Failed to retrieve settings from database")
+		log.Error().Err(err).Msg("Failed to retrieve settings from database")
 		return nil, err
 	}
 	return &settings, nil

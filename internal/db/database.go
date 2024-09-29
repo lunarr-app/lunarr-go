@@ -3,7 +3,7 @@ package db
 import (
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/models"
-	"github.com/lunarr-app/lunarr-go/internal/util"
+	"github.com/rs/zerolog/log"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +17,7 @@ func InitDatabase() {
 	initSQLite(appDataDir)
 	MigrateTables()
 
-	util.Logger.Info().Msg("Database initialization complete")
+	log.Info().Msg("Database initialization complete")
 }
 
 func MigrateTables() {
@@ -32,6 +32,6 @@ func MigrateTables() {
 		&models.TMDbSpokenLanguage{},
 	)
 	if err != nil {
-		util.Logger.Fatal().Err(err).Msg("Failed to perform auto migration")
+		log.Fatal().Err(err).Msg("Failed to perform auto migration")
 	}
 }

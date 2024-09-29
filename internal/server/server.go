@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/template/handlebars/v2"
+	"github.com/rs/zerolog/log"
 
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/lunarr-app/lunarr-go/internal/handlers"
@@ -13,7 +14,6 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/handlers/users"
 	"github.com/lunarr-app/lunarr-go/internal/server/middleware"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
-	"github.com/lunarr-app/lunarr-go/internal/util"
 	"github.com/lunarr-app/lunarr-go/web"
 	"github.com/lunarr-app/lunarr-go/web/router"
 
@@ -37,7 +37,7 @@ func New() *fiber.App {
 	// Load views using embed FS
 	views, err := web.GetViewsFS()
 	if err != nil {
-		util.Logger.Fatal().Err(err).Msg("Failed to load web views")
+		log.Fatal().Err(err).Msg("Failed to load web views")
 	}
 
 	// Create the handlebars engine with the views file systemand template functions
@@ -67,7 +67,7 @@ func New() *fiber.App {
 	// Load assets using embed FS
 	assets, err := web.GetAssetsFS()
 	if err != nil {
-		util.Logger.Fatal().Err(err).Msg("Failed to load web assets")
+		log.Fatal().Err(err).Msg("Failed to load web assets")
 	}
 
 	// Serve static files

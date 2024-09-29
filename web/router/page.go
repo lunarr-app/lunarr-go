@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lunarr-app/lunarr-go/internal/tmdb"
-	"github.com/lunarr-app/lunarr-go/internal/util"
+	"github.com/rs/zerolog/log"
 )
 
 func RootRedirect(c *fiber.Ctx) error {
@@ -16,7 +16,7 @@ func MoviePage(c *fiber.Ctx) error {
 	// Retrieve popular movies from TMDb
 	popularMovies, err := tmdb.TmdbClient.GetMoviePopular(nil)
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to get popular movies from TMDb")
+		log.Error().Err(err).Msg("Failed to get popular movies from TMDb")
 		c.Status(http.StatusInternalServerError)
 		return InternalServerErrorPage(c)
 	}
@@ -29,7 +29,7 @@ func MovieDetailsPage(c *fiber.Ctx) error {
 	// Get the movie ID from the URL parameter
 	movieID, err := c.ParamsInt("tmdb_id")
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Invalid movie ID")
+		log.Error().Err(err).Msg("Invalid movie ID")
 		c.Status(http.StatusBadRequest)
 		// return BadRequestPage(c)
 		return nil
@@ -38,7 +38,7 @@ func MovieDetailsPage(c *fiber.Ctx) error {
 	// Retrieve movie details from TMDb
 	movieDetails, err := tmdb.TmdbClient.GetMovieDetails(movieID, nil)
 	if err != nil {
-		util.Logger.Error().Err(err).Msg("Failed to get movie details from TMDb")
+		log.Error().Err(err).Msg("Failed to get movie details from TMDb")
 		c.Status(http.StatusInternalServerError)
 		return InternalServerErrorPage(c)
 	}

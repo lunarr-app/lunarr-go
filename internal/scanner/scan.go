@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 
 	PTN "github.com/Saoneth/go-parse-torrent-name"
+	"github.com/rs/zerolog/log"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
-	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
 func ScanMediaDirectory(directory string) {
 	err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			util.Logger.Error().Err(err).Str("path", path).Msg("Error accessing path")
+			log.Error().Err(err).Str("path", path).Msg("Error accessing path")
 			return nil
 		}
 
@@ -25,19 +25,19 @@ func ScanMediaDirectory(directory string) {
 		filename := filepath.Base(path)
 
 		if !IsValidVideoFile(filename) {
-			util.Logger.Debug().Str("filename", filename).Msg("Invalid video file, skipping")
+			log.Debug().Str("filename", filename).Msg("Invalid video file, skipping")
 			return nil
 		}
 
 		if db.CheckMovieExists(path) {
-			util.Logger.Debug().Str("filename", filename).Msg("Movie already exists in the database")
+			log.Debug().Str("filename", filename).Msg("Movie already exists in the database")
 			return nil
 		}
 
 		// Parse filename
 		tor, err := PTN.Parse(filename)
 		if err != nil {
-			util.Logger.Err(err).Str("filename", filename).Msg("Filename parse error")
+			log.Err(err).Str("filename", filename).Msg("Filename parse error")
 			return nil
 		}
 
@@ -52,6 +52,6 @@ func ScanMediaDirectory(directory string) {
 	})
 
 	if err != nil {
-		util.Logger.Err(err).Msg("Failed to scan media directory")
+		log.Err(err).Msg("Failed to scan media directory")
 	}
 }

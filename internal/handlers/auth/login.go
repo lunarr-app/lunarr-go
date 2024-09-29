@@ -6,11 +6,11 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/schema"
-	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
 // @Summary Login
@@ -50,7 +50,7 @@ func LoginHandler(c *fiber.Ctx) error {
 			})
 		}
 
-		util.Logger.Error().Err(err).Msgf("Failed to find user %s in database", loginReq.Username)
+		log.Error().Err(err).Msgf("Failed to find user %s in database", loginReq.Username)
 
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  http.StatusText(http.StatusInternalServerError),
