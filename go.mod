@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/Saoneth/go-parse-torrent-name v0.0.0-20201105190658-d8aed5bad934
-	github.com/cyruzin/golang-tmdb v1.8.2
+	github.com/cyruzin/golang-tmdb v1.9.1
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/gofiber/fiber/v2 v2.52.9
