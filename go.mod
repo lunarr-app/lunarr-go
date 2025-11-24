@@ -7,7 +7,7 @@ require (
 	github.com/cyruzin/golang-tmdb v1.8.2
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-playground/validator/v10 v10.28.0
-	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/gofiber/fiber/v2 v2.52.10
 	github.com/gofiber/swagger v1.1.1
 	github.com/knadh/koanf/parsers/yaml v1.1.0
 	github.com/knadh/koanf/providers/confmap v1.0.0
