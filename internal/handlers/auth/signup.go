@@ -1,13 +1,11 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
-	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/config"
 	"github.com/lunarr-app/lunarr-go/internal/db"
@@ -70,7 +68,7 @@ func SignupHandler(c *fiber.Ctx) error {
 	}
 
 	existingUser, err := db.FindUserByEmailOrUsername(userReq.Email, userReq.Username)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil && !db.IsNotFound(err) {
 		log.Error().Err(err).Msgf("Failed to check user %s in the database", userReq.Username)
 		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
 			Status:  http.StatusText(http.StatusInternalServerError),

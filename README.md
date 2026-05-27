@@ -16,7 +16,7 @@ Lunarr is a self-hosted media streaming platform for movies and TV shows, aiming
 
 - Golang
 - Fiber web framework
-- GORM for data modeling with SQLite database
+- Ent for data modeling with SQLite and Postgres database support
 - React Native for building mobile applications (separate repository)
 
 ## Contributing

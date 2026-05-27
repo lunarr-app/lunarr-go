@@ -1,13 +1,11 @@
 package users
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/schema"
-	"gorm.io/gorm"
 )
 
 // @Summary Get User Data
@@ -25,7 +23,7 @@ func GetMeHandler(c *fiber.Ctx) error {
 	apiKey := c.Get("x-api-key")
 	user, err := db.GetUserByAPIKey(apiKey)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if db.IsNotFound(err) {
 			return c.Status(http.StatusNotFound).JSON(schema.ErrorResponse{
 				Status:  http.StatusText(http.StatusNotFound),
 				Message: "User not found",

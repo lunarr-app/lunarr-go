@@ -1,12 +1,10 @@
 package middleware
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/lunarr-app/lunarr-go/internal/db"
-	"gorm.io/gorm"
 )
 
 func AuthenticateAPI(ctx *fiber.Ctx) error {
@@ -25,7 +23,7 @@ func AuthenticateAPI(ctx *fiber.Ctx) error {
 
 	user, err := db.GetUserByAPIKey(apiKey)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if db.IsNotFound(err) {
 			return ctx.Status(http.StatusUnauthorized).JSON(fiber.Map{
 				"status":  http.StatusText(http.StatusUnauthorized),
 				"message": "Invalid API key",

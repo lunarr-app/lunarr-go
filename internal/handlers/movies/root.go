@@ -4,12 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
 
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/models"
 	"github.com/lunarr-app/lunarr-go/internal/schema"
-	"github.com/lunarr-app/lunarr-go/internal/util"
 )
 
 // @Summary Get Movie Lists
@@ -45,16 +43,11 @@ func MovieRootHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	// Build search query
-	searchQuery := util.BuildSearchQueryMovies(&query)
-
-	// Count the total number of movies matching the search query
-	var totalMovies int64
-	err := db.GormDB.Model(&models.MovieWithFiles{}).Scopes(searchQuery).Count(&totalMovies).Error
+	movieList, totalMovies, err := db.ListMovies(&query)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
 			Status:  http.StatusText(http.StatusInternalServerError),
-			Message: "Failed to count movies",
+			Message: "Failed to find movies",
 		})
 	}
 
@@ -68,23 +61,10 @@ func MovieRootHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	// Find movies in the database based on query and pagination
-	var movieList []models.MovieWithFiles
-	err = db.GormDB.Scopes(searchQuery).
-		Limit(query.Limit).
-		Offset((query.Page - 1) * query.Limit).
-		Find(&movieList).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return c.Status(http.StatusInternalServerError).JSON(schema.ErrorResponse{
-			Status:  http.StatusText(http.StatusInternalServerError),
-			Message: "Failed to find movies",
-		})
-	}
-
 	return c.Status(http.StatusOK).JSON(schema.ListsResponse{
 		Results:     movieList,
 		Limit:       query.Limit,
 		CurrentPage: query.Page,
-		TotalPage:   int(totalMovies)/query.Limit + 1,
+		TotalPage:   totalMovies/query.Limit + 1,
 	})
 }

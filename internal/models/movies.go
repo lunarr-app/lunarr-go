@@ -1,39 +1,39 @@
 package models
 
 type MovieWithFiles struct {
-	GormModel
-	TMDbID              int32               `gorm:"column:tmdb_id" json:"tmdb_id"`
-	Location            string              `gorm:"column:location" json:"location"`
-	Metadata            MovieMetadata       `gorm:"embedded;embeddedPrefix:metadata_" json:"metadata"`
-	BelongsToCollection BelongsToCollection `gorm:"embedded;embeddedPrefix:collection_" json:"belongs_to_collection"`
+	BaseModel
+	TMDbID              int32               `json:"tmdb_id"`
+	Location            string              `json:"location"`
+	Metadata            MovieMetadata       `json:"metadata"`
+	BelongsToCollection BelongsToCollection `json:"belongs_to_collection"`
 }
 
 type MovieMetadata struct {
-	Adult            bool                 `gorm:"column:adult" json:"adult"`
-	BackdropPath     string               `gorm:"column:backdrop_path" json:"backdrop_path"`
-	Genres           []TMDbGenre          `gorm:"many2many:tmdb_genres;" json:"genres"`
-	Homepage         string               `gorm:"column:homepage" json:"homepage"`
-	IMDbID           string               `gorm:"column:imdb_id" json:"imdb_id"`
-	OriginalLanguage string               `gorm:"column:original_language" json:"original_language"`
-	OriginalTitle    string               `gorm:"column:original_title" json:"original_title"`
-	Overview         string               `gorm:"column:overview" json:"overview"`
-	Popularity       float32              `gorm:"column:popularity" json:"popularity"`
-	PosterPath       string               `gorm:"column:poster_path" json:"poster_path"`
-	ReleaseDate      string               `gorm:"column:release_date" json:"release_date"`
-	Revenue          int64                `gorm:"column:revenue" json:"revenue"`
-	Runtime          int                  `gorm:"column:runtime" json:"runtime"`
-	SpokenLanguages  []TMDbSpokenLanguage `gorm:"many2many:tmdb_spoken_languages;" json:"spoken_languages"`
-	Status           string               `gorm:"column:status" json:"status"`
-	Tagline          string               `gorm:"column:tagline" json:"tagline"`
-	Title            string               `gorm:"column:title" json:"title"`
-	Video            bool                 `gorm:"column:video" json:"video"`
-	VoteAverage      float32              `gorm:"column:vote_average" json:"vote_average"`
-	VoteCount        int64                `gorm:"column:vote_count" json:"vote_count"`
+	Adult            bool                 `json:"adult"`
+	BackdropPath     string               `json:"backdrop_path"`
+	Genres           []TMDbGenre          `json:"genres"`
+	Homepage         string               `json:"homepage"`
+	IMDbID           string               `json:"imdb_id"`
+	OriginalLanguage string               `json:"original_language"`
+	OriginalTitle    string               `json:"original_title"`
+	Overview         string               `json:"overview"`
+	Popularity       float32              `json:"popularity"`
+	PosterPath       string               `json:"poster_path"`
+	ReleaseDate      string               `json:"release_date"`
+	Revenue          int64                `json:"revenue"`
+	Runtime          int                  `json:"runtime"`
+	SpokenLanguages  []TMDbSpokenLanguage `json:"spoken_languages"`
+	Status           string               `json:"status"`
+	Tagline          string               `json:"tagline"`
+	Title            string               `json:"title"`
+	Video            bool                 `json:"video"`
+	VoteAverage      float32              `json:"vote_average"`
+	VoteCount        int64                `json:"vote_count"`
 }
 
 type BelongsToCollection struct {
-	ID           int64  `gorm:"column:id" json:"id"`
-	Name         string `gorm:"column:name" json:"name"`
-	PosterPath   string `gorm:"column:poster_path" json:"poster_path"`
-	BackdropPath string `gorm:"column:backdrop_path" json:"backdrop_path"`
+	ID           int64  `json:"id"`
+	Name         string `json:"name"`
+	PosterPath   string `json:"poster_path"`
+	BackdropPath string `json:"backdrop_path"`
 }

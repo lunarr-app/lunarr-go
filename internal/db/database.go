@@ -1,17 +1,21 @@
 package db
 
 import (
-	"github.com/lunarr-app/lunarr-go/internal/config"
-	"github.com/lunarr-app/lunarr-go/internal/models"
-	"github.com/rs/zerolog/log"
+	"context"
 
-	"gorm.io/gorm"
+	"github.com/lunarr-app/lunarr-go/internal/config"
+	"github.com/lunarr-app/lunarr-go/internal/ent"
+	"github.com/rs/zerolog/log"
 )
 
-var GormDB *gorm.DB
+var EntClient *ent.Client
 
 func InitDatabase() {
 	cfg := config.Get()
+
+	if EntClient != nil {
+		_ = EntClient.Close()
+	}
 
 	switch cfg.Database.Driver {
 	case "sqlite":
@@ -29,16 +33,12 @@ func InitDatabase() {
 }
 
 func MigrateTables() {
-	err := GormDB.AutoMigrate(
-		// Lunarr models
-		&models.UserAccounts{},
-		&models.MovieWithFiles{},
-
-		// TMDb models
-		&models.TMDbGenre{},
-		&models.TMDbSpokenLanguage{},
-	)
+	err := EntClient.Schema.Create(context.Background())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to perform auto migration")
 	}
+}
+
+func IsNotFound(err error) bool {
+	return ent.IsNotFound(err)
 }

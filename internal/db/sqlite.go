@@ -1,16 +1,18 @@
 package db
 
 import (
+	"database/sql"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
-	slog "log"
-
-	"github.com/glebarez/sqlite"
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
+	"github.com/lunarr-app/lunarr-go/internal/ent"
 	"github.com/rs/zerolog/log"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	_ "modernc.org/sqlite"
 )
 
 func initSQLite(dataDir string) {
@@ -18,33 +20,26 @@ func initSQLite(dataDir string) {
 
 	sqlitePath := getSQLitePath(dataDir)
 
-	gormLogger := logger.New(
-		slog.New(os.Stdout, "\r\n", slog.LstdFlags),
-		logger.Config{
-			SlowThreshold:             time.Second, // Log queries slower than this threshold
-			LogLevel:                  logger.Warn, // Log warnings and errors only
-			IgnoreRecordNotFoundError: true,        // Ignore "record not found" errors
-			ParameterizedQueries:      false,       // Don't log parameterized queries
-			Colorful:                  true,        // Enable colorful output
-		},
-	)
-
-	// Connect to the SQLite database
-	db, err := gorm.Open(sqlite.Open(sqlitePath), &gorm.Config{
-		Logger: gormLogger,
-	})
+	sqlDB, err := sql.Open("sqlite", sqlitePath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to the SQLite database")
 	}
+	sqlDB.SetMaxOpenConns(1)
+	if _, err := sqlDB.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to enable SQLite foreign keys")
+	}
 
-	// Assign the connection to the global GormDB variable
-	GormDB = db
+	EntClient = ent.NewClient(ent.Driver(entsql.OpenDB(dialect.SQLite, sqlDB)))
 }
 
 // getSQLitePath returns the path to the SQLite database, or in-memory for testing
 func getSQLitePath(dataDir string) string {
-	if os.Getenv("TEST_ENV") == "true" {
-		return ":memory:"
+	if os.Getenv("TEST_ENV") == "true" || isTestProcess() {
+		return fmt.Sprintf("file:lunarr-test-%d?mode=memory&cache=shared&_fk=1&_pragma=foreign_keys(1)", time.Now().UnixNano())
 	}
-	return filepath.Join(dataDir, "sqlite.db")
+	return filepath.Join(dataDir, "sqlite.db") + "?_fk=1&_pragma=foreign_keys(1)"
+}
+
+func isTestProcess() bool {
+	return strings.HasSuffix(os.Args[0], ".test")
 }

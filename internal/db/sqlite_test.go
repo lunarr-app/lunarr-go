@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 
 	"github.com/lunarr-app/lunarr-go/internal/models"
@@ -10,13 +11,10 @@ import (
 func TestReadWriteSQLite(t *testing.T) {
 	// Initialize the SQLite database
 	initSQLite("")
-	err := GormDB.AutoMigrate(
-		&models.MovieWithFiles{},
-	)
-	assert.NoError(t, err)
+	MigrateTables()
 
 	// Perform sample read and write operations
-	err = writeToSQLite()
+	err := writeToSQLite()
 	assert.NoError(t, err)
 
 	result, err := readFromSQLite()
@@ -26,21 +24,14 @@ func TestReadWriteSQLite(t *testing.T) {
 }
 
 func writeToSQLite() error {
-	// Perform write operation
-	data := &models.MovieWithFiles{}
-	result := GormDB.Create(data)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
+	_, err := EntClient.MovieWithFile.Create().Save(context.Background())
+	return err
 }
 
 func readFromSQLite() (*models.MovieWithFiles, error) {
-	// Perform read operation
-	var data models.MovieWithFiles
-	result := GormDB.First(&data)
-	if result.Error != nil {
-		return nil, result.Error
+	data, err := EntClient.MovieWithFile.Query().First(context.Background())
+	if err != nil {
+		return nil, err
 	}
-	return &data, nil
+	return movieWithFileToModel(data), nil
 }

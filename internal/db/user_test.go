@@ -10,7 +10,7 @@ import (
 	"github.com/lunarr-app/lunarr-go/internal/models"
 )
 
-func TestUserGORM(t *testing.T) {
+func TestUserEnt(t *testing.T) {
 	// Initialize the database
 	config.InitConfig()
 	InitDatabase()
@@ -97,6 +97,6 @@ func TestUserGORM(t *testing.T) {
 	assert.False(t, VerifyUserPassword(testUser.Username, invalidPassword))
 
 	// Clean up the test user from the database
-	err = GormDB.Delete(&testUser).Error
+	err = DeleteUserByUsername(testUser.Username)
 	assert.NoError(t, err)
 }

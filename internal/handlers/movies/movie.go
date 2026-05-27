@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/lunarr-app/lunarr-go/internal/db"
 	"github.com/lunarr-app/lunarr-go/internal/schema"
-	"gorm.io/gorm"
 )
 
 // @Summary Get Movie Details by ID
@@ -35,7 +34,7 @@ func MovieByIDHandler(c *fiber.Ctx) error {
 	// Find movie by ID in the database
 	movie, err := db.FindMovieByTmdbID(movieID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if db.IsNotFound(err) {
 			return c.Status(http.StatusNotFound).JSON(schema.ErrorResponse{
 				Status:  http.StatusText(http.StatusNotFound),
 				Message: "Movie not found",
