@@ -1,0 +1,9 @@
+.git
+.github
+.DS_Store
+
+lunarr-go
+coverage.out
+*.db
+*.sqlite
+*.sqlite3

@@ -2,6 +2,7 @@
 GOCMD = go
 GOBUILD = $(GOCMD) build
 GOCLEAN = $(GOCMD) clean
+GOGENERATE = $(GOCMD) generate
 GOTEST = $(GOCMD) test
 GOGET = $(GOCMD) get
 
@@ -23,6 +24,10 @@ build:
 swagger:
 	$(SWAGCMD) init -g internal/server/server.go
 
+# Generate Ent code
+generate:
+	$(GOGENERATE) ./internal/ent
+
 # Clean build files
 clean:
 	$(GOCLEAN)
@@ -43,4 +48,4 @@ deps:
 # Default target
 default: build
 
-.PHONY: build clean test swagger lint deps
+.PHONY: build clean test swagger generate lint deps
