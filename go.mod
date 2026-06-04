@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	entgo.io/ent v0.14.6
 	github.com/Saoneth/go-parse-torrent-name v0.0.0-20201105190658-d8aed5bad934
-	github.com/cyruzin/golang-tmdb v1.9.2
+	github.com/cyruzin/golang-tmdb v1.9.3
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/gofiber/swagger v1.1.1
