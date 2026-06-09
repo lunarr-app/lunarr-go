@@ -1,51 +1,42 @@
-# Go parameters
-GOCMD = go
-GOBUILD = $(GOCMD) build
-GOCLEAN = $(GOCMD) clean
-GOGENERATE = $(GOCMD) generate
-GOTEST = $(GOCMD) test
-GOGET = $(GOCMD) get
+IMAGE ?= sayem314/lunarr
+VERSION ?= $(shell node -p "require('./package.json').version")
+PLATFORMS ?= linux/amd64,linux/arm64
+BUILDER ?=
 
-# Name of binary
-BINARY_NAME = lunarr-go
+BUILDER_ARG := $(if $(BUILDER),--builder $(BUILDER),)
+IMAGE_TAGS := -t $(IMAGE):latest -t $(IMAGE):$(VERSION)
 
-# Swaggo parameters
-SWAGCMD = swag
+.PHONY: help docker-build docker-push docker-build-push docker-run
 
-# Configuration file path
-CONFIG_FILE = lunarr.yml
-LUNARR_YAML_PATH = $(shell pwd)/$(CONFIG_FILE)
+help:
+	@echo "Docker targets:"
+	@echo "  make docker-build       Build local Docker image tags"
+	@echo "  make docker-push        Push existing local latest/version tags"
+	@echo "  make docker-build-push  Build and push multi-arch latest/version tags"
+	@echo "  make docker-run         Run local lunarr container"
+	@echo ""
+	@echo "Variables:"
+	@echo "  IMAGE=$(IMAGE)"
+	@echo "  VERSION=$(VERSION)"
+	@echo "  PLATFORMS=$(PLATFORMS)"
+	@echo "  BUILDER=$(BUILDER)"
 
-# Build the binary
-build:
-	CGO_ENABLED=0 $(GOBUILD) -ldflags "-s -w" -o $(BINARY_NAME) cmd/main.go
+docker-build:
+	docker build $(IMAGE_TAGS) -t lunarr:local .
 
-# Generate Swagger docs
-swagger:
-	$(SWAGCMD) init -g internal/server/server.go
+docker-push:
+	docker push $(IMAGE):latest
+	docker push $(IMAGE):$(VERSION)
 
-# Generate Ent code
-generate:
-	$(GOGENERATE) ./internal/ent
+docker-build-push:
+	docker buildx build $(BUILDER_ARG) --platform $(PLATFORMS) $(IMAGE_TAGS) --push .
 
-# Clean build files
-clean:
-	$(GOCLEAN)
-	rm -f $(BINARY_NAME)
-
-# Run tests with config
-test:
-	LUNARR_YAML_PATH=$(LUNARR_YAML_PATH) TEST_ENV=true $(GOTEST) -v ./...
-
-# Lint the code
-lint:
-	golangci-lint run ./...
-
-# Install dependencies
-deps:
-	$(GOCMD) mod tidy
-
-# Default target
-default: build
-
-.PHONY: build clean test swagger generate lint deps
+docker-run:
+	docker rm -f lunarr 2>/dev/null || true
+	docker run -d \
+		--name lunarr \
+		--restart unless-stopped \
+		-p 3000:3000 \
+		--env-file /opt/lunarr/lunarr.env \
+		-v /opt/lunarr/data:/data \
+		lunarr:local

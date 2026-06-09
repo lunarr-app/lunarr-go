@@ -1,36 +1,39 @@
-# Build stage
-ARG GO_VERSION=1.25
-FROM golang:${GO_VERSION}-alpine AS builder
+# syntax=docker/dockerfile:1
 
-# Set the working directory inside the container
+ARG BUN_VERSION=1
+ARG NODE_VERSION=24-trixie-slim
+
+FROM oven/bun:${BUN_VERSION} AS deps
 WORKDIR /app
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
-# Copy go.mod and go.sum files to download dependencies
-COPY go.mod go.sum ./
-
-# Download the dependencies
-RUN go mod download && go mod verify
-
-# Copy the rest of the source code
+FROM deps AS build
 COPY . .
+RUN bun run build
 
-# Build the Go application
-RUN CGO_ENABLED=0 GOOS=linux go build -o lunarr ./cmd
+FROM oven/bun:${BUN_VERSION} AS prod-deps
+WORKDIR /app
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
 
-# Final stage
-FROM alpine:latest
+FROM node:${NODE_VERSION} AS runtime
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=3000 \
+    LUNARR_DATA_DIR=/data
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/lunarr .
+COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/build ./build
+COPY --chown=node:node package.json ./
+COPY --chown=node:node scripts/start.mjs scripts/env.mjs ./scripts/
 
-# Copy the configuration file
-COPY lunarr.yml .
+RUN mkdir -p /data && chown node:node /data
 
-# Expose the port
-EXPOSE 8484
+USER node
+EXPOSE 3000
+VOLUME ["/data"]
 
-# Run the application (no command-line args needed, uses env vars)
-CMD ["./lunarr"]
+CMD ["node", "scripts/start.mjs"]

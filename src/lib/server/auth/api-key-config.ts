@@ -1,0 +1,5 @@
+export const API_KEY_PREFIX = "lunarr_";
+export const API_KEY_MAX_NAME_LENGTH = 80;
+export const API_KEY_DISPLAY_PREFIX_LENGTH = 18;
+export const API_KEY_MAX_EXPIRES_IN_DAYS = 3650;
+export const API_KEY_MAX_EXPIRES_IN_SECONDS = API_KEY_MAX_EXPIRES_IN_DAYS * 24 * 60 * 60;
