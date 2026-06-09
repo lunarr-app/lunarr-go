@@ -24,7 +24,7 @@
         "@types/bun": "1.3.14",
         "@types/node": "25.9.2",
         "@types/ssh2": "1.15.5",
-        "prettier": "3.8.3",
+        "prettier": "3.8.4",
         "prettier-plugin-svelte": "4.1.0",
         "svelte": "5.56.3",
         "svelte-check": "4.6.0",
@@ -463,7 +463,7 @@
 
     "postcss": ["postcss@8.5.15", "", { "dependencies": { "nanoid": "^3.3.12", "picocolors": "^1.1.1", "source-map-js": "^1.2.1" } }, "sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A=="],
 
-    "prettier": ["prettier@3.8.3", "", { "bin": { "prettier": "bin/prettier.cjs" } }, "sha512-7igPTM53cGHMW8xWuVTydi2KO233VFiTNyF5hLJqpilHfmn8C8gPf+PS7dUT64YcXFbiMGZxS9pCSxL/Dxm/Jw=="],
+    "prettier": ["prettier@3.8.4", "", { "bin": { "prettier": "bin/prettier.cjs" } }, "sha512-N2MylSdi48+5N/6S5j+maeHbUSIzzZ5uOcX5Hm4QpV8Dkb1HFjfAKTKX6yNPJQD9AhcT3ifHNB66tWTTJDi11Q=="],
 
     "prettier-plugin-svelte": ["prettier-plugin-svelte@4.1.0", "", { "peerDependencies": { "prettier": "^3.0.0", "svelte": "^5.0.0" } }, "sha512-YZkhA2Q9oOerFFG9tq+2f98WYT7Z2JgrybJrAyrB78jpsH9i/DdgplXemehuFPgsldetFNCcR/yCcYlDjPy94Q=="],
 
