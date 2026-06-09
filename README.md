@@ -2,6 +2,8 @@
 
 Lunarr is a self-hosted web media server for local and SFTP movie and TV libraries. It scans folders, matches media with TMDb metadata when credentials are configured, and plays files in the browser with direct streaming, remuxed HLS, or request-driven HLS transcoding depending on the file and user playback preference.
 
+![Draft Screenshot](https://github.com/lunarr-app/lunarr-go/assets/14138401/15339179-2388-40ee-8270-61c085faa134)
+
 ## Local Development
 
 Install dependencies:
