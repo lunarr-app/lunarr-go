@@ -19,7 +19,7 @@
     "@better-auth/api-key": "1.6.15",
     "@ctrl/video-filename-parser": "5.10.1",
     "@lucide/svelte": "1.17.0",
-    "better-auth": "1.6.14",
+    "better-auth": "1.6.15",
     "chokidar": "5.0.0",
     "hls.js": "1.6.16",
     "kysely": "0.29.2",
