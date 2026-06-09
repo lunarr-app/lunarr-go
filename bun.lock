@@ -5,7 +5,7 @@
     "": {
       "name": "lunarr-sveltekit",
       "dependencies": {
-        "@better-auth/api-key": "1.6.14",
+        "@better-auth/api-key": "1.6.15",
         "@ctrl/video-filename-parser": "5.10.1",
         "@lucide/svelte": "1.17.0",
         "better-auth": "1.6.14",
@@ -41,7 +41,7 @@
   "packages": {
     "@babel/runtime": ["@babel/runtime@7.29.7", "", {}, "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="],
 
-    "@better-auth/api-key": ["@better-auth/api-key@1.6.14", "", { "dependencies": { "zod": "^4.3.6" }, "peerDependencies": { "@better-auth/core": "^1.6.14", "@better-auth/utils": "0.4.1", "better-auth": "^1.6.14", "better-call": "1.3.5" } }, "sha512-iMLRcjpGyegI5yy375ZIw83HZGSZe6TwjtCKWdFTYy1PQ0bUcD0H61uKcvO82Co4jJmjakI3POR6lDy5W1OOew=="],
+    "@better-auth/api-key": ["@better-auth/api-key@1.6.15", "", { "dependencies": { "zod": "^4.3.6" }, "peerDependencies": { "@better-auth/core": "^1.6.15", "@better-auth/utils": "0.4.1", "better-auth": "^1.6.15", "better-call": "1.3.5" } }, "sha512-+jFLVBbu4uTjo1JE8ET0SCAKz5FnTmI5CIBzY40IvITuWVTC8nxrWBUbEkmqXFgAJcxrK3/eqcWwlJ99Wve7dA=="],
 
     "@better-auth/core": ["@better-auth/core@1.6.14", "", { "dependencies": { "@opentelemetry/semantic-conventions": "^1.39.0", "@standard-schema/spec": "^1.1.0", "zod": "^4.3.6" }, "peerDependencies": { "@better-auth/utils": "0.4.1", "@better-fetch/fetch": "1.1.21", "@cloudflare/workers-types": ">=4", "@opentelemetry/api": "^1.9.0", "better-call": "1.3.5", "jose": "^6.1.0", "kysely": "^0.28.5 || ^0.29.0", "nanostores": "^1.0.1" }, "optionalPeers": ["@cloudflare/workers-types", "@opentelemetry/api"] }, "sha512-12cA7tnR4Wyb3nLpPmeq/Id7QNB+4OhjbzuX7sIhqglgXGjyT5iiNpe2lx/8FF532sHC450Yx1850salCYbkzw=="],
 

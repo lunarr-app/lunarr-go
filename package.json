@@ -16,7 +16,7 @@
     "verify:tmdb": "node scripts/verify-tmdb.mjs"
   },
   "dependencies": {
-    "@better-auth/api-key": "1.6.14",
+    "@better-auth/api-key": "1.6.15",
     "@ctrl/video-filename-parser": "5.10.1",
     "@lucide/svelte": "1.17.0",
     "better-auth": "1.6.14",
