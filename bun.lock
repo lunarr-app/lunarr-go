@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "lunarr-sveltekit",
+      "name": "lunarr",
       "dependencies": {
         "@better-auth/api-key": "1.6.15",
         "@ctrl/video-filename-parser": "5.10.1",
