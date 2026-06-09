@@ -1,0 +1,52 @@
+name: Docker
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Smoke Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: lunarr-app:latest
+
+      - name: Run Docker container
+        run: |
+          docker run -d \
+            -p 3000:3000 \
+            -e AUTH_SECRET=lunarr-ci-secret-value-that-is-at-least-32-chars \
+            -e ORIGIN=http://127.0.0.1:3000 \
+            --name lunarr-container \
+            lunarr-app:latest
+
+      - name: Smoke test
+        run: |
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/setup > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs lunarr-container
+          exit 1
+
+      - name: Stop and remove container
+        if: always()
+        run: docker rm -f lunarr-container || true
