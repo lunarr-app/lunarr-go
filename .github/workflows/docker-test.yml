@@ -38,12 +38,15 @@ jobs:
 
       - name: Smoke test
         run: |
+          last_error="$(mktemp)"
           for attempt in {1..30}; do
-            if curl -fsS http://127.0.0.1:3000/setup > /dev/null; then
+            if curl -fsS http://127.0.0.1:3000/setup > /dev/null 2>"$last_error"; then
               exit 0
             fi
             sleep 1
           done
+          cat "$last_error"
+          docker ps -a
           docker logs lunarr-container
           exit 1
 
