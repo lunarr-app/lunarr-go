@@ -135,7 +135,7 @@
         <input name="path" value={formData.path ?? ""} placeholder="/Volumes/Media" autocomplete="off" />
       </label>
     {/if}
-    <fieldset>
+    <fieldset class="automation-fieldset">
       <legend>Automation</legend>
       {#if selectedSource === "local"}
         <input type="hidden" name="watchEnabled" value="0" />
@@ -284,7 +284,7 @@
                   <input name="path" value={library.path} placeholder="/Volumes/Media/Movies" autocomplete="off" />
                 </label>
               {/if}
-              <fieldset>
+              <fieldset class="automation-fieldset">
                 <legend>Automation</legend>
                 {#if library.source === "local"}
                   <input type="hidden" name="watchEnabled" value="0" />
@@ -498,14 +498,43 @@
   fieldset {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
+    margin: 0;
     padding: 0.75rem;
     display: grid;
     gap: 0.55rem;
   }
 
+  .automation-fieldset {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    gap: 0.65rem;
+  }
+
   legend {
     padding: 0 0.25rem;
     font-weight: 700;
+  }
+
+  .automation-fieldset legend {
+    margin-bottom: 0.25rem;
+    padding: 0;
+  }
+
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .check input[type="checkbox"],
+  .check input[type="radio"] {
+    width: 1rem;
+    height: 1rem;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 auto;
   }
 
   .share-list {
