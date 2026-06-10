@@ -2,7 +2,7 @@
 
 Lunarr is a self-hosted web media server for local and SFTP movie and TV libraries. It scans folders, matches media with TMDb metadata when credentials are configured, and plays files in the browser with direct streaming, remuxed HLS, or request-driven HLS transcoding depending on the file and user playback preference.
 
-![Draft Screenshot](https://github.com/lunarr-app/lunarr-go/assets/14138401/15339179-2388-40ee-8270-61c085faa134)
+![Lunarr screenshot](https://github.com/lunarr-app/lunarr-go/assets/14138401/15339179-2388-40ee-8270-61c085faa134)
 
 ## Local Development
 
@@ -108,8 +108,9 @@ Admins can share each library with all users or only selected regular users from
 Use the published Docker image with persistent app data:
 
 ```sh
-docker run --rm \
+docker run -d \
   --name lunarr \
+  --restart unless-stopped \
   -p 3000:3000 \
   -e AUTH_SECRET=replace-with-a-random-secret-at-least-32-chars \
   -e ORIGIN=http://127.0.0.1:3000 \
@@ -138,8 +139,9 @@ docker run --rm \
 For local filesystem libraries, mount media into the container and add the container path in Libraries:
 
 ```sh
-docker run --rm \
+docker run -d \
   --name lunarr \
+  --restart unless-stopped \
   -p 3000:3000 \
   -e AUTH_SECRET=replace-with-a-random-secret-at-least-32-chars \
   -e ORIGIN=http://127.0.0.1:3000 \
