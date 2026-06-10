@@ -1,0 +1,17 @@
+services:
+  lunarr:
+    image: sayem314/lunarr:latest
+    container_name: lunarr
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      AUTH_SECRET: "replace-with-a-random-secret-at-least-32-chars"
+      ORIGIN: "http://127.0.0.1:3000"
+    volumes:
+      - lunarr-data:/data
+      # Mount local media read-only, then add /media/movies or /media/tv in Lunarr.
+      - /mnt/media:/media:ro
+
+volumes:
+  lunarr-data:

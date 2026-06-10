@@ -35,6 +35,8 @@ docker run -d \
 
 Open `http://127.0.0.1:3000`, create the first admin account, add a movie or TV library, then run a scan from Libraries.
 
+Docker Compose users can start from [docker-compose.yml](docker-compose.yml).
+
 ## Local Development
 
 Install dependencies and create a local environment file:

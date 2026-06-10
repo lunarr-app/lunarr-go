@@ -81,6 +81,14 @@ docker run -d \
   sayem314/lunarr:latest
 ```
 
+Or use the compose example:
+
+```sh
+docker compose up -d
+```
+
+Before starting, replace `AUTH_SECRET`, set `ORIGIN` to the URL users will open, and change `/mnt/media:/media:ro` to your host media path.
+
 Build and run a local image:
 
 ```sh
