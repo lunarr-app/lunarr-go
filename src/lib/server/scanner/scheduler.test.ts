@@ -24,4 +24,20 @@ describe("scheduled library scans", () => {
     expect(scheduledScanDelayMs({ ...base, updated_at: "2026-06-10T11:30:00.000Z" }, nowMs)).toBe(30 * 60_000);
     expect(scheduledScanDelayMs({ ...base, last_scheduled_scan_at: "2026-06-10T11:45:00.000Z" }, nowMs)).toBe(45 * 60_000);
   });
+
+  test("keeps long intervals waiting after the maximum timeout slice", () => {
+    const maxTimeoutMs = 2_147_483_647;
+    const anchorMs = Date.parse("2026-06-10T00:00:00.000Z");
+    const library = {
+      id: "library-1",
+      kind: "movie",
+      created_at: "2026-06-10T00:00:00.000Z",
+      updated_at: "2026-06-10T00:00:00.000Z",
+      scan_interval_minutes: 43_200,
+      last_scheduled_scan_at: null,
+    };
+
+    expect(scheduledScanDelayMs(library, anchorMs)).toBe(maxTimeoutMs);
+    expect(scheduledScanDelayMs(library, anchorMs + maxTimeoutMs)).toBe(43_200 * 60_000 - maxTimeoutMs);
+  });
 });

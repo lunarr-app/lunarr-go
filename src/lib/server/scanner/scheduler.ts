@@ -65,6 +65,8 @@ async function runScheduledScan(libraryId: string) {
       .executeTakeFirst();
 
     if (!library || !shouldScheduleLibraryScan(library)) return;
+    const remainingDelayMs = scheduledScanDelayMs(library);
+    if (remainingDelayMs === null || remainingDelayMs > 0) return;
 
     await db
       .updateTable("library")
