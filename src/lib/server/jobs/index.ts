@@ -1,6 +1,17 @@
 import { getDb } from "../db";
 import { normalizePlaybackSessionMessage } from "../transcoding/messages";
 
+const JOB_HISTORY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const JOB_HISTORY_MIN_ROWS = 500;
+const JOB_HISTORY_DELETE_BATCH_SIZE = 500;
+const ACTIVE_JOB_STATUSES = ["queued", "running"] as const;
+
+type CleanupJobHistoryOptions = {
+  maxAgeMs?: number;
+  minRows?: number;
+  now?: Date;
+};
+
 function emptyJobSummary() {
   return {
     total: 0,
@@ -10,6 +21,23 @@ function emptyJobSummary() {
     cancelled: 0,
     errors: 0
   };
+}
+
+function inactiveHistoryCutoff(options: CleanupJobHistoryOptions) {
+  const maxAgeMs = Math.max(0, options.maxAgeMs ?? JOB_HISTORY_MAX_AGE_MS);
+  return new Date((options.now ?? new Date()).getTime() - maxAgeMs).toISOString();
+}
+
+function historyRetentionRows(options: CleanupJobHistoryOptions) {
+  return Math.max(0, Math.floor(options.minRows ?? JOB_HISTORY_MIN_ROWS));
+}
+
+function chunkIds(ids: string[]) {
+  const chunks: string[][] = [];
+  for (let index = 0; index < ids.length; index += JOB_HISTORY_DELETE_BATCH_SIZE) {
+    chunks.push(ids.slice(index, index + JOB_HISTORY_DELETE_BATCH_SIZE));
+  }
+  return chunks;
 }
 
 function applyStatusToSummary<T extends { status: string }>(
@@ -130,4 +158,65 @@ export async function listScanErrors(limit = 100) {
     .orderBy("scan_job_error.created_at", "desc")
     .limit(limit)
     .execute();
+}
+
+export async function cleanupJobHistory(options: CleanupJobHistoryOptions = {}) {
+  const db = await getDb();
+  const cutoff = inactiveHistoryCutoff(options);
+  const keepRows = historyRetentionRows(options);
+
+  const [scanRows, latestLibraryScanRows, playbackRows] = await Promise.all([
+    db
+      .selectFrom("scan_job")
+      .select(["id", "updated_at"])
+      .where("status", "not in", ACTIVE_JOB_STATUSES)
+      .orderBy("updated_at", "desc")
+      .orderBy("created_at", "desc")
+      .execute(),
+    db
+      .selectFrom("scan_job")
+      .select(["id", "library_id"])
+      .where("job_kind", "=", "library_scan")
+      .where("library_id", "is not", null)
+      .orderBy("library_id")
+      .orderBy("created_at", "desc")
+      .execute(),
+    db
+      .selectFrom("playback_session")
+      .select(["id", "updated_at"])
+      .where("status", "not in", ACTIVE_JOB_STATUSES)
+      .orderBy("updated_at", "desc")
+      .orderBy("created_at", "desc")
+      .execute(),
+  ]);
+
+  const latestLibraryScanIds = new Set<string>();
+  const libraryIdsWithLatestScan = new Set<string>();
+  for (const job of latestLibraryScanRows) {
+    if (job.library_id && !libraryIdsWithLatestScan.has(job.library_id)) {
+      latestLibraryScanIds.add(job.id);
+      libraryIdsWithLatestScan.add(job.library_id);
+    }
+  }
+
+  const staleScanJobIds = scanRows
+    .slice(keepRows)
+    .filter((job) => job.updated_at < cutoff && !latestLibraryScanIds.has(job.id))
+    .map((job) => job.id);
+  const stalePlaybackSessionIds = playbackRows
+    .slice(keepRows)
+    .filter((job) => job.updated_at < cutoff)
+    .map((job) => job.id);
+
+  for (const ids of chunkIds(staleScanJobIds)) {
+    await db.deleteFrom("scan_job").where("id", "in", ids).execute();
+  }
+  for (const ids of chunkIds(stalePlaybackSessionIds)) {
+    await db.deleteFrom("playback_session").where("id", "in", ids).execute();
+  }
+
+  return {
+    scanJobs: staleScanJobIds.length,
+    playbackSessions: stalePlaybackSessionIds.length,
+  };
 }

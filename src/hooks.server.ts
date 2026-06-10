@@ -2,6 +2,7 @@ import { building } from "$app/environment";
 import { auth } from "$lib/server/auth";
 import { hasRegisteredUsers } from "$lib/server/auth/users";
 import { migrateDatabase } from "$lib/server/db";
+import { cleanupJobHistory } from "$lib/server/jobs";
 import { resumeInterruptedJobs } from "$lib/server/scanner";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
@@ -20,6 +21,7 @@ function ensureStartup() {
     await migrateDatabase();
     await recoverInterruptedTranscodeSessions();
     await cleanupConfiguredPlaybackSessionArtifacts();
+    await cleanupJobHistory();
     await resumeInterruptedJobs();
     if (!building) {
       startStaleTranscodeExpiryLoop();

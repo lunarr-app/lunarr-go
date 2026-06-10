@@ -17,6 +17,7 @@ import {
   updateTranscodeSessionPipeline,
   updateTranscodeSessionStatus,
 } from "./sessions";
+import { cleanupJobHistory } from "../jobs";
 import {
   DEFAULT_HLS_SEGMENT_SECONDS,
   hlsSegmentFileExists,
@@ -1429,6 +1430,7 @@ export function startStaleTranscodeExpiryLoop() {
       staleExpiryLoopTicks += 1;
       if (staleExpiryLoopTicks % PLAYBACK_SESSION_ARTIFACT_CLEANUP_TICKS === 0) {
         await cleanupConfiguredPlaybackSessionArtifacts();
+        await cleanupJobHistory();
       }
     })().catch((error: unknown) => {
       console.error("Failed to clean up stale playback sessions.", error);
