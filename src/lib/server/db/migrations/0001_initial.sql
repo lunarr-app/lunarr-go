@@ -88,6 +88,9 @@ create table library (
   access_mode text not null default 'all' check (access_mode in ('all', 'shared')),
   path text not null unique,
   config_json text,
+  watch_enabled integer not null default 1,
+  scan_interval_minutes integer,
+  last_scheduled_scan_at text,
   created_at text not null,
   updated_at text not null
 );

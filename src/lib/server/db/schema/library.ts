@@ -13,6 +13,9 @@ export type LibraryTable = {
   access_mode: ColumnType<LibraryAccessMode, LibraryAccessMode | undefined, LibraryAccessMode | undefined>;
   path: string;
   config_json: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  watch_enabled: ColumnType<number, number | undefined, number | undefined>;
+  scan_interval_minutes: ColumnType<number | null, number | null | undefined, number | null | undefined>;
+  last_scheduled_scan_at: ColumnType<string | null, string | null | undefined, string | null | undefined>;
   created_at: TimestampText;
   updated_at: TimestampText;
 };

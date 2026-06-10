@@ -150,7 +150,9 @@ docker run -d \
   sayem314/lunarr:latest
 ```
 
-For remote or mounted libraries where native file events are unreliable, enable conservative watcher polling:
+Local library watching is enabled per library by default. Scheduled rescans are disabled by default for both local and SFTP libraries and can be enabled per library from Libraries. SFTP libraries are not watched live, so manual scans or scheduled rescans are how remote file changes are discovered.
+
+For remote or mounted local libraries where native file events are unreliable, enable conservative watcher polling:
 
 ```sh
 LUNARR_WATCH_USE_POLLING=true
@@ -160,7 +162,7 @@ LUNARR_WATCH_DEBOUNCE_MS=10000
 LUNARR_WATCH_WRITE_STABILITY_MS=15000
 ```
 
-Polling is best-effort and can still miss remote-side cache changes, so manual scans remain the source of truth.
+Polling is best-effort and can still miss remote-side cache changes, so manual scans or scheduled rescans remain the source of truth.
 
 For SFTP libraries, scans list remote directories concurrently while still processing media files one at a time. Each remote stat/list/read operation also has a timeout so an unresponsive server does not stall work forever. Configure SFTP walk concurrency and operation timeout per library from the Libraries page. Increase concurrency only if the server and network handle extra concurrent directory listings well.
 
@@ -186,6 +188,6 @@ bun run verify:tmdb
 - Personal API keys can be used by mobile and custom clients; they follow the same user role and library-sharing rules as browser sessions.
 - Library access can be shared with all users or selected regular users; per-title permissions are not implemented.
 - Library paths and scan errors are admin-only.
-- Configured local movie and TV library folders are watched for media/subtitle changes and trigger debounced background scans; manual scans remain available and are authoritative for network mounts.
+- Configured local movie and TV library folders can watch media/subtitle changes and trigger debounced background scans; scheduled rescans are available per library for local and SFTP sources.
 - Media files are streamed through authenticated range-capable routes; raw filesystem paths are resolved only on the server.
 - Hardware acceleration for NodeAV HLS transcoding is best-effort unless the admin marks hardware as required; required hardware fails playback when NodeAV cannot create the selected device or H.264 encoder.

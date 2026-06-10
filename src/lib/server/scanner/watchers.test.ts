@@ -16,6 +16,7 @@ describe("library scan watchers", () => {
   test("watches local movie and TV libraries", () => {
     expect(shouldWatchLibrary({ kind: "movie", source: "local" })).toBe(true);
     expect(shouldWatchLibrary({ kind: "tv", source: "local" })).toBe(true);
+    expect(shouldWatchLibrary({ kind: "movie", source: "local", watch_enabled: 0 })).toBe(false);
     expect(shouldWatchLibrary({ kind: "tv", source: "sftp" })).toBe(false);
   });
 });

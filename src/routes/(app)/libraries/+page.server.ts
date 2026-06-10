@@ -14,6 +14,7 @@ import {
 } from "$lib/server/libraries/input";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
 import { startScan } from "$lib/server/scanner";
+import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
@@ -41,6 +42,7 @@ export const actions: Actions = {
     try {
       await createLibrary(parseCreateLibraryInput(form));
       await syncLibraryWatchers();
+      await syncScheduledLibraryScans();
     } catch (error) {
       return fail(400, {
         ...state,
@@ -85,6 +87,7 @@ export const actions: Actions = {
     try {
       await updateLibrary(libraryId, parseUpdateLibraryInput(form));
       await syncLibraryWatchers();
+      await syncScheduledLibraryScans();
     } catch (error) {
       return fail(400, {
         libraryActionError:
@@ -107,6 +110,7 @@ export const actions: Actions = {
     try {
       await deleteLibrary(libraryId);
       await syncLibraryWatchers();
+      await syncScheduledLibraryScans();
     } catch (error) {
       return fail(400, {
         libraryActionError:

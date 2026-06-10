@@ -148,6 +148,37 @@ POST /api/settings/actions
 POST /api/movies/:id/metadata/refresh
 ```
 
+Library create/update bodies use the same shape as the web form. Local libraries use `path`; SFTP libraries use SFTP connection fields:
+
+```json
+{
+  "source": "local",
+  "kind": "movie",
+  "name": "Movies",
+  "path": "/media/movies",
+  "watchEnabled": true,
+  "scanIntervalMinutes": null
+}
+```
+
+```json
+{
+  "source": "sftp",
+  "kind": "movie",
+  "name": "Remote Movies",
+  "host": "sftp.example.com",
+  "port": 22,
+  "username": "mediauser",
+  "password": "secret",
+  "root": "/media/movies",
+  "walkConcurrency": 4,
+  "operationTimeoutMs": 30000,
+  "scanIntervalMinutes": 360
+}
+```
+
+`watchEnabled` only applies to local libraries and defaults to `true`. `scanIntervalMinutes` is optional for local and SFTP libraries; use `null` or `0` to disable scheduled rescans. Allowed intervals are 5 minutes through 30 days.
+
 Settings action body:
 
 ```json

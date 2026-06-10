@@ -26,8 +26,8 @@ export function shouldReactToLibraryWatchEvent(filePath: string, stats?: { isFil
   return isVideoFilePath(filePath) || isSidecarSubtitlePath(filePath);
 }
 
-export function shouldWatchLibrary(library: { kind: string; source: string }) {
-  return (library.kind === "movie" || library.kind === "tv") && library.source === "local";
+export function shouldWatchLibrary(library: { kind: string; source: string; watch_enabled?: number | null }) {
+  return (library.kind === "movie" || library.kind === "tv") && library.source === "local" && library.watch_enabled !== 0;
 }
 
 function scheduleScan(libraryId: string) {

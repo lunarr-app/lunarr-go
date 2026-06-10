@@ -12,6 +12,23 @@
     if (formData.source) selectedSource = formData.source;
   });
 
+  function scanIntervalLabel(value: number | string | null | undefined) {
+    const minutes = Number(value);
+    if (!Number.isFinite(minutes) || minutes <= 0) return "off";
+    if (minutes === 15) return "every 15 minutes";
+    if (minutes === 60) return "hourly";
+    if (minutes === 360) return "every 6 hours";
+    if (minutes === 720) return "every 12 hours";
+    if (minutes === 1440) return "daily";
+    return `every ${minutes} minutes`;
+  }
+
+  function automationSummary(library: { source: string; watch_enabled: number; scan_interval_minutes: number | null }) {
+    const scheduled = `scheduled ${scanIntervalLabel(library.scan_interval_minutes)}`;
+    if (library.source !== "local") return scheduled;
+    return `watcher ${library.watch_enabled === 0 ? "off" : "on"} - ${scheduled}`;
+  }
+
   function formatTime(value: string | null | undefined) {
     if (!value) return "Not yet";
     return new Intl.DateTimeFormat(undefined, {
@@ -118,6 +135,32 @@
         <input name="path" value={formData.path ?? ""} placeholder="/Volumes/Media" autocomplete="off" />
       </label>
     {/if}
+    <fieldset>
+      <legend>Automation</legend>
+      {#if selectedSource === "local"}
+        <input type="hidden" name="watchEnabled" value="0" />
+        <label class="check subdued">
+          <input
+            type="checkbox"
+            name="watchEnabled"
+            value="1"
+            checked={(formData.watchEnabled ?? "1") !== "0"}
+          />
+          <span>Watch local changes</span>
+        </label>
+      {/if}
+      <label>
+        Scheduled rescan
+        <select name="scanIntervalMinutes">
+          <option value="" selected={(formData.scanIntervalMinutes ?? "") === ""}>Off</option>
+          <option value="15" selected={formData.scanIntervalMinutes === "15"}>Every 15 minutes</option>
+          <option value="60" selected={formData.scanIntervalMinutes === "60"}>Hourly</option>
+          <option value="360" selected={formData.scanIntervalMinutes === "360"}>Every 6 hours</option>
+          <option value="720" selected={formData.scanIntervalMinutes === "720"}>Every 12 hours</option>
+          <option value="1440" selected={formData.scanIntervalMinutes === "1440"}>Daily</option>
+        </select>
+      </label>
+    </fieldset>
     {#if form?.addError}
       <p class="error">{form.addError}</p>
     {/if}
@@ -138,6 +181,7 @@
           <div class="library-summary">
             <strong>{library.name}</strong>
             <span class="muted">{library.kind === "tv" ? "TV shows" : "Movies"} - {library.source} - {library.path}</span>
+            <span class="muted">{automationSummary(library)}</span>
             {#if library.latestScanJob}
               <span class:active={library.scanActive} class="scan-status">
                 {library.latestScanJob.status} - seen {library.latestScanJob.files_seen}, added {library.latestScanJob.files_added}, updated {library.latestScanJob.files_updated}, removed {library.latestScanJob.files_removed}, errors {library.latestScanJob.errors_count}
@@ -240,6 +284,32 @@
                   <input name="path" value={library.path} placeholder="/Volumes/Media/Movies" autocomplete="off" />
                 </label>
               {/if}
+              <fieldset>
+                <legend>Automation</legend>
+                {#if library.source === "local"}
+                  <input type="hidden" name="watchEnabled" value="0" />
+                  <label class="check subdued">
+                    <input
+                      type="checkbox"
+                      name="watchEnabled"
+                      value="1"
+                      checked={library.watch_enabled !== 0}
+                    />
+                    <span>Watch local changes</span>
+                  </label>
+                {/if}
+                <label>
+                  Scheduled rescan
+                  <select name="scanIntervalMinutes">
+                    <option value="" selected={library.scan_interval_minutes === null}>Off</option>
+                    <option value="15" selected={library.scan_interval_minutes === 15}>Every 15 minutes</option>
+                    <option value="60" selected={library.scan_interval_minutes === 60}>Hourly</option>
+                    <option value="360" selected={library.scan_interval_minutes === 360}>Every 6 hours</option>
+                    <option value="720" selected={library.scan_interval_minutes === 720}>Every 12 hours</option>
+                    <option value="1440" selected={library.scan_interval_minutes === 1440}>Daily</option>
+                  </select>
+                </label>
+              </fieldset>
               <button class="secondary" disabled={library.scanActive}>
                 <Save size={16} aria-hidden="true" />
                 Save changes

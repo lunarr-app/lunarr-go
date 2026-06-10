@@ -5,6 +5,7 @@ import {
   updateLibrary,
 } from "$lib/server/libraries";
 import { parseUpdateLibraryInput } from "$lib/server/libraries/input";
+import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
@@ -34,6 +35,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
       ),
     );
     await syncLibraryWatchers();
+    await syncScheduledLibraryScans();
     return json({ library });
   } catch (error) {
     return jsonError(error, "Could not update library.");
@@ -47,6 +49,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
   try {
     await deleteLibrary(params.id);
     await syncLibraryWatchers();
+    await syncScheduledLibraryScans();
     return json({ ok: true });
   } catch (error) {
     return jsonError(error, "Could not remove library.");

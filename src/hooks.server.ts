@@ -3,6 +3,7 @@ import { auth } from "$lib/server/auth";
 import { hasRegisteredUsers } from "$lib/server/auth/users";
 import { migrateDatabase } from "$lib/server/db";
 import { resumeInterruptedJobs } from "$lib/server/scanner";
+import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
 import { startStaleTranscodeExpiryLoop } from "$lib/server/transcoding/manager";
 import {
@@ -23,6 +24,7 @@ function ensureStartup() {
     if (!building) {
       startStaleTranscodeExpiryLoop();
       await syncLibraryWatchers();
+      await syncScheduledLibraryScans();
     }
   })().catch((error) => {
     startupPromise = undefined;

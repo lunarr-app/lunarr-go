@@ -52,6 +52,29 @@ describe("createLibrary", () => {
       name: "movies",
       kind: "movie",
       path: library.path,
+      watch_enabled: 1,
+      scan_interval_minutes: null,
+    });
+  });
+
+  test("stores local library automation settings", async () => {
+    const mediaDir = path.join(tempDir, "movies");
+    await mkdir(mediaDir);
+
+    const library = await createLibrary({
+      name: "Movies",
+      kind: "movie",
+      path: mediaDir,
+      watchEnabled: false,
+      scanIntervalMinutes: 60,
+    });
+    const stored = await getDb()
+      .then((db) => db.selectFrom("library").selectAll().where("id", "=", library.id).executeTakeFirstOrThrow());
+
+    expect(stored).toMatchObject({
+      watch_enabled: 0,
+      scan_interval_minutes: 60,
+      last_scheduled_scan_at: null,
     });
   });
 
@@ -81,6 +104,8 @@ describe("createLibrary", () => {
       name: "movies",
       source: "sftp",
       path: "sftp://mediauser@sftp.example.com:22/media/movies",
+      watch_enabled: 0,
+      scan_interval_minutes: null,
     });
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({
@@ -256,6 +281,8 @@ describe("createLibrary", () => {
       source: "local",
       name: "",
       path: updatedDir,
+      watchEnabled: false,
+      scanIntervalMinutes: 360,
     });
 
     const rows = await listLibraries();
@@ -266,6 +293,9 @@ describe("createLibrary", () => {
       source: "local",
       path: await realpath(updatedDir),
       config_json: null,
+      watch_enabled: 0,
+      scan_interval_minutes: 360,
+      last_scheduled_scan_at: null,
     });
   });
 
@@ -299,6 +329,7 @@ describe("createLibrary", () => {
         root: "radarr/movies",
         walkConcurrency: 7,
         operationTimeoutMs: 75_000,
+        scanIntervalMinutes: 720,
       },
       {
         testSftpConnection: async (config) => {
@@ -326,6 +357,8 @@ describe("createLibrary", () => {
       name: "movies",
       source: "sftp",
       path: "sftp://mediauser@sftp.example.com:23/radarr/movies",
+      watch_enabled: 0,
+      scan_interval_minutes: 720,
     });
     const config = JSON.parse(updated.config_json ?? "{}");
     expect(decryptSecret(config.passwordEncrypted)).toBe("original-password");

@@ -6,6 +6,7 @@ import {
 } from "$lib/server/libraries";
 import { parseCreateLibraryInput } from "$lib/server/libraries/input";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
+import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
@@ -35,6 +36,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       ),
     );
     await syncLibraryWatchers();
+    await syncScheduledLibraryScans();
     return json({ library }, { status: 201 });
   } catch (error) {
     return jsonError(error, "Could not add library.");

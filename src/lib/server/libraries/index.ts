@@ -158,6 +158,8 @@ type CreateLocalLibraryInput = {
   name: string;
   kind: LibraryKind;
   path: string;
+  watchEnabled?: boolean;
+  scanIntervalMinutes?: number | null;
 };
 
 type CreateSftpLibraryInput = {
@@ -171,12 +173,16 @@ type CreateSftpLibraryInput = {
   root: string;
   walkConcurrency?: number;
   operationTimeoutMs?: number;
+  watchEnabled?: boolean;
+  scanIntervalMinutes?: number | null;
 };
 
 type UpdateLocalLibraryInput = {
   source?: "local";
   name: string;
   path: string;
+  watchEnabled?: boolean;
+  scanIntervalMinutes?: number | null;
 };
 
 type UpdateSftpLibraryInput = {
@@ -189,6 +195,8 @@ type UpdateSftpLibraryInput = {
   root: string;
   walkConcurrency?: number;
   operationTimeoutMs?: number;
+  watchEnabled?: boolean;
+  scanIntervalMinutes?: number | null;
 };
 
 export type CreateLibraryInput = CreateLocalLibraryInput | CreateSftpLibraryInput;
@@ -197,8 +205,24 @@ export type CreateLibraryOptions = {
   testSftpConnection?: typeof testSftpConnection;
 };
 
+const MIN_SCAN_INTERVAL_MINUTES = 5;
+const MAX_SCAN_INTERVAL_MINUTES = 43_200;
+
 function assertSupportedLibraryKind(kind: LibraryKind) {
   if (kind !== "movie" && kind !== "tv") throw new Error("Unsupported library kind.");
+}
+
+function normalizeWatchEnabled(source: "local" | "sftp", value: boolean | undefined) {
+  if (source !== "local") return 0;
+  return value === false ? 0 : 1;
+}
+
+function normalizeScanIntervalMinutes(value: number | null | undefined) {
+  if (value === null || value === undefined || value === 0) return null;
+  if (!Number.isInteger(value) || value < MIN_SCAN_INTERVAL_MINUTES || value > MAX_SCAN_INTERVAL_MINUTES) {
+    throw new Error(`Scheduled scan interval must be between ${MIN_SCAN_INTERVAL_MINUTES} minutes and 30 days.`);
+  }
+  return value;
 }
 
 async function createLocalLibrary(input: CreateLocalLibraryInput) {
@@ -239,6 +263,9 @@ async function createLocalLibrary(input: CreateLocalLibraryInput) {
     access_mode: "all" as const,
     path: resolved,
     config_json: null,
+    watch_enabled: normalizeWatchEnabled("local", input.watchEnabled),
+    scan_interval_minutes: normalizeScanIntervalMinutes(input.scanIntervalMinutes),
+    last_scheduled_scan_at: null,
     created_at: now,
     updated_at: now
   };
@@ -350,6 +377,9 @@ async function createSftpLibrary(input: CreateSftpLibraryInput, options: CreateL
     access_mode: "all" as const,
     path: displayPath,
     config_json: JSON.stringify(config),
+    watch_enabled: normalizeWatchEnabled("sftp", input.watchEnabled),
+    scan_interval_minutes: normalizeScanIntervalMinutes(input.scanIntervalMinutes),
+    last_scheduled_scan_at: null,
     created_at: now,
     updated_at: now
   };
@@ -369,6 +399,12 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
   if (await activeScanExists(id)) throw new Error("Library has an active scan.");
   const inputSource = input.source ?? "local";
   if (inputSource !== existingLibrary.source) throw new Error("Library source cannot be changed. Add a new library instead.");
+  const watchEnabled = normalizeWatchEnabled(existingLibrary.source, input.watchEnabled);
+  const scanIntervalMinutes = normalizeScanIntervalMinutes(input.scanIntervalMinutes);
+  const resetScheduledScanAt =
+    scanIntervalMinutes !== existingLibrary.scan_interval_minutes
+      ? { last_scheduled_scan_at: null }
+      : {};
 
   const now = nowIso();
   if (existingLibrary.source === "sftp" && input.source === "sftp") {
@@ -414,6 +450,9 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
         name: cleanName,
         path: displayPath,
         config_json: JSON.stringify(config),
+        watch_enabled: watchEnabled,
+        scan_interval_minutes: scanIntervalMinutes,
+        ...resetScheduledScanAt,
         updated_at: now
       })
       .where("id", "=", id)
@@ -459,6 +498,9 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
       name: cleanName,
       path: resolved,
       config_json: null,
+      watch_enabled: watchEnabled,
+      scan_interval_minutes: scanIntervalMinutes,
+      ...resetScheduledScanAt,
       updated_at: now
     })
     .where("id", "=", id)
