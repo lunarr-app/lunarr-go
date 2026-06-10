@@ -105,13 +105,25 @@ Admins can share each library with all users or only selected regular users from
 
 ### Docker
 
-Build a local image:
+Use the published Docker image with persistent app data:
+
+```sh
+docker run --rm \
+  --name lunarr \
+  -p 3000:3000 \
+  -e AUTH_SECRET=replace-with-a-random-secret-at-least-32-chars \
+  -e ORIGIN=http://127.0.0.1:3000 \
+  -v lunarr-data:/data \
+  sayem314/lunarr:latest
+```
+
+Build a local image for development:
 
 ```sh
 docker build -t lunarr:local .
 ```
 
-Run with persistent app data:
+Run the local image:
 
 ```sh
 docker run --rm \
@@ -123,7 +135,7 @@ docker run --rm \
   lunarr:local
 ```
 
-When using a published image, replace `lunarr:local` with the published tag. For local filesystem libraries, mount media into the container and add the container path in Libraries:
+For local filesystem libraries, mount media into the container and add the container path in Libraries:
 
 ```sh
 docker run --rm \
@@ -133,7 +145,7 @@ docker run --rm \
   -e ORIGIN=http://127.0.0.1:3000 \
   -v lunarr-data:/data \
   -v /mnt/media:/media:ro \
-  lunarr:local
+  sayem314/lunarr:latest
 ```
 
 For remote or mounted libraries where native file events are unreliable, enable conservative watcher polling:
