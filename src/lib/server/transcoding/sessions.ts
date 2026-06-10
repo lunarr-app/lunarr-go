@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
+import { getSetting, setSetting } from "../settings";
 
 export type CreateTranscodeSessionInput = {
   mediaFileId: string;
@@ -96,7 +97,17 @@ type OrphanedPlaybackSessionArtifactDirectory = {
 const INTERRUPTED_TRANSCODE_MESSAGE =
   "Playback session was interrupted by a server restart.";
 const DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_AGE_MS = 2 * 60 * 60 * 1000;
-const DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES = 20 * 1024 * 1024 * 1024;
+export const PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS = [
+  5 * 1024 * 1024 * 1024,
+  10 * 1024 * 1024 * 1024,
+  20 * 1024 * 1024 * 1024,
+  50 * 1024 * 1024 * 1024,
+  100 * 1024 * 1024 * 1024,
+] as const;
+export const DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES =
+  20 * 1024 * 1024 * 1024;
+const PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY =
+  "playback_session_artifact_max_bytes";
 const ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS = 60_000;
 const RECENT_FAILED_PLAYBACK_SESSION_MAX_IDLE_MS = 60_000;
 const ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS = 2;
@@ -185,6 +196,28 @@ export function isEndedPlaybackArtifactFresh(input: {
     Date.now() - ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS,
   ).toISOString();
   return endedPlaybackArtifactActivityAt(input) >= endedArtifactCutoff;
+}
+
+export function normalizePlaybackSessionArtifactMaxBytes(value: unknown) {
+  const numeric = typeof value === "number" ? value : Number(String(value ?? ""));
+  return PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS.includes(
+    numeric as (typeof PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS)[number],
+  )
+    ? numeric
+    : DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES;
+}
+
+export async function getPlaybackSessionArtifactMaxBytes() {
+  return normalizePlaybackSessionArtifactMaxBytes(
+    await getSetting(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY),
+  );
+}
+
+export async function setPlaybackSessionArtifactMaxBytes(value: unknown) {
+  await setSetting(
+    PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY,
+    String(normalizePlaybackSessionArtifactMaxBytes(value)),
+  );
 }
 
 async function directorySizeBytes(directory: string): Promise<number> {
@@ -1029,4 +1062,13 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
   }
 
   return { sessions: cleanedSessionIds.size, cleaned };
+}
+
+export async function cleanupConfiguredPlaybackSessionArtifacts(
+  maxAgeMs = DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_AGE_MS,
+) {
+  return cleanupExpiredPlaybackSessionArtifacts(
+    maxAgeMs,
+    await getPlaybackSessionArtifactMaxBytes(),
+  );
 }

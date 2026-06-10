@@ -48,6 +48,19 @@ Playback preference body:
 
 Supported preferences are normalized by the server.
 
+Transcoding settings accept the temporary playback-session artifact limit in bytes:
+
+```json
+{
+  "transcodingEnabled": true,
+  "hardwareAcceleration": "off",
+  "hardwareAccelerationRequired": false,
+  "playbackSessionArtifactMaxBytes": 21474836480
+}
+```
+
+Allowed artifact limits are returned by `GET /api/settings` as `playbackSessionArtifactMaxBytesOptions`.
+
 ## Catalog
 
 ```http

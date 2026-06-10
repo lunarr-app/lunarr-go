@@ -52,6 +52,8 @@ Lunarr prefers direct browser playback when the media file is already browser-co
 
 When direct playback is not suitable, Lunarr can serve request-driven HLS. Compatible codecs in an incompatible container can be remuxed into HLS segments without re-encoding. Unsupported codecs use NodeAV-backed HLS transcoding. HLS segments are generated around the segment requested by the browser, and far seeks cancel stale segment work before generating near the new target.
 
+Temporary HLS playback artifacts are stored under `LUNARR_DATA_DIR/playback-sessions`, pruned automatically, and capped by the temporary transcode storage setting in Settings.
+
 For SFTP libraries, direct playback and HLS generation both read from the remote server through the app. SFTP playback quality depends on server/network range-read performance, known file sizes, and stable remote connectivity.
 
 ## API And Mobile Clients

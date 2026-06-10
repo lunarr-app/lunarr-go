@@ -7,7 +7,7 @@ import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
 import { startStaleTranscodeExpiryLoop } from "$lib/server/transcoding/manager";
 import {
-  cleanupExpiredPlaybackSessionArtifacts,
+  cleanupConfiguredPlaybackSessionArtifacts,
   recoverInterruptedTranscodeSessions,
 } from "$lib/server/transcoding/sessions";
 import { json, redirect, type Handle } from "@sveltejs/kit";
@@ -19,7 +19,7 @@ function ensureStartup() {
   startupPromise ??= (async () => {
     await migrateDatabase();
     await recoverInterruptedTranscodeSessions();
-    await cleanupExpiredPlaybackSessionArtifacts();
+    await cleanupConfiguredPlaybackSessionArtifacts();
     await resumeInterruptedJobs();
     if (!building) {
       startStaleTranscodeExpiryLoop();

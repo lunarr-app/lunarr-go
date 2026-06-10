@@ -10,6 +10,10 @@ import {
 } from "$lib/server/settings-commands";
 import { getServerStatus } from "$lib/server/status";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
+import {
+  getPlaybackSessionArtifactMaxBytes,
+  PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
+} from "$lib/server/transcoding/sessions";
 import { APP_VERSION } from "$lib/server/version";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
@@ -31,6 +35,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     tmdbApiKeyConfigured: Boolean(savedApiKey),
     tmdbApiKeySaved: Boolean(savedApiKey),
     transcodePolicy: await getTranscodePolicy(locals.user?.id),
+    playbackSessionArtifactMaxBytes: await getPlaybackSessionArtifactMaxBytes(),
+    playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
     version: APP_VERSION,
     status: await getServerStatus(),
   };

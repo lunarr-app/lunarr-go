@@ -11,6 +11,7 @@ import {
   setHardwareAccelerationRequired,
   setTranscodingEnabled,
 } from "./transcoding/policy";
+import { setPlaybackSessionArtifactMaxBytes } from "./transcoding/sessions";
 
 type InputSource = Record<string, unknown> | FormData;
 
@@ -25,6 +26,10 @@ export function booleanInput(input: InputSource, key: string) {
 
 function stringInput(input: InputSource, key: string) {
   return String(valueFrom(input, key) ?? "").trim();
+}
+
+function hasInput(input: InputSource, key: string) {
+  return valueFrom(input, key) !== null && valueFrom(input, key) !== undefined;
 }
 
 export async function updateRegistrationSettings(input: InputSource) {
@@ -56,6 +61,11 @@ export async function updateTranscodingSettings(input: InputSource) {
     hardwareAcceleration !== "off" &&
       booleanInput(input, "hardwareAccelerationRequired"),
   );
+  if (hasInput(input, "playbackSessionArtifactMaxBytes")) {
+    await setPlaybackSessionArtifactMaxBytes(
+      stringInput(input, "playbackSessionArtifactMaxBytes"),
+    );
+  }
 }
 
 export async function runSettingsAction(action: string) {

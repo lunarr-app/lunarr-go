@@ -16,6 +16,10 @@ import {
   setSetting,
 } from "$lib/server/settings";
 import { registerTranscodeHlsArtifact } from "$lib/server/transcoding/sessions";
+import {
+  DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
+  PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
+} from "$lib/server/transcoding/sessions";
 import type { TranscodePolicy } from "$lib/server/transcoding/policy";
 import { actions, load } from "./+page.server";
 
@@ -27,6 +31,8 @@ type SettingsLoadResult = {
   tmdbApiKeyConfigured: boolean;
   tmdbApiKeySaved: boolean;
   transcodePolicy: TranscodePolicy;
+  playbackSessionArtifactMaxBytes: number;
+  playbackSessionArtifactMaxBytesOptions: readonly number[];
   version: string;
   status: {
     libraries: number;
@@ -121,6 +127,10 @@ describe("settings page server", () => {
     const transcodingForm = new FormData();
     transcodingForm.set("hardwareAcceleration", "videotoolbox");
     transcodingForm.set("hardwareAccelerationRequired", "on");
+    transcodingForm.set(
+      "playbackSessionArtifactMaxBytes",
+      String(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1]),
+    );
     const now = new Date().toISOString();
     await db
       .insertInto("user")
@@ -257,6 +267,10 @@ describe("settings page server", () => {
         hardwareAcceleration: "videotoolbox",
         hardwareAccelerationRequired: true,
       },
+      playbackSessionArtifactMaxBytes:
+        PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1],
+      playbackSessionArtifactMaxBytesOptions:
+        PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
       status: {
         libraries: 1,
         movies: 1,
@@ -264,6 +278,9 @@ describe("settings page server", () => {
       },
     });
     expect(data.version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(await getSetting("playback_session_artifact_max_bytes")).toBe(
+      String(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1]),
+    );
 
     const transcodeSession = await db
       .selectFrom("playback_session")
@@ -298,6 +315,8 @@ describe("settings page server", () => {
       tmdbConfigured: true,
       tmdbAccessTokenConfigured: false,
       tmdbApiKeyConfigured: false,
+      playbackSessionArtifactMaxBytes:
+        DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
     });
   });
 

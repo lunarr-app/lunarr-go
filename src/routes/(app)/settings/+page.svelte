@@ -39,6 +39,11 @@
       timeStyle: "short",
     }).format(new Date(value));
   }
+
+  function formatBytes(value: number) {
+    const gib = value / 1024 / 1024 / 1024;
+    return `${Number.isInteger(gib) ? gib : gib.toFixed(1)} GiB`;
+  }
 </script>
 
 <svelte:head>
@@ -138,6 +143,20 @@
         </select>
       </label>
 
+      <label>
+        Temporary transcode storage
+        <select name="playbackSessionArtifactMaxBytes">
+          {#each data.playbackSessionArtifactMaxBytesOptions as bytes}
+            <option
+              value={bytes}
+              selected={bytes === data.playbackSessionArtifactMaxBytes}
+            >
+              {formatBytes(bytes)}
+            </option>
+          {/each}
+        </select>
+      </label>
+
       <label class="check subdued">
         <input
           type="checkbox"
@@ -151,6 +170,8 @@
       <p class="muted detail-copy">
         Direct play stays first. Transcoding uses temporary NodeAV HLS sessions
         when the browser cannot play a file directly or the user prefers HLS.
+        Temporary HLS files are stored under LUNARR_DATA_DIR/playback-sessions
+        and cleaned automatically.
         Hardware acceleration is best-effort unless required; when required,
         playback fails if NodeAV cannot create the selected device or H.264
         encoder.

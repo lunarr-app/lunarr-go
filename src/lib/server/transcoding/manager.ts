@@ -1,6 +1,6 @@
 import {
   createTranscodeSession,
-  cleanupExpiredPlaybackSessionArtifacts,
+  cleanupConfiguredPlaybackSessionArtifacts,
   deleteTranscodeHlsArtifacts,
   findActiveHlsArtifact,
   findRecentFailedHlsPlayback,
@@ -1428,7 +1428,7 @@ export function startStaleTranscodeExpiryLoop() {
       await pruneActiveHlsSegmentArtifacts();
       staleExpiryLoopTicks += 1;
       if (staleExpiryLoopTicks % PLAYBACK_SESSION_ARTIFACT_CLEANUP_TICKS === 0) {
-        await cleanupExpiredPlaybackSessionArtifacts();
+        await cleanupConfiguredPlaybackSessionArtifacts();
       }
     })().catch((error: unknown) => {
       console.error("Failed to clean up stale playback sessions.", error);
