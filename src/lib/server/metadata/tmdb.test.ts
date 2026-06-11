@@ -280,6 +280,70 @@ describe("matchMovieMetadata", () => {
     expect(metadata?.providerId).toBe("603");
   });
 
+  test("does not accept unrelated same-year movie results", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/search/movie")) {
+        return Response.json({
+          results: [
+            {
+              id: 991530,
+              title: "Gentlemen Of The World",
+              release_date: "2019-01-01"
+            }
+          ]
+        });
+      }
+
+      detailCalls.push(url);
+      return Response.json({
+        id: 991530,
+        title: "Gentlemen Of The World",
+        release_date: "2019-01-01"
+      });
+    };
+
+    const metadata = await matchMovieMetadata("The Gentlemen", 2019, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch
+    });
+
+    expect(metadata).toBeNull();
+    expect(detailCalls).toEqual([]);
+  });
+
+  test("does not accept unrelated same-year TV results", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: [
+            {
+              id: 123,
+              name: "Different Show",
+              first_air_date: "2004-01-01"
+            }
+          ]
+        });
+      }
+
+      detailCalls.push(url);
+      return Response.json({ id: 123, name: "Different Show" });
+    };
+
+    const metadata = await matchTvSeasonMetadata("Battlestar Galactica", 2004, 1, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch
+    });
+
+    expect(metadata).toBeNull();
+    expect(detailCalls).toEqual([]);
+  });
+
   test("connection test reports a successful metadata lookup", async () => {
     const mockedFetch = async (input: URL | RequestInfo) => {
       const url = String(input);

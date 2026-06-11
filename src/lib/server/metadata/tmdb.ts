@@ -393,7 +393,7 @@ function bestSearchResult(results: TmdbSearchResult[] | undefined, title: string
   if (!year) return exactTitle ?? results[0];
 
   const exactYearResults = results.filter((result) => extractYear(result.release_date) === year);
-  return exactYearResults.find((result) => titleMatches(result, title)) ?? exactYearResults[0] ?? exactTitle ?? results[0];
+  return exactYearResults.find((result) => titleMatches(result, title)) ?? exactTitle ?? null;
 }
 
 function bestTvSearchResult(results: TmdbTvSearchResult[] | undefined, title: string, year: number | null) {
@@ -402,7 +402,7 @@ function bestTvSearchResult(results: TmdbTvSearchResult[] | undefined, title: st
   if (!year) return exactTitle ?? results[0];
 
   const exactYearResults = results.filter((result) => extractYear(result.first_air_date) === year);
-  return exactYearResults.find((result) => tvTitleMatches(result, title)) ?? exactYearResults[0] ?? exactTitle ?? results[0];
+  return exactYearResults.find((result) => tvTitleMatches(result, title)) ?? exactTitle ?? null;
 }
 
 function numberOrNull(value: number | null | undefined) {

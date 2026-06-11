@@ -1,4 +1,3 @@
-import { filenameParse, removeFileExtension } from "@ctrl/video-filename-parser";
 import { sql } from "kysely";
 import path from "node:path";
 import { getDb } from "../db";
@@ -24,6 +23,7 @@ import { nodeAvBackend } from "../transcoding/node-av";
 import { mediaFileValuesFromProbe, replaceMediaStreamInfo } from "../transcoding/probe";
 import { runMediaProbeRefreshJob } from "../transcoding/probe-jobs";
 import { createSeekableInputSourceFromStorage } from "../transcoding/seekable-input";
+import { movieLookupFromPath } from "../metadata/movie-lookup";
 import { lookupMovieMetadata, lookupTvSeasonMetadata, type MovieMetadataMatcher, type TvSeasonMetadataMatcher } from "./matching";
 import { isSidecarSubtitlePath, isVideoFilePath } from "./media-files";
 import { parseTvEpisodePath, type ParsedTvEpisode } from "./tv-parser";
@@ -274,10 +274,8 @@ async function findOrCreateMovieItem(
   metadataMatcher?: MovieMetadataMatcher
 ) {
   const db = await getDb();
-  const parsed = filenameParse(removeFileExtension(path.basename(filePath)));
-  const parsedYear = parsed.year ? Number(parsed.year) : null;
-  const movieYear = parsedYear !== null && Number.isFinite(parsedYear) ? parsedYear : null;
-  const metadata = await lookupMovieMetadata(parsed.title, movieYear, onMetadataError, metadataMatcher);
+  const parsed = movieLookupFromPath(filePath);
+  const metadata = await lookupMovieMetadata(parsed.title, parsed.year, onMetadataError, metadataMatcher);
   const now = nowIso();
 
   if (metadata) {
@@ -308,7 +306,7 @@ async function findOrCreateMovieItem(
       .where("kind", "=", "movie")
       .where("provider", "is", null)
       .where("title", "=", parsed.title)
-      .where((eb) => (movieYear === null ? eb("year", "is", null) : eb("year", "=", movieYear)))
+      .where((eb) => (parsed.year === null ? eb("year", "is", null) : eb("year", "=", parsed.year)))
       .executeTakeFirst();
 
     if (localExisting) {
@@ -328,7 +326,7 @@ async function findOrCreateMovieItem(
     .selectAll()
     .where("kind", "=", "movie")
     .where("title", "=", parsed.title)
-    .where((eb) => (movieYear === null ? eb("year", "is", null) : eb("year", "=", movieYear)))
+    .where((eb) => (parsed.year === null ? eb("year", "is", null) : eb("year", "=", parsed.year)))
     .executeTakeFirst();
   if (existing) return existing.id;
 
@@ -340,8 +338,8 @@ async function findOrCreateMovieItem(
       kind: "movie",
       title: parsed.title,
       sort_title: sortTitle(parsed.title),
-      year: movieYear,
-      release_date: movieYear ? `${movieYear}-01-01` : null,
+      year: parsed.year,
+      release_date: parsed.year ? `${parsed.year}-01-01` : null,
       ...emptyMovieMetadataValues(),
       parent_id: null,
       created_at: now,

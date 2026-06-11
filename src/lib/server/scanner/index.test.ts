@@ -1094,6 +1094,75 @@ describe("runScanJob", () => {
     expect(scannedMovie.media_item_id).not.toBe("show-provider-same-id");
   });
 
+  test("uses Radarr movie folder metadata before noisy release filenames", async () => {
+    const mediaDir = path.join(tempDir, "radarr-folder-metadata");
+    const movieDir = path.join(mediaDir, "Blade Runner (1982)");
+    await mkdir(movieDir, { recursive: true });
+    await writeFile(path.join(movieDir, "Blade.Runner (1997).mp4"), "blade");
+
+    const movieLibrary = await createLibrary({
+      name: "Radarr Folder Metadata",
+      kind: "movie",
+      path: mediaDir,
+    });
+    const calls: Array<{ title: string; year: number | null }> = [];
+    const jobId = await createScanJob(movieLibrary.id);
+    await runScanJob(jobId, {
+      metadataMatcher: async (title, year) => {
+        calls.push({ title, year });
+        expect({ title, year }).toEqual({
+          title: "Blade Runner",
+          year: 1982,
+        });
+        return {
+          provider: "tmdb",
+          providerId: "78",
+          title: "Blade Runner",
+          year: 1982,
+          overview: "A blade runner must pursue replicants.",
+          runtimeSeconds: 7020,
+          posterPath: "/blade-runner.jpg",
+          backdropPath: "/blade-runner-backdrop.jpg",
+          releaseDate: "1982-06-25",
+          popularity: 60,
+          voteAverage: 7.9,
+        };
+      },
+    });
+
+    const job = await db
+      .selectFrom("scan_job")
+      .selectAll()
+      .where("id", "=", jobId)
+      .executeTakeFirstOrThrow();
+    expect(job).toMatchObject({
+      status: "completed",
+      files_added: 1,
+      errors_count: 0,
+    });
+    expect(calls).toEqual([{ title: "Blade Runner", year: 1982 }]);
+
+    const scannedMovie = await db
+      .selectFrom("media_file")
+      .innerJoin("media_item", "media_item.id", "media_file.media_item_id")
+      .select([
+        "media_item.title",
+        "media_item.year",
+        "media_item.provider",
+        "media_item.provider_id",
+        "media_item.poster_path",
+      ])
+      .where("media_file.library_id", "=", movieLibrary.id)
+      .executeTakeFirstOrThrow();
+    expect(scannedMovie).toMatchObject({
+      title: "Blade Runner",
+      year: 1982,
+      provider: "tmdb",
+      provider_id: "78",
+      poster_path: "/blade-runner.jpg",
+    });
+  });
+
   test("keeps same-title local movies separate when one filename has no year", async () => {
     const mediaDir = path.join(tempDir, "same-title-movies");
     await mkdir(mediaDir);

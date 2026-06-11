@@ -1,9 +1,8 @@
-import { filenameParse, removeFileExtension } from "@ctrl/video-filename-parser";
 import { sql } from "kysely";
-import path from "node:path";
 import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
+import { movieLookupFromPath } from "./movie-lookup";
 import { movieMetadataValues, syncMovieMetadataRelations } from "./store";
 import { matchMovieMetadata, type MatchedMovieMetadata } from "./tmdb";
 
@@ -88,7 +87,8 @@ export async function refreshMovieMetadataResult(mediaItemId: string, options: R
       "media_item.id",
       "media_item.title",
       "media_item.year",
-      "media_file.basename as basename"
+      "media_file.basename as basename",
+      "media_file.path as path",
     ])
     .where("media_item.id", "=", mediaItemId)
     .where("media_item.kind", "=", "movie")
@@ -97,10 +97,12 @@ export async function refreshMovieMetadataResult(mediaItemId: string, options: R
 
   if (!movie) return { status: "missing", mediaItemId: null };
 
-  const parsed = movie.basename ? filenameParse(removeFileExtension(path.basename(movie.basename))) : null;
-  const parsedYear = parsed?.year ? Number(parsed.year) : null;
-  const title = parsed?.title || movie.title;
-  const year = parsedYear !== null && Number.isFinite(parsedYear) ? parsedYear : movie.year;
+  const parsed = movieLookupFromPath(movie.path ?? movie.basename ?? "", {
+    title: movie.title,
+    year: movie.year,
+  });
+  const title = parsed.title || movie.title;
+  const year = parsed.year ?? movie.year;
   const metadataMatcher = options.metadataMatcher ?? matchMovieMetadata;
   const metadata = await metadataMatcher(title, year);
   if (!metadata) return { status: "unmatched", mediaItemId };

@@ -139,6 +139,58 @@ describe("refreshMovieMetadata", () => {
     ).toEqual([{ name: "Action" }]);
   });
 
+  test("refreshes movie metadata using Radarr parent folder title and year", async () => {
+    await db
+      .updateTable("media_file")
+      .set({
+        path: path.join(tempDir, "Blade Runner (1982)", "Blade.Runner (1997).mp4"),
+        basename: "Blade.Runner (1997).mp4",
+      })
+      .where("id", "=", "file-1")
+      .execute();
+
+    const calls: Array<{ title: string; year: number | null }> = [];
+    const matcher = async (
+      title: string,
+      year: number | null,
+    ): Promise<MatchedMovieMetadata | null> => {
+      calls.push({ title, year });
+      return {
+        provider: "tmdb",
+        providerId: "78",
+        title: "Blade Runner",
+        year,
+        overview: "A blade runner must pursue replicants.",
+        runtimeSeconds: 7020,
+        posterPath: "/blade-runner.jpg",
+        backdropPath: "/blade-runner-backdrop.jpg",
+        releaseDate: "1982-06-25",
+        popularity: 60,
+        voteAverage: 7.9,
+      };
+    };
+
+    expect(
+      await refreshMovieMetadataResult("movie-1", {
+        metadataMatcher: matcher,
+      }).then((result) => result.status),
+    ).toBe("matched");
+    expect(calls).toEqual([{ title: "Blade Runner", year: 1982 }]);
+
+    const movie = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("id", "=", "movie-1")
+      .executeTakeFirstOrThrow();
+    expect(movie).toMatchObject({
+      title: "Blade Runner",
+      year: 1982,
+      provider: "tmdb",
+      provider_id: "78",
+      poster_path: "/blade-runner.jpg",
+    });
+  });
+
   test("moves local duplicates onto an existing provider item during refresh", async () => {
     const now = new Date().toISOString();
     const nowMs = Date.now();
