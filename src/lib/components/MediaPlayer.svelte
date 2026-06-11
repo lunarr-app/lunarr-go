@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
+  import { Play } from "@lucide/svelte";
   import {
     createLatestHlsRepositionScheduler,
     hlsRepositionHref,
@@ -18,6 +19,15 @@
   } from "$lib/playback/session";
   import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
 
+  type PlayerUiState =
+    | "starting"
+    | "playing"
+    | "paused"
+    | "buffering"
+    | "seeking"
+    | "autoplayBlocked"
+    | "error";
+
   let {
     data,
     onProgressSaved,
@@ -32,9 +42,60 @@
 
   let video: HTMLVideoElement | undefined = $state();
   let saveState = $state<"idle" | "saving" | "saved" | "error">("idle");
+  let playerUiState = $state<PlayerUiState>("starting");
+  let hasStartedPlayback = $state(false);
   let hasPlaybackActivity = false;
   let playbackActivityKey: string | null = null;
   const cancelledPlaybackSessions = new Set<string>();
+
+  function isPlayOverlayVisible() {
+    return (
+      playerUiState === "autoplayBlocked" ||
+      (!hasStartedPlayback && playerUiState === "paused")
+    );
+  }
+
+  function isStatusOverlayVisible() {
+    return (
+      playerUiState === "starting" ||
+      playerUiState === "buffering" ||
+      playerUiState === "seeking" ||
+      playerUiState === "error"
+    );
+  }
+
+  function isPlayerOverlayVisible() {
+    return isPlayOverlayVisible() || isStatusOverlayVisible();
+  }
+
+  function playerOverlayMessage() {
+    switch (playerUiState) {
+      case "autoplayBlocked":
+      case "paused":
+        return "Tap to play";
+      case "buffering":
+        return "Buffering";
+      case "seeking":
+        return "Seeking";
+      case "error":
+        return "Playback error";
+      default:
+        return "Starting playback";
+    }
+  }
+
+  async function playFromOverlay() {
+    if (!video) return;
+    playerUiState = "starting";
+    try {
+      await video.play();
+      hasPlaybackActivity = true;
+      hasStartedPlayback = true;
+      playerUiState = "playing";
+    } catch {
+      playerUiState = "autoplayBlocked";
+    }
+  }
 
   function progressPayload(sourceData: PlaybackData = data, completed = false) {
     if (!video) return null;
@@ -170,6 +231,8 @@
       if (playbackActivityKey !== currentPlaybackActivityKey) {
         playbackActivityKey = currentPlaybackActivityKey;
         hasPlaybackActivity = false;
+        hasStartedPlayback = false;
+        playerUiState = "starting";
         saveState = "idle";
       }
       let lastPlaybackTime = initialPlayerTimelineSeconds({
@@ -218,6 +281,27 @@
         player.currentTime = startSeconds;
         lastPlaybackTime = startSeconds;
         hasPlaybackActivity = true;
+      };
+
+      let autoplayAttempted = false;
+      const attemptAutoplay = async () => {
+        if (autoplayAttempted || disposed || !player.paused) return;
+        autoplayAttempted = true;
+        playerUiState = "starting";
+        try {
+          await player.play();
+          if (disposed) return;
+          hasPlaybackActivity = true;
+          hasStartedPlayback = true;
+          playerUiState = "playing";
+        } catch {
+          if (!disposed && !hasStartedPlayback) playerUiState = "autoplayBlocked";
+        }
+      };
+
+      const prepareInitialPlayback = () => {
+        seekToStart();
+        void attemptAutoplay();
       };
 
       const currentPlayerTime = () =>
@@ -290,8 +374,40 @@
       const onTimeUpdate = () => {
         if (!player.seeking) lastPlaybackTime = currentPlayerTime();
       };
+      const onLoadStart = () => {
+        if (!hasStartedPlayback) playerUiState = "starting";
+      };
+      const onCanPlay = () => {
+        if (
+          !hasStartedPlayback &&
+          !autoplayAttempted &&
+          playerUiState !== "autoplayBlocked"
+        ) {
+          playerUiState = "paused";
+        }
+      };
+      const onPlaying = () => {
+        hasPlaybackActivity = true;
+        hasStartedPlayback = true;
+        playerUiState = "playing";
+      };
+      const onPause = () => {
+        if (
+          disposed ||
+          player.ended ||
+          repositioning ||
+          playerUiState === "autoplayBlocked"
+        )
+          return;
+        playerUiState = "paused";
+      };
+      const onWaiting = () => {
+        if (playerUiState === "autoplayBlocked") return;
+        playerUiState = player.seeking ? "seeking" : "buffering";
+      };
       const onSeeking = () => {
         const targetSeconds = currentPlayerTime();
+        playerUiState = "seeking";
         if (shouldRepositionSeekTo(targetSeconds)) {
           seekRepositionScheduler.schedule(targetSeconds);
           return;
@@ -306,14 +422,26 @@
         }
         seekRepositionScheduler.cancel();
         lastPlaybackTime = targetSeconds;
+        playerUiState = player.paused ? "paused" : "playing";
       };
-      const onPlayerError = () => restartHlsNearCurrentTime("native");
+      const onPlayerError = () => {
+        playerUiState = "error";
+        restartHlsNearCurrentTime("native");
+      };
 
       if (player.readyState >= HTMLMediaElement.HAVE_METADATA) {
-        seekToStart();
+        prepareInitialPlayback();
       } else {
-        player.addEventListener("loadedmetadata", seekToStart, { once: true });
+        player.addEventListener("loadedmetadata", prepareInitialPlayback, {
+          once: true
+        });
       }
+      player.addEventListener("loadstart", onLoadStart);
+      player.addEventListener("canplay", onCanPlay);
+      player.addEventListener("playing", onPlaying);
+      player.addEventListener("pause", onPause);
+      player.addEventListener("waiting", onWaiting);
+      player.addEventListener("stalled", onWaiting);
       player.addEventListener("timeupdate", onTimeUpdate);
       player.addEventListener("seeking", onSeeking);
       player.addEventListener("seeked", onSeeked);
@@ -329,7 +457,13 @@
 
       cleanup = () => {
         seekRepositionScheduler.cancel();
-        player.removeEventListener("loadedmetadata", seekToStart);
+        player.removeEventListener("loadedmetadata", prepareInitialPlayback);
+        player.removeEventListener("loadstart", onLoadStart);
+        player.removeEventListener("canplay", onCanPlay);
+        player.removeEventListener("playing", onPlaying);
+        player.removeEventListener("pause", onPause);
+        player.removeEventListener("waiting", onWaiting);
+        player.removeEventListener("stalled", onWaiting);
         player.removeEventListener("timeupdate", onTimeUpdate);
         player.removeEventListener("seeking", onSeeking);
         player.removeEventListener("seeked", onSeeked);
@@ -386,28 +520,54 @@
 
 {#if data.playback.status === "ready" && data.playback.streamUrl}
   <!-- svelte-ignore a11y_media_has_caption -->
-  <video
-    bind:this={video}
-    controls
-    playsinline
-    preload={data.playback.mode === "direct" ? "metadata" : "auto"}
-    onplay={() => (hasPlaybackActivity = true)}
-    ontimeupdate={() => {
-      if (video && video.currentTime > 0) hasPlaybackActivity = true;
-    }}
-    onpause={() => save(false)}
-    onended={() => save(true)}
-  >
-    {#each data.playback.tracks as track}
-      <track
-        kind="subtitles"
-        src={track.src}
-        srclang={track.language}
-        label={track.label}
-        default={track.default}
-      />
-    {/each}
-  </video>
+  <div class="video-shell">
+    <video
+      bind:this={video}
+      controls
+      playsinline
+      preload={data.playback.mode === "direct" ? "metadata" : "auto"}
+      onplay={() => (hasPlaybackActivity = true)}
+      ontimeupdate={() => {
+        if (video && video.currentTime > 0) hasPlaybackActivity = true;
+      }}
+      onpause={() => save(false)}
+      onended={() => save(true)}
+    >
+      {#each data.playback.tracks as track}
+        <track
+          kind="subtitles"
+          src={track.src}
+          srclang={track.language}
+          label={track.label}
+          default={track.default}
+        />
+      {/each}
+    </video>
+
+    {#if isPlayerOverlayVisible()}
+      <div
+        class:interactive={isPlayOverlayVisible()}
+        class="player-overlay"
+        aria-live="polite"
+      >
+        {#if isPlayOverlayVisible()}
+          <button
+            class="overlay-play"
+            type="button"
+            aria-label="Play"
+            onclick={playFromOverlay}
+          >
+            <Play size={34} fill="currentColor" aria-hidden="true" />
+          </button>
+        {:else if playerUiState === "error"}
+          <span class="overlay-error" aria-hidden="true">!</span>
+        {:else}
+          <span class="overlay-spinner" aria-hidden="true"></span>
+        {/if}
+        <p>{playerOverlayMessage()}</p>
+      </div>
+    {/if}
+  </div>
 
   <p class:error={saveState === "error"} class="save-state">
     {#if saveState === "saving"}
@@ -432,12 +592,88 @@
 {/if}
 
 <style>
+  .video-shell {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #000;
+  }
+
   video {
     width: 100%;
     max-height: min(72vh, calc(100dvh - 9rem));
     background: #000;
-    border-radius: 8px;
     display: block;
+  }
+
+  .player-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1rem 4rem;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.18);
+    color: #f8fafc;
+    text-align: center;
+  }
+
+  .player-overlay.interactive {
+    pointer-events: auto;
+  }
+
+  .player-overlay p {
+    margin: 0;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.56);
+    padding: 0.4rem 0.7rem;
+    font-size: 0.85rem;
+    font-weight: 750;
+  }
+
+  .overlay-play {
+    width: 5rem;
+    height: 5rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(8, 12, 16, 0.72);
+    color: #fff;
+    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.35);
+  }
+
+  .overlay-play:hover {
+    background: rgba(18, 25, 33, 0.86);
+  }
+
+  .overlay-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid rgba(255, 255, 255, 0.28);
+    border-top-color: #fff;
+    border-radius: 999px;
+    animation: spin 0.85s linear infinite;
+  }
+
+  .overlay-error {
+    width: 3rem;
+    height: 3rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(185, 28, 28, 0.88);
+    color: #fff;
+    font-size: 1.6rem;
+    font-weight: 900;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .playback-message {
