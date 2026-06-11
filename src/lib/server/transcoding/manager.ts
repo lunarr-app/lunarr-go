@@ -186,6 +186,10 @@ function canUseRequestDrivenHls(
   return nodeAvInputFormat(file) !== null && hasSeekableRemoteSize(file);
 }
 
+function isTerminalTranscodeSessionStatus(status: string | null | undefined) {
+  return status === "completed" || status === "failed" || status === "cancelled";
+}
+
 async function isReadableFile(filePath: string) {
   try {
     return (await stat(filePath)).isFile();
@@ -957,15 +961,35 @@ async function startRequestDrivenHlsSession(input: {
 async function warmInitialRequestDrivenHlsSegment(input: {
   sessionId: string;
   userId: string;
-}) {
-  const ready = await ensureHlsSegmentForRequest({
-    sessionId: input.sessionId,
-    userId: input.userId,
-    segment: hlsSegmentName(0),
-  });
+}): Promise<TranscodeMode> {
+  let ready = false;
+  try {
+    ready = await ensureHlsSegmentForRequest({
+      sessionId: input.sessionId,
+      userId: input.userId,
+      segment: hlsSegmentName(0),
+    });
+  } catch (error) {
+    const session = await getTranscodeSession(input.sessionId);
+    if (session && isTerminalTranscodeSessionStatus(session.status)) {
+      throw new TranscodeStartupAbortedError(
+        session.errorMessage ??
+          (error instanceof Error ? error.message : PLAYBACK_SESSION_INACTIVE_MESSAGE),
+      );
+    }
+    throw error;
+  }
+
+  const session = await getTranscodeSession(input.sessionId);
+  if (!session || isTerminalTranscodeSessionStatus(session.status)) {
+    throw new TranscodeStartupAbortedError(
+      session?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE,
+    );
+  }
   if (!ready) {
     throw new Error("Initial HLS playback segment could not be generated.");
   }
+  return session.mode;
 }
 
 export async function cancelPlaybackSession(
@@ -1657,13 +1681,13 @@ export async function resolveHlsPlayback(input: {
         durationSeconds,
         startTimeSeconds,
       });
-      await warmInitialRequestDrivenHlsSegment({
+      const effectiveMode = await warmInitialRequestDrivenHlsSegment({
         sessionId,
         userId: input.userId,
       });
       return {
         status: "ready",
-        mode,
+        mode: effectiveMode,
         sessionId,
         streamUrl: playbackSessionStreamUrl(sessionId),
         streamStartSeconds: startTimeSeconds,
@@ -1671,10 +1695,11 @@ export async function resolveHlsPlayback(input: {
       };
     } catch (error) {
       if (error instanceof TranscodeStartupAbortedError) {
+        const terminalSession = await getTranscodeSession(sessionId);
         await cleanupTranscodeStartupFailure(sessionId);
         return {
           status: "unavailable",
-          mode,
+          mode: terminalSession?.mode ?? mode,
           sessionId,
           streamUrl: null,
           streamStartSeconds: startTimeSeconds,
@@ -1685,6 +1710,18 @@ export async function resolveHlsPlayback(input: {
         error instanceof Error
           ? error.message
           : "NodeAV request-driven HLS playback failed to start.";
+      const terminalSession = await getTranscodeSession(sessionId);
+      if (terminalSession && isTerminalTranscodeSessionStatus(terminalSession.status)) {
+        await cleanupTranscodeStartupFailure(sessionId);
+        return {
+          status: "unavailable",
+          mode: terminalSession.mode,
+          sessionId,
+          streamUrl: null,
+          streamStartSeconds: startTimeSeconds,
+          message: terminalSession.errorMessage ?? message,
+        };
+      }
       await updateTranscodeSessionStatus(sessionId, "failed", message);
       await cleanupTranscodeStartupFailure(sessionId);
 

@@ -59,6 +59,7 @@ export type TranscodeSessionRecord = {
   mode: TranscodeMode;
   pipeline: TranscodePipeline | null;
   status: TranscodeSessionStatus;
+  errorMessage: string | null;
   playlistPath: string | null;
   startTimeSeconds: number;
   durationSeconds: number | null;
@@ -886,6 +887,7 @@ export async function getTranscodeSession(
       "playback_session.mode as mode",
       "playback_session.pipeline as pipeline",
       "playback_session.status as status",
+      "playback_session.error_message as errorMessage",
       "playback_hls_artifact.path as playlistPath",
       "playback_session.start_time_seconds as startTimeSeconds",
       "media_file.duration_seconds as durationSeconds",

@@ -748,6 +748,105 @@ describe("getPlaybackDecision", () => {
     );
   });
 
+  test("preserves cancellation state when initial request-driven HLS warmup is cancelled", async () => {
+    await db
+      .updateTable("media_file")
+      .set({ duration_seconds: 120 })
+      .where("id", "=", "file-b")
+      .execute();
+    await setUserPlaybackPreference("user-1", "prefer_transcode");
+
+    let cancelledSessionId: string | null = null;
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("linear HLS should not start");
+      },
+      async generateHlsSegmentWindow(input) {
+        cancelledSessionId = input.sessionId;
+        expect(
+          await cancelPlaybackSession(
+            input.sessionId,
+            "Cancelled during initial warmup.",
+          ),
+        ).toBe("cancelled");
+        return completedWindowGeneration();
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision(
+      "movie-1",
+      "file-b",
+      "user-1",
+      20,
+    );
+    expect(decision).toMatchObject({
+      mode: "unavailable",
+      status: "unavailable",
+      streamUrl: null,
+      streamStartSeconds: 20,
+      message: "Cancelled during initial warmup.",
+    });
+    expect(decision?.playbackSessionId).toBe(cancelledSessionId);
+
+    const job = await db
+      .selectFrom("playback_session")
+      .select(["status", "error_message"])
+      .where("id", "=", decision?.playbackSessionId ?? "")
+      .executeTakeFirstOrThrow();
+    expect(job).toEqual({
+      status: "cancelled",
+      error_message: "Cancelled during initial warmup.",
+    });
+  });
+
+  test("returns the effective transcode mode after initial remux warmup fallback", async () => {
+    const requestedModes: string[] = [];
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("linear HLS should not start");
+      },
+      async generateHlsSegmentWindow(input) {
+        requestedModes.push(input.mode ?? "transcode");
+        if (input.mode === "remux") throw new Error("remux segment failed");
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision(
+      "movie-1",
+      "remux-file",
+      "user-1",
+      20,
+    );
+    expect(decision).toMatchObject({
+      mode: "transcode",
+      status: "ready",
+      modeDecision: { mode: "remux", reason: "container_unsupported" },
+      streamStartSeconds: 20,
+      message: null,
+    });
+    expect(requestedModes).toEqual(["remux", "transcode"]);
+
+    const sessionId = decision?.playbackSessionId;
+    if (!sessionId) throw new Error("Expected request-driven playback session id.");
+    const job = await db
+      .selectFrom("playback_session")
+      .select(["status", "mode", "error_message"])
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(job).toEqual({
+      status: "running",
+      mode: "transcode",
+      error_message: null,
+    });
+  });
+
   test("does not reuse ready request-driven HLS sessions across playback decisions", async () => {
     await db
       .updateTable("media_file")
