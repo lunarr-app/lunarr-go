@@ -5,7 +5,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { nodeAvBackend } from "../src/lib/server/transcoding/node-av.ts";
 
-const DEFAULT_INPUT = ".lunarr/fixtures/radarr/.sample-video-cache/Big_Buck_Bunny_360_10s_1MB.mp4";
+const DEFAULT_INPUTS = [
+  ".lunarr/fixtures/transcode/mp4_192s_h264_aac_360p_sample.mp4",
+  ".lunarr/fixtures/transcode/mp4_60s_sample_file_3.4MB.mp4",
+  ".lunarr/fixtures/radarr/.sample-video-cache/Big_Buck_Bunny_360_10s_1MB.mp4",
+];
 const DEFAULT_INPUT_DIR = ".lunarr/fixtures/radarr";
 const TRANSCODE_TIMEOUT_MS = 120_000;
 const MEDIA_FILE_PATTERN = /\.(mp4|mkv|mov|webm)$/i;
@@ -22,7 +26,10 @@ function hasArg(name) {
 
 function timeoutAfter(ms, label) {
   return new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms.`)), ms);
+    setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms.`)),
+      ms,
+    );
   });
 }
 
@@ -37,6 +44,26 @@ async function requireInputFile(inputPath) {
   throw new Error(
     `Smoke input was not found: ${inputPath}\n` +
       "Pass --input /path/to/video.mp4 or seed playable fixtures with `bun run seed:radarr -- --clean --playback`.",
+  );
+}
+
+async function firstAvailableDefaultInput() {
+  for (const candidate of DEFAULT_INPUTS) {
+    const inputPath = path.resolve(candidate);
+    try {
+      const details = await stat(inputPath);
+      if (details.isFile()) {
+        return { inputPath, discoveredFromDirectory: null, checked: 0 };
+      }
+    } catch {
+      // Try the next bundled/local smoke fixture.
+    }
+  }
+
+  throw new Error(
+    "No default smoke input was found. Checked:\n" +
+      DEFAULT_INPUTS.map((candidate) => `- ${candidate}`).join("\n") +
+      "\nPass --input /path/to/video.mp4 or seed playable fixtures with `bun run seed:radarr -- --clean --playback`.",
   );
 }
 
@@ -63,7 +90,8 @@ export async function firstProbeableInputFromDirectory(directory, input) {
   const files = await mediaFilesInDirectory(directory);
   let checked = 0;
   let firstVideoInput = null;
-  const probeMedia = input.probe ?? ((probeInput) => nodeAvBackend.probe(probeInput));
+  const probeMedia =
+    input.probe ?? ((probeInput) => nodeAvBackend.probe(probeInput));
 
   for (const file of files) {
     checked += 1;
@@ -91,19 +119,23 @@ export async function firstProbeableInputFromDirectory(directory, input) {
   }
   if (firstVideoInput) return { ...firstVideoInput, checked };
 
-  throw new Error(`No probeable video smoke input found in ${directory}. Checked ${checked} media files.`);
+  throw new Error(
+    `No probeable video smoke input found in ${directory}. Checked ${checked} media files.`,
+  );
 }
 
 export async function resolveSmokeInput(input) {
-  const explicitInput = argValue("--input") ?? process.env.LUNARR_TRANSCODE_SMOKE_INPUT;
+  const explicitInput =
+    argValue("--input") ?? process.env.LUNARR_TRANSCODE_SMOKE_INPUT;
   if (explicitInput) {
     const inputPath = path.resolve(explicitInput);
     await requireInputFile(inputPath);
     return { inputPath, discoveredFromDirectory: null, checked: 0 };
   }
 
-  const inputDirectory = argValue("--input-dir") ?? process.env.LUNARR_TRANSCODE_SMOKE_INPUT_DIR;
-  if (inputDirectory || input.requireAudio) {
+  const inputDirectory =
+    argValue("--input-dir") ?? process.env.LUNARR_TRANSCODE_SMOKE_INPUT_DIR;
+  if (inputDirectory) {
     const directory = path.resolve(inputDirectory ?? DEFAULT_INPUT_DIR);
     const discovered = await firstProbeableInputFromDirectory(directory, input);
     return {
@@ -113,9 +145,7 @@ export async function resolveSmokeInput(input) {
     };
   }
 
-  const inputPath = path.resolve(DEFAULT_INPUT);
-  await requireInputFile(inputPath);
-  return { inputPath, discoveredFromDirectory: null, checked: 0 };
+  return firstAvailableDefaultInput();
 }
 
 function playlistSegments(playlist) {
@@ -135,8 +165,10 @@ async function assertNonEmptyFile(filePath) {
 
 export function streamCounts(probe) {
   return {
-    videoStreams: probe.streams.filter((stream) => stream.type === "video").length,
-    audioStreams: probe.streams.filter((stream) => stream.type === "audio").length,
+    videoStreams: probe.streams.filter((stream) => stream.type === "video")
+      .length,
+    audioStreams: probe.streams.filter((stream) => stream.type === "audio")
+      .length,
   };
 }
 
@@ -167,7 +199,9 @@ async function assertProbeHasExpectedStreams(input) {
     throw new Error(`${input.label} did not contain a probeable video stream.`);
   }
   if (input.expectAudio && audioStreams <= 0) {
-    throw new Error(`${input.label} did not preserve a probeable audio stream.`);
+    throw new Error(
+      `${input.label} did not preserve a probeable audio stream.`,
+    );
   }
   return { probe, videoStreams, audioStreams };
 }
@@ -216,12 +250,16 @@ async function assertPlaylistArtifacts(input) {
 
   const segments = playlistSegments(playlist);
   if (segments.length === 0) {
-    throw new Error(`${input.label} playlist did not reference any media segments.`);
+    throw new Error(
+      `${input.label} playlist did not reference any media segments.`,
+    );
   }
 
   for (const segment of segments) {
     if (segment.includes("/") || segment.includes("\\")) {
-      throw new Error(`${input.label} expected relative segment name, got: ${segment}`);
+      throw new Error(
+        `${input.label} expected relative segment name, got: ${segment}`,
+      );
     }
     await assertNonEmptyFile(path.join(input.artifactDirectory, segment));
   }
@@ -243,8 +281,9 @@ async function assertPlaylistArtifacts(input) {
 }
 
 async function temporarySegmentWindowDirectories(artifactDirectory) {
-  return (await readdir(artifactDirectory).catch(() => []))
-    .filter((entry) => entry.startsWith(".segment-window-"));
+  return (await readdir(artifactDirectory).catch(() => [])).filter((entry) =>
+    entry.startsWith(".segment-window-"),
+  );
 }
 
 async function assertNoTemporarySegmentWindowDirectories(input) {
@@ -282,15 +321,21 @@ export async function assertSegmentsAbsent(input) {
 async function generateRequestDrivenSmokeWindow(input) {
   const requestedSegment = input.segments[0];
   if (!requestedSegment) {
-    throw new Error(`${input.label} request-driven smoke window has no requested segment.`);
+    throw new Error(
+      `${input.label} request-driven smoke window has no requested segment.`,
+    );
   }
   const segmentSeconds = requestedSegment.segmentSeconds;
   if (!Number.isFinite(segmentSeconds) || segmentSeconds <= 0) {
-    throw new Error(`${input.label} request-driven smoke window has an invalid segment duration.`);
+    throw new Error(
+      `${input.label} request-driven smoke window has an invalid segment duration.`,
+    );
   }
   for (const segment of input.segments) {
     if (segment.segmentSeconds !== segmentSeconds) {
-      throw new Error(`${input.label} request-driven smoke window has mixed segment durations.`);
+      throw new Error(
+        `${input.label} request-driven smoke window has mixed segment durations.`,
+      );
     }
   }
 
@@ -315,11 +360,16 @@ async function generateRequestDrivenSmokeWindow(input) {
     throw new Error(`${input.label} failed: ${message}`);
   }
   if (!window?.completion) {
-    throw new Error(`${input.label} HLS window did not return background completion.`);
+    throw new Error(
+      `${input.label} HLS window did not return background completion.`,
+    );
   }
 
   const requestedReadyMs = Math.round(performance.now() - startedAt);
-  const requestedSegmentPath = path.join(input.artifactDirectory, requestedSegment.segment);
+  const requestedSegmentPath = path.join(
+    input.artifactDirectory,
+    requestedSegment.segment,
+  );
   const segmentSize = await assertNonEmptyFile(requestedSegmentPath);
   const segmentProbe = await assertProbeHasExpectedStreams({
     filePath: requestedSegmentPath,
@@ -337,15 +387,17 @@ async function generateRequestDrivenSmokeWindow(input) {
     throw new Error(`${input.label} failed: ${message}`);
   }
   const windowCompleteMs = Math.round(performance.now() - startedAt);
-  const temporaryWindowDirectories = await assertNoTemporarySegmentWindowDirectories({
-    artifactDirectory: input.artifactDirectory,
-    label: input.label,
-  });
-  const readyBeforeWindowComplete = assertRequestedSegmentReadyBeforeWindowComplete({
-    label: input.label,
-    requestedReadyMs,
-    windowCompleteMs,
-  });
+  const temporaryWindowDirectories =
+    await assertNoTemporarySegmentWindowDirectories({
+      artifactDirectory: input.artifactDirectory,
+      label: input.label,
+    });
+  const readyBeforeWindowComplete =
+    assertRequestedSegmentReadyBeforeWindowComplete({
+      label: input.label,
+      requestedReadyMs,
+      windowCompleteMs,
+    });
 
   const lookaheadSegments = [];
   for (const lookahead of input.segments.slice(1)) {
@@ -381,11 +433,14 @@ async function generateRequestDrivenSmokeWindow(input) {
 export async function main() {
   const keepArtifacts = hasArg("--keep");
   const requireAudio = hasArg("--require-audio");
-  const { inputPath, discoveredFromDirectory, checked } = await resolveSmokeInput({
-    requireAudio,
-  });
+  const { inputPath, discoveredFromDirectory, checked } =
+    await resolveSmokeInput({
+      requireAudio,
+    });
 
-  const artifactRootDirectory = await mkdtemp(path.join(tmpdir(), "lunarr-nodeav-smoke-"));
+  const artifactRootDirectory = await mkdtemp(
+    path.join(tmpdir(), "lunarr-nodeav-smoke-"),
+  );
   try {
     const probe = await nodeAvBackend.probe({
       mediaFileId: "smoke-input",
@@ -448,8 +503,14 @@ export async function main() {
       expectAudio,
     });
 
-    const requestDrivenArtifactDirectory = path.join(artifactRootDirectory, "request-driven");
-    const requestDrivenPlaylistPath = path.join(requestDrivenArtifactDirectory, "master.m3u8");
+    const requestDrivenArtifactDirectory = path.join(
+      artifactRootDirectory,
+      "request-driven",
+    );
+    const requestDrivenPlaylistPath = path.join(
+      requestDrivenArtifactDirectory,
+      "master.m3u8",
+    );
     const requestDrivenInitialWindow = await generateRequestDrivenSmokeWindow({
       label: "request-driven-initial",
       sessionId: "smoke-session",
@@ -494,28 +555,29 @@ export async function main() {
       ],
       expectAudio,
     });
-    const requestDrivenSecondSeekWindow = await generateRequestDrivenSmokeWindow({
-      label: "request-driven-second-seek",
-      sessionId: "smoke-session",
-      inputPath,
-      artifactDirectory: requestDrivenArtifactDirectory,
-      playlistPath: requestDrivenPlaylistPath,
-      segments: [
-        {
-          segment: "segment-00002.ts",
-          segmentIndex: 2,
-          segmentStartSeconds: 4,
-          segmentSeconds: 2,
-        },
-        {
-          segment: "segment-00003.ts",
-          segmentIndex: 3,
-          segmentStartSeconds: 6,
-          segmentSeconds: 2,
-        },
-      ],
-      expectAudio,
-    });
+    const requestDrivenSecondSeekWindow =
+      await generateRequestDrivenSmokeWindow({
+        label: "request-driven-second-seek",
+        sessionId: "smoke-session",
+        inputPath,
+        artifactDirectory: requestDrivenArtifactDirectory,
+        playlistPath: requestDrivenPlaylistPath,
+        segments: [
+          {
+            segment: "segment-00002.ts",
+            segmentIndex: 2,
+            segmentStartSeconds: 4,
+            segmentSeconds: 2,
+          },
+          {
+            segment: "segment-00003.ts",
+            segmentIndex: 3,
+            segmentStartSeconds: 6,
+            segmentSeconds: 2,
+          },
+        ],
+        expectAudio,
+      });
     const requestDrivenLateSeekWindow = canRunLateSeek(probe.durationSeconds)
       ? await generateRequestDrivenSmokeWindow({
           label: "request-driven-late-seek",
@@ -539,8 +601,13 @@ export async function main() {
           ],
           expectAudio,
         })
-      : lateSeekSkippedResult("request-driven-late-seek", probe.durationSeconds);
-    const requestDrivenLateSeekSkippedSegments = canRunLateSeek(probe.durationSeconds)
+      : lateSeekSkippedResult(
+          "request-driven-late-seek",
+          probe.durationSeconds,
+        );
+    const requestDrivenLateSeekSkippedSegments = canRunLateSeek(
+      probe.durationSeconds,
+    )
       ? await assertSegmentsAbsent({
           label: "request-driven-late-seek",
           artifactDirectory: requestDrivenArtifactDirectory,
@@ -552,10 +619,19 @@ export async function main() {
             "segment-00009.ts",
           ],
         })
-      : lateSeekSkippedResult("request-driven-late-seek-skipped-segments", probe.durationSeconds);
+      : lateSeekSkippedResult(
+          "request-driven-late-seek-skipped-segments",
+          probe.durationSeconds,
+        );
 
-    const customIoArtifactDirectory = path.join(artifactRootDirectory, "custom-io");
-    const customIoPlaylistPath = path.join(customIoArtifactDirectory, "master.m3u8");
+    const customIoArtifactDirectory = path.join(
+      artifactRootDirectory,
+      "custom-io",
+    );
+    const customIoPlaylistPath = path.join(
+      customIoArtifactDirectory,
+      "master.m3u8",
+    );
     const inputSource = await createSeekableFileInputSource(inputPath);
     let customIoInitialWindow;
     let customIoSeekWindow;
@@ -659,7 +735,9 @@ export async function main() {
     } finally {
       await inputSource.close();
     }
-    const customIoLateSeekSkippedSegments = canRunLateSeek(probe.durationSeconds)
+    const customIoLateSeekSkippedSegments = canRunLateSeek(
+      probe.durationSeconds,
+    )
       ? await assertSegmentsAbsent({
           label: "custom-io-late-seek",
           artifactDirectory: customIoArtifactDirectory,
@@ -671,7 +749,10 @@ export async function main() {
             "segment-00009.ts",
           ],
         })
-      : lateSeekSkippedResult("custom-io-late-seek-skipped-segments", probe.durationSeconds);
+      : lateSeekSkippedResult(
+          "custom-io-late-seek-skipped-segments",
+          probe.durationSeconds,
+        );
     const artifactDirectories = await readdir(artifactRootDirectory);
 
     console.log(
@@ -690,8 +771,10 @@ export async function main() {
           remuxPlaylist: remux.playlistPath,
           remuxPlaylistSize: remuxArtifacts.playlistSize,
           remuxSegmentCount: remuxArtifacts.segmentCount,
-          remuxFirstSegmentVideoStreams: remuxArtifacts.firstSegmentVideoStreams,
-          remuxFirstSegmentAudioStreams: remuxArtifacts.firstSegmentAudioStreams,
+          remuxFirstSegmentVideoStreams:
+            remuxArtifacts.firstSegmentVideoStreams,
+          remuxFirstSegmentAudioStreams:
+            remuxArtifacts.firstSegmentAudioStreams,
           requestDrivenInitialWindow,
           requestDrivenSeekWindow,
           requestDrivenSecondSeekWindow,
