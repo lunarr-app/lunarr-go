@@ -50,6 +50,7 @@ export type HlsTranscodeInput = {
   mode?: TranscodeMode;
   startTimeSeconds?: number;
   outputTimelineStartSeconds?: number;
+  trimStartSeconds?: number;
   hardwareAcceleration: HardwareAccelerationMode;
   hardwareAccelerationRequired: boolean;
   signal?: AbortSignal;

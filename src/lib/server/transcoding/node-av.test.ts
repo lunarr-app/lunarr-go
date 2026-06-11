@@ -603,6 +603,113 @@ describe("NodeAV generated HLS segment validation", () => {
     }
   });
 
+  test("trims transcode windows before resetting timestamps", async () => {
+    const sessionId = "trim-window-test";
+    const artifactDirectory = await mkdtemp(
+      path.join(tmpdir(), "lunarr-nodeav-trim-window-"),
+    );
+    const filterDescriptions: string[] = [];
+    const seekTimes: number[] = [];
+    let pipelineStarted!: () => void;
+    const pipelineStartedPromise = new Promise<void>((resolve) => {
+      pipelineStarted = resolve;
+    });
+    setNodeAvModuleLoaderForTests(async () => ({
+      api: {
+        Demuxer: {
+          open: async () => ({
+            audio: () => ({}),
+            close: async () => undefined,
+            seek: async (time: number) => {
+              seekTimes.push(time);
+            },
+            video: () => ({}),
+          }),
+        },
+        Decoder: {
+          create: async () => ({ close: () => undefined }),
+        },
+        Encoder: {
+          create: async () => ({ close: () => undefined }),
+        },
+        FilterAPI: {
+          create: (description: string) => {
+            filterDescriptions.push(description);
+            return { close: () => undefined };
+          },
+        },
+        HardwareContext: {
+          auto: () => null,
+          create: () => null,
+        },
+        Muxer: {
+          open: async () => ({}),
+        },
+        pipeline: (
+          _demuxer: unknown,
+          _stages: unknown,
+          _output: unknown,
+          options: unknown,
+        ) => {
+          pipelineStarted();
+          const signal = (options as { signal?: AbortSignal }).signal;
+          return {
+            completion: new Promise<void>((_, reject) => {
+              signal?.addEventListener(
+                "abort",
+                () => reject(new Error("pipeline cancelled")),
+                { once: true },
+              );
+            }),
+          };
+        },
+      } as never,
+      constants: {
+        AV_LOG_QUIET: 0,
+        FF_ENCODER_AAC: "aac",
+        FF_ENCODER_LIBX264: "libx264",
+      } as never,
+      lib: {
+        Codec: {
+          findEncoderByName: () => ({}),
+        },
+        Log: {
+          setLevel: () => undefined,
+        },
+      } as never,
+    }));
+
+    try {
+      const startup = await nodeAvBackend.startCompatibilityHls({
+        sessionId,
+        mediaFileId: "media-file",
+        inputPath: "/tmp/movie.mkv",
+        artifactDirectory,
+        segmentSeconds: 16,
+        mode: "transcode",
+        startTimeSeconds: 160,
+        outputTimelineStartSeconds: 160,
+        trimStartSeconds: 160,
+        hardwareAcceleration: "off",
+        hardwareAccelerationRequired: false,
+      });
+      await pipelineStartedPromise;
+
+      expect(seekTimes).toEqual([160]);
+      expect(filterDescriptions).toEqual([
+        "trim=start=160",
+        "setpts=PTS-STARTPTS+160/TB",
+        "atrim=start=160",
+        "asetpts=PTS-STARTPTS+160/TB",
+      ]);
+
+      await startup.cancel();
+    } finally {
+      await nodeAvBackend.cancel(sessionId);
+      await rm(artifactDirectory, { recursive: true, force: true });
+    }
+  });
+
   test("accepts a probeable segment within the requested duration envelope", () => {
     expect(() =>
       validateGeneratedHlsSegmentProbe({

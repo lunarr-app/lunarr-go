@@ -16,7 +16,15 @@ import type * as NodeAvApi from "node-av/api";
 import type * as NodeAvConstants from "node-av/constants";
 import type * as NodeAvLib from "node-av/lib";
 import { randomUUID } from "node:crypto";
-import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 type NodeAvModules = {
@@ -341,7 +349,10 @@ export function validateGeneratedHlsSegmentProbe(input: {
       `NodeAV generated an HLS segment with duration ${effectiveDurationSeconds.toFixed(3)}s for a ${expectedDurationSeconds.toFixed(3)}s request.`,
     );
   }
-  if (effectiveDurationSeconds && effectiveDurationSeconds > maximumSegmentSeconds) {
+  if (
+    effectiveDurationSeconds &&
+    effectiveDurationSeconds > maximumSegmentSeconds
+  ) {
     throw new NodeAvBackendError(
       `NodeAV generated an HLS segment with duration ${effectiveDurationSeconds.toFixed(3)}s for a ${expectedDurationSeconds.toFixed(3)}s request.`,
     );
@@ -440,7 +451,10 @@ export function setNodeAvModuleLoaderForTests(
   modulesPromise = null;
 }
 
-function trackActiveSegmentGeneration(sessionId: string, generation: ActiveTranscode) {
+function trackActiveSegmentGeneration(
+  sessionId: string,
+  generation: ActiveTranscode,
+) {
   let active = activeSegmentGenerations.get(sessionId);
   if (!active) {
     active = new Set();
@@ -460,7 +474,9 @@ function trackActiveSegmentGeneration(sessionId: string, generation: ActiveTrans
 export function registerActiveSegmentGenerationForTests(sessionId: string) {
   const controller = new AbortController();
   const completion = new Promise<void>((resolve) => {
-    controller.signal.addEventListener("abort", () => resolve(), { once: true });
+    controller.signal.addEventListener("abort", () => resolve(), {
+      once: true,
+    });
   });
   trackActiveSegmentGeneration(sessionId, { controller, completion });
   return controller.signal;
@@ -479,7 +495,10 @@ function segmentPattern(artifactDirectory: string) {
 }
 
 function generatedSegmentPath(artifactDirectory: string, index: number) {
-  return path.join(artifactDirectory, `segment-${String(index).padStart(5, "0")}.ts`);
+  return path.join(
+    artifactDirectory,
+    `segment-${String(index).padStart(5, "0")}.ts`,
+  );
 }
 
 async function positiveFileSize(filePath: string) {
@@ -522,11 +541,7 @@ async function makePlaylistRoutesRelative(
     "\\$&",
   );
   const absolutePrefix = new RegExp(`${escapedArtifactDirectory}/`, "g");
-  await writeFile(
-    playlistPath,
-    playlist.replace(absolutePrefix, ""),
-    "utf8",
-  );
+  await writeFile(playlistPath, playlist.replace(absolutePrefix, ""), "utf8");
 }
 
 function hlsMuxerOptions(input: HlsTranscodeInput) {
@@ -545,9 +560,30 @@ function hlsMuxerTimestampOptions(startTimeSeconds: number | null) {
   };
 }
 
-function normalizedOutputTimelineStartSeconds(value: number | null | undefined) {
+function normalizedOutputTimelineStartSeconds(
+  value: number | null | undefined,
+) {
   if (value === null || value === undefined) return null;
   return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function normalizedTrimStartSeconds(value: number | null | undefined) {
+  if (value === null || value === undefined) return null;
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function filterSeconds(value: number) {
+  return Number(value.toFixed(6)).toString();
+}
+
+function trimExpression(
+  filterName: "trim" | "atrim",
+  startSeconds: number | null,
+) {
+  const options: string[] = [];
+  if (startSeconds !== null)
+    options.push(`start=${filterSeconds(startSeconds)}`);
+  return options.length > 0 ? `${filterName}=${options.join(":")}` : null;
 }
 
 function timestampResetExpression(outputTimelineStartSeconds: number) {
@@ -605,7 +641,10 @@ function createHardwareContextForPolicy(
     if (!hardware) {
       if (input.hardwareAccelerationRequired) {
         throw new NodeAvBackendError(
-          hardwareUnavailableMessage(input, "NodeAV could not create a hardware device"),
+          hardwareUnavailableMessage(
+            input,
+            "NodeAV could not create a hardware device",
+          ),
         );
       }
       return null;
@@ -617,7 +656,10 @@ function createHardwareContextForPolicy(
 
     if (input.hardwareAccelerationRequired) {
       throw new NodeAvBackendError(
-        hardwareUnavailableMessage(input, "no H.264 hardware encoder is available"),
+        hardwareUnavailableMessage(
+          input,
+          "no H.264 hardware encoder is available",
+        ),
       );
     }
     return null;
@@ -701,13 +743,25 @@ async function runHlsTranscode(
   const outputTimelineStartSeconds = normalizedOutputTimelineStartSeconds(
     input.outputTimelineStartSeconds,
   );
+  const requestedTrimStartSeconds =
+    outputTimelineStartSeconds !== null
+      ? normalizedTrimStartSeconds(input.trimStartSeconds)
+      : null;
+  const trimStartSeconds =
+    requestedTrimStartSeconds !== null && requestedTrimStartSeconds > 0
+      ? requestedTrimStartSeconds
+      : null;
   const decoders: Array<{ close(): void }> = [];
   const encoders: Array<{ close(): void }> = [];
   const filters: Array<{ close(): void }> = [];
 
   try {
     if (startTimeSeconds !== null) {
-      await demuxer.seek(startTimeSeconds, -1, modules.constants.AVSEEK_FLAG_BACKWARD);
+      await demuxer.seek(
+        startTimeSeconds,
+        -1,
+        modules.constants.AVSEEK_FLAG_BACKWARD,
+      );
     }
 
     const videoStream = demuxer.video();
@@ -735,6 +789,17 @@ async function runHlsTranscode(
     encoders.push(videoEncoder);
 
     const videoStages: unknown[] = [videoDecoder];
+    const videoTrimExpression = trimExpression("trim", trimStartSeconds);
+    if (videoTrimExpression) {
+      const videoTrimFilter = modules.api.FilterAPI.create(
+        videoTrimExpression,
+        {
+          hardware,
+        },
+      );
+      filters.push(videoTrimFilter);
+      videoStages.push(videoTrimFilter);
+    }
     if (outputTimelineStartSeconds !== null) {
       const videoTimestampFilter = modules.api.FilterAPI.create(
         `setpts=${timestampResetExpression(outputTimelineStartSeconds)}`,
@@ -768,6 +833,13 @@ async function runHlsTranscode(
       decoders.push(audioDecoder);
       encoders.push(audioEncoder);
       const audioStages: unknown[] = [audioDecoder];
+      const audioTrimExpression = trimExpression("atrim", trimStartSeconds);
+      if (audioTrimExpression) {
+        const audioTrimFilter =
+          modules.api.FilterAPI.create(audioTrimExpression);
+        filters.push(audioTrimFilter);
+        audioStages.push(audioTrimFilter);
+      }
       if (outputTimelineStartSeconds !== null) {
         const audioTimestampFilter = modules.api.FilterAPI.create(
           `asetpts=${timestampResetExpression(outputTimelineStartSeconds)}`,
@@ -818,7 +890,11 @@ async function runHlsRemux(
 
   try {
     if (startTimeSeconds !== null) {
-      await demuxer.seek(startTimeSeconds, -1, modules.constants.AVSEEK_FLAG_BACKWARD);
+      await demuxer.seek(
+        startTimeSeconds,
+        -1,
+        modules.constants.AVSEEK_FLAG_BACKWARD,
+      );
     }
 
     const playlistPath = hlsPlaylistPath(input.artifactDirectory);
@@ -885,7 +961,10 @@ async function waitForClosedGeneratedSegment(input: {
       })
     : null;
   const wait = (async () => {
-    const segmentPath = generatedSegmentPath(input.artifactDirectory, input.segmentIndex);
+    const segmentPath = generatedSegmentPath(
+      input.artifactDirectory,
+      input.segmentIndex,
+    );
     const nextSegmentPath = generatedSegmentPath(
       input.artifactDirectory,
       input.segmentIndex + 1,
@@ -895,7 +974,10 @@ async function waitForClosedGeneratedSegment(input: {
     while (Date.now() < input.deadline) {
       throwIfNodeAvOperationAborted(input.signal);
       if ((await positiveFileSize(segmentPath)) > 0) {
-        if (input.state.settled || (await positiveFileSize(nextSegmentPath)) > 0) {
+        if (
+          input.state.settled ||
+          (await positiveFileSize(nextSegmentPath)) > 0
+        ) {
           return segmentPath;
         }
       }
@@ -903,7 +985,9 @@ async function waitForClosedGeneratedSegment(input: {
       if (input.state.settled) {
         if ((await positiveFileSize(segmentPath)) > 0) return segmentPath;
         if (input.state.failure) throw input.state.failure;
-        throw new NodeAvBackendError("NodeAV did not write the requested HLS segment.");
+        throw new NodeAvBackendError(
+          "NodeAV did not write the requested HLS segment.",
+        );
       }
 
       await delay(50, input.signal);
@@ -927,8 +1011,9 @@ async function assertProbeableVideoSegment(
   expectedDurationSeconds: number,
   expectAudio = false,
 ) {
-  let demuxer: Awaited<ReturnType<NodeAvModules["api"]["Demuxer"]["open"]>> | null =
-    null;
+  let demuxer: Awaited<
+    ReturnType<NodeAvModules["api"]["Demuxer"]["open"]>
+  > | null = null;
   try {
     demuxer = await modules.api.Demuxer.open(segmentPath);
     const videoStream = demuxer.video();
@@ -946,8 +1031,16 @@ async function assertProbeableVideoSegment(
         }
 
         const timestampSeconds =
-          packetTimestampSeconds(packet.dts, packet.timeBase, modules.constants) ??
-          packetTimestampSeconds(packet.pts, packet.timeBase, modules.constants);
+          packetTimestampSeconds(
+            packet.dts,
+            packet.timeBase,
+            modules.constants,
+          ) ??
+          packetTimestampSeconds(
+            packet.pts,
+            packet.timeBase,
+            modules.constants,
+          );
         if (timestampSeconds !== null) {
           comparableVideoTimestampCount += 1;
           firstVideoTimestampSeconds ??= timestampSeconds;
@@ -1001,7 +1094,10 @@ async function publishGeneratedWindowSegment(input: {
   expectAudio?: boolean;
 }) {
   await mkdir(input.artifactDirectory, { recursive: true });
-  const finalSegmentPath = path.join(input.artifactDirectory, input.requestedSegment.segment);
+  const finalSegmentPath = path.join(
+    input.artifactDirectory,
+    input.requestedSegment.segment,
+  );
   const tempSegmentPath = path.join(
     input.artifactDirectory,
     `.${input.requestedSegment.segment}.${randomUUID()}.tmp`,
@@ -1024,7 +1120,9 @@ async function runHlsSegmentWindowGeneration(
   modules: NodeAvModules,
   input: HlsSegmentWindowTranscodeInput,
 ): Promise<HlsSegmentWindowGeneration> {
-  const requestedSegments = input.segments.filter((segment) => segment.segmentSeconds > 0);
+  const requestedSegments = input.segments.filter(
+    (segment) => segment.segmentSeconds > 0,
+  );
   const firstSegment = requestedSegments[0];
   if (!firstSegment) return { completion: Promise.resolve() };
 
@@ -1035,12 +1133,15 @@ async function runHlsSegmentWindowGeneration(
   const controller = new AbortController();
   const cancelFromInputSignal = () => controller.abort();
   throwIfNodeAvOperationAborted(input.signal);
-  input.signal?.addEventListener("abort", cancelFromInputSignal, { once: true });
+  input.signal?.addEventListener("abort", cancelFromInputSignal, {
+    once: true,
+  });
   const runner = input.mode === "remux" ? runHlsRemux : runHlsTranscode;
   const segmentInput: HlsTranscodeInput = {
     ...input,
     artifactDirectory: tempArtifactDirectory,
     startTimeSeconds: firstSegment.segmentStartSeconds,
+    trimStartSeconds: firstSegment.segmentStartSeconds,
     outputTimelineStartSeconds: Math.max(
       0,
       firstSegment.segmentStartSeconds -
@@ -1114,13 +1215,17 @@ async function runHlsSegmentWindowGeneration(
   return { completion };
 }
 
-export const nodeAvBackend: ProbeBackend & TranscodeBackend & CompatibilityHlsBackend = {
+export const nodeAvBackend: ProbeBackend &
+  TranscodeBackend &
+  CompatibilityHlsBackend = {
   async probe(input: ProbeInput): Promise<MediaProbe> {
     const modules = await loadNodeAvModules(input.signal);
     throwIfNodeAvOperationAborted(input.signal);
     const controller = new AbortController();
     const cancelFromInputSignal = () => controller.abort();
-    input.signal?.addEventListener("abort", cancelFromInputSignal, { once: true });
+    input.signal?.addEventListener("abort", cancelFromInputSignal, {
+      once: true,
+    });
     let demuxer:
       | Awaited<ReturnType<NodeAvModules["api"]["Demuxer"]["open"]>>
       | undefined;
@@ -1155,7 +1260,9 @@ export const nodeAvBackend: ProbeBackend & TranscodeBackend & CompatibilityHlsBa
     }
   },
 
-  async startCompatibilityHls(input: HlsTranscodeInput): Promise<RunningTranscode> {
+  async startCompatibilityHls(
+    input: HlsTranscodeInput,
+  ): Promise<RunningTranscode> {
     throwIfNodeAvOperationAborted(input.signal);
     const status = await getNodeAvBackendStatus(input.signal);
     if (!status.available) {
@@ -1166,7 +1273,9 @@ export const nodeAvBackend: ProbeBackend & TranscodeBackend & CompatibilityHlsBa
     throwIfNodeAvOperationAborted(input.signal);
     const controller = new AbortController();
     const cancelFromInputSignal = () => controller.abort();
-    input.signal?.addEventListener("abort", cancelFromInputSignal, { once: true });
+    input.signal?.addEventListener("abort", cancelFromInputSignal, {
+      once: true,
+    });
     const playlistPath = hlsPlaylistPath(input.artifactDirectory);
     const runner = input.mode === "remux" ? runHlsRemux : runHlsTranscode;
     const completion = runner(modules, input, controller).finally(() => {
