@@ -48,12 +48,47 @@ import {
 } from "../transcoding/manager";
 import type {
   HlsSegmentWindowGeneration,
+  HlsSegmentWindowTranscodeInput,
   HlsTranscodeInput,
   RunningTranscode,
 } from "../transcoding/backend";
 
-function completedWindowGeneration(): HlsSegmentWindowGeneration {
+async function writeRequestedWindowSegment(
+  input: HlsSegmentWindowTranscodeInput,
+  body = "generated",
+) {
+  const segment = input.segments[0];
+  if (!segment) throw new Error("Expected a requested HLS window segment.");
+  await mkdir(input.artifactDirectory, { recursive: true });
+  await writeFile(path.join(input.artifactDirectory, segment.segment), body);
+}
+
+async function completedWindowGeneration(
+  input?: HlsSegmentWindowTranscodeInput,
+): Promise<HlsSegmentWindowGeneration> {
+  if (input) await writeRequestedWindowSegment(input);
   return { completion: Promise.resolve() };
+}
+
+function setReadableSftpStorageForTests() {
+  setTranscodeStorageFactoryForTests(async () => ({
+    source: "sftp",
+    async statFile() {
+      return null;
+    },
+    async listFiles() {
+      return null;
+    },
+    async *walkFiles() {
+      return;
+    },
+    async createReadStream() {
+      return Readable.from(Buffer.alloc(1024));
+    },
+    async close() {
+      return;
+    },
+  }));
 }
 
 async function waitFor(predicate: () => boolean, timeoutMs = 1_000) {
@@ -420,9 +455,9 @@ describe("getPlaybackDecision", () => {
         linearStartCount += 1;
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
+      async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
-        return completedWindowGeneration();
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -450,7 +485,7 @@ describe("getPlaybackDecision", () => {
       `/media/playback-sessions/${decision?.playbackSessionId}/master.m3u8`,
     );
     expect(linearStartCount).toBe(0);
-    expect(segmentGenerationCount).toBe(0);
+    expect(segmentGenerationCount).toBe(1);
   });
 
   test("returns at most one default subtitle track", async () => {
@@ -659,8 +694,8 @@ describe("getPlaybackDecision", () => {
         startCalled = true;
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -725,8 +760,8 @@ describe("getPlaybackDecision", () => {
       async startCompatibilityHls(): Promise<RunningTranscode> {
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -798,9 +833,9 @@ describe("getPlaybackDecision", () => {
         linearStartCount += 1;
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
+      async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
-        return completedWindowGeneration();
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -905,9 +940,9 @@ describe("getPlaybackDecision", () => {
       async startCompatibilityHls(): Promise<RunningTranscode> {
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
+      async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
-        return completedWindowGeneration();
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1016,9 +1051,9 @@ describe("getPlaybackDecision", () => {
         startCount += 1;
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
+      async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
-        return completedWindowGeneration();
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1088,8 +1123,8 @@ describe("getPlaybackDecision", () => {
         });
         throw new Error("NodeAV policy validation failed.");
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1154,8 +1189,8 @@ describe("getPlaybackDecision", () => {
       async startCompatibilityHls(): Promise<RunningTranscode> {
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1227,8 +1262,8 @@ describe("getPlaybackDecision", () => {
       async startCompatibilityHls(): Promise<RunningTranscode> {
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1298,8 +1333,8 @@ describe("getPlaybackDecision", () => {
       async startCompatibilityHls(): Promise<RunningTranscode> {
         throw new Error("linear HLS should not start");
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1370,8 +1405,8 @@ describe("getPlaybackDecision", () => {
           },
         };
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel(sessionId) {
         cancelledSessionId = sessionId;
@@ -1421,8 +1456,8 @@ describe("getPlaybackDecision", () => {
           },
         };
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel(sessionId) {
         cancelledSessionIds.push(sessionId);
@@ -1499,8 +1534,8 @@ describe("getPlaybackDecision", () => {
           },
         };
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel(sessionId) {
         cancelledSessionId = sessionId;
@@ -1577,8 +1612,8 @@ describe("getPlaybackDecision", () => {
           },
         };
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel(sessionId) {
         cancelledSessionId = sessionId;
@@ -1742,8 +1777,8 @@ describe("getPlaybackDecision", () => {
           },
         };
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1806,8 +1841,8 @@ describe("getPlaybackDecision", () => {
           },
         };
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1866,8 +1901,8 @@ describe("getPlaybackDecision", () => {
           },
         };
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1925,8 +1960,8 @@ describe("getPlaybackDecision", () => {
           },
         };
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -1994,14 +2029,15 @@ describe("getPlaybackDecision", () => {
       })
       .execute();
 
+    setReadableSftpStorageForTests();
     setTranscodeBackendForTests({
       async startCompatibilityHls() {
         throw new Error(
           "linear HLS should not start for duration-known SFTP media",
         );
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -2072,12 +2108,13 @@ describe("getPlaybackDecision", () => {
       })
       .execute();
 
+    setReadableSftpStorageForTests();
     setTranscodeBackendForTests({
       async startCompatibilityHls() {
         throw new Error("linear HLS should not start for SFTP auto playback");
       },
-      async generateHlsSegmentWindow() {
-        return completedWindowGeneration();
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -2259,9 +2296,9 @@ describe("getPlaybackDecision", () => {
         startedInputs.push(input);
         throw new Error("compatibility HLS should not start");
       },
-      async generateHlsSegmentWindow() {
+      async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
-        return completedWindowGeneration();
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -2371,9 +2408,9 @@ describe("getPlaybackDecision", () => {
         startedInputs.push(input);
         throw new Error("compatibility HLS should not start");
       },
-      async generateHlsSegmentWindow() {
+      async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
-        return completedWindowGeneration();
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -2481,9 +2518,9 @@ describe("getPlaybackDecision", () => {
         linearStartCount += 1;
         throw new Error("compatibility HLS should not start");
       },
-      async generateHlsSegmentWindow() {
+      async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
-        return completedWindowGeneration();
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;

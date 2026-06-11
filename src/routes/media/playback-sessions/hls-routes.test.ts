@@ -2190,7 +2190,7 @@ describe("playback-session HLS routes", () => {
 
     expect(initial.status).toBe(200);
     expect(await initial.text()).toBe("segment-00042.ts");
-    expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(2);
+    expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(7);
 
     const far = await getSegment({
       params: { sessionId, segment: "segment-00120.ts" },
@@ -2356,7 +2356,16 @@ describe("playback-session HLS routes", () => {
     expect(second.status).toBe(200);
     expect(generationCount).toBe(1);
     expect(requestedWindows).toEqual([
-      ["segment-00042.ts", "segment-00043.ts", "segment-00044.ts"],
+      [
+        "segment-00042.ts",
+        "segment-00043.ts",
+        "segment-00044.ts",
+        "segment-00045.ts",
+        "segment-00046.ts",
+        "segment-00047.ts",
+        "segment-00048.ts",
+        "segment-00049.ts",
+      ],
     ]);
     expect(expectedAudioFlags).toEqual([true]);
     expect(await first.text()).toBe("segment-00042.ts");
@@ -2416,6 +2425,11 @@ describe("playback-session HLS routes", () => {
         { segment: "segment-00600.ts", startSeconds: 2_400 },
         { segment: "segment-00601.ts", startSeconds: 2_404 },
         { segment: "segment-00602.ts", startSeconds: 2_408 },
+        { segment: "segment-00603.ts", startSeconds: 2_412 },
+        { segment: "segment-00604.ts", startSeconds: 2_416 },
+        { segment: "segment-00605.ts", startSeconds: 2_420 },
+        { segment: "segment-00606.ts", startSeconds: 2_424 },
+        { segment: "segment-00607.ts", startSeconds: 2_428 },
       ],
     ]);
     expect(
@@ -3538,11 +3552,11 @@ describe("playback-session HLS routes", () => {
 
     expect(first.status).toBe(200);
     expect(await first.text()).toBe("generated-before-missing-source");
-    expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(2);
+    expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(7);
 
     await rm(path.join(tempDir, "Movie.2026.mkv"), { force: true });
     const missing = await getSegment({
-      params: { sessionId, segment: "segment-00045.ts" },
+      params: { sessionId, segment: "segment-00050.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 

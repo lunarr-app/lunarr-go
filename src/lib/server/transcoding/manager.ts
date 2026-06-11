@@ -68,8 +68,8 @@ const TRANSCODE_EXPIRY_INTERVAL_MS = 15_000;
 const PLAYBACK_SESSION_ARTIFACT_CLEANUP_TICKS = 20;
 const REQUEST_DRIVEN_SEGMENT_TIMEOUT_MS = 120_000;
 const ACTIVE_TRANSCODE_CANCEL_BATCH_SIZE = 100;
-const REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT = 3;
-const REQUEST_DRIVEN_LOOKAHEAD_WAIT_MS = 5_000;
+const REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT = 8;
+const REQUEST_DRIVEN_LOOKAHEAD_WAIT_MS = REQUEST_DRIVEN_SEGMENT_TIMEOUT_MS;
 const REQUEST_DRIVEN_LOOKAHEAD_FILE_POLL_MS = 25;
 const REQUEST_DRIVEN_LOOKAHEAD_STATE_POLL_MS = 100;
 const SFTP_SEEKABLE_READ_AHEAD_BYTES = 2 * 1024 * 1024;
@@ -954,6 +954,20 @@ async function startRequestDrivenHlsSession(input: {
   }
 }
 
+async function warmInitialRequestDrivenHlsSegment(input: {
+  sessionId: string;
+  userId: string;
+}) {
+  const ready = await ensureHlsSegmentForRequest({
+    sessionId: input.sessionId,
+    userId: input.userId,
+    segment: hlsSegmentName(0),
+  });
+  if (!ready) {
+    throw new Error("Initial HLS playback segment could not be generated.");
+  }
+}
+
 export async function cancelPlaybackSession(
   sessionId: string,
   message = PLAYBACK_CANCELLED_MESSAGE,
@@ -1642,6 +1656,10 @@ export async function resolveHlsPlayback(input: {
         mediaFileId: input.mediaFileId,
         durationSeconds,
         startTimeSeconds,
+      });
+      await warmInitialRequestDrivenHlsSegment({
+        sessionId,
+        userId: input.userId,
       });
       return {
         status: "ready",

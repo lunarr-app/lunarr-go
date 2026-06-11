@@ -2,12 +2,10 @@
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
   import {
-    createLatestHlsRepositionScheduler,
     hlsRepositionHref,
     initialPlayerTimelineSeconds,
     shouldReloadHlsPlaybackDataOnError,
-    shouldRecoverHlsPlaybackError,
-    shouldRepositionHlsSeek
+    shouldRecoverHlsPlaybackError
   } from "$lib/playback/seek";
   import {
     activePlaybackSessionId,
@@ -178,7 +176,6 @@
         startSeconds,
         streamStartSeconds: playback.streamStartSeconds
       });
-      let seekOriginTime: number | null = null;
       let repositioning = false;
       const streamUrl = playback.streamUrl;
       const currentPageHref = () =>
@@ -187,24 +184,6 @@
         hls?.destroy();
         hls = null;
       };
-      const hlsSeekRepositionScheduler = createLatestHlsRepositionScheduler({
-        reposition(targetSeconds) {
-          if (disposed) return;
-          const href = hlsRepositionHref({
-            currentUrl: new URL(window.location.href),
-            mediaFileId: playback.file.id,
-            startSeconds: targetSeconds + Math.max(0, playback.streamStartSeconds ?? 0)
-          });
-          if (href === currentPageHref()) {
-            repositioning = false;
-            return;
-          }
-          stopHlsTransport();
-          flushProgress(sourceData);
-          cancelPlaybackSession(playback);
-          onReposition(href);
-        }
-      });
       const setupPlayer = async () => {
         if (
           (playback.mode === "transcode" || playback.mode === "remux") &&
@@ -213,7 +192,13 @@
           const { default: Hls } = await import("hls.js/light");
           if (disposed) return;
           if (Hls.isSupported()) {
-            hls = new Hls();
+            hls = new Hls({
+              fragLoadingTimeOut: 120000,
+              fragLoadingMaxRetry: 2,
+              fragLoadingRetryDelay: 500,
+              maxBufferLength: 60,
+              backBufferLength: 60,
+            });
             hls.on(Hls.Events.ERROR, (_event, eventData) => {
               if (!disposed && eventData.fatal) restartHlsNearCurrentTime("hls");
             });
@@ -285,48 +270,6 @@
         onReposition(href);
       };
 
-      const repositionHlsSeekAtCurrentTime = (fromSeconds: number) => {
-        const currentTime = currentPlayerTime();
-        if (hlsSeekRepositionScheduler.pending()) {
-          hlsSeekRepositionScheduler.schedule(currentTime);
-          lastPlaybackTime = currentTime;
-          return true;
-        }
-        if (
-          repositioning ||
-          !shouldRepositionHlsSeek({
-            mode: playback.mode,
-            status: playback.status,
-            fromSeconds,
-            toSeconds: currentTime
-          })
-        ) {
-          lastPlaybackTime = currentTime;
-          return false;
-        }
-
-        repositioning = true;
-        hasPlaybackActivity = true;
-        hlsSeekRepositionScheduler.schedule(currentTime);
-        return true;
-      };
-
-      const onSeeking = () => {
-        const fromSeconds = lastPlaybackTime;
-        seekOriginTime = fromSeconds;
-        if (repositionHlsSeekAtCurrentTime(fromSeconds)) {
-          seekOriginTime = null;
-        }
-      };
-
-      const onSeeked = () => {
-        const currentTime = currentPlayerTime();
-        const fromSeconds = seekOriginTime ?? lastPlaybackTime;
-        seekOriginTime = null;
-
-        repositionHlsSeekAtCurrentTime(fromSeconds);
-      };
-
       const onTimeUpdate = () => {
         if (!player.seeking) lastPlaybackTime = currentPlayerTime();
       };
@@ -337,8 +280,6 @@
       } else {
         player.addEventListener("loadedmetadata", seekToStart, { once: true });
       }
-      player.addEventListener("seeking", onSeeking);
-      player.addEventListener("seeked", onSeeked);
       player.addEventListener("timeupdate", onTimeUpdate);
       player.addEventListener("error", onPlayerError);
 
@@ -352,14 +293,11 @@
 
       cleanup = () => {
         player.removeEventListener("loadedmetadata", seekToStart);
-        player.removeEventListener("seeking", onSeeking);
-        player.removeEventListener("seeked", onSeeked);
         player.removeEventListener("timeupdate", onTimeUpdate);
         player.removeEventListener("error", onPlayerError);
         window.removeEventListener("pagehide", flushCapturedProgress);
         document.removeEventListener("visibilitychange", onVisibilityChange);
         window.clearInterval(interval);
-        hlsSeekRepositionScheduler.cancel();
         stopHlsTransport();
       };
     })();

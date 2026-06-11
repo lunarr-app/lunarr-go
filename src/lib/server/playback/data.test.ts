@@ -5,8 +5,22 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import { setTranscodeBackendForTests } from "$lib/server/transcoding/manager";
-import type { RunningTranscode } from "$lib/server/transcoding/backend";
+import type {
+  HlsSegmentWindowGeneration,
+  HlsSegmentWindowTranscodeInput,
+  RunningTranscode
+} from "$lib/server/transcoding/backend";
 import { getPlaybackData } from ".";
+
+async function completedWindowGeneration(
+  input: HlsSegmentWindowTranscodeInput
+): Promise<HlsSegmentWindowGeneration> {
+  const segment = input.segments[0];
+  if (!segment) throw new Error("Expected a requested HLS window segment.");
+  await mkdir(input.artifactDirectory, { recursive: true });
+  await writeFile(path.join(input.artifactDirectory, segment.segment), "generated");
+  return { completion: Promise.resolve() };
+}
 
 type WatchLoadResult = {
   item: {
@@ -441,8 +455,8 @@ describe("playback data", () => {
           }
         };
       },
-      async generateHlsSegmentWindow() {
-        return { completion: Promise.resolve() };
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
@@ -476,8 +490,8 @@ describe("playback data", () => {
           }
         };
       },
-      async generateHlsSegmentWindow() {
-        return { completion: Promise.resolve() };
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
       },
       async cancel() {
         return;
