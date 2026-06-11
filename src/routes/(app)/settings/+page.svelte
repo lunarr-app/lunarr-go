@@ -4,6 +4,7 @@
   let { data, form } = $props();
 
   let registrationForm: HTMLFormElement | null = $state(null);
+  let transcodingForm: HTMLFormElement | null = $state(null);
   let signupOpen = $state(false);
   let tmdbAccessToken = $state("");
   let tmdbApiKey = $state("");
@@ -30,6 +31,10 @@
 
   function submitRegistration() {
     registrationForm?.requestSubmit();
+  }
+
+  function submitTranscoding() {
+    transcodingForm?.requestSubmit();
   }
 
   function formatTime(value: string | null | undefined) {
@@ -103,7 +108,12 @@
       {/if}
     </form>
 
-    <form class="panel" method="POST" action="?/saveTranscoding">
+    <form
+      class="panel"
+      method="POST"
+      action="?/saveTranscoding"
+      bind:this={transcodingForm}
+    >
       <div class="section-heading">
         <div>
           <h2>Transcoding</h2>
@@ -125,6 +135,7 @@
             type="checkbox"
             name="transcodingEnabled"
             bind:checked={transcodingEnabled}
+            onchange={submitTranscoding}
           />
           <span class="switch-track" aria-hidden="true"></span>
         </span>
@@ -132,7 +143,11 @@
 
       <label>
         Hardware acceleration
-        <select name="hardwareAcceleration" bind:value={hardwareAcceleration}>
+        <select
+          name="hardwareAcceleration"
+          bind:value={hardwareAcceleration}
+          onchange={submitTranscoding}
+        >
           <option value="off">Off</option>
           <option value="auto">Auto</option>
           <option value="videotoolbox">VideoToolbox</option>
@@ -145,7 +160,10 @@
 
       <label>
         Temporary transcode storage
-        <select name="playbackSessionArtifactMaxBytes">
+        <select
+          name="playbackSessionArtifactMaxBytes"
+          onchange={submitTranscoding}
+        >
           {#each data.playbackSessionArtifactMaxBytesOptions as bytes}
             <option
               value={bytes}
@@ -163,6 +181,7 @@
           name="hardwareAccelerationRequired"
           bind:checked={hardwareAccelerationRequired}
           disabled={hardwareAcceleration === "off"}
+          onchange={submitTranscoding}
         />
         <span>Require hardware acceleration; fail if unavailable</span>
       </label>
@@ -180,10 +199,6 @@
       {#if form?.transcodingError}
         <p class="error">{form.transcodingError}</p>
       {/if}
-      <button>
-        <Save size={16} aria-hidden="true" />
-        Save transcoding
-      </button>
     </form>
 
     <form class="panel primary-panel" method="POST" action="?/saveMetadata">
