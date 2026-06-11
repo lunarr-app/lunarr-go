@@ -48,6 +48,8 @@ type NodeAvStream = {
   index: number;
   duration: bigint;
   timeBase: { num: number; den: number };
+  avgFrameRate?: { num: number; den: number };
+  rFrameRate?: { num: number; den: number };
   metadata: { getAll(): Record<string, string> } | null;
   codecpar: {
     bitRate: bigint;
@@ -677,15 +679,46 @@ function createHardwareContextForPolicy(
   }
 }
 
+function rationalSeconds(
+  value: { num: number; den: number } | null | undefined,
+) {
+  if (!value || !Number.isFinite(value.num) || !Number.isFinite(value.den)) {
+    return null;
+  }
+  if (value.num <= 0 || value.den <= 0) return null;
+  return value.num / value.den;
+}
+
+function streamFrameRate(stream: unknown) {
+  const videoStream = stream as {
+    avgFrameRate?: { num: number; den: number };
+    rFrameRate?: { num: number; den: number };
+  };
+  const frameRate =
+    rationalSeconds(videoStream.avgFrameRate) ??
+    rationalSeconds(videoStream.rFrameRate);
+  if (frameRate === null || frameRate < 1 || frameRate > 240) return 30;
+  return frameRate;
+}
+
+function hlsGopSize(input: { segmentSeconds: number; stream: unknown }) {
+  return Math.max(
+    1,
+    Math.round(input.segmentSeconds * streamFrameRate(input.stream)),
+  );
+}
+
 function videoEncoderOptions(input: {
   decoder: Awaited<ReturnType<NodeAvModules["api"]["Decoder"]["create"]>>;
   hardware: NodeAvHardwareContext | null;
   segmentSeconds: number;
+  stream: unknown;
   signal: AbortSignal;
 }) {
+  const gopSize = hlsGopSize(input);
   const baseOptions = {
     decoder: input.decoder,
-    gopSize: Math.max(1, Math.round(input.segmentSeconds * 30)),
+    gopSize,
     signal: input.signal,
   };
 
@@ -703,6 +736,8 @@ function videoEncoderOptions(input: {
       preset: "veryfast",
       crf: 23,
       pix_fmt: "yuv420p",
+      keyint_min: gopSize,
+      "no-scenecut": true,
     },
   };
 }
@@ -782,6 +817,7 @@ async function runHlsTranscode(
         decoder: videoDecoder,
         hardware,
         segmentSeconds: input.segmentSeconds,
+        stream: videoStream,
         signal: controller.signal,
       }),
     );

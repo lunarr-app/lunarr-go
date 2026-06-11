@@ -603,6 +603,107 @@ describe("NodeAV generated HLS segment validation", () => {
     }
   });
 
+  test("sizes transcode GOP from the source frame rate", async () => {
+    const sessionId = "source-framerate-gop-test";
+    const artifactDirectory = await mkdtemp(
+      path.join(tmpdir(), "lunarr-nodeav-source-framerate-gop-"),
+    );
+    let videoEncoderOptions: unknown;
+    let pipelineStarted!: () => void;
+    const pipelineStartedPromise = new Promise<void>((resolve) => {
+      pipelineStarted = resolve;
+    });
+    setNodeAvModuleLoaderForTests(async () => ({
+      api: {
+        Demuxer: {
+          open: async () => ({
+            audio: () => null,
+            close: async () => undefined,
+            video: () => ({
+              avgFrameRate: { num: 25, den: 1 },
+              rFrameRate: { num: 25, den: 1 },
+            }),
+          }),
+        },
+        Decoder: {
+          create: async () => ({ close: () => undefined }),
+        },
+        Encoder: {
+          create: async (codec: unknown, options: unknown) => {
+            if (codec === "libx264") videoEncoderOptions = options;
+            return { close: () => undefined };
+          },
+        },
+        FilterAPI: {
+          create: () => ({ close: () => undefined }),
+        },
+        HardwareContext: {
+          auto: () => null,
+          create: () => null,
+        },
+        Muxer: {
+          open: async () => ({}),
+        },
+        pipeline: (
+          _demuxer: unknown,
+          _stages: unknown,
+          _output: unknown,
+          options: unknown,
+        ) => {
+          pipelineStarted();
+          const signal = (options as { signal?: AbortSignal }).signal;
+          return {
+            completion: new Promise<void>((_, reject) => {
+              signal?.addEventListener(
+                "abort",
+                () => reject(new Error("pipeline cancelled")),
+                { once: true },
+              );
+            }),
+          };
+        },
+      } as never,
+      constants: {
+        AV_LOG_QUIET: 0,
+        FF_ENCODER_LIBX264: "libx264",
+      } as never,
+      lib: {
+        Codec: {
+          findEncoderByName: () => ({}),
+        },
+        Log: {
+          setLevel: () => undefined,
+        },
+      } as never,
+    }));
+
+    try {
+      const startup = await nodeAvBackend.startCompatibilityHls({
+        sessionId,
+        mediaFileId: "media-file",
+        inputPath: "/tmp/movie.mkv",
+        artifactDirectory,
+        segmentSeconds: 16,
+        hardwareAcceleration: "off",
+        hardwareAccelerationRequired: false,
+      });
+      await pipelineStartedPromise;
+
+      expect(videoEncoderOptions).toMatchObject({
+        gopSize: 400,
+        options: {
+          keyint_min: 400,
+          "no-scenecut": true,
+        },
+      });
+
+      await startup.cancel();
+    } finally {
+      await nodeAvBackend.cancel(sessionId);
+      await rm(artifactDirectory, { recursive: true, force: true });
+    }
+  });
+
   test("trims transcode windows before resetting timestamps", async () => {
     const sessionId = "trim-window-test";
     const artifactDirectory = await mkdtemp(
