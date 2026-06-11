@@ -83,12 +83,14 @@ export async function refreshMovieMetadataResult(mediaItemId: string, options: R
   const movie = await db
     .selectFrom("media_item")
     .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+    .innerJoin("library", "library.id", "media_file.library_id")
     .select([
       "media_item.id",
       "media_item.title",
       "media_item.year",
       "media_file.basename as basename",
       "media_file.path as path",
+      "library.path as library_path",
     ])
     .where("media_item.id", "=", mediaItemId)
     .where("media_item.kind", "=", "movie")
@@ -100,6 +102,8 @@ export async function refreshMovieMetadataResult(mediaItemId: string, options: R
   const parsed = movieLookupFromPath(movie.path ?? movie.basename ?? "", {
     title: movie.title,
     year: movie.year,
+  }, {
+    libraryRoot: movie.library_path,
   });
   const title = parsed.title || movie.title;
   const year = parsed.year ?? movie.year;

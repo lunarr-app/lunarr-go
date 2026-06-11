@@ -6,6 +6,10 @@ export type ParsedMovieLookup = {
   year: number | null;
 };
 
+export type MovieLookupOptions = {
+  libraryRoot?: string | null;
+};
+
 function numericYear(value: string | null | undefined) {
   if (!value) return null;
   const parsed = Number(value);
@@ -54,14 +58,23 @@ function parseMovieFilename(basename: string): ParsedMovieLookup {
   };
 }
 
+function normalizedLookupPath(value: string | null | undefined) {
+  return (value ?? "").replaceAll("\\", "/").replace(/\/+$/, "");
+}
+
 export function movieLookupFromPath(
   filePath: string,
   fallback?: ParsedMovieLookup,
+  options: MovieLookupOptions = {},
 ): ParsedMovieLookup {
-  const normalizedPath = filePath.replaceAll("\\", "/");
-  const parentName = path.posix.basename(path.posix.dirname(normalizedPath));
-  const parent = parseTitleYearName(parentName);
-  if (parent) return parent;
+  const normalizedPath = normalizedLookupPath(filePath);
+  const parentPath = normalizedLookupPath(path.posix.dirname(normalizedPath));
+  const libraryRoot = normalizedLookupPath(options.libraryRoot);
+  if (!libraryRoot || parentPath !== libraryRoot) {
+    const parentName = path.posix.basename(parentPath);
+    const parent = parseTitleYearName(parentName);
+    if (parent) return parent;
+  }
 
   const file = parseMovieFilename(path.posix.basename(normalizedPath));
   return {

@@ -1163,6 +1163,59 @@ describe("runScanJob", () => {
     });
   });
 
+  test("does not use a year-like library root as movie metadata", async () => {
+    const mediaDir = path.join(tempDir, "Movies (2026)");
+    await mkdir(mediaDir, { recursive: true });
+    await writeFile(path.join(mediaDir, "The Matrix (1999).mkv"), "matrix");
+
+    const movieLibrary = await createLibrary({
+      name: "Year Root",
+      kind: "movie",
+      path: mediaDir,
+    });
+    const calls: Array<{ title: string; year: number | null }> = [];
+    const jobId = await createScanJob(movieLibrary.id);
+    await runScanJob(jobId, {
+      metadataMatcher: async (title, year) => {
+        calls.push({ title, year });
+        if (title !== "The Matrix") return null;
+        return {
+          provider: "tmdb",
+          providerId: "603",
+          title,
+          year,
+          overview: "A hacker discovers the nature of reality.",
+          runtimeSeconds: 8160,
+          posterPath: "/matrix.jpg",
+          backdropPath: "/matrix-backdrop.jpg",
+          releaseDate: "1999-03-31",
+          popularity: 100,
+          voteAverage: 8.3,
+        };
+      },
+    });
+
+    const job = await db
+      .selectFrom("scan_job")
+      .selectAll()
+      .where("id", "=", jobId)
+      .executeTakeFirstOrThrow();
+    expect(job.status).toBe("completed");
+    expect(calls).toEqual([{ title: "The Matrix", year: 1999 }]);
+
+    const scannedMovie = await db
+      .selectFrom("media_file")
+      .innerJoin("media_item", "media_item.id", "media_file.media_item_id")
+      .select(["media_item.title", "media_item.year", "media_item.provider_id"])
+      .where("media_file.library_id", "=", movieLibrary.id)
+      .executeTakeFirstOrThrow();
+    expect(scannedMovie).toEqual({
+      title: "The Matrix",
+      year: 1999,
+      provider_id: "603",
+    });
+  });
+
   test("keeps same-title local movies separate when one filename has no year", async () => {
     const mediaDir = path.join(tempDir, "same-title-movies");
     await mkdir(mediaDir);

@@ -21,4 +21,14 @@ describe("movieLookupFromPath", () => {
       movieLookupFromPath("movies/Multiplicity (1996) [REPACK] [720p].mp4"),
     ).toEqual({ title: "Multiplicity", year: 1996 });
   });
+
+  test("does not treat the library root as a movie folder", () => {
+    expect(
+      movieLookupFromPath(
+        "/media/Movies (2026)/The Matrix (1999).mkv",
+        undefined,
+        { libraryRoot: "/media/Movies (2026)" },
+      ),
+    ).toEqual({ title: "The Matrix", year: 1999 });
+  });
 });

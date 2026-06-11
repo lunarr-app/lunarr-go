@@ -191,6 +191,51 @@ describe("refreshMovieMetadata", () => {
     });
   });
 
+  test("refreshes movie metadata from filename when library root contains a year", async () => {
+    const libraryRoot = path.join(tempDir, "Movies (2026)");
+    await db
+      .updateTable("library")
+      .set({ path: libraryRoot })
+      .where("id", "=", "library-1")
+      .execute();
+    await db
+      .updateTable("media_file")
+      .set({
+        path: path.join(libraryRoot, "The Matrix (1999).mkv"),
+        basename: "The Matrix (1999).mkv",
+      })
+      .where("id", "=", "file-1")
+      .execute();
+
+    const calls: Array<{ title: string; year: number | null }> = [];
+    const matcher = async (
+      title: string,
+      year: number | null,
+    ): Promise<MatchedMovieMetadata | null> => {
+      calls.push({ title, year });
+      return {
+        provider: "tmdb",
+        providerId: "603",
+        title: "The Matrix",
+        year,
+        overview: "A hacker discovers the nature of reality.",
+        runtimeSeconds: 8160,
+        posterPath: "/matrix.jpg",
+        backdropPath: "/matrix-backdrop.jpg",
+        releaseDate: "1999-03-31",
+        popularity: 100,
+        voteAverage: 8.3,
+      };
+    };
+
+    expect(
+      await refreshMovieMetadataResult("movie-1", {
+        metadataMatcher: matcher,
+      }).then((result) => result.status),
+    ).toBe("matched");
+    expect(calls).toEqual([{ title: "The Matrix", year: 1999 }]);
+  });
+
   test("moves local duplicates onto an existing provider item during refresh", async () => {
     const now = new Date().toISOString();
     const nowMs = Date.now();

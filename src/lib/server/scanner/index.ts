@@ -269,12 +269,13 @@ async function loadExistingLibraryFiles(libraryId: string) {
 }
 
 async function findOrCreateMovieItem(
+  libraryRoot: string,
   filePath: string,
   onMetadataError?: (error: unknown) => Promise<void>,
   metadataMatcher?: MovieMetadataMatcher
 ) {
   const db = await getDb();
-  const parsed = movieLookupFromPath(filePath);
+  const parsed = movieLookupFromPath(filePath, undefined, { libraryRoot });
   const metadata = await lookupMovieMetadata(parsed.title, parsed.year, onMetadataError, metadataMatcher);
   const now = nowIso();
 
@@ -394,7 +395,7 @@ async function scanMovieFile(
       return "unchanged" as const;
     }
 
-    const mediaItemId = await findOrCreateMovieItem(filePath, onMetadataError, metadataMatcher);
+    const mediaItemId = await findOrCreateMovieItem(library.path, filePath, onMetadataError, metadataMatcher);
     const values = {
       ...fileValues,
       media_item_id: mediaItemId
@@ -413,7 +414,7 @@ async function scanMovieFile(
     return "updated" as const;
   }
 
-  const mediaItemId = await findOrCreateMovieItem(filePath, onMetadataError, metadataMatcher);
+  const mediaItemId = await findOrCreateMovieItem(library.path, filePath, onMetadataError, metadataMatcher);
   const values = {
     ...fileValues,
     media_item_id: mediaItemId
