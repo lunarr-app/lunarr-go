@@ -689,12 +689,16 @@ describe("getPlaybackDecision", () => {
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     let startCalled = false;
+    const requestedWindows: string[][] = [];
+    const windowTimelineStarts: Array<number | undefined> = [];
     setTranscodeBackendForTests({
       async startCompatibilityHls(): Promise<RunningTranscode> {
         startCalled = true;
         throw new Error("linear HLS should not start");
       },
       async generateHlsSegmentWindow(input) {
+        requestedWindows.push(input.segments.map((segment) => segment.segment));
+        windowTimelineStarts.push(input.startTimeSeconds);
         return completedWindowGeneration(input);
       },
       async cancel() {
@@ -743,9 +747,11 @@ describe("getPlaybackDecision", () => {
     expect(job.pipeline).toBe("request_driven");
     expect(job.start_time_seconds).toBe(20);
     expect(job.path).toBeTruthy();
-    expect(await readFile(job.path!, "utf8")).toContain(
-      "segments/segment-00000.ts",
-    );
+    const playlist = await readFile(job.path!, "utf8");
+    expect(playlist).toContain("segments/segment-00000.ts");
+    expect(playlist).toContain("segments/segment-00029.ts");
+    expect(requestedWindows[0]?.[0]).toBe("segment-00005.ts");
+    expect(windowTimelineStarts).toEqual([undefined]);
   });
 
   test("preserves cancellation state when initial request-driven HLS warmup is cancelled", async () => {

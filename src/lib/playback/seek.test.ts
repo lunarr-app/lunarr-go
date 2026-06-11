@@ -189,7 +189,7 @@ describe("HLS seek helpers", () => {
         startSeconds: 125,
         streamStartSeconds: 125,
       }),
-    ).toBe(0);
+    ).toBe(125);
 
     expect(
       shouldRepositionHlsSeek({
@@ -201,7 +201,7 @@ describe("HLS seek helpers", () => {
         }),
         toSeconds: 10,
       }),
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       initialPlayerTimelineSeconds({

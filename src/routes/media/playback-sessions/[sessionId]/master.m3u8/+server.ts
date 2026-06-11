@@ -79,7 +79,7 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
 
     return virtualHlsPlaylistResponse({
       durationSeconds: artifact.durationSeconds,
-      startTimeSeconds: artifact.startTimeSeconds,
+      startTimeSeconds: 0,
     });
   }
 

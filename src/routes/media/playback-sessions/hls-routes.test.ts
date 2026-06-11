@@ -359,13 +359,15 @@ describe("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain("segments/segment-00001.ts");
+    expect(await response.text()).toBe(
+      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:4.000,\nsegments/segment-00000.ts\n#EXTINF:4.000,\nsegments/segment-00001.ts\n#EXTINF:4.000,\nsegments/segment-00002.ts\n#EXTINF:1.000,\nsegments/segment-00003.ts\n#EXT-X-ENDLIST\n",
+    );
   });
 
   test("serves the same virtual playlist through the default and explicit playlist routes", async () => {
     const playlist = virtualHlsPlaylist({
       durationSeconds: 13,
-      startTimeSeconds: 5,
+      startTimeSeconds: 0,
     });
     await db
       .updateTable("media_file")

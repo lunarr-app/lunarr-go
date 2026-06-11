@@ -120,12 +120,6 @@ export function initialPlayerTimelineSeconds(input: {
   startSeconds: number;
   streamStartSeconds?: number | null;
 }) {
-  if (
-    Number.isFinite(input.streamStartSeconds) &&
-    Number(input.streamStartSeconds) > 0
-  ) {
-    return 0;
-  }
   return Number.isFinite(input.startSeconds)
     ? Math.max(0, input.startSeconds)
     : 0;

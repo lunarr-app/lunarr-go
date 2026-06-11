@@ -942,7 +942,7 @@ async function startRequestDrivenHlsSession(input: {
     playlistPath,
     virtualHlsPlaylist({
       durationSeconds: input.durationSeconds,
-      startTimeSeconds: input.startTimeSeconds,
+      startTimeSeconds: 0,
       segmentSeconds: DEFAULT_HLS_SEGMENT_SECONDS,
     }),
   );
@@ -962,12 +962,22 @@ async function warmInitialRequestDrivenHlsSegment(input: {
   sessionId: string;
   userId: string;
 }): Promise<TranscodeMode> {
+  const initialSession = await getTranscodeSession(input.sessionId);
+  if (!initialSession || isTerminalTranscodeSessionStatus(initialSession.status)) {
+    throw new TranscodeStartupAbortedError(
+      initialSession?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE,
+    );
+  }
+  const segmentIndex = Math.max(
+    0,
+    Math.floor(initialSession.startTimeSeconds / DEFAULT_HLS_SEGMENT_SECONDS),
+  );
   let ready = false;
   try {
     ready = await ensureHlsSegmentForRequest({
       sessionId: input.sessionId,
       userId: input.userId,
-      segment: hlsSegmentName(0),
+      segment: hlsSegmentName(segmentIndex),
     });
   } catch (error) {
     const session = await getTranscodeSession(input.sessionId);
@@ -1172,7 +1182,7 @@ async function generateHlsSegmentForRequest(input: {
   const defaultSegmentSeconds = DEFAULT_HLS_SEGMENT_SECONDS;
   const segmentWindow = requestDrivenSegmentWindow({
     durationSeconds: session.durationSeconds,
-    startTimeSeconds: session.startTimeSeconds,
+    startTimeSeconds: 0,
     segmentIndex,
     segmentSeconds: defaultSegmentSeconds,
   });
@@ -1254,8 +1264,6 @@ async function generateHlsSegmentForRequest(input: {
       segmentGenerationTimeoutMs: REQUEST_DRIVEN_SEGMENT_TIMEOUT_MS,
       signal: segmentSetupController.signal,
       mode: session.mode,
-      startTimeSeconds:
-        session.startTimeSeconds > 0 ? session.startTimeSeconds : undefined,
       hardwareAcceleration: policy.hardwareAcceleration,
       hardwareAccelerationRequired: policy.hardwareAccelerationRequired,
     };

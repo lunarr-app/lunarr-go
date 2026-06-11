@@ -36,16 +36,14 @@
 
   function progressPayload(sourceData: PlaybackData = data, completed = false) {
     if (!video) return null;
-    const streamStartSeconds = Math.max(0, sourceData.playback.streamStartSeconds ?? 0);
-    const positionSeconds =
-      (Number.isFinite(video.currentTime) ? video.currentTime : 0) + streamStartSeconds;
+    const positionSeconds = Number.isFinite(video.currentTime) ? video.currentTime : 0;
     const ended = completed || video.ended;
     if (!ended && !hasPlaybackActivity && video.currentTime <= 0) return null;
 
     return {
       mediaFileId: sourceData.playback.file.id,
       positionSeconds,
-      durationSeconds: Number.isFinite(video.duration) ? video.duration + streamStartSeconds : null,
+      durationSeconds: Number.isFinite(video.duration) ? video.duration : null,
       completed: ended
     };
   }
@@ -213,7 +211,6 @@
       void setupPlayer();
 
       const seekToStart = () => {
-        if ((playback.streamStartSeconds ?? 0) > 0) return;
         if (startSeconds <= 0 || !Number.isFinite(startSeconds)) return;
         player.currentTime = startSeconds;
         lastPlaybackTime = startSeconds;
@@ -257,7 +254,7 @@
         const href = hlsRepositionHref({
           currentUrl: new URL(window.location.href),
           mediaFileId: playback.file.id,
-          startSeconds: currentTime + Math.max(0, playback.streamStartSeconds ?? 0),
+          startSeconds: currentTime,
           forceTranscode: playback.mode === "remux"
         });
         if (href === currentPageHref()) {
