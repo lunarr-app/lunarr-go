@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { page } from "$app/state";
   import EpisodeCard from "$lib/components/EpisodeCard.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
-  import { playbackModalHref } from "$lib/playback/links";
   import { ChevronRight, Library, Search } from "@lucide/svelte";
 
   let { data } = $props();
@@ -16,13 +14,11 @@
       key: "continue",
       title: "Continue watching",
       episodes: data.rows.continueWatching,
-      watch: true,
     },
     {
       key: "next-up",
       title: "Next up",
       episodes: data.rows.nextUp,
-      watch: false,
     },
   ]);
   const visibleEpisodeSections = $derived(
@@ -41,18 +37,6 @@
       recentlyAiredShows.length > 0 ||
       popularShows.length > 0,
   );
-
-  function episodeHref(
-    episode: (typeof data.rows.continueWatching)[number],
-    watch = false,
-  ) {
-    if (!watch) return `/episodes/${episode.id}`;
-    return playbackModalHref({
-      currentUrl: page.url,
-      mediaItemId: episode.id,
-      mediaFileId: episode.fileId
-    });
-  }
 
   function submitSearchNow() {
     if (searchSubmitTimer) {
@@ -139,7 +123,7 @@
       </div>
       <div class="episode-rail">
         {#each section.episodes as episode}
-          <EpisodeCard {episode} href={episodeHref(episode, section.watch)} />
+          <EpisodeCard {episode} />
         {/each}
       </div>
     </section>

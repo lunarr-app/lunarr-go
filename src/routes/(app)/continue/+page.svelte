@@ -1,25 +1,20 @@
 <script lang="ts">
-  import { page } from "$app/state";
   import EpisodeCard from "$lib/components/EpisodeCard.svelte";
   import MovieCard from "$lib/components/MovieCard.svelte";
-  import { playbackModalHref } from "$lib/playback/links";
   import { Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();
-  const hasProgress = $derived(data.movies.length > 0 || data.episodes.length > 0);
-
-  function playHref(mediaItemId: string, mediaFileId?: string | null) {
-    return playbackModalHref({
-      currentUrl: page.url,
-      mediaItemId,
-      mediaFileId
-    });
-  }
+  const hasProgress = $derived(
+    data.movies.length > 0 || data.episodes.length > 0,
+  );
 </script>
 
 <svelte:head>
   <title>Continue Watching - Lunarr</title>
-  <meta name="description" content="Resume movies and TV episodes that are still in progress in your Lunarr library." />
+  <meta
+    name="description"
+    content="Resume movies and TV episodes that are still in progress in your Lunarr library."
+  />
 </svelte:head>
 
 <header class="page-header">
@@ -35,7 +30,7 @@
       <h2 id="movies-heading">Movies</h2>
       <div class="movie-grid">
         {#each data.movies as movie}
-          <MovieCard {movie} href={playHref(movie.id, movie.resumeFileId)} />
+          <MovieCard {movie} />
         {/each}
       </div>
     </section>
@@ -46,7 +41,7 @@
       <h2 id="episodes-heading">Episodes</h2>
       <div class="episode-grid">
         {#each data.episodes as episode}
-          <EpisodeCard {episode} href={playHref(episode.id, episode.fileId)} />
+          <EpisodeCard {episode} />
         {/each}
       </div>
     </section>
@@ -54,7 +49,9 @@
 {:else}
   <section class="empty">
     <h2>Nothing in progress</h2>
-    <p class="muted">Start a movie or episode and Lunarr will keep it here until it is watched.</p>
+    <p class="muted">
+      Start a movie or episode and Lunarr will keep it here until it is watched.
+    </p>
     <div class="empty-actions">
       <a class="button" href="/movies">
         <Film size={16} aria-hidden="true" />

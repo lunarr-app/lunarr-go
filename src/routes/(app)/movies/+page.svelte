@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { page } from "$app/state";
   import MovieCard from "$lib/components/MovieCard.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
-  import { playbackModalHref } from "$lib/playback/links";
   import { ChevronRight, Library, Search } from "@lucide/svelte";
 
   let { data } = $props();
@@ -16,7 +14,6 @@
       title: "Continue watching",
       movies: data.rows.continueWatching,
       href: "/continue",
-      watch: true,
     },
     {
       key: "all",
@@ -46,15 +43,6 @@
   const hasActiveFilters = $derived(
     data.query.trim().length > 0 || data.status !== "all",
   );
-
-  function movieHref(movie: (typeof data.rows.all)[number], watch = false) {
-    if (!watch) return `/movies/${movie.id}`;
-    return playbackModalHref({
-      currentUrl: page.url,
-      mediaItemId: movie.id,
-      mediaFileId: movie.resumeFileId
-    });
-  }
 
   function allMoviesHref() {
     const params = new URLSearchParams();
@@ -162,7 +150,7 @@
         </div>
         <div class="movie-rail">
           {#each section.movies as movie}
-            <MovieCard {movie} href={movieHref(movie, section.watch)} />
+            <MovieCard {movie} />
           {/each}
         </div>
       </section>
