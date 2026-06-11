@@ -15,11 +15,15 @@ export function shouldRepositionHlsSeek(input: {
   thresholdSeconds?: number;
 }) {
   if (!isHlsPlaybackMode(input.mode) || input.status !== "ready") return false;
-  if (!Number.isFinite(input.fromSeconds) || !Number.isFinite(input.toSeconds)) return false;
+  if (!Number.isFinite(input.fromSeconds) || !Number.isFinite(input.toSeconds))
+    return false;
   if (input.toSeconds < 0) return false;
 
-  const threshold = input.thresholdSeconds ?? HLS_REPOSITION_SEEK_THRESHOLD_SECONDS;
-  return Math.abs(input.toSeconds - input.fromSeconds) >= Math.max(0, threshold);
+  const threshold =
+    input.thresholdSeconds ?? HLS_REPOSITION_SEEK_THRESHOLD_SECONDS;
+  return (
+    Math.abs(input.toSeconds - input.fromSeconds) >= Math.max(0, threshold)
+  );
 }
 
 export function shouldRecoverHlsPlaybackError(input: {
@@ -29,7 +33,8 @@ export function shouldRecoverHlsPlaybackError(input: {
   hasPlaybackActivity: boolean;
 }) {
   if (!isHlsPlaybackMode(input.mode) || input.status !== "ready") return false;
-  if (!Number.isFinite(input.currentSeconds) || input.currentSeconds < 0) return false;
+  if (!Number.isFinite(input.currentSeconds) || input.currentSeconds < 0)
+    return false;
   return input.currentSeconds > 0;
 }
 
@@ -41,7 +46,8 @@ export function shouldReloadHlsPlaybackDataOnError(input: {
   hasLoadedMetadata?: boolean;
 }) {
   if (!isHlsPlaybackMode(input.mode) || input.status !== "ready") return false;
-  if (!Number.isFinite(input.currentSeconds) || input.currentSeconds < 0) return false;
+  if (!Number.isFinite(input.currentSeconds) || input.currentSeconds < 0)
+    return false;
   if (input.currentSeconds <= 0) return false;
   if (!input.hasPlaybackActivity && input.hasLoadedMetadata) return false;
   return !shouldRecoverHlsPlaybackError(input);
@@ -112,7 +118,7 @@ export function createLatestHlsRepositionScheduler(input: {
     },
     pending() {
       return pending;
-    }
+    },
   };
 }
 
@@ -123,4 +129,34 @@ export function initialPlayerTimelineSeconds(input: {
   return Number.isFinite(input.startSeconds)
     ? Math.max(0, input.startSeconds)
     : 0;
+}
+
+export function streamRelativePlaybackSeconds(input: {
+  absoluteSeconds: number;
+  streamStartSeconds?: number | null;
+}) {
+  const absoluteSeconds = Number.isFinite(input.absoluteSeconds)
+    ? Math.max(0, input.absoluteSeconds)
+    : 0;
+  const streamStartSeconds =
+    Number.isFinite(input.streamStartSeconds) &&
+    Number(input.streamStartSeconds) > 0
+      ? Number(input.streamStartSeconds)
+      : 0;
+  return Math.max(0, absoluteSeconds - streamStartSeconds);
+}
+
+export function absolutePlaybackSeconds(input: {
+  relativeSeconds: number;
+  streamStartSeconds?: number | null;
+}) {
+  const relativeSeconds = Number.isFinite(input.relativeSeconds)
+    ? Math.max(0, input.relativeSeconds)
+    : 0;
+  const streamStartSeconds =
+    Number.isFinite(input.streamStartSeconds) &&
+    Number(input.streamStartSeconds) > 0
+      ? Number(input.streamStartSeconds)
+      : 0;
+  return streamStartSeconds + relativeSeconds;
 }

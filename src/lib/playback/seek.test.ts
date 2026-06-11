@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
+  absolutePlaybackSeconds,
   createLatestHlsRepositionScheduler,
   hlsRepositionHref,
   initialPlayerTimelineSeconds,
   shouldReloadHlsPlaybackDataOnError,
   shouldRecoverHlsPlaybackError,
   shouldRepositionHlsSeek,
+  streamRelativePlaybackSeconds,
 } from "./seek";
 
 describe("HLS seek helpers", () => {
@@ -55,7 +57,9 @@ describe("HLS seek helpers", () => {
   test("builds a same-page start URL for HLS repositioning", () => {
     expect(
       hlsRepositionHref({
-        currentUrl: new URL("http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player"),
+        currentUrl: new URL(
+          "http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player",
+        ),
         mediaFileId: "file-1",
         startSeconds: 125.8,
       }),
@@ -63,16 +67,22 @@ describe("HLS seek helpers", () => {
 
     expect(
       hlsRepositionHref({
-        currentUrl: new URL("http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player"),
+        currentUrl: new URL(
+          "http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player",
+        ),
         mediaFileId: "file-1",
         startSeconds: 125.8,
         forceTranscode: true,
       }),
-    ).toBe("/movies/movie-1?play=movie-1&file=file-1&foo=bar&start=125&transcode=1#player");
+    ).toBe(
+      "/movies/movie-1?play=movie-1&file=file-1&foo=bar&start=125&transcode=1#player",
+    );
 
     expect(
       hlsRepositionHref({
-        currentUrl: new URL("http://localhost/movies/movie-1?play=movie-1&file=old&start=40&transcode=1#player"),
+        currentUrl: new URL(
+          "http://localhost/movies/movie-1?play=movie-1&file=old&start=40&transcode=1#player",
+        ),
         mediaFileId: "file-1",
         startSeconds: 0,
       }),
@@ -211,6 +221,33 @@ describe("HLS seek helpers", () => {
     ).toBe(45);
   });
 
+  test("converts between media time and HLS stream-relative time", () => {
+    expect(
+      streamRelativePlaybackSeconds({
+        absoluteSeconds: 1174,
+        streamStartSeconds: 1174,
+      }),
+    ).toBe(0);
+    expect(
+      streamRelativePlaybackSeconds({
+        absoluteSeconds: 1200,
+        streamStartSeconds: 1174,
+      }),
+    ).toBe(26);
+    expect(
+      absolutePlaybackSeconds({
+        relativeSeconds: 26,
+        streamStartSeconds: 1174,
+      }),
+    ).toBe(1200);
+    expect(
+      streamRelativePlaybackSeconds({
+        absoluteSeconds: 30,
+        streamStartSeconds: 1174,
+      }),
+    ).toBe(0);
+  });
+
   test("debounces repeated HLS reposition requests to the latest target", () => {
     let callback: (() => void) | null = null;
     const runCallback = () => {
@@ -230,7 +267,7 @@ describe("HLS seek helpers", () => {
       },
       clearTimer(timer) {
         clearedTimers.push(timer);
-      }
+      },
     });
 
     expect(scheduler.schedule(40)).toBe(true);
@@ -261,7 +298,7 @@ describe("HLS seek helpers", () => {
       },
       clearTimer() {
         return;
-      }
+      },
     });
 
     expect(scheduler.schedule(40)).toBe(true);
@@ -290,7 +327,7 @@ describe("HLS seek helpers", () => {
       },
       clearTimer() {
         return;
-      }
+      },
     });
     const stableSeconds = 120;
     const scheduleSeek = (targetSeconds: number) => {

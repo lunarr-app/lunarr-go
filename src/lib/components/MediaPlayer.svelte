@@ -3,19 +3,21 @@
   import { onDestroy, tick } from "svelte";
   import { Play } from "@lucide/svelte";
   import {
+    absolutePlaybackSeconds,
     createLatestHlsRepositionScheduler,
     hlsRepositionHref,
     initialPlayerTimelineSeconds,
     shouldReloadHlsPlaybackDataOnError,
     shouldRecoverHlsPlaybackError,
-    shouldRepositionHlsSeek
+    shouldRepositionHlsSeek,
+    streamRelativePlaybackSeconds,
   } from "$lib/playback/seek";
   import {
     activePlaybackSessionId,
     cancelPlaybackSessionOnce,
     postWithBeaconFallback,
     shouldCancelCapturedPlaybackSession,
-    shouldInvalidateAfterHeartbeat
+    shouldInvalidateAfterHeartbeat,
   } from "$lib/playback/session";
   import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
 
@@ -32,7 +34,7 @@
     data,
     onProgressSaved,
     onReload,
-    onReposition
+    onReposition,
   }: {
     data: PlaybackData;
     onProgressSaved: () => void;
@@ -99,15 +101,32 @@
 
   function progressPayload(sourceData: PlaybackData = data, completed = false) {
     if (!video) return null;
-    const positionSeconds = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+    const positionSeconds = absolutePlaybackSeconds({
+      relativeSeconds: Number.isFinite(video.currentTime)
+        ? video.currentTime
+        : 0,
+      streamStartSeconds: sourceData.playback.streamStartSeconds,
+    });
+    const fileDurationSeconds = Number(
+      sourceData.playback.file.duration_seconds,
+    );
+    const durationSeconds =
+      Number.isFinite(fileDurationSeconds) && fileDurationSeconds > 0
+        ? fileDurationSeconds
+        : Number.isFinite(video.duration)
+          ? absolutePlaybackSeconds({
+              relativeSeconds: video.duration,
+              streamStartSeconds: sourceData.playback.streamStartSeconds,
+            })
+          : null;
     const ended = completed || video.ended;
     if (!ended && !hasPlaybackActivity && video.currentTime <= 0) return null;
 
     return {
       mediaFileId: sourceData.playback.file.id,
       positionSeconds,
-      durationSeconds: Number.isFinite(video.duration) ? video.duration : null,
-      completed: ended
+      durationSeconds,
+      completed: ended,
     };
   }
 
@@ -120,7 +139,7 @@
       const response = await fetch(`/api/playback/${sourceData.item.id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       saveState = response.ok ? "saved" : "error";
@@ -141,7 +160,7 @@
       body: new Blob([body], { type: "application/json" }),
       headers: { "content-type": "application/json" },
       navigatorRef: navigator,
-      fetchFn: fetch
+      fetchFn: fetch,
     });
   }
 
@@ -150,7 +169,7 @@
       playback,
       cancelledPlaybackSessions,
       navigatorRef: navigator,
-      fetchFn: fetch
+      fetchFn: fetch,
     });
   }
 
@@ -162,7 +181,7 @@
       if (
         shouldCancelCapturedPlaybackSession({
           captured: playback,
-          current: data.playback
+          current: data.playback,
         })
       ) {
         cancelPlaybackSession(playback);
@@ -175,9 +194,12 @@
     if (!sessionId) return;
     const requestPathname = window.location.pathname;
     const requestSearch = window.location.search;
-    void fetch(`/api/playback-sessions/${encodeURIComponent(sessionId)}/heartbeat`, {
-      method: "POST"
-    })
+    void fetch(
+      `/api/playback-sessions/${encodeURIComponent(sessionId)}/heartbeat`,
+      {
+        method: "POST",
+      },
+    )
       .then((response) => {
         if (
           shouldInvalidateAfterHeartbeat({
@@ -187,7 +209,7 @@
             requestPathname,
             requestSearch,
             currentPathname: window.location.pathname,
-            currentSearch: window.location.search
+            currentSearch: window.location.search,
           })
         ) {
           onReload();
@@ -226,7 +248,7 @@
         playback.mode,
         playback.playbackSessionId ?? playback.streamUrl,
         playback.file.id,
-        playback.streamStartSeconds ?? 0
+        playback.streamStartSeconds ?? 0,
       ].join(":");
       if (playbackActivityKey !== currentPlaybackActivityKey) {
         playbackActivityKey = currentPlaybackActivityKey;
@@ -237,8 +259,13 @@
       }
       let lastPlaybackTime = initialPlayerTimelineSeconds({
         startSeconds,
-        streamStartSeconds: playback.streamStartSeconds
+        streamStartSeconds: playback.streamStartSeconds,
       });
+      const relativeStartSeconds = () =>
+        streamRelativePlaybackSeconds({
+          absoluteSeconds: startSeconds,
+          streamStartSeconds: playback.streamStartSeconds,
+        });
       let repositioning = false;
       const streamUrl = playback.streamUrl;
       const currentPageHref = () =>
@@ -261,10 +288,11 @@
               fragLoadingRetryDelay: 500,
               maxBufferLength: 60,
               backBufferLength: 60,
-              startPosition: Math.max(0, startSeconds),
+              startPosition: relativeStartSeconds(),
             });
             hls.on(Hls.Events.ERROR, (_event, eventData) => {
-              if (!disposed && eventData.fatal) restartHlsNearCurrentTime("hls");
+              if (!disposed && eventData.fatal)
+                restartHlsNearCurrentTime("hls");
             });
             hls.loadSource(streamUrl);
             hls.attachMedia(player);
@@ -278,7 +306,7 @@
 
       const seekToStart = () => {
         if (startSeconds <= 0 || !Number.isFinite(startSeconds)) return;
-        player.currentTime = startSeconds;
+        player.currentTime = relativeStartSeconds();
         lastPlaybackTime = startSeconds;
         hasPlaybackActivity = true;
       };
@@ -295,7 +323,8 @@
           hasStartedPlayback = true;
           playerUiState = "playing";
         } catch {
-          if (!disposed && !hasStartedPlayback) playerUiState = "autoplayBlocked";
+          if (!disposed && !hasStartedPlayback)
+            playerUiState = "autoplayBlocked";
         }
       };
 
@@ -305,7 +334,12 @@
       };
 
       const currentPlayerTime = () =>
-        Number.isFinite(player.currentTime) ? Math.max(0, player.currentTime) : 0;
+        absolutePlaybackSeconds({
+          relativeSeconds: Number.isFinite(player.currentTime)
+            ? player.currentTime
+            : 0,
+          streamStartSeconds: playback.streamStartSeconds,
+        });
 
       const repositionHlsPlayback = (targetSeconds: number) => {
         if (disposed || repositioning) return false;
@@ -313,7 +347,7 @@
           currentUrl: new URL(window.location.href),
           mediaFileId: playback.file.id,
           startSeconds: targetSeconds,
-          forceTranscode: playback.mode === "remux"
+          forceTranscode: playback.mode === "remux",
         });
         if (href === currentPageHref()) return false;
 
@@ -326,7 +360,7 @@
       };
 
       const seekRepositionScheduler = createLatestHlsRepositionScheduler({
-        reposition: repositionHlsPlayback
+        reposition: repositionHlsPlayback,
       });
 
       const shouldRepositionSeekTo = (targetSeconds: number) =>
@@ -334,10 +368,12 @@
           mode: playback.mode,
           status: playback.status,
           fromSeconds: lastPlaybackTime,
-          toSeconds: targetSeconds
+          toSeconds: targetSeconds,
         });
 
-      const restartHlsNearCurrentTime = (source: "hls" | "native" = "native") => {
+      const restartHlsNearCurrentTime = (
+        source: "hls" | "native" = "native",
+      ) => {
         if (disposed) return;
         if (source === "native" && hls) return;
         const currentTime = currentPlayerTime();
@@ -347,7 +383,7 @@
             mode: playback.mode,
             status: playback.status,
             currentSeconds: currentTime,
-            hasPlaybackActivity
+            hasPlaybackActivity,
           })
         ) {
           if (
@@ -356,7 +392,8 @@
               status: playback.status,
               currentSeconds: currentTime,
               hasPlaybackActivity,
-              hasLoadedMetadata: player.readyState >= HTMLMediaElement.HAVE_METADATA
+              hasLoadedMetadata:
+                player.readyState >= HTMLMediaElement.HAVE_METADATA,
             })
           ) {
             repositioning = true;
@@ -433,7 +470,7 @@
         prepareInitialPlayback();
       } else {
         player.addEventListener("loadedmetadata", prepareInitialPlayback, {
-          once: true
+          once: true,
         });
       }
       player.addEventListener("loadstart", onLoadStart);
@@ -447,7 +484,10 @@
       player.addEventListener("seeked", onSeeked);
       player.addEventListener("error", onPlayerError);
 
-      const interval = window.setInterval(() => void save(false, sourceData), 10000);
+      const interval = window.setInterval(
+        () => void save(false, sourceData),
+        10000,
+      );
       const onVisibilityChange = () => {
         if (document.visibilityState === "hidden") flushProgress(sourceData);
       };
@@ -492,7 +532,10 @@
       return;
 
     heartbeatPlaybackSession(playback);
-    const interval = window.setInterval(() => heartbeatPlaybackSession(playback), 10000);
+    const interval = window.setInterval(
+      () => heartbeatPlaybackSession(playback),
+      10000,
+    );
     const cancelCapturedPlaybackSession = () => cancelPlaybackSession(playback);
     window.addEventListener("pagehide", cancelCapturedPlaybackSession);
 
