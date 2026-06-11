@@ -13,11 +13,19 @@
   let closeButton: HTMLButtonElement | null = $state(null);
   let progressInvalidationTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const mediaItemId = $derived(page.url.searchParams.get("play")?.trim() || null);
+  const mediaItemId = $derived(
+    page.url.searchParams.get("play")?.trim() || null,
+  );
   const modalOpen = $derived(Boolean(mediaItemId));
+  const playbackRequestHref = $derived.by(() =>
+    mediaItemId ? playbackApiHref(mediaItemId, page.url) : null,
+  );
 
   function playbackApiHref(id: string, sourceUrl: URL) {
-    const apiUrl = new URL(`/api/playback/${encodeURIComponent(id)}`, sourceUrl.origin);
+    const apiUrl = new URL(
+      `/api/playback/${encodeURIComponent(id)}`,
+      sourceUrl.origin,
+    );
     for (const key of ["file", "start", "transcode"]) {
       const value = sourceUrl.searchParams.get(key);
       if (value) apiUrl.searchParams.set(key, value);
@@ -45,7 +53,7 @@
     void goto(closeHref(), {
       replaceState: true,
       noScroll: true,
-      keepFocus: true
+      keepFocus: true,
     }).then(() => invalidateAll());
   }
 
@@ -53,7 +61,7 @@
     void goto(href, {
       replaceState: true,
       noScroll: true,
-      keepFocus: true
+      keepFocus: true,
     });
   }
 
@@ -67,10 +75,9 @@
 
   $effect(() => {
     if (!browser) return;
-    const id = mediaItemId;
-    const sourceUrl = page.url;
+    const href = playbackRequestHref;
     const token = reloadToken;
-    if (!id) {
+    if (!href) {
       playbackData = null;
       loading = false;
       error = null;
@@ -81,7 +88,7 @@
     loading = true;
     error = null;
 
-    void fetch(playbackApiHref(id, sourceUrl), { signal: controller.signal })
+    void fetch(href, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) {
           const body = await response.json().catch(() => null);
@@ -92,10 +99,14 @@
       .catch((fetchError) => {
         if (controller.signal.aborted) return;
         playbackData = null;
-        error = fetchError instanceof Error ? fetchError.message : "Playback could not be started.";
+        error =
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Playback could not be started.";
       })
       .finally(() => {
-        if (!controller.signal.aborted && token === reloadToken) loading = false;
+        if (!controller.signal.aborted && token === reloadToken)
+          loading = false;
       });
 
     return () => controller.abort();
@@ -123,15 +134,27 @@
   <div
     class="overlay"
     role="presentation"
-    onpointerdown={(event) => event.target === event.currentTarget && closeModal()}
+    onpointerdown={(event) =>
+      event.target === event.currentTarget && closeModal()}
   >
-    <div class="modal" role="dialog" aria-modal="true" aria-label={playbackData?.item.title ?? "Playback"}>
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={playbackData?.item.title ?? "Playback"}
+    >
       <header>
         <div>
           <p>Now playing</p>
           <h2>{playbackData?.item.title ?? "Starting playback"}</h2>
         </div>
-        <button class="icon-button" type="button" aria-label="Close player" bind:this={closeButton} onclick={closeModal}>
+        <button
+          class="icon-button"
+          type="button"
+          aria-label="Close player"
+          bind:this={closeButton}
+          onclick={closeModal}
+        >
           <X size={18} aria-hidden="true" />
         </button>
       </header>
