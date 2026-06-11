@@ -360,7 +360,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(
-      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:4.000,\nsegments/segment-00000.ts\n#EXTINF:4.000,\nsegments/segment-00001.ts\n#EXTINF:4.000,\nsegments/segment-00002.ts\n#EXTINF:1.000,\nsegments/segment-00003.ts\n#EXT-X-ENDLIST\n",
+      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:16\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:13.000,\nsegments/segment-00000.ts\n#EXT-X-ENDLIST\n",
     );
   });
 
@@ -1164,7 +1164,7 @@ describe("playback-session HLS routes", () => {
     expect(hlsSegmentReadCountForTests()).toBe(0);
 
     const missing = await headSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     expect(missing.status).toBe(404);
@@ -1391,7 +1391,7 @@ describe("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
     } as never);
     const missingSegment = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     const segmentHead = await headSegment({
@@ -1874,19 +1874,19 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await Promise.resolve();
     const second = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     releaseGeneration();
 
     const responses = await Promise.all([first, second]);
     expect(generationCount).toBe(1);
-    expect(requested).toEqual({ startSeconds: 168, timeoutMs: 120_000 });
+    expect(requested).toEqual({ startSeconds: 160, timeoutMs: 120_000 });
     expect(responses.map((response) => response.status)).toEqual([200, 200]);
     expect(await responses[0].text()).toBe("generated");
     expect(await responses[1].text()).toBe("generated");
@@ -1938,20 +1938,20 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
       request: { signal: firstController.signal },
     } as never);
     await waitFor(() => generationStarted);
     const second = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await waitFor(
       () =>
         pendingSegmentGenerationWaiterCountForTests(
           sessionId,
-          "segment-00042.ts",
+          "segment-00010.ts",
         ) === 2,
     );
 
@@ -2013,13 +2013,13 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
       request: { signal: firstController.signal },
     } as never);
     await waitFor(() => generationStarted);
     const second = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
       request: { signal: secondController.signal },
     } as never);
@@ -2027,7 +2027,7 @@ describe("playback-session HLS routes", () => {
       () =>
         pendingSegmentGenerationWaiterCountForTests(
           sessionId,
-          "segment-00042.ts",
+          "segment-00010.ts",
         ) === 2,
     );
 
@@ -2087,7 +2087,7 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         const segment = requestedWindowSegment(input).segment;
         requestedSegments.push(segment);
-        if (segment === "segment-00042.ts") {
+        if (segment === "segment-00010.ts") {
           await new Promise<void>((_resolve, reject) => {
             input.signal?.addEventListener(
               "abort",
@@ -2108,26 +2108,26 @@ describe("playback-session HLS routes", () => {
     });
 
     const stale = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
-    await waitFor(() => requestedSegments.includes("segment-00042.ts"));
+    await waitFor(() => requestedSegments.includes("segment-00010.ts"));
 
     const far = getSegment({
-      params: { sessionId, segment: "segment-00120.ts" },
+      params: { sessionId, segment: "segment-00030.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
-    await waitFor(() => requestedSegments.includes("segment-00120.ts"));
+    await waitFor(() => requestedSegments.includes("segment-00030.ts"));
 
     const [staleResponse, farResponse] = await Promise.all([stale, far]);
 
-    expect(requestedSegments).toEqual(["segment-00042.ts", "segment-00120.ts"]);
+    expect(requestedSegments).toEqual(["segment-00010.ts", "segment-00030.ts"]);
     expect(staleSignalAborted).toBe(true);
     expect(backendCancelCount).toBeGreaterThanOrEqual(1);
     expect(staleResponse.status).toBe(404);
     expect(await staleResponse.text()).toBe("Not found.");
     expect(farResponse.status).toBe(200);
-    expect(await farResponse.text()).toBe("segment-00120.ts");
+    expect(await farResponse.text()).toBe("segment-00030.ts");
 
     const job = await db
       .selectFrom("playback_session")
@@ -2142,8 +2142,8 @@ describe("playback-session HLS routes", () => {
     expect(job).toEqual({
       status: "running",
       error_message: null,
-      last_segment_name: "segment-00120.ts",
-      last_segment_index: 120,
+      last_segment_name: "segment-00030.ts",
+      last_segment_index: 30,
     });
   });
 
@@ -2175,7 +2175,7 @@ describe("playback-session HLS routes", () => {
         const segment = requestedWindowSegment(input).segment;
         requestedSegments.push(segment);
         await writeRequestedWindowSegment(input, segment);
-        if (segment === "segment-00042.ts") {
+        if (segment === "segment-00010.ts") {
           return { completion: oldLookaheadCompletion };
         }
         return completedWindowGeneration();
@@ -2186,22 +2186,22 @@ describe("playback-session HLS routes", () => {
     });
 
     const initial = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
     expect(initial.status).toBe(200);
-    expect(await initial.text()).toBe("segment-00042.ts");
+    expect(await initial.text()).toBe("segment-00010.ts");
     expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(7);
 
     const far = await getSegment({
-      params: { sessionId, segment: "segment-00120.ts" },
+      params: { sessionId, segment: "segment-00030.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
     expect(far.status).toBe(200);
-    expect(await far.text()).toBe("segment-00120.ts");
-    expect(requestedSegments).toEqual(["segment-00042.ts", "segment-00120.ts"]);
+    expect(await far.text()).toBe("segment-00030.ts");
+    expect(requestedSegments).toEqual(["segment-00010.ts", "segment-00030.ts"]);
     expect(backendCancelCount).toBe(1);
     expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(0);
 
@@ -2240,7 +2240,7 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         const segment = requestedWindowSegment(input).segment;
         requestedSegments.push(segment);
-        if (segment === "segment-00042.ts") {
+        if (segment === "segment-00010.ts") {
           await new Promise<void>((_resolve, reject) => {
             input.signal?.addEventListener(
               "abort",
@@ -2262,26 +2262,26 @@ describe("playback-session HLS routes", () => {
     });
 
     const stale = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
-    await waitFor(() => requestedSegments.includes("segment-00042.ts"));
+    await waitFor(() => requestedSegments.includes("segment-00010.ts"));
 
     const firstFar = getSegment({
-      params: { sessionId, segment: "segment-00120.ts" },
+      params: { sessionId, segment: "segment-00030.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await waitFor(() => backendCancelStarted);
 
     const secondFar = getSegment({
-      params: { sessionId, segment: "segment-00120.ts" },
+      params: { sessionId, segment: "segment-00030.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await waitFor(
       () =>
         pendingSegmentGenerationWaiterCountForTests(
           sessionId,
-          "segment-00120.ts",
+          "segment-00030.ts",
         ) === 1,
     );
 
@@ -2290,7 +2290,7 @@ describe("playback-session HLS routes", () => {
       () =>
         pendingSegmentGenerationWaiterCountForTests(
           sessionId,
-          "segment-00120.ts",
+          "segment-00030.ts",
         ) === 2,
     );
     releaseFarGeneration();
@@ -2298,13 +2298,13 @@ describe("playback-session HLS routes", () => {
     const [staleResponse, firstFarResponse, secondFarResponse] =
       await Promise.all([stale, firstFar, secondFar]);
 
-    expect(requestedSegments).toEqual(["segment-00042.ts", "segment-00120.ts"]);
+    expect(requestedSegments).toEqual(["segment-00010.ts", "segment-00030.ts"]);
     expect(farGenerationCount).toBe(1);
     expect([404, 409]).toContain(staleResponse.status);
     expect(firstFarResponse.status).toBe(200);
     expect(secondFarResponse.status).toBe(200);
-    expect(await firstFarResponse.text()).toBe("segment-00120.ts");
-    expect(await secondFarResponse.text()).toBe("segment-00120.ts");
+    expect(await firstFarResponse.text()).toBe("segment-00030.ts");
+    expect(await secondFarResponse.text()).toBe("segment-00030.ts");
   });
 
   test("generates a bounded request-driven segment window", async () => {
@@ -2346,11 +2346,11 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     const second = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -2359,19 +2359,16 @@ describe("playback-session HLS routes", () => {
     expect(generationCount).toBe(1);
     expect(requestedWindows).toEqual([
       [
-        "segment-00042.ts",
-        "segment-00043.ts",
-        "segment-00044.ts",
-        "segment-00045.ts",
-        "segment-00046.ts",
-        "segment-00047.ts",
-        "segment-00048.ts",
-        "segment-00049.ts",
+        "segment-00010.ts",
+        "segment-00011.ts",
+        "segment-00012.ts",
+        "segment-00013.ts",
+        "segment-00014.ts",
       ],
     ]);
     expect(expectedAudioFlags).toEqual([true]);
-    expect(await first.text()).toBe("segment-00042.ts");
-    expect(await second.text()).toBe("segment-00043.ts");
+    expect(await first.text()).toBe("segment-00010.ts");
+    expect(await second.text()).toBe("segment-00011.ts");
   });
 
   test("starts a 40-minute far seek at the requested segment window", async () => {
@@ -2416,22 +2413,22 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00600.ts" },
+      params: { sessionId, segment: "segment-00150.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe("segment-00600.ts");
+    expect(await response.text()).toBe("segment-00150.ts");
     expect(requestedWindows).toEqual([
       [
-        { segment: "segment-00600.ts", startSeconds: 2_400 },
-        { segment: "segment-00601.ts", startSeconds: 2_404 },
-        { segment: "segment-00602.ts", startSeconds: 2_408 },
-        { segment: "segment-00603.ts", startSeconds: 2_412 },
-        { segment: "segment-00604.ts", startSeconds: 2_416 },
-        { segment: "segment-00605.ts", startSeconds: 2_420 },
-        { segment: "segment-00606.ts", startSeconds: 2_424 },
-        { segment: "segment-00607.ts", startSeconds: 2_428 },
+        { segment: "segment-00150.ts", startSeconds: 2_400 },
+        { segment: "segment-00151.ts", startSeconds: 2_416 },
+        { segment: "segment-00152.ts", startSeconds: 2_432 },
+        { segment: "segment-00153.ts", startSeconds: 2_448 },
+        { segment: "segment-00154.ts", startSeconds: 2_464 },
+        { segment: "segment-00155.ts", startSeconds: 2_480 },
+        { segment: "segment-00156.ts", startSeconds: 2_496 },
+        { segment: "segment-00157.ts", startSeconds: 2_512 },
       ],
     ]);
     expect(
@@ -2501,7 +2498,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -2511,7 +2508,7 @@ describe("playback-session HLS routes", () => {
     expect(await first.text()).toBe("requested");
 
     const secondPromise = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await new Promise((resolve) => setTimeout(resolve, 25));
@@ -2524,7 +2521,7 @@ describe("playback-session HLS routes", () => {
     expect(second.status).toBe(200);
     await waitFor(() => lookaheadDone);
     expect(generationCount).toBe(1);
-    expect(await second.text()).toBe("segment-00043.ts");
+    expect(await second.text()).toBe("segment-00011.ts");
   });
 
   test("stops waiting for bounded lookahead when the segment request is cancelled", async () => {
@@ -2577,14 +2574,14 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     expect(first.status).toBe(200);
     expect(await first.text()).toBe("requested");
 
     const waiting = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
     } as never);
@@ -2600,13 +2597,13 @@ describe("playback-session HLS routes", () => {
     releaseLookahead();
     await waitFor(() => lookaheadDone);
     const retry = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
     expect(retry.status).toBe(200);
     expect(generationCount).toBe(1);
-    expect(await retry.text()).toBe("segment-00043.ts");
+    expect(await retry.text()).toBe("segment-00011.ts");
   });
 
   test("retries adjacent generation when bounded lookahead finishes without output", async () => {
@@ -2651,14 +2648,14 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     expect(first.status).toBe(200);
     expect(await first.text()).toBe("requested");
 
     const secondPromise = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await new Promise((resolve) => setTimeout(resolve, 25));
@@ -2729,14 +2726,14 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     expect(first.status).toBe(200);
     expect(await first.text()).toBe("requested");
 
     const secondPromise = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await new Promise((resolve) => setTimeout(resolve, 1));
@@ -2808,14 +2805,14 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     expect(first.status).toBe(200);
     expect(await first.text()).toBe("requested");
 
     const secondPromise = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await new Promise((resolve) => setTimeout(resolve, 1));
@@ -2891,14 +2888,14 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     expect(first.status).toBe(200);
     expect(await first.text()).toBe("requested");
 
     const secondPromise = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await new Promise((resolve) => setTimeout(resolve, 1));
@@ -2999,11 +2996,11 @@ describe("playback-session HLS routes", () => {
         await generationGate;
         const artifactDirectory = path.dirname(input.playlistPath);
         await writeFile(
-          path.join(artifactDirectory, "segment-00042.ts"),
+          path.join(artifactDirectory, "segment-00010.ts"),
           "first",
         );
         await writeFile(
-          path.join(artifactDirectory, "segment-00043.ts"),
+          path.join(artifactDirectory, "segment-00011.ts"),
           "second",
         );
         return completedWindowGeneration();
@@ -3014,12 +3011,12 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await waitFor(() => generationCount === 1);
     const second = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -3061,7 +3058,7 @@ describe("playback-session HLS routes", () => {
         await generationGate;
         const artifactDirectory = path.dirname(input.playlistPath);
         await writeFile(
-          path.join(artifactDirectory, "segment-00042.ts"),
+          path.join(artifactDirectory, "segment-00010.ts"),
           "first",
         );
         await db
@@ -3082,12 +3079,12 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await waitFor(() => generationCount === 1);
     const second = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     releaseGeneration();
@@ -3096,7 +3093,7 @@ describe("playback-session HLS routes", () => {
     expect(generationCount).toBe(1);
     expect(responses.map((response) => response.status)).toEqual([204, 204]);
     expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00043.ts")),
+      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
     ).toBe(false);
   });
 
@@ -3493,7 +3490,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -3548,17 +3545,17 @@ describe("playback-session HLS routes", () => {
     });
 
     const first = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
     expect(first.status).toBe(200);
     expect(await first.text()).toBe("generated-before-missing-source");
-    expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(7);
+    expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(4);
 
     await rm(path.join(tempDir, "Movie.2026.mkv"), { force: true });
     const missing = await getSegment({
-      params: { sessionId, segment: "segment-00050.ts" },
+      params: { sessionId, segment: "segment-00000.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -4134,7 +4131,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -4187,12 +4184,12 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00003.ts" },
+      params: { sessionId, segment: "segment-00000.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
     expect(response.status).toBe(200);
-    expect(requested).toEqual({ startSeconds: 12, segmentSeconds: 1 });
+    expect(requested).toEqual({ startSeconds: 0, segmentSeconds: 13 });
     expect(await response.text()).toBe("last");
   });
 
@@ -4225,7 +4222,7 @@ describe("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
     } as never);
     const missingSegment = await getSegment({
-      params: { sessionId, segment: "segment-00042.ts" },
+      params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -4575,7 +4572,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const responsePromise = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await waitFor(() => generationStarted);
@@ -4584,7 +4581,7 @@ describe("playback-session HLS routes", () => {
     expect(
       pendingSegmentGenerationWaiterCountForTests(
         sessionId,
-        "segment-00043.ts",
+        "segment-00011.ts",
       ),
     ).toBe(0);
     const response = await responsePromise;
@@ -4634,7 +4631,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const responsePromise = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
     await waitFor(() => generationStarted);
@@ -4644,7 +4641,7 @@ describe("playback-session HLS routes", () => {
     expect(
       pendingSegmentGenerationWaiterCountForTests(
         sessionId,
-        "segment-00043.ts",
+        "segment-00011.ts",
       ),
     ).toBe(0);
     const response = await Promise.race([
@@ -4729,7 +4726,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const responsePromise = getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
     } as never);
@@ -4759,7 +4756,7 @@ describe("playback-session HLS routes", () => {
       last_segment_request_at: null,
     });
     expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00043.ts")),
+      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
     ).toBe(false);
   });
 
@@ -4794,7 +4791,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
     } as never);
@@ -4819,7 +4816,7 @@ describe("playback-session HLS routes", () => {
       last_segment_request_at: null,
     });
     expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00043.ts")),
+      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
     ).toBe(false);
   });
 
@@ -4866,7 +4863,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -4889,7 +4886,7 @@ describe("playback-session HLS routes", () => {
       last_segment_request_at: null,
     });
     expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00043.ts")),
+      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
     ).toBe(false);
     expect(cancelCount).toBe(1);
   });
@@ -4927,7 +4924,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -4953,7 +4950,7 @@ describe("playback-session HLS routes", () => {
       last_segment_request_at: null,
     });
     expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00043.ts")),
+      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
     ).toBe(false);
     expect(cancelCount).toBe(1);
   });
@@ -4988,7 +4985,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -5047,7 +5044,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -5156,7 +5153,7 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
@@ -5207,14 +5204,14 @@ describe("playback-session HLS routes", () => {
     });
 
     const response = await getSegment({
-      params: { sessionId, segment: "segment-00043.ts" },
+      params: { sessionId, segment: "segment-00011.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
       error:
-        "NodeAV bounded-window HLS segment generation completed without publishing segment-00043.ts.",
+        "NodeAV bounded-window HLS segment generation completed without publishing segment-00011.ts.",
     });
     expect(generationCount).toBe(1);
     const job = await db
@@ -5225,7 +5222,7 @@ describe("playback-session HLS routes", () => {
     expect(job).toEqual({
       status: "failed",
       error_message:
-        "NodeAV bounded-window HLS segment generation completed without publishing segment-00043.ts.",
+        "NodeAV bounded-window HLS segment generation completed without publishing segment-00011.ts.",
     });
     const artifacts = await db
       .selectFrom("playback_hls_artifact")

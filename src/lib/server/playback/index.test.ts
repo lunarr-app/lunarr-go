@@ -749,8 +749,8 @@ describe("getPlaybackDecision", () => {
     expect(job.path).toBeTruthy();
     const playlist = await readFile(job.path!, "utf8");
     expect(playlist).toContain("segments/segment-00000.ts");
-    expect(playlist).toContain("segments/segment-00029.ts");
-    expect(requestedWindows[0]?.[0]).toBe("segment-00005.ts");
+    expect(playlist).toContain("segments/segment-00007.ts");
+    expect(requestedWindows[0]?.[0]).toBe("segment-00001.ts");
     expect(windowTimelineStarts).toEqual([undefined]);
   });
 

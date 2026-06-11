@@ -9,7 +9,7 @@ const DEFAULT_INPUT = ".lunarr/fixtures/radarr/.sample-video-cache/Big_Buck_Bunn
 const DEFAULT_INPUT_DIR = ".lunarr/fixtures/radarr";
 const TRANSCODE_TIMEOUT_MS = 120_000;
 const MEDIA_FILE_PATTERN = /\.(mp4|mkv|mov|webm)$/i;
-const LATE_SEEK_MIN_DURATION_SECONDS = 48;
+const LATE_SEEK_MIN_DURATION_SECONDS = 192;
 
 function argValue(name) {
   const index = process.argv.indexOf(name);
@@ -527,14 +527,14 @@ export async function main() {
             {
               segment: "segment-00010.ts",
               segmentIndex: 10,
-              segmentStartSeconds: 40,
-              segmentSeconds: 4,
+              segmentStartSeconds: 160,
+              segmentSeconds: 16,
             },
             {
               segment: "segment-00011.ts",
               segmentIndex: 11,
-              segmentStartSeconds: 44,
-              segmentSeconds: 4,
+              segmentStartSeconds: 176,
+              segmentSeconds: 16,
             },
           ],
           expectAudio,
@@ -643,14 +643,14 @@ export async function main() {
               {
                 segment: "segment-00010.ts",
                 segmentIndex: 10,
-                segmentStartSeconds: 40,
-                segmentSeconds: 4,
+                segmentStartSeconds: 160,
+                segmentSeconds: 16,
               },
               {
                 segment: "segment-00011.ts",
                 segmentIndex: 11,
-                segmentStartSeconds: 44,
-                segmentSeconds: 4,
+                segmentStartSeconds: 176,
+                segmentSeconds: 16,
               },
             ],
             expectAudio,

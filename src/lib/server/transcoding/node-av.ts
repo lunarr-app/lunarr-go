@@ -322,10 +322,7 @@ export function validateGeneratedHlsSegmentProbe(input: {
     );
   }
 
-  const maximumSegmentSeconds = Math.max(
-    expectedDurationSeconds + 12,
-    expectedDurationSeconds * 4,
-  );
+  const maximumSegmentSeconds = expectedDurationSeconds + 12;
   if (
     expectedDurationSeconds >= 2 &&
     input.probe.comparableVideoTimestampCount < 2

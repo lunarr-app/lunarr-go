@@ -6,7 +6,7 @@ const MPEG_TS_MIME_TYPE = "video/mp2t";
 const FMP4_SEGMENT_MIME_TYPE = "video/iso.segment";
 const SEGMENT_ROUTE_PREFIX = "segments/";
 const DEFAULT_SEGMENT_KEEP_BEHIND = 12;
-export const DEFAULT_HLS_SEGMENT_SECONDS = 4;
+export const DEFAULT_HLS_SEGMENT_SECONDS = 16;
 
 type HlsSegmentPayload = {
   body: Uint8Array;

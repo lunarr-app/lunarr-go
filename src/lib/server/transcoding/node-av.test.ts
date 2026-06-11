@@ -732,6 +732,25 @@ describe("NodeAV generated HLS segment validation", () => {
     ).toThrow(NodeAvBackendError);
   });
 
+  test("rejects generated segments far beyond the 16 second playback target", () => {
+    expect(() =>
+      validateGeneratedHlsSegmentProbe({
+        probe: {
+          audioStreamCount: 1,
+          comparableVideoTimestampCount: 1200,
+          durationSeconds: 45,
+          firstVideoPacketIsKeyframe: true,
+          firstVideoTimestampSeconds: 0,
+          lastVideoTimestampSeconds: 45,
+          videoTimestampsMonotonic: true,
+          videoStreamCount: 1,
+        },
+        expectedDurationSeconds: 16,
+        expectAudio: true,
+      }),
+    ).toThrow(NodeAvBackendError);
+  });
+
   test("rejects generated segments with a video timestamp span far beyond the request", () => {
     expect(() =>
       validateGeneratedHlsSegmentProbe({
