@@ -272,4 +272,49 @@ describe("HLS seek helpers", () => {
     expect(scheduler.pending()).toBe(false);
     expect(scheduler.schedule(-1)).toBe(false);
   });
+
+  test("cancels a pending HLS reposition when the seek returns near the last stable time", () => {
+    let callback: (() => void) | null = null;
+    const runCallback = () => {
+      if (!callback) throw new Error("Expected scheduled callback.");
+      callback();
+    };
+    const starts: number[] = [];
+    const scheduler = createLatestHlsRepositionScheduler({
+      reposition(startSeconds) {
+        starts.push(startSeconds);
+      },
+      setTimer(nextCallback) {
+        callback = nextCallback;
+        return 1;
+      },
+      clearTimer() {
+        return;
+      }
+    });
+    const stableSeconds = 120;
+    const scheduleSeek = (targetSeconds: number) => {
+      if (
+        shouldRepositionHlsSeek({
+          mode: "transcode",
+          status: "ready",
+          fromSeconds: stableSeconds,
+          toSeconds: targetSeconds,
+        })
+      ) {
+        return scheduler.schedule(targetSeconds);
+      }
+      scheduler.cancel();
+      return false;
+    };
+
+    expect(scheduleSeek(220)).toBe(true);
+    expect(scheduler.pending()).toBe(true);
+    expect(scheduleSeek(126)).toBe(false);
+    expect(scheduler.pending()).toBe(false);
+
+    runCallback();
+
+    expect(starts).toEqual([]);
+  });
 });

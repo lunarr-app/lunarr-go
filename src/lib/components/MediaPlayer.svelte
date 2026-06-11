@@ -2,10 +2,12 @@
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
   import {
+    createLatestHlsRepositionScheduler,
     hlsRepositionHref,
     initialPlayerTimelineSeconds,
     shouldReloadHlsPlaybackDataOnError,
-    shouldRecoverHlsPlaybackError
+    shouldRecoverHlsPlaybackError,
+    shouldRepositionHlsSeek
   } from "$lib/playback/seek";
   import {
     activePlaybackSessionId,
@@ -196,6 +198,7 @@
               fragLoadingRetryDelay: 500,
               maxBufferLength: 60,
               backBufferLength: 60,
+              startPosition: Math.max(0, startSeconds),
             });
             hls.on(Hls.Events.ERROR, (_event, eventData) => {
               if (!disposed && eventData.fatal) restartHlsNearCurrentTime("hls");
@@ -219,6 +222,36 @@
 
       const currentPlayerTime = () =>
         Number.isFinite(player.currentTime) ? Math.max(0, player.currentTime) : 0;
+
+      const repositionHlsPlayback = (targetSeconds: number) => {
+        if (disposed || repositioning) return false;
+        const href = hlsRepositionHref({
+          currentUrl: new URL(window.location.href),
+          mediaFileId: playback.file.id,
+          startSeconds: targetSeconds,
+          forceTranscode: playback.mode === "remux"
+        });
+        if (href === currentPageHref()) return false;
+
+        repositioning = true;
+        stopHlsTransport();
+        flushProgress(sourceData);
+        cancelPlaybackSession(playback);
+        onReposition(href);
+        return true;
+      };
+
+      const seekRepositionScheduler = createLatestHlsRepositionScheduler({
+        reposition: repositionHlsPlayback
+      });
+
+      const shouldRepositionSeekTo = (targetSeconds: number) =>
+        shouldRepositionHlsSeek({
+          mode: playback.mode,
+          status: playback.status,
+          fromSeconds: lastPlaybackTime,
+          toSeconds: targetSeconds
+        });
 
       const restartHlsNearCurrentTime = (source: "hls" | "native" = "native") => {
         if (disposed) return;
@@ -250,25 +283,29 @@
           return;
         }
 
-        repositioning = true;
-        const href = hlsRepositionHref({
-          currentUrl: new URL(window.location.href),
-          mediaFileId: playback.file.id,
-          startSeconds: currentTime,
-          forceTranscode: playback.mode === "remux"
-        });
-        if (href === currentPageHref()) {
-          repositioning = false;
-          return;
-        }
-        stopHlsTransport();
-        flushProgress(sourceData);
-        cancelPlaybackSession(playback);
-        onReposition(href);
+        seekRepositionScheduler.cancel();
+        repositionHlsPlayback(currentTime);
       };
 
       const onTimeUpdate = () => {
         if (!player.seeking) lastPlaybackTime = currentPlayerTime();
+      };
+      const onSeeking = () => {
+        const targetSeconds = currentPlayerTime();
+        if (shouldRepositionSeekTo(targetSeconds)) {
+          seekRepositionScheduler.schedule(targetSeconds);
+          return;
+        }
+        seekRepositionScheduler.cancel();
+      };
+      const onSeeked = () => {
+        const targetSeconds = currentPlayerTime();
+        if (shouldRepositionSeekTo(targetSeconds)) {
+          seekRepositionScheduler.schedule(targetSeconds);
+          return;
+        }
+        seekRepositionScheduler.cancel();
+        lastPlaybackTime = targetSeconds;
       };
       const onPlayerError = () => restartHlsNearCurrentTime("native");
 
@@ -278,6 +315,8 @@
         player.addEventListener("loadedmetadata", seekToStart, { once: true });
       }
       player.addEventListener("timeupdate", onTimeUpdate);
+      player.addEventListener("seeking", onSeeking);
+      player.addEventListener("seeked", onSeeked);
       player.addEventListener("error", onPlayerError);
 
       const interval = window.setInterval(() => void save(false, sourceData), 10000);
@@ -289,8 +328,11 @@
       document.addEventListener("visibilitychange", onVisibilityChange);
 
       cleanup = () => {
+        seekRepositionScheduler.cancel();
         player.removeEventListener("loadedmetadata", seekToStart);
         player.removeEventListener("timeupdate", onTimeUpdate);
+        player.removeEventListener("seeking", onSeeking);
+        player.removeEventListener("seeked", onSeeked);
         player.removeEventListener("error", onPlayerError);
         window.removeEventListener("pagehide", flushCapturedProgress);
         document.removeEventListener("visibilitychange", onVisibilityChange);
@@ -348,7 +390,7 @@
     bind:this={video}
     controls
     playsinline
-    preload="metadata"
+    preload={data.playback.mode === "direct" ? "metadata" : "auto"}
     onplay={() => (hasPlaybackActivity = true)}
     ontimeupdate={() => {
       if (video && video.currentTime > 0) hasPlaybackActivity = true;
