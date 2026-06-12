@@ -337,6 +337,17 @@
             : 0,
           streamStartSeconds: playback.streamStartSeconds,
         });
+      const clearTransientOverlayIfPlaying = () => {
+        if (
+          (playerUiState !== "buffering" && playerUiState !== "seeking") ||
+          player.paused ||
+          player.seeking ||
+          player.ended ||
+          player.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+        )
+          return;
+        playerUiState = "playing";
+      };
 
       const repositionHlsPlayback = (targetSeconds: number) => {
         if (disposed || repositioning) return false;
@@ -407,11 +418,13 @@
             : 0,
           seeking: player.seeking,
         });
+        clearTransientOverlayIfPlaying();
       };
       const onLoadStart = () => {
         if (!hasStartedPlayback) playerUiState = "starting";
       };
       const onCanPlay = () => {
+        clearTransientOverlayIfPlaying();
         if (
           !hasStartedPlayback &&
           !autoplayAttempted &&
