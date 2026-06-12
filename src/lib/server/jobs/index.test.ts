@@ -338,6 +338,188 @@ describe("scan job listings", () => {
     ).toHaveLength(0);
   });
 
+  test("prunes playback session history by terminal status", async () => {
+    const now = "2026-03-10T12:00:00.000Z";
+    const cancelledOld = "2026-03-10T11:40:00.000Z";
+    const cancelledRecent = "2026-03-10T11:50:00.000Z";
+    const completedOld = "2026-03-10T09:30:00.000Z";
+    const completedRecent = "2026-03-10T10:30:00.000Z";
+    const failedOld = "2026-03-02T12:00:00.000Z";
+    const failedRecent = "2026-03-05T12:00:00.000Z";
+    await db
+      .insertInto("user")
+      .values({
+        id: "playback-user",
+        name: "Viewer",
+        email: "playback-viewer@example.com",
+        role: "user",
+        email_verified: 0,
+        image: null,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      })
+      .execute();
+    await db
+      .insertInto("media_item")
+      .values({
+        id: "retention-movie",
+        kind: "movie",
+        title: "Retention Movie",
+        sort_title: "Retention Movie",
+        release_date: null,
+        parent_id: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    await db
+      .insertInto("media_file")
+      .values({
+        id: "retention-file",
+        library_id: "library-1",
+        media_item_id: "retention-movie",
+        path: path.join(tempDir, "Retention.mkv"),
+        basename: "Retention.mkv",
+        extension: ".mkv",
+        size_bytes: 1,
+        mtime_ms: Date.now(),
+        duration_seconds: 120,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    await db
+      .insertInto("playback_session")
+      .values([
+        {
+          id: "cancelled-old-delete",
+          media_file_id: "retention-file",
+          user_id: "playback-user",
+          status: "cancelled",
+          mode: "transcode",
+          error_message: "Playback session was cancelled.",
+          last_heartbeat_at: cancelledOld,
+          last_segment_request_at: null,
+          last_segment_name: null,
+          last_segment_index: null,
+          start_time_seconds: 0,
+          started_at: cancelledOld,
+          finished_at: cancelledOld,
+          created_at: cancelledOld,
+          updated_at: cancelledOld,
+        },
+        {
+          id: "cancelled-recent-keep",
+          media_file_id: "retention-file",
+          user_id: "playback-user",
+          status: "cancelled",
+          mode: "transcode",
+          error_message: "Playback session was cancelled.",
+          last_heartbeat_at: cancelledRecent,
+          last_segment_request_at: null,
+          last_segment_name: null,
+          last_segment_index: null,
+          start_time_seconds: 0,
+          started_at: cancelledRecent,
+          finished_at: cancelledRecent,
+          created_at: cancelledRecent,
+          updated_at: cancelledRecent,
+        },
+        {
+          id: "completed-old-delete",
+          media_file_id: "retention-file",
+          user_id: "playback-user",
+          status: "completed",
+          mode: "transcode",
+          error_message: null,
+          last_heartbeat_at: completedOld,
+          last_segment_request_at: null,
+          last_segment_name: null,
+          last_segment_index: null,
+          start_time_seconds: 0,
+          started_at: completedOld,
+          finished_at: completedOld,
+          created_at: completedOld,
+          updated_at: completedOld,
+        },
+        {
+          id: "completed-recent-keep",
+          media_file_id: "retention-file",
+          user_id: "playback-user",
+          status: "completed",
+          mode: "transcode",
+          error_message: null,
+          last_heartbeat_at: completedRecent,
+          last_segment_request_at: null,
+          last_segment_name: null,
+          last_segment_index: null,
+          start_time_seconds: 0,
+          started_at: completedRecent,
+          finished_at: completedRecent,
+          created_at: completedRecent,
+          updated_at: completedRecent,
+        },
+        {
+          id: "failed-old-delete",
+          media_file_id: "retention-file",
+          user_id: "playback-user",
+          status: "failed",
+          mode: "transcode",
+          error_message: "Playback failed.",
+          last_heartbeat_at: failedOld,
+          last_segment_request_at: null,
+          last_segment_name: null,
+          last_segment_index: null,
+          start_time_seconds: 0,
+          started_at: failedOld,
+          finished_at: failedOld,
+          created_at: failedOld,
+          updated_at: failedOld,
+        },
+        {
+          id: "failed-recent-keep",
+          media_file_id: "retention-file",
+          user_id: "playback-user",
+          status: "failed",
+          mode: "transcode",
+          error_message: "Playback failed.",
+          last_heartbeat_at: failedRecent,
+          last_segment_request_at: null,
+          last_segment_name: null,
+          last_segment_index: null,
+          start_time_seconds: 0,
+          started_at: failedRecent,
+          finished_at: failedRecent,
+          created_at: failedRecent,
+          updated_at: failedRecent,
+        },
+      ])
+      .execute();
+
+    await expect(
+      cleanupJobHistory({
+        maxAgeMs: 0,
+        minRows: 0,
+        now: new Date(now),
+      }),
+    ).resolves.toEqual({ scanJobs: 0, playbackSessions: 3 });
+
+    const remainingPlaybackIds = (
+      await db
+        .selectFrom("playback_session")
+        .select("id")
+        .where("media_file_id", "=", "retention-file")
+        .orderBy("id")
+        .execute()
+    ).map((job) => job.id);
+    expect(remainingPlaybackIds).toEqual([
+      "cancelled-recent-keep",
+      "completed-recent-keep",
+      "failed-recent-keep",
+    ]);
+  });
+
   test("preserves each library's latest scan row while pruning old scan history", async () => {
     const older = "2026-01-01T00:00:00.000Z";
     const latest = "2026-01-02T00:00:00.000Z";

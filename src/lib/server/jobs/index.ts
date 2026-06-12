@@ -4,6 +4,9 @@ import { normalizePlaybackSessionMessage } from "../transcoding/messages";
 const JOB_HISTORY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const JOB_HISTORY_MIN_ROWS = 500;
 const JOB_HISTORY_DELETE_BATCH_SIZE = 500;
+const CANCELLED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS = 15 * 60 * 1000;
+const COMPLETED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+const FAILED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const ACTIVE_JOB_STATUSES = ["queued", "running"] as const;
 
 type CleanupJobHistoryOptions = {
@@ -30,6 +33,21 @@ function inactiveHistoryCutoff(options: CleanupJobHistoryOptions) {
 
 function historyRetentionRows(options: CleanupJobHistoryOptions) {
   return Math.max(0, Math.floor(options.minRows ?? JOB_HISTORY_MIN_ROWS));
+}
+
+function playbackSessionHistoryCutoffs(options: CleanupJobHistoryOptions) {
+  const now = (options.now ?? new Date()).getTime();
+  return {
+    cancelled: new Date(
+      now - CANCELLED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS,
+    ).toISOString(),
+    completed: new Date(
+      now - COMPLETED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS,
+    ).toISOString(),
+    failed: new Date(
+      now - FAILED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS,
+    ).toISOString(),
+  };
 }
 
 function chunkIds(ids: string[]) {
@@ -183,7 +201,7 @@ export async function cleanupJobHistory(options: CleanupJobHistoryOptions = {}) 
       .execute(),
     db
       .selectFrom("playback_session")
-      .select(["id", "updated_at"])
+      .select(["id", "status", "updated_at"])
       .where("status", "not in", ACTIVE_JOB_STATUSES)
       .orderBy("updated_at", "desc")
       .orderBy("created_at", "desc")
@@ -203,9 +221,20 @@ export async function cleanupJobHistory(options: CleanupJobHistoryOptions = {}) 
     .slice(keepRows)
     .filter((job) => job.updated_at < cutoff && !latestLibraryScanIds.has(job.id))
     .map((job) => job.id);
+  const playbackCutoffs = playbackSessionHistoryCutoffs(options);
   const stalePlaybackSessionIds = playbackRows
-    .slice(keepRows)
-    .filter((job) => job.updated_at < cutoff)
+    .filter((job) => {
+      if (job.status === "cancelled") {
+        return job.updated_at < playbackCutoffs.cancelled;
+      }
+      if (job.status === "completed") {
+        return job.updated_at < playbackCutoffs.completed;
+      }
+      if (job.status === "failed") {
+        return job.updated_at < playbackCutoffs.failed;
+      }
+      return false;
+    })
     .map((job) => job.id);
 
   for (const ids of chunkIds(staleScanJobIds)) {
