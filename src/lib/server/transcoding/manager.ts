@@ -1088,7 +1088,6 @@ async function runQueuedSegmentGeneration<T>(
 
 function requestDrivenSegmentWindow(input: {
   durationSeconds: number;
-  startTimeSeconds: number;
   segmentIndex: number;
   segmentSeconds: number;
   segmentFormat?: HlsSegmentFormat;
@@ -1418,7 +1417,6 @@ async function generateHlsSegmentForRequest(input: {
   const defaultSegmentSeconds = DEFAULT_HLS_SEGMENT_SECONDS;
   const segmentWindow = requestDrivenSegmentWindow({
     durationSeconds: session.durationSeconds,
-    startTimeSeconds: session.startTimeSeconds,
     segmentIndex,
     segmentSeconds: defaultSegmentSeconds,
     segmentFormat,
