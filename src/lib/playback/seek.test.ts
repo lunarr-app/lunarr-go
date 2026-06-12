@@ -2,57 +2,19 @@ import { describe, expect, test } from "bun:test";
 import {
   absolutePlaybackSeconds,
   createHlsSeekEventController,
-  createLatestHlsRepositionScheduler,
   hlsRepositionHref,
   initialPlayerTimelineSeconds,
+  isHlsPlaybackMode,
   shouldReloadHlsPlaybackDataOnError,
   shouldRecoverHlsPlaybackError,
-  shouldRepositionHlsSeek,
   streamRelativePlaybackSeconds,
 } from "./seek";
 
 describe("HLS seek helpers", () => {
-  test("detects large ready HLS seeks only", () => {
-    expect(
-      shouldRepositionHlsSeek({
-        mode: "transcode",
-        status: "ready",
-        fromSeconds: 10,
-        toSeconds: 75,
-      }),
-    ).toBe(true);
-    expect(
-      shouldRepositionHlsSeek({
-        mode: "remux",
-        status: "ready",
-        fromSeconds: 90,
-        toSeconds: 30,
-      }),
-    ).toBe(true);
-    expect(
-      shouldRepositionHlsSeek({
-        mode: "direct",
-        status: "ready",
-        fromSeconds: 10,
-        toSeconds: 75,
-      }),
-    ).toBe(false);
-    expect(
-      shouldRepositionHlsSeek({
-        mode: "transcode",
-        status: "preparing",
-        fromSeconds: 10,
-        toSeconds: 75,
-      }),
-    ).toBe(false);
-    expect(
-      shouldRepositionHlsSeek({
-        mode: "transcode",
-        status: "ready",
-        fromSeconds: 10,
-        toSeconds: 20,
-      }),
-    ).toBe(false);
+  test("detects HLS playback modes", () => {
+    expect(isHlsPlaybackMode("transcode")).toBe(true);
+    expect(isHlsPlaybackMode("remux")).toBe(true);
+    expect(isHlsPlaybackMode("direct")).toBe(false);
   });
 
   test("builds a same-page start URL for HLS repositioning", () => {
@@ -194,25 +156,13 @@ describe("HLS seek helpers", () => {
     ).toBe(false);
   });
 
-  test("tracks seek deltas in the player timeline after HLS repositioning", () => {
+  test("tracks seek deltas in the player timeline", () => {
     expect(
       initialPlayerTimelineSeconds({
         startSeconds: 125,
         streamStartSeconds: 125,
       }),
     ).toBe(125);
-
-    expect(
-      shouldRepositionHlsSeek({
-        mode: "transcode",
-        status: "ready",
-        fromSeconds: initialPlayerTimelineSeconds({
-          startSeconds: 125,
-          streamStartSeconds: 125,
-        }),
-        toSeconds: 10,
-      }),
-    ).toBe(true);
 
     expect(
       initialPlayerTimelineSeconds({
@@ -249,193 +199,11 @@ describe("HLS seek helpers", () => {
     ).toBe(0);
   });
 
-  test("debounces repeated HLS reposition requests to the latest target", () => {
-    let callback: (() => void) | null = null;
-    const runCallback = () => {
-      if (!callback) throw new Error("Expected scheduled callback.");
-      callback();
-    };
-    const clearedTimers: unknown[] = [];
-    const starts: number[] = [];
-    const scheduler = createLatestHlsRepositionScheduler({
-      delayMs: 120,
-      reposition(startSeconds) {
-        starts.push(startSeconds);
-      },
-      setTimer(nextCallback) {
-        callback = nextCallback;
-        return starts.length + clearedTimers.length + 1;
-      },
-      clearTimer(timer) {
-        clearedTimers.push(timer);
-      },
-    });
-
-    expect(scheduler.schedule(40)).toBe(true);
-    expect(scheduler.pending()).toBe(true);
-    expect(scheduler.schedule(52.25)).toBe(true);
-    expect(clearedTimers).toHaveLength(1);
-
-    runCallback();
-
-    expect(starts).toEqual([52.25]);
-    expect(scheduler.pending()).toBe(false);
-  });
-
-  test("can cancel pending HLS reposition requests", () => {
-    let callback: (() => void) | null = null;
-    const runCallback = () => {
-      if (!callback) throw new Error("Expected scheduled callback.");
-      callback();
-    };
-    const starts: number[] = [];
-    const scheduler = createLatestHlsRepositionScheduler({
-      reposition(startSeconds) {
-        starts.push(startSeconds);
-      },
-      setTimer(nextCallback) {
-        callback = nextCallback;
-        return 1;
-      },
-      clearTimer() {
-        return;
-      },
-    });
-
-    expect(scheduler.schedule(40)).toBe(true);
-    scheduler.cancel();
-    runCallback();
-
-    expect(starts).toEqual([]);
-    expect(scheduler.pending()).toBe(false);
-    expect(scheduler.schedule(-1)).toBe(false);
-  });
-
-  test("cancels a pending HLS reposition when the seek returns near the last stable time", () => {
-    let callback: (() => void) | null = null;
-    const runCallback = () => {
-      if (!callback) throw new Error("Expected scheduled callback.");
-      callback();
-    };
-    const starts: number[] = [];
-    const scheduler = createLatestHlsRepositionScheduler({
-      reposition(startSeconds) {
-        starts.push(startSeconds);
-      },
-      setTimer(nextCallback) {
-        callback = nextCallback;
-        return 1;
-      },
-      clearTimer() {
-        return;
-      },
-    });
-    const stableSeconds = 120;
-    const scheduleSeek = (targetSeconds: number) => {
-      if (
-        shouldRepositionHlsSeek({
-          mode: "transcode",
-          status: "ready",
-          fromSeconds: stableSeconds,
-          toSeconds: targetSeconds,
-        })
-      ) {
-        return scheduler.schedule(targetSeconds);
-      }
-      scheduler.cancel();
-      return false;
-    };
-
-    expect(scheduleSeek(220)).toBe(true);
-    expect(scheduler.pending()).toBe(true);
-    expect(scheduleSeek(126)).toBe(false);
-    expect(scheduler.pending()).toBe(false);
-
-    runCallback();
-
-    expect(starts).toEqual([]);
-  });
-
-  test("keeps only the latest target during rapid HLS seek churn", () => {
-    let callback: (() => void) | null = null;
-    const starts: number[] = [];
-    const clearedTimers: unknown[] = [];
-    const scheduler = createLatestHlsRepositionScheduler({
-      delayMs: 120,
-      reposition(startSeconds) {
-        starts.push(startSeconds);
-      },
-      setTimer(nextCallback) {
-        callback = nextCallback;
-        return starts.length + clearedTimers.length + 1;
-      },
-      clearTimer(timer) {
-        clearedTimers.push(timer);
-      },
-    });
-    const runCallback = () => {
-      if (!callback) throw new Error("Expected scheduled callback.");
-      callback();
-    };
-    const stableSeconds = 60;
-    const seekTo = (targetSeconds: number) => {
-      if (
-        shouldRepositionHlsSeek({
-          mode: "transcode",
-          status: "ready",
-          fromSeconds: stableSeconds,
-          toSeconds: targetSeconds,
-        })
-      ) {
-        return scheduler.schedule(targetSeconds);
-      }
-      scheduler.cancel();
-      return false;
-    };
-
-    expect(seekTo(180)).toBe(true);
-    expect(seekTo(20)).toBe(true);
-    expect(seekTo(240)).toBe(true);
-    expect(clearedTimers).toHaveLength(2);
-    expect(scheduler.pending()).toBe(true);
-    runCallback();
-
-    expect(starts).toEqual([240]);
-    expect(scheduler.pending()).toBe(false);
-
-    expect(seekTo(140)).toBe(true);
-    expect(seekTo(64)).toBe(false);
-    runCallback();
-
-    expect(starts).toEqual([240]);
-    expect(scheduler.pending()).toBe(false);
-  });
-
   test("handles browser-style HLS seek event churn against stream-relative currentTime", () => {
-    let callback: (() => void) | null = null;
-    const starts: number[] = [];
-    const clearedTimers: unknown[] = [];
     const controller = createHlsSeekEventController({
-      mode: "transcode",
-      status: "ready",
       startSeconds: 120,
       streamStartSeconds: 120,
-      delayMs: 120,
-      reposition(startSeconds) {
-        starts.push(startSeconds);
-      },
-      setTimer(nextCallback) {
-        callback = nextCallback;
-        return starts.length + clearedTimers.length + 1;
-      },
-      clearTimer(timer) {
-        clearedTimers.push(timer);
-      },
     });
-    const runCallback = () => {
-      if (!callback) throw new Error("Expected scheduled callback.");
-      callback();
-    };
 
     expect(controller.lastPlaybackTime()).toBe(120);
 
@@ -444,59 +212,38 @@ describe("HLS seek helpers", () => {
 
     expect(controller.seeking({ relativeSeconds: 180 })).toEqual({
       uiState: "seeking",
-      pendingReposition: true,
+      pendingReposition: false,
     });
     expect(controller.seeked({ relativeSeconds: 220, paused: false })).toEqual({
-      uiState: "seeking",
-      pendingReposition: true,
-    });
-    expect(clearedTimers).toHaveLength(1);
-
-    runCallback();
-
-    expect(starts).toEqual([340]);
-    expect(controller.pending()).toBe(false);
-    expect(controller.lastPlaybackTime()).toBe(128);
-  });
-
-  test("cancels pending browser-style HLS reposition after a near-stable seeked event", () => {
-    let callback: (() => void) | null = null;
-    const starts: number[] = [];
-    const controller = createHlsSeekEventController({
-      mode: "remux",
-      status: "ready",
-      startSeconds: 90,
-      streamStartSeconds: 90,
-      reposition(startSeconds) {
-        starts.push(startSeconds);
-      },
-      setTimer(nextCallback) {
-        callback = nextCallback;
-        return 1;
-      },
-      clearTimer() {
-        return;
-      },
-    });
-    const runCallback = () => {
-      if (!callback) throw new Error("Expected scheduled callback.");
-      callback();
-    };
-
-    controller.timeUpdate({ relativeSeconds: 10, seeking: false });
-    expect(controller.seeking({ relativeSeconds: 80 })).toEqual({
-      uiState: "seeking",
-      pendingReposition: true,
-    });
-    expect(controller.seeked({ relativeSeconds: 14, paused: false })).toEqual({
       uiState: "playing",
       pendingReposition: false,
     });
 
-    runCallback();
-
-    expect(starts).toEqual([]);
     expect(controller.pending()).toBe(false);
-    expect(controller.lastPlaybackTime()).toBe(104);
+    expect(controller.lastPlaybackTime()).toBe(340);
+  });
+
+  test("keeps full-timeline HLS seeks in the current playback session", () => {
+    const controller = createHlsSeekEventController({
+      startSeconds: 0,
+      streamStartSeconds: 0,
+    });
+
+    controller.timeUpdate({ relativeSeconds: 23 * 60, seeking: false });
+    expect(controller.lastPlaybackTime()).toBe(23 * 60);
+
+    expect(controller.seeking({ relativeSeconds: 15 * 60 })).toEqual({
+      uiState: "seeking",
+      pendingReposition: false,
+    });
+    expect(controller.seeked({ relativeSeconds: 11 * 60, paused: false })).toEqual(
+      {
+        uiState: "playing",
+        pendingReposition: false,
+      },
+    );
+
+    expect(controller.pending()).toBe(false);
+    expect(controller.lastPlaybackTime()).toBe(11 * 60);
   });
 });

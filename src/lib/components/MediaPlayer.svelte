@@ -369,11 +369,8 @@
       };
 
       const hlsSeekController = createHlsSeekEventController({
-        mode: playback.mode,
-        status: playback.status,
         startSeconds,
         streamStartSeconds: playback.streamStartSeconds,
-        reposition: repositionHlsPlayback,
       });
 
       const restartHlsNearCurrentTime = (

@@ -1,29 +1,5 @@
-export const HLS_REPOSITION_SEEK_THRESHOLD_SECONDS = 30;
-export const HLS_REPOSITION_DEBOUNCE_MS = 120;
-
-type RepositionTimer = unknown;
-
 export function isHlsPlaybackMode(mode: string) {
   return mode === "transcode" || mode === "remux";
-}
-
-export function shouldRepositionHlsSeek(input: {
-  mode: string;
-  status: string;
-  fromSeconds: number;
-  toSeconds: number;
-  thresholdSeconds?: number;
-}) {
-  if (!isHlsPlaybackMode(input.mode) || input.status !== "ready") return false;
-  if (!Number.isFinite(input.fromSeconds) || !Number.isFinite(input.toSeconds))
-    return false;
-  if (input.toSeconds < 0) return false;
-
-  const threshold =
-    input.thresholdSeconds ?? HLS_REPOSITION_SEEK_THRESHOLD_SECONDS;
-  return (
-    Math.abs(input.toSeconds - input.fromSeconds) >= Math.max(0, threshold)
-  );
 }
 
 export function shouldRecoverHlsPlaybackError(input: {
@@ -73,86 +49,18 @@ export function hlsRepositionHref(input: {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-export function createLatestHlsRepositionScheduler(input: {
-  reposition: (startSeconds: number) => void;
-  delayMs?: number;
-  setTimer?: (callback: () => void, delayMs: number) => RepositionTimer;
-  clearTimer?: (timer: RepositionTimer) => void;
-}) {
-  const delayMs = Math.max(0, input.delayMs ?? HLS_REPOSITION_DEBOUNCE_MS);
-  const setTimer =
-    input.setTimer ??
-    ((callback: () => void, delay: number): RepositionTimer =>
-      setTimeout(callback, delay));
-  const clearTimer =
-    input.clearTimer ??
-    ((activeTimer: RepositionTimer) =>
-      clearTimeout(activeTimer as ReturnType<typeof setTimeout>));
-  let timer: RepositionTimer | null = null;
-  let latestStartSeconds = 0;
-  let pending = false;
-
-  const clearPendingTimer = () => {
-    if (timer === null) return;
-    clearTimer(timer);
-    timer = null;
-  };
-
-  return {
-    schedule(startSeconds: number) {
-      if (!Number.isFinite(startSeconds) || startSeconds < 0) return false;
-      latestStartSeconds = Math.max(0, startSeconds);
-      pending = true;
-      clearPendingTimer();
-      timer = setTimer(() => {
-        timer = null;
-        if (!pending) return;
-        pending = false;
-        input.reposition(latestStartSeconds);
-      }, delayMs);
-      return true;
-    },
-    cancel() {
-      clearPendingTimer();
-      pending = false;
-    },
-    pending() {
-      return pending;
-    },
-  };
-}
-
 export function createHlsSeekEventController(input: {
-  mode: string;
-  status: string;
   startSeconds: number;
   streamStartSeconds?: number | null;
-  reposition: (startSeconds: number) => void;
-  delayMs?: number;
-  setTimer?: (callback: () => void, delayMs: number) => RepositionTimer;
-  clearTimer?: (timer: RepositionTimer) => void;
 }) {
   let lastPlaybackTime = initialPlayerTimelineSeconds({
     startSeconds: input.startSeconds,
     streamStartSeconds: input.streamStartSeconds,
   });
-  const scheduler = createLatestHlsRepositionScheduler({
-    reposition: input.reposition,
-    delayMs: input.delayMs,
-    setTimer: input.setTimer,
-    clearTimer: input.clearTimer,
-  });
   const absoluteSeconds = (relativeSeconds: number) =>
     absolutePlaybackSeconds({
       relativeSeconds,
       streamStartSeconds: input.streamStartSeconds,
-    });
-  const shouldReposition = (targetSeconds: number) =>
-    shouldRepositionHlsSeek({
-      mode: input.mode,
-      status: input.status,
-      fromSeconds: lastPlaybackTime,
-      toSeconds: targetSeconds,
     });
 
   return {
@@ -161,22 +69,11 @@ export function createHlsSeekEventController(input: {
         lastPlaybackTime = absoluteSeconds(event.relativeSeconds);
       return lastPlaybackTime;
     },
-    seeking(event: { relativeSeconds: number }) {
-      const targetSeconds = absoluteSeconds(event.relativeSeconds);
-      if (shouldReposition(targetSeconds)) {
-        scheduler.schedule(targetSeconds);
-        return { uiState: "seeking" as const, pendingReposition: true };
-      }
-      scheduler.cancel();
+    seeking(_event: { relativeSeconds: number }) {
       return { uiState: "seeking" as const, pendingReposition: false };
     },
     seeked(event: { relativeSeconds: number; paused: boolean }) {
       const targetSeconds = absoluteSeconds(event.relativeSeconds);
-      if (shouldReposition(targetSeconds)) {
-        scheduler.schedule(targetSeconds);
-        return { uiState: "seeking" as const, pendingReposition: true };
-      }
-      scheduler.cancel();
       lastPlaybackTime = targetSeconds;
       return {
         uiState: event.paused ? ("paused" as const) : ("playing" as const),
@@ -184,10 +81,10 @@ export function createHlsSeekEventController(input: {
       };
     },
     cancel() {
-      scheduler.cancel();
+      return;
     },
     pending() {
-      return scheduler.pending();
+      return false;
     },
     lastPlaybackTime() {
       return lastPlaybackTime;
