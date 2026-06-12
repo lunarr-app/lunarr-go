@@ -2,6 +2,8 @@ import {
   getTranscodePolicy,
   normalizePlaybackPreference,
   setUserPlaybackPreference,
+  setUserPreferredAudioLanguage,
+  setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
@@ -26,6 +28,14 @@ export const actions: Actions = {
     await setUserPlaybackPreference(
       locals.user.id,
       normalizePlaybackPreference(String(form.get("playbackPreference") ?? "")),
+    );
+    await setUserPreferredAudioLanguage(
+      locals.user.id,
+      String(form.get("preferredAudioLanguage") ?? ""),
+    );
+    await setUserPreferredSubtitleLanguage(
+      locals.user.id,
+      String(form.get("preferredSubtitleLanguage") ?? ""),
     );
 
     throw redirect(303, "/profile");

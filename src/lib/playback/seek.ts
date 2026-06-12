@@ -122,6 +122,79 @@ export function createLatestHlsRepositionScheduler(input: {
   };
 }
 
+export function createHlsSeekEventController(input: {
+  mode: string;
+  status: string;
+  startSeconds: number;
+  streamStartSeconds?: number | null;
+  reposition: (startSeconds: number) => void;
+  delayMs?: number;
+  setTimer?: (callback: () => void, delayMs: number) => RepositionTimer;
+  clearTimer?: (timer: RepositionTimer) => void;
+}) {
+  let lastPlaybackTime = initialPlayerTimelineSeconds({
+    startSeconds: input.startSeconds,
+    streamStartSeconds: input.streamStartSeconds,
+  });
+  const scheduler = createLatestHlsRepositionScheduler({
+    reposition: input.reposition,
+    delayMs: input.delayMs,
+    setTimer: input.setTimer,
+    clearTimer: input.clearTimer,
+  });
+  const absoluteSeconds = (relativeSeconds: number) =>
+    absolutePlaybackSeconds({
+      relativeSeconds,
+      streamStartSeconds: input.streamStartSeconds,
+    });
+  const shouldReposition = (targetSeconds: number) =>
+    shouldRepositionHlsSeek({
+      mode: input.mode,
+      status: input.status,
+      fromSeconds: lastPlaybackTime,
+      toSeconds: targetSeconds,
+    });
+
+  return {
+    timeUpdate(event: { relativeSeconds: number; seeking: boolean }) {
+      if (!event.seeking)
+        lastPlaybackTime = absoluteSeconds(event.relativeSeconds);
+      return lastPlaybackTime;
+    },
+    seeking(event: { relativeSeconds: number }) {
+      const targetSeconds = absoluteSeconds(event.relativeSeconds);
+      if (shouldReposition(targetSeconds)) {
+        scheduler.schedule(targetSeconds);
+        return { uiState: "seeking" as const, pendingReposition: true };
+      }
+      scheduler.cancel();
+      return { uiState: "seeking" as const, pendingReposition: false };
+    },
+    seeked(event: { relativeSeconds: number; paused: boolean }) {
+      const targetSeconds = absoluteSeconds(event.relativeSeconds);
+      if (shouldReposition(targetSeconds)) {
+        scheduler.schedule(targetSeconds);
+        return { uiState: "seeking" as const, pendingReposition: true };
+      }
+      scheduler.cancel();
+      lastPlaybackTime = targetSeconds;
+      return {
+        uiState: event.paused ? ("paused" as const) : ("playing" as const),
+        pendingReposition: false,
+      };
+    },
+    cancel() {
+      scheduler.cancel();
+    },
+    pending() {
+      return scheduler.pending();
+    },
+    lastPlaybackTime() {
+      return lastPlaybackTime;
+    },
+  };
+}
+
 export function initialPlayerTimelineSeconds(input: {
   startSeconds: number;
   streamStartSeconds?: number | null;

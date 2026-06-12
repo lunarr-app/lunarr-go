@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { createReadStream as createNodeReadStream } from "node:fs";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
+import { spawnSync } from "node:child_process";
 import type { Kysely } from "kysely";
 import {
   closeDatabaseForTests,
@@ -40,14 +42,19 @@ import {
   registerTranscodeHlsArtifact,
   setTranscodeTouchDelayForTests,
   updateTranscodeSessionPipeline,
+  updateTranscodeSessionMode,
   updateTranscodeSessionStatus,
 } from "$lib/server/transcoding/sessions";
-import { setTranscodingEnabled } from "$lib/server/transcoding/policy";
+import {
+  setTranscodingEnabled,
+  setUserPreferredAudioLanguage,
+} from "$lib/server/transcoding/policy";
 import type {
   HlsSegmentWindowGeneration,
   HlsSegmentWindowTranscodeInput,
   RunningTranscode,
 } from "$lib/server/transcoding/backend";
+import { resolvedFfmpegPath } from "$lib/server/transcoding/ffmpeg-cli";
 import type { LibraryStorage } from "$lib/server/storage";
 import {
   GET as getPlaylist,
@@ -79,13 +86,68 @@ function completedWindowGeneration(): HlsSegmentWindowGeneration {
   return { completion: Promise.resolve() };
 }
 
+function canRunFfmpeg() {
+  const result = spawnSync(resolvedFfmpegPath(), ["-version"], {
+    stdio: "ignore",
+  });
+  return !result.error && result.status === 0;
+}
+
+function generateRouteSmokeInput(
+  inputPath: string,
+  options: {
+    durationSeconds?: number;
+    size?: string;
+    rate?: number;
+  } = {},
+) {
+  const result = spawnSync(
+    resolvedFfmpegPath(),
+    [
+      "-hide_banner",
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      `testsrc=size=${options.size ?? "96x54"}:rate=${options.rate ?? 5}`,
+      "-t",
+      String(options.durationSeconds ?? 34),
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-pix_fmt",
+      "yuv420p",
+      "-movflags",
+      "+faststart",
+      inputPath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `Route smoke FFmpeg fixture failed: ${result.stderr || result.stdout || result.error?.message || "unknown error"}`,
+    );
+  }
+}
+
+function slowTransform(delayMs: number) {
+  return new Transform({
+    transform(chunk, _encoding, callback) {
+      setTimeout(() => callback(null, chunk), delayMs);
+    },
+  });
+}
+
 describe("playback-session HLS routes", () => {
   let tempDir: string;
   let db: Kysely<Database>;
   let sessionId: string;
   let playlistPath: string;
+  let originalHlsSegmentFormat: string | undefined;
 
   beforeEach(async () => {
+    originalHlsSegmentFormat = process.env.LUNARR_HLS_SEGMENT_FORMAT;
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-hls-routes-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();
@@ -189,6 +251,11 @@ describe("playback-session HLS routes", () => {
   });
 
   afterEach(async () => {
+    if (originalHlsSegmentFormat === undefined) {
+      delete process.env.LUNARR_HLS_SEGMENT_FORMAT;
+    } else {
+      process.env.LUNARR_HLS_SEGMENT_FORMAT = originalHlsSegmentFormat;
+    }
     resetHlsSegmentLoadStateForTests();
     setTranscodeTouchDelayForTests(null);
     setRequestDrivenLookaheadWaitForTests(null);
@@ -360,14 +427,68 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(
-      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:16\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:13.000,\nsegments/segment-00000.ts\n#EXT-X-ENDLIST\n",
+      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:16\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:8.000,\nsegments/segment-00000.ts\n#EXT-X-ENDLIST\n",
+    );
+  });
+
+  test("serves an explicit virtual fMP4 playlist when the session uses fMP4", async () => {
+    await db
+      .updateTable("media_file")
+      .set({ duration_seconds: 34 })
+      .where("id", "=", "file-1")
+      .execute();
+    await writeFile(
+      playlistPath,
+      [
+        "#EXTM3U",
+        "#EXT-X-VERSION:7",
+        '#EXT-X-MAP:URI="init.mp4"',
+        "#EXTINF:16.000,",
+        "segment-00000.m4s",
+        "",
+      ].join("\n"),
+    );
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+
+    const response = await getPlaylist({
+      params: { sessionId },
+      locals: { user: { id: "user-1" } },
+      url: new URL(
+        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
+      ),
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(
+      [
+        "#EXTM3U",
+        "#EXT-X-VERSION:7",
+        "#EXT-X-TARGETDURATION:16",
+        "#EXT-X-PLAYLIST-TYPE:VOD",
+        "#EXT-X-MEDIA-SEQUENCE:0",
+        '#EXT-X-MAP:URI="segments/init.mp4"',
+        "#EXTINF:16.000,",
+        "segments/segment-00000.m4s",
+        "#EXTINF:16.000,",
+        "segments/segment-00001.m4s",
+        "#EXTINF:2.000,",
+        "segments/segment-00002.m4s",
+        "#EXT-X-ENDLIST",
+        "",
+      ].join("\n"),
     );
   });
 
   test("serves the same virtual playlist through the default and explicit playlist routes", async () => {
     const playlist = virtualHlsPlaylist({
       durationSeconds: 13,
-      startTimeSeconds: 0,
+      startTimeSeconds: 5,
     });
     await db
       .updateTable("media_file")
@@ -1457,7 +1578,7 @@ describe("playback-session HLS routes", () => {
     await updateTranscodeSessionStatus(
       sessionId,
       "failed",
-      "NodeAV segment validation failed.",
+      "FFmpeg segment validation failed.",
     );
     let cancelCount = 0;
     setTranscodeBackendForTests({
@@ -1487,11 +1608,11 @@ describe("playback-session HLS routes", () => {
 
     expect(playlist.status).toBe(409);
     expect(await playlist.json()).toEqual({
-      error: "NodeAV segment validation failed.",
+      error: "FFmpeg segment validation failed.",
     });
     expect(segment.status).toBe(409);
     expect(await segment.json()).toEqual({
-      error: "NodeAV segment validation failed.",
+      error: "FFmpeg segment validation failed.",
     });
     expect(cancelCount).toBe(0);
   });
@@ -2307,11 +2428,55 @@ describe("playback-session HLS routes", () => {
     expect(await secondFarResponse.text()).toBe("segment-00030.ts");
   });
 
-  test("generates a bounded request-driven segment window", async () => {
+  test("generates a request-driven segment window", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 240 })
       .where("id", "=", "file-1")
+      .execute();
+    const now = new Date().toISOString();
+    await db
+      .insertInto("media_stream_info")
+      .values([
+        {
+          id: "bounded-audio-1",
+          media_file_id: "file-1",
+          stream_index: 1,
+          stream_type: "audio",
+          codec_name: "aac",
+          codec_long_name: null,
+          language: null,
+          title: null,
+          width: null,
+          height: null,
+          channels: 2,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 192000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "bounded-audio-2",
+          media_file_id: "file-1",
+          stream_index: 2,
+          stream_type: "audio",
+          codec_name: "dts",
+          codec_long_name: null,
+          language: null,
+          title: null,
+          width: null,
+          height: null,
+          channels: 6,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 768000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+      ])
       .execute();
     await registerTranscodeHlsArtifact({
       sessionId,
@@ -2324,6 +2489,7 @@ describe("playback-session HLS routes", () => {
     let generationCount = 0;
     const requestedWindows: string[][] = [];
     const expectedAudioFlags: Array<boolean | undefined> = [];
+    const audioStreamIndexes: Array<number | null | undefined> = [];
     setTranscodeBackendForTests({
       async startCompatibilityHls(): Promise<RunningTranscode> {
         throw new Error("not used");
@@ -2332,6 +2498,7 @@ describe("playback-session HLS routes", () => {
         generationCount += 1;
         requestedWindows.push(input.segments.map((segment) => segment.segment));
         expectedAudioFlags.push(input.expectAudio);
+        audioStreamIndexes.push(input.audioStreamIndex);
         for (const segment of input.segments) {
           await writeFile(
             path.join(path.dirname(input.playlistPath), segment.segment),
@@ -2367,9 +2534,767 @@ describe("playback-session HLS routes", () => {
       ],
     ]);
     expect(expectedAudioFlags).toEqual([true]);
+    expect(audioStreamIndexes).toEqual([2]);
     expect(await first.text()).toBe("segment-00010.ts");
     expect(await second.text()).toBe("segment-00011.ts");
   });
+
+  test("generates request-driven fMP4 segments when the experimental format is enabled", async () => {
+    process.env.LUNARR_HLS_SEGMENT_FORMAT = "fmp4";
+    await db
+      .updateTable("media_file")
+      .set({ duration_seconds: 64 })
+      .where("id", "=", "file-1")
+      .execute();
+    await writeFile(
+      playlistPath,
+      virtualHlsPlaylist({
+        durationSeconds: 64,
+        segmentSeconds: 16,
+        segmentFormat: "fmp4",
+      }),
+    );
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+
+    let backendSegmentFormat: string | undefined;
+    const requestedWindows: string[][] = [];
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("not used");
+      },
+      async generateHlsSegmentWindow(input) {
+        backendSegmentFormat = input.hlsSegmentFormat;
+        requestedWindows.push(input.segments.map((segment) => segment.segment));
+        await writeFile(
+          path.join(path.dirname(input.playlistPath), "init.mp4"),
+          "init",
+        );
+        for (const segment of input.segments) {
+          await writeFile(
+            path.join(path.dirname(input.playlistPath), segment.segment),
+            segment.segment,
+          );
+        }
+        return completedWindowGeneration();
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const segment = await getSegment({
+      params: { sessionId, segment: "segment-00001.m4s" },
+      locals: { user: { id: "user-1" } },
+    } as never);
+    const init = await getSegment({
+      params: { sessionId, segment: "init.mp4" },
+      locals: { user: { id: "user-1" } },
+    } as never);
+
+    expect(init.status).toBe(200);
+    expect(init.headers.get("content-type")).toBe("video/iso.segment");
+    expect(segment.status).toBe(200);
+    expect(segment.headers.get("content-type")).toBe("video/iso.segment");
+    expect(await segment.text()).toBe("segment-00001.m4s");
+    expect(backendSegmentFormat).toBe("fmp4");
+    expect(requestedWindows).toEqual([
+      ["segment-00001.m4s", "segment-00002.m4s", "segment-00003.m4s"],
+    ]);
+  });
+
+  test("uses remux audio selection for request-driven remux sessions", async () => {
+    await db
+      .updateTable("media_file")
+      .set({ duration_seconds: 240 })
+      .where("id", "=", "file-1")
+      .execute();
+    await updateTranscodeSessionMode(sessionId, "remux");
+    const now = new Date().toISOString();
+    await db
+      .insertInto("media_stream_info")
+      .values([
+        {
+          id: "remux-audio-1",
+          media_file_id: "file-1",
+          stream_index: 1,
+          stream_type: "audio",
+          codec_name: "dts",
+          codec_long_name: null,
+          language: null,
+          title: null,
+          width: null,
+          height: null,
+          channels: 6,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 768000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "remux-audio-2",
+          media_file_id: "file-1",
+          stream_index: 2,
+          stream_type: "audio",
+          codec_name: "aac",
+          codec_long_name: null,
+          language: null,
+          title: null,
+          width: null,
+          height: null,
+          channels: 2,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 192000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .execute();
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+
+    const audioStreamIndexes: Array<number | null | undefined> = [];
+    const requestedModes: Array<string | undefined> = [];
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("not used");
+      },
+      async generateHlsSegmentWindow(input) {
+        requestedModes.push(input.mode);
+        audioStreamIndexes.push(input.audioStreamIndex);
+        await writeRequestedWindowSegment(input, "remux-segment");
+        return completedWindowGeneration();
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const response = await getSegment({
+      params: { sessionId, segment: "segment-00010.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(requestedModes).toEqual(["remux"]);
+    expect(audioStreamIndexes).toEqual([2]);
+  });
+
+  test("prefers the user's audio language for request-driven transcode generation", async () => {
+    await setUserPreferredAudioLanguage("user-1", "jpn");
+    await db
+      .updateTable("media_file")
+      .set({ duration_seconds: 240 })
+      .where("id", "=", "file-1")
+      .execute();
+    const now = new Date().toISOString();
+    await db
+      .insertInto("media_stream_info")
+      .values([
+        {
+          id: "preferred-audio-eng",
+          media_file_id: "file-1",
+          stream_index: 1,
+          stream_type: "audio",
+          codec_name: "aac",
+          codec_long_name: null,
+          language: "eng",
+          title: null,
+          width: null,
+          height: null,
+          channels: 6,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 768000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "preferred-audio-jpn",
+          media_file_id: "file-1",
+          stream_index: 2,
+          stream_type: "audio",
+          codec_name: "aac",
+          codec_long_name: null,
+          language: "jpn",
+          title: null,
+          width: null,
+          height: null,
+          channels: 2,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 192000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .execute();
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+
+    const audioStreamIndexes: Array<number | null | undefined> = [];
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("not used");
+      },
+      async generateHlsSegmentWindow(input) {
+        audioStreamIndexes.push(input.audioStreamIndex);
+        await writeRequestedWindowSegment(input, "preferred-audio-segment");
+        return completedWindowGeneration();
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const response = await getSegment({
+      params: { sessionId, segment: "segment-00010.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(audioStreamIndexes).toEqual([2]);
+  });
+
+  test("uses remux language preference for request-driven remux sessions", async () => {
+    await setUserPreferredAudioLanguage("user-1", "jpn");
+    await db
+      .updateTable("media_file")
+      .set({ duration_seconds: 240 })
+      .where("id", "=", "file-1")
+      .execute();
+    await updateTranscodeSessionMode(sessionId, "remux");
+    const now = new Date().toISOString();
+    await db
+      .insertInto("media_stream_info")
+      .values([
+        {
+          id: "preferred-remux-dts-jpn",
+          media_file_id: "file-1",
+          stream_index: 1,
+          stream_type: "audio",
+          codec_name: "dts",
+          codec_long_name: null,
+          language: "jpn",
+          title: null,
+          width: null,
+          height: null,
+          channels: 6,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 768000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "preferred-remux-aac-eng",
+          media_file_id: "file-1",
+          stream_index: 2,
+          stream_type: "audio",
+          codec_name: "aac",
+          codec_long_name: null,
+          language: "eng",
+          title: null,
+          width: null,
+          height: null,
+          channels: 6,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 768000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "preferred-remux-aac-jpn",
+          media_file_id: "file-1",
+          stream_index: 3,
+          stream_type: "audio",
+          codec_name: "aac",
+          codec_long_name: null,
+          language: "jpn",
+          title: null,
+          width: null,
+          height: null,
+          channels: 2,
+          sample_rate: 48000,
+          duration_seconds: 240,
+          bit_rate: 192000,
+          raw_json: "{}",
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .execute();
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+
+    const audioStreamIndexes: Array<number | null | undefined> = [];
+    const requestedModes: Array<string | undefined> = [];
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("not used");
+      },
+      async generateHlsSegmentWindow(input) {
+        requestedModes.push(input.mode);
+        audioStreamIndexes.push(input.audioStreamIndex);
+        await writeRequestedWindowSegment(input, "preferred-remux-segment");
+        return completedWindowGeneration();
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const response = await getSegment({
+      params: { sessionId, segment: "segment-00010.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(requestedModes).toEqual(["remux"]);
+    expect(audioStreamIndexes).toEqual([3]);
+  });
+
+  const routeSmokeTest = canRunFfmpeg() ? test : test.skip;
+
+  routeSmokeTest(
+    "serves an authenticated later-seek segment generated by real FFmpeg",
+    async () => {
+      const sourcePath = path.join(tempDir, "RouteSmoke.mp4");
+      generateRouteSmokeInput(sourcePath);
+      const sourceDetails = await stat(sourcePath);
+      await db
+        .updateTable("media_file")
+        .set({
+          path: sourcePath,
+          basename: "RouteSmoke.mp4",
+          extension: ".mp4",
+          size_bytes: sourceDetails.size,
+          duration_seconds: 34,
+          video_codec: "hevc",
+          audio_codec: null,
+          container: "mp4",
+        })
+        .where("id", "=", "file-1")
+        .execute();
+      await registerTranscodeHlsArtifact({
+        sessionId,
+        mediaFileId: "file-1",
+        path: playlistPath,
+        mimeType: "application/vnd.apple.mpegurl",
+      });
+      await updateTranscodeSessionStatus(sessionId, "running");
+
+      const response = await getSegment({
+        params: { sessionId, segment: "segment-00001.ts" },
+        locals: { user: { id: "user-1" } },
+      } as never);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toContain("video/mp2t");
+      const body = Buffer.from(await response.arrayBuffer());
+      expect(body.length).toBeGreaterThan(0);
+      expect(
+        await exists(path.join(path.dirname(playlistPath), "segment-00001.ts")),
+      ).toBe(true);
+      const session = await db
+        .selectFrom("playback_session")
+        .select(["status", "last_segment_name", "last_segment_index"])
+        .where("id", "=", sessionId)
+        .executeTakeFirstOrThrow();
+      expect(session).toMatchObject({
+        status: "running",
+        last_segment_name: "segment-00001.ts",
+        last_segment_index: 1,
+      });
+    },
+  );
+
+  routeSmokeTest(
+    "serves stream-relative segment zero for a non-zero HLS playback start through real FFmpeg",
+    async () => {
+      const sourcePath = path.join(tempDir, "RouteSmokeOffset.mp4");
+      generateRouteSmokeInput(sourcePath, {
+        durationSeconds: 120,
+        size: "64x36",
+        rate: 2,
+      });
+      const sourceDetails = await stat(sourcePath);
+      await db
+        .updateTable("media_file")
+        .set({
+          path: sourcePath,
+          basename: "RouteSmokeOffset.mp4",
+          extension: ".mp4",
+          size_bytes: sourceDetails.size,
+          duration_seconds: 120,
+          video_codec: "hevc",
+          audio_codec: null,
+          container: "mp4",
+        })
+        .where("id", "=", "file-1")
+        .execute();
+      await db
+        .updateTable("playback_session")
+        .set({ start_time_seconds: 48 })
+        .where("id", "=", sessionId)
+        .execute();
+      await writeFile(
+        playlistPath,
+        virtualHlsPlaylist({
+          durationSeconds: 120,
+          startTimeSeconds: 48,
+        }),
+      );
+      await registerTranscodeHlsArtifact({
+        sessionId,
+        mediaFileId: "file-1",
+        path: playlistPath,
+        mimeType: "application/vnd.apple.mpegurl",
+      });
+      await updateTranscodeSessionStatus(sessionId, "running");
+
+      const response = await getSegment({
+        params: { sessionId, segment: "segment-00000.ts" },
+        locals: { user: { id: "user-1" } },
+      } as never);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toContain("video/mp2t");
+      expect(
+        Buffer.from(await response.arrayBuffer()).length,
+      ).toBeGreaterThan(0);
+      const generatedPlaylist = await readFile(playlistPath, "utf8");
+      expect(generatedPlaylist).toContain("#EXT-X-MEDIA-SEQUENCE:0");
+      expect(generatedPlaylist).toContain("segment-00000.ts");
+      expect(generatedPlaylist).toContain("segment-00004.ts");
+      expect(generatedPlaylist).not.toContain("segment-00005.ts");
+      const session = await db
+        .selectFrom("playback_session")
+        .select([
+          "status",
+          "start_time_seconds",
+          "last_segment_name",
+          "last_segment_index",
+        ])
+        .where("id", "=", sessionId)
+        .executeTakeFirstOrThrow();
+      expect(session).toMatchObject({
+        status: "running",
+        start_time_seconds: 48,
+        last_segment_name: "segment-00000.ts",
+        last_segment_index: 0,
+      });
+    },
+  );
+
+  routeSmokeTest(
+    "serves an authenticated local far-seek segment generated by real FFmpeg",
+    async () => {
+      const sourcePath = path.join(tempDir, "RouteSmokeLocalChurn.mp4");
+      generateRouteSmokeInput(sourcePath, {
+        durationSeconds: 300,
+        size: "32x18",
+        rate: 1,
+      });
+      const sourceDetails = await stat(sourcePath);
+      await db
+        .updateTable("media_file")
+        .set({
+          path: sourcePath,
+          basename: "RouteSmokeLocalChurn.mp4",
+          extension: ".mp4",
+          size_bytes: sourceDetails.size,
+          duration_seconds: 300,
+          video_codec: "hevc",
+          audio_codec: null,
+          container: "mp4",
+        })
+        .where("id", "=", "file-1")
+        .execute();
+      await registerTranscodeHlsArtifact({
+        sessionId,
+        mediaFileId: "file-1",
+        path: playlistPath,
+        mimeType: "application/vnd.apple.mpegurl",
+      });
+      await updateTranscodeSessionStatus(sessionId, "running");
+
+      const firstResponse = await getSegment({
+        params: { sessionId, segment: "segment-00000.ts" },
+        locals: { user: { id: "user-1" } },
+      } as never);
+
+      expect(firstResponse.status).toBe(200);
+      expect(firstResponse.headers.get("content-type")).toContain("video/mp2t");
+      expect(
+        Buffer.from(await firstResponse.arrayBuffer()).length,
+      ).toBeGreaterThan(0);
+
+      const farResponse = await getSegment({
+        params: { sessionId, segment: "segment-00016.ts" },
+        locals: { user: { id: "user-1" } },
+      } as never);
+
+      expect(farResponse.status).toBe(200);
+      expect(farResponse.headers.get("content-type")).toContain("video/mp2t");
+      expect(
+        Buffer.from(await farResponse.arrayBuffer()).length,
+      ).toBeGreaterThan(0);
+      expect(
+        await exists(path.join(path.dirname(playlistPath), "segment-00016.ts")),
+      ).toBe(true);
+      const session = await db
+        .selectFrom("playback_session")
+        .select(["status", "last_segment_name", "last_segment_index"])
+        .where("id", "=", sessionId)
+        .executeTakeFirstOrThrow();
+      expect(session).toMatchObject({
+        status: "running",
+        last_segment_name: "segment-00016.ts",
+        last_segment_index: 16,
+      });
+    },
+  );
+
+  routeSmokeTest(
+    "serves an authenticated SFTP later-seek segment generated by real FFmpeg through the input proxy",
+    async () => {
+      const sourcePath = path.join(tempDir, "RouteSmokeRemote.mp4");
+      generateRouteSmokeInput(sourcePath);
+      const sourceDetails = await stat(sourcePath);
+      const { sftpSessionId, sftpPlaylistPath } =
+        await createRequestDrivenSftpSession();
+      await db
+        .updateTable("media_file")
+        .set({
+          path: "/movies/RouteSmokeRemote.mp4",
+          basename: "RouteSmokeRemote.mp4",
+          extension: ".mp4",
+          size_bytes: sourceDetails.size,
+          duration_seconds: 34,
+          video_codec: "hevc",
+          audio_codec: null,
+          container: "mp4",
+        })
+        .where("id", "=", "sftp-file")
+        .execute();
+
+      const reads: Array<{
+        start: number;
+        end: number;
+        keepOpen: boolean | undefined;
+      }> = [];
+      let storageSetupCount = 0;
+      let storageClosed = false;
+      setTranscodeStorageFactoryForTests(async () => {
+        storageSetupCount += 1;
+        return {
+          source: "sftp",
+          async statFile() {
+            return null;
+          },
+          async listFiles() {
+            return null;
+          },
+          async *walkFiles() {
+            return;
+          },
+          async createReadStream(_filePath, range, options) {
+            if (!range) throw new Error("Expected FFmpeg proxy range read.");
+            reads.push({
+              start: range.start,
+              end: range.end,
+              keepOpen: options?.keepOpen,
+            });
+            return createNodeReadStream(sourcePath, {
+              start: range.start,
+              end: range.end,
+            });
+          },
+          async close() {
+            storageClosed = true;
+          },
+        };
+      });
+
+      const firstResponse = await getSegment({
+        params: { sessionId: sftpSessionId, segment: "segment-00001.ts" },
+        locals: { user: { id: "user-1" } },
+      } as never);
+
+      expect(firstResponse.status).toBe(200);
+      expect(firstResponse.headers.get("content-type")).toContain("video/mp2t");
+      const firstBody = Buffer.from(await firstResponse.arrayBuffer());
+      expect(firstBody.length).toBeGreaterThan(0);
+
+      const secondResponse = await getSegment({
+        params: { sessionId: sftpSessionId, segment: "segment-00002.ts" },
+        locals: { user: { id: "user-1" } },
+      } as never);
+
+      expect(secondResponse.status).toBe(200);
+      expect(secondResponse.headers.get("content-type")).toContain(
+        "video/mp2t",
+      );
+      const secondBody = Buffer.from(await secondResponse.arrayBuffer());
+      expect(secondBody.length).toBeGreaterThan(0);
+      expect(storageSetupCount).toBe(1);
+      expect(reads.length).toBeGreaterThan(0);
+      expect(reads.every((read) => read.keepOpen === true)).toBe(true);
+      await waitFor(() => storageClosed);
+      expect(
+        await exists(
+          path.join(path.dirname(sftpPlaylistPath), "segment-00001.ts"),
+        ),
+      ).toBe(true);
+      expect(
+        await exists(
+          path.join(path.dirname(sftpPlaylistPath), "segment-00002.ts"),
+        ),
+      ).toBe(true);
+      const session = await db
+        .selectFrom("playback_session")
+        .select(["status", "last_segment_name", "last_segment_index"])
+        .where("id", "=", sftpSessionId)
+        .executeTakeFirstOrThrow();
+      expect(session).toMatchObject({
+        status: "running",
+        last_segment_name: "segment-00002.ts",
+        last_segment_index: 2,
+      });
+    },
+  );
+
+  routeSmokeTest(
+    "serves an authenticated SFTP far-seek segment generated by real FFmpeg through the input proxy",
+    async () => {
+      const sourcePath = path.join(tempDir, "RouteSmokeRemoteChurn.mp4");
+      generateRouteSmokeInput(sourcePath, {
+        durationSeconds: 300,
+        size: "32x18",
+        rate: 1,
+      });
+      const sourceDetails = await stat(sourcePath);
+      const { sftpSessionId, sftpPlaylistPath } =
+        await createRequestDrivenSftpSession();
+      await db
+        .updateTable("media_file")
+        .set({
+          path: "/movies/RouteSmokeRemoteChurn.mp4",
+          basename: "RouteSmokeRemoteChurn.mp4",
+          extension: ".mp4",
+          size_bytes: sourceDetails.size,
+          duration_seconds: 300,
+          video_codec: "hevc",
+          audio_codec: null,
+          container: "mp4",
+        })
+        .where("id", "=", "sftp-file")
+        .execute();
+
+      let storageSetupCount = 0;
+      let storageCloseCount = 0;
+      setTranscodeStorageFactoryForTests(async () => {
+        storageSetupCount += 1;
+        return {
+          source: "sftp",
+          async statFile() {
+            return null;
+          },
+          async listFiles() {
+            return null;
+          },
+          async *walkFiles() {
+            return;
+          },
+          async createReadStream(_filePath, range, options) {
+            if (!range) throw new Error("Expected FFmpeg proxy range read.");
+            if (options?.keepOpen !== true) {
+              throw new Error("Expected FFmpeg proxy to keep storage open.");
+            }
+            return createNodeReadStream(sourcePath, {
+              start: range.start,
+              end: range.end,
+              highWaterMark: 1024,
+            }).pipe(slowTransform(5));
+          },
+          async close() {
+            storageCloseCount += 1;
+          },
+        };
+      });
+
+      const firstResponse = await getSegment({
+        params: { sessionId: sftpSessionId, segment: "segment-00000.ts" },
+        locals: { user: { id: "user-1" } },
+      } as never);
+
+      expect(firstResponse.status).toBe(200);
+      expect(
+        Buffer.from(await firstResponse.arrayBuffer()).length,
+      ).toBeGreaterThan(0);
+      expect(storageSetupCount).toBe(1);
+
+      const farResponse = await getSegment({
+        params: { sessionId: sftpSessionId, segment: "segment-00016.ts" },
+        locals: { user: { id: "user-1" } },
+      } as never);
+
+      expect(farResponse.status).toBe(200);
+      expect(
+        Buffer.from(await farResponse.arrayBuffer()).length,
+      ).toBeGreaterThan(0);
+      expect(storageSetupCount).toBeGreaterThanOrEqual(1);
+      await waitFor(() => storageCloseCount >= 1);
+      expect(
+        await exists(
+          path.join(path.dirname(sftpPlaylistPath), "segment-00016.ts"),
+        ),
+      ).toBe(true);
+      const session = await db
+        .selectFrom("playback_session")
+        .select(["status", "last_segment_name", "last_segment_index"])
+        .where("id", "=", sftpSessionId)
+        .executeTakeFirstOrThrow();
+      expect(session).toMatchObject({
+        status: "running",
+        last_segment_name: "segment-00016.ts",
+        last_segment_index: 16,
+      });
+
+      expect(await cancelPlaybackSession(sftpSessionId)).toBe("cancelled");
+      await waitFor(() => storageCloseCount >= storageSetupCount);
+    },
+  );
 
   test("starts a 40-minute far seek at the requested segment window", async () => {
     await db
@@ -4232,7 +5157,7 @@ describe("playback-session HLS routes", () => {
     expect(generationCount).toBe(0);
   });
 
-  test("falls back from request-driven remux segment generation to full transcode", async () => {
+  test("falls back from request-driven remux to full transcode", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 60 })
@@ -4287,7 +5212,7 @@ describe("playback-session HLS routes", () => {
     });
   });
 
-  test("does not start remux fallback when the session is cancelled after remux failure", async () => {
+  test("preserves cancellation when request-driven remux generation fails", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 60 })
@@ -4343,7 +5268,7 @@ describe("playback-session HLS routes", () => {
     expect(cancelCount).toBe(1);
   });
 
-  test("does not start remux fallback when transcoding is disabled after remux failure", async () => {
+  test("preserves disabled policy when request-driven remux generation fails", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 60 })
@@ -4398,7 +5323,7 @@ describe("playback-session HLS routes", () => {
     });
   });
 
-  test("does not keep fallback artifacts when the session is cancelled before mode switch", async () => {
+  test("does not keep generated artifacts when remux fallback is cancelled", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 60 })
@@ -4471,7 +5396,7 @@ describe("playback-session HLS routes", () => {
     expect(cancelCount).toBe(1);
   });
 
-  test("does not keep fallback artifacts when transcoding is disabled during fallback generation", async () => {
+  test("does not keep generated artifacts when policy is disabled during remux fallback", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 60 })
@@ -5071,7 +5996,7 @@ describe("playback-session HLS routes", () => {
     });
   });
 
-  test("fails when remux fallback segment generation publishes no segment", async () => {
+  test("fails when remux and fallback segment generation publish no segment", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 60 })
@@ -5097,7 +6022,6 @@ describe("playback-session HLS routes", () => {
       },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode ?? "transcode");
-        if (input.mode === "remux") throw new Error("remux segment failed");
         return completedWindowGeneration();
       },
       async cancel() {
@@ -5111,7 +6035,7 @@ describe("playback-session HLS routes", () => {
     } as never);
 
     const message =
-      "Remux segment generation failed; full transcode fallback failed: NodeAV bounded-window HLS segment generation completed without publishing segment-00003.ts.";
+      "Remux segment generation failed; full transcode fallback failed: Request-driven HLS segment generation completed without publishing segment-00003.ts.";
     expect(response.status).toBe(409);
     expect(requestedModes).toEqual(["remux", "transcode"]);
     expect(await response.json()).toEqual({ error: message });
@@ -5127,7 +6051,7 @@ describe("playback-session HLS routes", () => {
     });
   });
 
-  test("returns the failed session error when bounded-window generation fails", async () => {
+  test("returns the failed session error when request-driven generation fails", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 240 })
@@ -5176,7 +6100,7 @@ describe("playback-session HLS routes", () => {
     expect(Number(artifacts.count)).toBe(0);
   });
 
-  test("fails when bounded-window generation publishes no segment", async () => {
+  test("fails when request-driven generation publishes no segment", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 240 })
@@ -5211,7 +6135,7 @@ describe("playback-session HLS routes", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
       error:
-        "NodeAV bounded-window HLS segment generation completed without publishing segment-00011.ts.",
+        "Request-driven HLS segment generation completed without publishing segment-00011.ts.",
     });
     expect(generationCount).toBe(1);
     const job = await db
@@ -5222,7 +6146,7 @@ describe("playback-session HLS routes", () => {
     expect(job).toEqual({
       status: "failed",
       error_message:
-        "NodeAV bounded-window HLS segment generation completed without publishing segment-00011.ts.",
+        "Request-driven HLS segment generation completed without publishing segment-00011.ts.",
     });
     const artifacts = await db
       .selectFrom("playback_hls_artifact")

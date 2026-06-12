@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { RefreshCw, Save, ScanSearch, SearchCheck, Wrench } from "@lucide/svelte";
+  import {
+    RefreshCw,
+    Save,
+    ScanSearch,
+    SearchCheck,
+    Wrench,
+  } from "@lucide/svelte";
 
   let { data, form } = $props();
 
@@ -13,6 +19,7 @@
   let transcodingEnabled = $state(true);
   let hardwareAcceleration = $state("off");
   let hardwareAccelerationRequired = $state(false);
+  let transcodeQualityPreset = $state("auto");
 
   const metadataChanged = $derived(
     tmdbAccessToken.trim().length > 0 ||
@@ -27,6 +34,7 @@
     hardwareAcceleration = data.transcodePolicy.hardwareAcceleration;
     hardwareAccelerationRequired =
       data.transcodePolicy.hardwareAccelerationRequired;
+    transcodeQualityPreset = data.transcodePolicy.transcodeQualityPreset;
   });
 
   function submitRegistration() {
@@ -159,6 +167,20 @@
       </label>
 
       <label>
+        HLS quality
+        <select
+          name="transcodeQualityPreset"
+          bind:value={transcodeQualityPreset}
+          onchange={submitTranscoding}
+        >
+          <option value="auto">Auto</option>
+          <option value="720p">720p</option>
+          <option value="1080p">1080p</option>
+          <option value="original">Original resolution</option>
+        </select>
+      </label>
+
+      <label>
         Temporary transcode storage
         <select
           name="playbackSessionArtifactMaxBytes"
@@ -187,13 +209,13 @@
       </label>
 
       <p class="muted detail-copy">
-        Direct play stays first. Transcoding uses temporary NodeAV HLS sessions
+        Direct play stays first. Transcoding uses temporary FFmpeg HLS sessions
         when the browser cannot play a file directly or the user prefers HLS.
-        Temporary HLS files are stored under LUNARR_DATA_DIR/playback-sessions
-        and cleaned automatically.
-        Hardware acceleration is best-effort unless required; when required,
-        playback fails if NodeAV cannot create the selected device or H.264
-        encoder.
+        HLS quality controls FFmpeg transcode resolution and bitrate; Auto keeps
+        the current server default. Temporary HLS files are stored under
+        LUNARR_DATA_DIR/playback-sessions and cleaned automatically. Hardware
+        acceleration is best-effort unless required; when required, playback
+        fails if FFmpeg cannot use the selected device or H.264 encoder.
       </p>
 
       {#if form?.transcodingError}

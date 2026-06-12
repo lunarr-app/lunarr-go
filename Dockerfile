@@ -12,11 +12,6 @@ FROM deps AS build
 COPY . .
 RUN bun run build
 
-FROM oven/bun:${BUN_VERSION} AS prod-deps
-WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production
-
 FROM node:${NODE_VERSION} AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
@@ -25,7 +20,16 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node scripts/verify-ffmpeg.mjs scripts/smoke-ffmpeg-transcode.mjs scripts/smoke-ffmpeg-hardware.mjs scripts/verify-nodeav-probe.mjs scripts/verify-runtime.mjs ./scripts/
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && node scripts/verify-ffmpeg.mjs
+
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+RUN node scripts/verify-nodeav-probe.mjs
+
 COPY --from=build --chown=node:node /app/build ./build
 COPY --chown=node:node package.json ./
 COPY --chown=node:node scripts/start.mjs scripts/env.mjs ./scripts/

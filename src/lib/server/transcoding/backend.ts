@@ -1,4 +1,8 @@
-import type { HardwareAccelerationMode } from "./policy";
+import type {
+  HardwareAccelerationMode,
+  TranscodeQualityTarget,
+} from "./policy";
+import type { HlsSegmentFormat } from "./hls";
 import type { TranscodeMode } from "../db/schema/streaming";
 
 export type ProbeInput = {
@@ -47,7 +51,10 @@ export type HlsTranscodeInput = {
   inputSource?: SeekableTranscodeInputSource;
   artifactDirectory: string;
   segmentSeconds: number;
+  hlsSegmentFormat?: HlsSegmentFormat;
   mode?: TranscodeMode;
+  audioStreamIndex?: number | null;
+  transcodeQuality?: TranscodeQualityTarget;
   startTimeSeconds?: number;
   outputTimelineStartSeconds?: number;
   trimStartSeconds?: number;
@@ -73,11 +80,15 @@ export type HlsSegmentWindowTranscodeInput = HlsTranscodeInput & {
 
 export type HlsSegmentWindowGeneration = {
   completion: Promise<void>;
+  inputSourceDisposition?: "backend";
 };
 
 export type HlsSegmentGenerationPolicyInput = Pick<
   HlsTranscodeInput,
-  "hardwareAcceleration" | "hardwareAccelerationRequired" | "mode"
+  | "hardwareAcceleration"
+  | "hardwareAccelerationRequired"
+  | "mode"
+  | "transcodeQuality"
 >;
 
 export type RunningTranscode = {

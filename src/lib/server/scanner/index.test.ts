@@ -335,7 +335,7 @@ describe("runScanJob", () => {
 
     setTranscodeBackendForTests({
       async startCompatibilityHls() {
-        throw new Error("NodeAV test backend unavailable.");
+        throw new Error("FFmpeg test backend unavailable.");
       },
       async cancel() {
         return;

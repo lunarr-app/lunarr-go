@@ -1,3 +1,5 @@
+import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
+import type { HlsSegmentFormat } from "./hls";
 import type { PlaybackPreference, TranscodePolicy } from "./policy";
 
 export type PlaybackMode = "direct" | "remux" | "transcode";
@@ -12,7 +14,10 @@ export type MediaCapabilityInput = {
 export type PlaybackModeDecision =
   | { mode: "direct"; reason: "direct_supported" | "transcode_not_needed" }
   | { mode: "remux"; reason: "container_unsupported" }
-  | { mode: "transcode"; reason: "user_preference" | "direct_unsupported" }
+  | {
+      mode: "transcode";
+      reason: "user_preference" | "direct_unsupported";
+    }
   | { mode: "unavailable"; reason: "transcoding_disabled" };
 
 function normalizeCodec(value: string | null | undefined) {
@@ -29,36 +34,200 @@ function normalizeContainer(value: string | null | undefined) {
   return value?.trim().toLowerCase() || null;
 }
 
-function hasBrowserCompatibleCodecs(input: MediaCapabilityInput) {
+function hasBaselineHlsRemuxCompatibleCodecs(input: MediaCapabilityInput) {
   const videoCodec = normalizeCodec(input.videoCodec);
   const audioCodec = normalizeCodec(input.audioCodec);
-  const browserVideo = videoCodec === null || videoCodec === "h264" || videoCodec === "avc1";
-  const browserAudio = audioCodec === null || audioCodec === "aac" || audioCodec === "mp4a";
+  return isH264Codec(videoCodec) && isKnownAacCodec(audioCodec);
+}
+
+function hasFmp4HevcHlsRemuxCompatibleCodecs(
+  input: MediaCapabilityInput,
+  clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
+) {
+  const videoCodec = normalizeCodec(input.videoCodec);
+  const audioCodec = normalizeCodec(input.audioCodec);
+  return (
+    clientCapabilities?.hlsNative === true &&
+    clientCapabilities?.hlsFmp4 === true &&
+    clientCapabilities?.hevc === true &&
+    isHevcCodec(videoCodec) &&
+    isKnownAacCodec(audioCodec)
+  );
+}
+
+function isHevcCodec(codec: string | null) {
+  return (
+    codec !== null &&
+    (codec === "hevc" ||
+      codec === "h265" ||
+      codec === "hvc1" ||
+      codec === "hev1" ||
+      codec.startsWith("hvc1.") ||
+      codec.startsWith("hev1."))
+  );
+}
+
+function isAv1Codec(codec: string | null) {
+  return (
+    codec !== null &&
+    (codec === "av1" || codec === "av01" || codec.startsWith("av01."))
+  );
+}
+
+function isVp9Codec(codec: string | null) {
+  return (
+    codec !== null &&
+    (codec === "vp9" || codec === "vp09" || codec.startsWith("vp09."))
+  );
+}
+
+function isVp8Codec(codec: string | null) {
+  return codec !== null && codec === "vp8";
+}
+
+function isH264Codec(codec: string | null) {
+  return (
+    codec !== null &&
+    (codec === "h264" ||
+      codec === "avc" ||
+      codec === "avc1" ||
+      codec === "avc3" ||
+      codec.startsWith("avc1.") ||
+      codec.startsWith("avc3."))
+  );
+}
+
+function isAacCodec(codec: string | null) {
+  return (
+    codec === null ||
+    codec === "aac" ||
+    codec === "mp4a" ||
+    codec.startsWith("mp4a.")
+  );
+}
+
+function isKnownAacCodec(codec: string | null) {
+  return codec !== null && isAacCodec(codec);
+}
+
+function isOpusCodec(codec: string | null) {
+  return codec === null || codec === "opus";
+}
+
+function isVorbisCodec(codec: string | null) {
+  return codec === null || codec === "vorbis";
+}
+
+function hasClientMp4CompatibleCodecs(
+  input: MediaCapabilityInput,
+  clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
+) {
+  const videoCodec = normalizeCodec(input.videoCodec);
+  const audioCodec = normalizeCodec(input.audioCodec);
+  const browserVideo =
+    videoCodec === null ||
+    isH264Codec(videoCodec) ||
+    (clientCapabilities?.hevc === true && isHevcCodec(videoCodec)) ||
+    (clientCapabilities?.av1 === true && isAv1Codec(videoCodec));
+  return browserVideo && isAacCodec(audioCodec);
+}
+
+function hasClientWebmCompatibleCodecs(
+  input: MediaCapabilityInput,
+  clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
+) {
+  if (clientCapabilities?.webm !== true) return false;
+  const videoCodec = normalizeCodec(input.videoCodec);
+  const audioCodec = normalizeCodec(input.audioCodec);
+  const browserVideo =
+    videoCodec === null ||
+    (clientCapabilities.vp9 === true && isVp9Codec(videoCodec)) ||
+    (clientCapabilities.vp8 === true && isVp8Codec(videoCodec)) ||
+    (clientCapabilities.av1 === true && isAv1Codec(videoCodec));
+  const browserAudio =
+    audioCodec === null ||
+    (clientCapabilities.opus === true && isOpusCodec(audioCodec)) ||
+    (clientCapabilities.vorbis === true && isVorbisCodec(audioCodec));
   return browserVideo && browserAudio;
 }
 
-export function isDirectPlayCompatible(input: MediaCapabilityInput) {
+function isMp4Container(extension: string | null, container: string | null) {
+  return (
+    extension === ".mp4" ||
+    extension === ".m4v" ||
+    extension === ".mov" ||
+    container === "mp4" ||
+    container === "mov,mp4,m4a,3gp,3g2,mj2"
+  );
+}
+
+function isWebmContainer(extension: string | null, container: string | null) {
+  return (
+    extension === ".webm" ||
+    container === "webm" ||
+    container === "matroska,webm" ||
+    container?.split(",").includes("webm") === true
+  );
+}
+
+export function isDirectPlayCompatible(
+  input: MediaCapabilityInput,
+  clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
+) {
   const extension = normalizeExtension(input.extension);
   const container = normalizeContainer(input.container);
 
-  const mp4Container = extension === ".mp4" || container === "mp4" || container === "mov,mp4,m4a,3gp,3g2,mj2";
-  return mp4Container && hasBrowserCompatibleCodecs(input);
+  if (isMp4Container(extension, container)) {
+    return hasClientMp4CompatibleCodecs(input, clientCapabilities);
+  }
+  if (isWebmContainer(extension, container)) {
+    return hasClientWebmCompatibleCodecs(input, clientCapabilities);
+  }
+  return false;
 }
 
-export function isRemuxCompatible(input: MediaCapabilityInput) {
-  if (isDirectPlayCompatible(input)) return false;
-  return hasBrowserCompatibleCodecs(input);
+export function isRemuxCompatible(
+  input: MediaCapabilityInput,
+  clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
+  hlsSegmentFormat: HlsSegmentFormat = "mpegts",
+) {
+  if (isDirectPlayCompatible(input, clientCapabilities)) return false;
+  return isHlsRemuxCompatible(input, clientCapabilities, hlsSegmentFormat);
+}
+
+export function isHlsRemuxCompatible(
+  input: MediaCapabilityInput,
+  clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
+  hlsSegmentFormat: HlsSegmentFormat = "mpegts",
+) {
+  if (hasBaselineHlsRemuxCompatibleCodecs(input)) return true;
+  return (
+    hlsSegmentFormat === "fmp4" &&
+    hasFmp4HevcHlsRemuxCompatibleCodecs(input, clientCapabilities)
+  );
 }
 
 export function decidePlaybackMode(input: {
   file: MediaCapabilityInput;
   policy: Pick<TranscodePolicy, "transcodingEnabled" | "playbackPreference">;
+  clientCapabilities?: Partial<ClientPlaybackCapabilities> | null;
+  hlsSegmentFormat?: HlsSegmentFormat;
 }): PlaybackModeDecision {
-  const directCompatible = isDirectPlayCompatible(input.file);
-  const remuxCompatible = isRemuxCompatible(input.file);
+  const directCompatible = isDirectPlayCompatible(
+    input.file,
+    input.clientCapabilities,
+  );
+  const remuxCompatible = isRemuxCompatible(
+    input.file,
+    input.clientCapabilities,
+    input.hlsSegmentFormat,
+  );
   const preference: PlaybackPreference = input.policy.playbackPreference;
 
-  if (directCompatible && (preference === "auto" || preference === "prefer_direct")) {
+  if (
+    directCompatible &&
+    (preference === "auto" || preference === "prefer_direct")
+  ) {
     return { mode: "direct", reason: "direct_supported" };
   }
 
@@ -74,6 +243,7 @@ export function decidePlaybackMode(input: {
     return { mode: "transcode", reason: "direct_unsupported" };
   }
 
-  if (directCompatible) return { mode: "direct", reason: "transcode_not_needed" };
+  if (directCompatible)
+    return { mode: "direct", reason: "transcode_not_needed" };
   return { mode: "unavailable", reason: "transcoding_disabled" };
 }

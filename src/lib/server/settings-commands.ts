@@ -7,8 +7,10 @@ import { cancelActivePlaybackSessions } from "./transcoding/manager";
 import { startMediaProbeRefreshJob } from "./transcoding/probe-jobs";
 import {
   normalizeHardwareAccelerationMode,
+  normalizeTranscodeQualityPreset,
   setHardwareAccelerationMode,
   setHardwareAccelerationRequired,
+  setTranscodeQualityPreset,
   setTranscodingEnabled,
 } from "./transcoding/policy";
 import { setPlaybackSessionArtifactMaxBytes } from "./transcoding/sessions";
@@ -53,6 +55,9 @@ export async function updateTranscodingSettings(input: InputSource) {
   const hardwareAcceleration = normalizeHardwareAccelerationMode(
     stringInput(input, "hardwareAcceleration"),
   );
+  const transcodeQualityPreset = normalizeTranscodeQualityPreset(
+    stringInput(input, "transcodeQualityPreset"),
+  );
 
   await setTranscodingEnabled(transcodingEnabled);
   if (!transcodingEnabled) await cancelActivePlaybackSessions();
@@ -61,6 +66,7 @@ export async function updateTranscodingSettings(input: InputSource) {
     hardwareAcceleration !== "off" &&
       booleanInput(input, "hardwareAccelerationRequired"),
   );
+  await setTranscodeQualityPreset(transcodeQualityPreset);
   if (hasInput(input, "playbackSessionArtifactMaxBytes")) {
     await setPlaybackSessionArtifactMaxBytes(
       stringInput(input, "playbackSessionArtifactMaxBytes"),

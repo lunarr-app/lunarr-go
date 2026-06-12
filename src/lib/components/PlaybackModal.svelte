@@ -4,6 +4,10 @@
   import { page } from "$app/state";
   import { X } from "@lucide/svelte";
   import MediaPlayer from "$lib/components/MediaPlayer.svelte";
+  import {
+    appendClientPlaybackCapabilityParams,
+    detectClientPlaybackCapabilities,
+  } from "$lib/playback/capabilities";
   import type { PlaybackData } from "$lib/server/playback";
 
   let playbackData: PlaybackData | null = $state(null);
@@ -30,7 +34,23 @@
       const value = sourceUrl.searchParams.get(key);
       if (value) apiUrl.searchParams.set(key, value);
     }
+    if (browser) {
+      const video = document.createElement("video");
+      appendClientPlaybackCapabilityParams(
+        apiUrl.searchParams,
+        detectClientPlaybackCapabilities((type) => video.canPlayType(type), {
+          mediaSourceSupported: canUseFmp4MediaSource(),
+        }),
+      );
+    }
     return `${apiUrl.pathname}${apiUrl.search}`;
+  }
+
+  function canUseFmp4MediaSource() {
+    if (!("MediaSource" in window)) return false;
+    return window.MediaSource.isTypeSupported(
+      'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
+    );
   }
 
   function closeHref(sourceUrl = page.url) {

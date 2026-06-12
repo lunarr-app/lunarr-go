@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   absolutePlaybackSeconds,
+  createHlsSeekEventController,
   createLatestHlsRepositionScheduler,
   hlsRepositionHref,
   initialPlayerTimelineSeconds,
@@ -353,5 +354,149 @@ describe("HLS seek helpers", () => {
     runCallback();
 
     expect(starts).toEqual([]);
+  });
+
+  test("keeps only the latest target during rapid HLS seek churn", () => {
+    let callback: (() => void) | null = null;
+    const starts: number[] = [];
+    const clearedTimers: unknown[] = [];
+    const scheduler = createLatestHlsRepositionScheduler({
+      delayMs: 120,
+      reposition(startSeconds) {
+        starts.push(startSeconds);
+      },
+      setTimer(nextCallback) {
+        callback = nextCallback;
+        return starts.length + clearedTimers.length + 1;
+      },
+      clearTimer(timer) {
+        clearedTimers.push(timer);
+      },
+    });
+    const runCallback = () => {
+      if (!callback) throw new Error("Expected scheduled callback.");
+      callback();
+    };
+    const stableSeconds = 60;
+    const seekTo = (targetSeconds: number) => {
+      if (
+        shouldRepositionHlsSeek({
+          mode: "transcode",
+          status: "ready",
+          fromSeconds: stableSeconds,
+          toSeconds: targetSeconds,
+        })
+      ) {
+        return scheduler.schedule(targetSeconds);
+      }
+      scheduler.cancel();
+      return false;
+    };
+
+    expect(seekTo(180)).toBe(true);
+    expect(seekTo(20)).toBe(true);
+    expect(seekTo(240)).toBe(true);
+    expect(clearedTimers).toHaveLength(2);
+    expect(scheduler.pending()).toBe(true);
+    runCallback();
+
+    expect(starts).toEqual([240]);
+    expect(scheduler.pending()).toBe(false);
+
+    expect(seekTo(140)).toBe(true);
+    expect(seekTo(64)).toBe(false);
+    runCallback();
+
+    expect(starts).toEqual([240]);
+    expect(scheduler.pending()).toBe(false);
+  });
+
+  test("handles browser-style HLS seek event churn against stream-relative currentTime", () => {
+    let callback: (() => void) | null = null;
+    const starts: number[] = [];
+    const clearedTimers: unknown[] = [];
+    const controller = createHlsSeekEventController({
+      mode: "transcode",
+      status: "ready",
+      startSeconds: 120,
+      streamStartSeconds: 120,
+      delayMs: 120,
+      reposition(startSeconds) {
+        starts.push(startSeconds);
+      },
+      setTimer(nextCallback) {
+        callback = nextCallback;
+        return starts.length + clearedTimers.length + 1;
+      },
+      clearTimer(timer) {
+        clearedTimers.push(timer);
+      },
+    });
+    const runCallback = () => {
+      if (!callback) throw new Error("Expected scheduled callback.");
+      callback();
+    };
+
+    expect(controller.lastPlaybackTime()).toBe(120);
+
+    controller.timeUpdate({ relativeSeconds: 8, seeking: false });
+    expect(controller.lastPlaybackTime()).toBe(128);
+
+    expect(controller.seeking({ relativeSeconds: 180 })).toEqual({
+      uiState: "seeking",
+      pendingReposition: true,
+    });
+    expect(controller.seeked({ relativeSeconds: 220, paused: false })).toEqual({
+      uiState: "seeking",
+      pendingReposition: true,
+    });
+    expect(clearedTimers).toHaveLength(1);
+
+    runCallback();
+
+    expect(starts).toEqual([340]);
+    expect(controller.pending()).toBe(false);
+    expect(controller.lastPlaybackTime()).toBe(128);
+  });
+
+  test("cancels pending browser-style HLS reposition after a near-stable seeked event", () => {
+    let callback: (() => void) | null = null;
+    const starts: number[] = [];
+    const controller = createHlsSeekEventController({
+      mode: "remux",
+      status: "ready",
+      startSeconds: 90,
+      streamStartSeconds: 90,
+      reposition(startSeconds) {
+        starts.push(startSeconds);
+      },
+      setTimer(nextCallback) {
+        callback = nextCallback;
+        return 1;
+      },
+      clearTimer() {
+        return;
+      },
+    });
+    const runCallback = () => {
+      if (!callback) throw new Error("Expected scheduled callback.");
+      callback();
+    };
+
+    controller.timeUpdate({ relativeSeconds: 10, seeking: false });
+    expect(controller.seeking({ relativeSeconds: 80 })).toEqual({
+      uiState: "seeking",
+      pendingReposition: true,
+    });
+    expect(controller.seeked({ relativeSeconds: 14, paused: false })).toEqual({
+      uiState: "playing",
+      pendingReposition: false,
+    });
+
+    runCallback();
+
+    expect(starts).toEqual([]);
+    expect(controller.pending()).toBe(false);
+    expect(controller.lastPlaybackTime()).toBe(104);
   });
 });

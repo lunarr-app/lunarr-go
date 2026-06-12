@@ -42,11 +42,13 @@ Playback preference body:
 
 ```json
 {
-  "playbackPreference": "auto"
+  "playbackPreference": "auto",
+  "preferredAudioLanguage": "eng",
+  "preferredSubtitleLanguage": "eng"
 }
 ```
 
-Supported preferences are normalized by the server.
+Supported preferences and language values are normalized by the server.
 
 Transcoding settings accept the temporary playback-session artifact limit in bytes:
 

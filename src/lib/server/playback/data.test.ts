@@ -205,8 +205,8 @@ describe("playback data", () => {
           size_bytes: 20,
           mtime_ms: nowMs,
           duration_seconds: 300,
-          video_codec: null,
-          audio_codec: null,
+          video_codec: "h264",
+          audio_codec: "aac",
           container: "mkv",
           created_at: now,
           updated_at: now
@@ -339,7 +339,7 @@ describe("playback data", () => {
 
   test("loads episode playback with show context", async () => {    setTranscodeBackendForTests({
       async startCompatibilityHls() {
-        throw new Error("NodeAV test backend unavailable.");
+        throw new Error("FFmpeg test backend unavailable.");
       },
       async cancel() {
         return;
@@ -473,12 +473,16 @@ describe("playback data", () => {
     expect(result.playback).toMatchObject({
       mode: "remux",
       status: "ready",
+      modeDecision: {
+        mode: "remux",
+        reason: "container_unsupported"
+      },
       streamStartSeconds: 125
     });
     expect(result.playback.playbackSessionId).toBeTruthy();
   });
 
-  test("uses explicit transcode query to recover remux playback as full transcode", async () => {
+  test("keeps explicit transcode query on the full transcode path", async () => {
     setTranscodeBackendForTests({
       async startCompatibilityHls(input): Promise<RunningTranscode> {
         return {
@@ -508,7 +512,10 @@ describe("playback data", () => {
     expect(result.playback).toMatchObject({
       mode: "transcode",
       status: "ready",
-      modeDecision: { mode: "remux", reason: "container_unsupported" },
+      modeDecision: {
+        mode: "remux",
+        reason: "container_unsupported"
+      },
       streamStartSeconds: 125
     });
     expect(result.playback.playbackSessionId).toBeTruthy();

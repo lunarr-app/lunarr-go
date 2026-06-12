@@ -45,6 +45,8 @@ describe("profile page server", () => {
       },
       transcodePolicy: {
         playbackPreference: "auto",
+        preferredAudioLanguage: null,
+        preferredSubtitleLanguage: null,
         transcodingEnabled: true,
       },
     });
@@ -53,6 +55,8 @@ describe("profile page server", () => {
   test("saves playback preference for normal users", async () => {
     const form = new FormData();
     form.set("playbackPreference", "prefer_transcode");
+    form.set("preferredAudioLanguage", " JPN ");
+    form.set("preferredSubtitleLanguage", " ENG ");
 
     try {
       await actions.savePlaybackPreference({
@@ -75,6 +79,16 @@ describe("profile page server", () => {
         (policy) => policy.playbackPreference,
       ),
     ).toBe("prefer_transcode");
+    expect(
+      await getTranscodePolicy("user-1").then(
+        (policy) => policy.preferredAudioLanguage,
+      ),
+    ).toBe("jpn");
+    expect(
+      await getTranscodePolicy("user-1").then(
+        (policy) => policy.preferredSubtitleLanguage,
+      ),
+    ).toBe("eng");
   });
 
   test("normalizes invalid playback preference values", async () => {

@@ -23,12 +23,14 @@ import {
   getPlaybackDecision,
   markWatched,
   normalizePlaybackProgress,
+  parseClientPlaybackCapabilities,
   parsePlaybackProgressBody,
   saveProgress,
 } from ".";
 import {
   setTranscodingEnabled,
   setUserPlaybackPreference,
+  setUserPreferredSubtitleLanguage,
 } from "../transcoding/policy";
 import {
   createTranscodeSession,
@@ -347,6 +349,54 @@ describe("getPlaybackDecision", () => {
           updated_at: now,
         },
         {
+          id: "hevc-mp4-file",
+          library_id: "library-1",
+          media_item_id: "movie-1",
+          path: path.join(tempDir, "Movie.Hevc.mp4"),
+          basename: "Movie.Hevc.mp4",
+          extension: ".mp4",
+          size_bytes: 45,
+          mtime_ms: nowMs,
+          duration_seconds: 300,
+          video_codec: "hevc",
+          audio_codec: "aac",
+          container: "mp4",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "av1-mp4-file",
+          library_id: "library-1",
+          media_item_id: "movie-1",
+          path: path.join(tempDir, "Movie.Av1.mp4"),
+          basename: "Movie.Av1.mp4",
+          extension: ".mp4",
+          size_bytes: 47,
+          mtime_ms: nowMs,
+          duration_seconds: 300,
+          video_codec: "av1",
+          audio_codec: "aac",
+          container: "mp4",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "webm-file",
+          library_id: "library-1",
+          media_item_id: "movie-1",
+          path: path.join(tempDir, "Movie.Webm.webm"),
+          basename: "Movie.Webm.webm",
+          extension: ".webm",
+          size_bytes: 48,
+          mtime_ms: nowMs,
+          duration_seconds: 300,
+          video_codec: "vp9",
+          audio_codec: "opus",
+          container: "matroska,webm",
+          created_at: now,
+          updated_at: now,
+        },
+        {
           id: "remux-file",
           library_id: "library-1",
           media_item_id: "movie-1",
@@ -356,6 +406,8 @@ describe("getPlaybackDecision", () => {
           size_bytes: 50,
           mtime_ms: nowMs,
           duration_seconds: 300,
+          video_codec: "h264",
+          audio_codec: "aac",
           container: "matroska",
           created_at: now,
           updated_at: now,
@@ -367,6 +419,9 @@ describe("getPlaybackDecision", () => {
       writeFile(path.join(tempDir, "Movie.4k.mp4"), "fixture"),
       writeFile(path.join(tempDir, "Show.mp4"), "fixture"),
       writeFile(path.join(tempDir, "Movie.Hevc.mkv"), "fixture"),
+      writeFile(path.join(tempDir, "Movie.Hevc.mp4"), "fixture"),
+      writeFile(path.join(tempDir, "Movie.Av1.mp4"), "fixture"),
+      writeFile(path.join(tempDir, "Movie.Webm.webm"), "fixture"),
       writeFile(path.join(tempDir, "Movie.Remux.mkv"), "fixture"),
     ]);
     await db
@@ -508,15 +563,249 @@ describe("getPlaybackDecision", () => {
     ]);
   });
 
+  test("prefers the user's subtitle language when choosing the default subtitle track", async () => {
+    await setUserPreferredSubtitleLanguage("user-1", "eng");
+    await db
+      .updateTable("subtitle_track")
+      .set({ language: "spa", is_default: 1 })
+      .where("id", "=", "subtitle-shared")
+      .execute();
+    await db
+      .updateTable("subtitle_track")
+      .set({ language: "eng", is_default: 0 })
+      .where("id", "=", "subtitle-file-b")
+      .execute();
+
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1");
+
+    expect(
+      decision?.tracks.map((track) => ({
+        id: track.id,
+        default: track.default,
+      })),
+    ).toEqual([
+      { id: "subtitle-shared", default: false },
+      { id: "subtitle-file-b", default: true },
+    ]);
+  });
+
   test("falls back to the first playable file and rejects files outside the movie", async () => {
     expect((await getPlaybackDecision("movie-1"))?.file.id).toBe("file-a");
     expect(await getPlaybackDecision("movie-1", "missing-file")).toBeNull();
   });
 
+  test("parses explicit browser playback capability hints", () => {
+    expect(
+      parseClientPlaybackCapabilities(
+        new URL(
+          "http://localhost/api/playback/movie-1?hevc=probably&av1=1&vp9=true&webm=1&opus=0&hlsFmp4=1&hlsNative=true",
+        ),
+      ),
+    ).toEqual({
+      hevc: true,
+      av1: true,
+      vp9: true,
+      vp8: false,
+      opus: false,
+      vorbis: false,
+      webm: true,
+      hlsFmp4: true,
+      hlsNative: true,
+    });
+  });
+
+  test("uses client HEVC support to direct play compatible MP4 files", async () => {
+    let segmentGenerationCount = 0;
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("linear HLS should not start");
+      },
+      async generateHlsSegmentWindow(input) {
+        segmentGenerationCount += 1;
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const defaultDecision = await getPlaybackDecision(
+      "movie-1",
+      "hevc-mp4-file",
+      "user-1",
+    );
+    expect(defaultDecision?.mode).toBe("transcode");
+    expect(segmentGenerationCount).toBe(1);
+
+    const hevcDecision = await getPlaybackDecision(
+      "movie-1",
+      "hevc-mp4-file",
+      "user-1",
+      0,
+      { clientCapabilities: { hevc: true } },
+    );
+
+    expect(hevcDecision?.mode).toBe("direct");
+    expect(hevcDecision?.modeDecision).toEqual({
+      mode: "direct",
+      reason: "direct_supported",
+    });
+    expect(hevcDecision?.streamUrl).toBe("/media/files/hevc-mp4-file/stream");
+    expect(segmentGenerationCount).toBe(1);
+  });
+
+  test("uses client AV1 and WebM support for direct play decisions", async () => {
+    let segmentGenerationCount = 0;
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("linear HLS should not start");
+      },
+      async generateHlsSegmentWindow(input) {
+        segmentGenerationCount += 1;
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const av1Decision = await getPlaybackDecision(
+      "movie-1",
+      "av1-mp4-file",
+      "user-1",
+      0,
+      { clientCapabilities: { av1: true } },
+    );
+    expect(av1Decision?.mode).toBe("direct");
+    expect(av1Decision?.streamUrl).toBe("/media/files/av1-mp4-file/stream");
+
+    const defaultWebmDecision = await getPlaybackDecision(
+      "movie-1",
+      "webm-file",
+      "user-1",
+    );
+    expect(defaultWebmDecision?.mode).toBe("transcode");
+    expect(segmentGenerationCount).toBe(1);
+
+    const webmDecision = await getPlaybackDecision(
+      "movie-1",
+      "webm-file",
+      "user-1",
+      0,
+      { clientCapabilities: { webm: true, vp9: true, opus: true } },
+    );
+    expect(webmDecision?.mode).toBe("direct");
+    expect(webmDecision?.streamUrl).toBe("/media/files/webm-file/stream");
+    expect(segmentGenerationCount).toBe(1);
+  });
+
+  test("uses client fMP4 HLS support when segment format is automatic", async () => {
+    const originalHlsSegmentFormat = process.env.LUNARR_HLS_SEGMENT_FORMAT;
+    process.env.LUNARR_HLS_SEGMENT_FORMAT = "auto";
+    const segmentFormats: Array<string | undefined> = [];
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("linear HLS should not start");
+      },
+      async generateHlsSegmentWindow(input) {
+        segmentFormats.push(input.hlsSegmentFormat);
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    try {
+      const defaultDecision = await getPlaybackDecision(
+        "movie-1",
+        "webm-file",
+        "user-1",
+      );
+      expect(defaultDecision?.mode).toBe("transcode");
+      expect(segmentFormats).toEqual(["mpegts"]);
+
+      const fmp4Decision = await getPlaybackDecision(
+        "movie-1",
+        "webm-file",
+        "user-1",
+        0,
+        { forceStartTime: true, clientCapabilities: { hlsFmp4: true } },
+      );
+      expect(fmp4Decision?.mode).toBe("transcode");
+      expect(segmentFormats).toEqual(["mpegts", "fmp4"]);
+    } finally {
+      if (originalHlsSegmentFormat === undefined) {
+        delete process.env.LUNARR_HLS_SEGMENT_FORMAT;
+      } else {
+        process.env.LUNARR_HLS_SEGMENT_FORMAT = originalHlsSegmentFormat;
+      }
+    }
+  });
+
+  test("uses fMP4 HLS remux for compatible HEVC when the client can play it", async () => {
+    const originalHlsSegmentFormat = process.env.LUNARR_HLS_SEGMENT_FORMAT;
+    process.env.LUNARR_HLS_SEGMENT_FORMAT = "auto";
+    await db
+      .updateTable("media_file")
+      .set({ audio_codec: "aac", duration_seconds: 300 })
+      .where("id", "=", "unsupported-file")
+      .execute();
+
+    const generations: Array<{
+      mode: HlsSegmentWindowTranscodeInput["mode"];
+      format: HlsSegmentWindowTranscodeInput["hlsSegmentFormat"];
+    }> = [];
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("linear HLS should not start");
+      },
+      async generateHlsSegmentWindow(input) {
+        generations.push({
+          mode: input.mode,
+          format: input.hlsSegmentFormat,
+        });
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    try {
+      const decision = await getPlaybackDecision(
+        "movie-1",
+        "unsupported-file",
+        "user-1",
+        0,
+        {
+          clientCapabilities: {
+            hevc: true,
+            hlsFmp4: true,
+            hlsNative: true,
+          },
+        },
+      );
+
+      expect(decision?.mode).toBe("remux");
+      expect(decision?.modeDecision).toEqual({
+        mode: "remux",
+        reason: "container_unsupported",
+      });
+      expect(generations).toEqual([{ mode: "remux", format: "fmp4" }]);
+    } finally {
+      if (originalHlsSegmentFormat === undefined) {
+        delete process.env.LUNARR_HLS_SEGMENT_FORMAT;
+      } else {
+        process.env.LUNARR_HLS_SEGMENT_FORMAT = originalHlsSegmentFormat;
+      }
+    }
+  });
+
   test("returns clear unavailable playback when request-driven HLS is not available", async () => {
     setTranscodeBackendForTests({
       async startCompatibilityHls() {
-        throw new Error("NodeAV test backend unavailable.");
+        throw new Error("FFmpeg test backend unavailable.");
       },
       async cancel() {
         return;
@@ -690,7 +979,7 @@ describe("getPlaybackDecision", () => {
 
     let startCalled = false;
     const requestedWindows: string[][] = [];
-    const windowTimelineStarts: Array<number | undefined> = [];
+    const windowTimelineStarts: number[] = [];
     setTranscodeBackendForTests({
       async startCompatibilityHls(): Promise<RunningTranscode> {
         startCalled = true;
@@ -698,7 +987,7 @@ describe("getPlaybackDecision", () => {
       },
       async generateHlsSegmentWindow(input) {
         requestedWindows.push(input.segments.map((segment) => segment.segment));
-        windowTimelineStarts.push(input.startTimeSeconds);
+        windowTimelineStarts.push(input.segments[0]?.segmentStartSeconds ?? -1);
         return completedWindowGeneration(input);
       },
       async cancel() {
@@ -749,9 +1038,9 @@ describe("getPlaybackDecision", () => {
     expect(job.path).toBeTruthy();
     const playlist = await readFile(job.path!, "utf8");
     expect(playlist).toContain("segments/segment-00000.ts");
-    expect(playlist).toContain("segments/segment-00007.ts");
-    expect(requestedWindows[0]?.[0]).toBe("segment-00001.ts");
-    expect(windowTimelineStarts).toEqual([undefined]);
+    expect(playlist).not.toContain("segments/segment-00007.ts");
+    expect(requestedWindows[0]?.[0]).toBe("segment-00000.ts");
+    expect(windowTimelineStarts).toEqual([20]);
   });
 
   test("preserves cancellation state when initial request-driven HLS warmup is cancelled", async () => {
@@ -808,7 +1097,7 @@ describe("getPlaybackDecision", () => {
     });
   });
 
-  test("returns the effective transcode mode after initial remux warmup fallback", async () => {
+  test("falls back to transcode when request-driven remux generation fails", async () => {
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
       async startCompatibilityHls(): Promise<RunningTranscode> {
@@ -833,14 +1122,18 @@ describe("getPlaybackDecision", () => {
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
-      modeDecision: { mode: "remux", reason: "container_unsupported" },
+      modeDecision: {
+        mode: "remux",
+        reason: "container_unsupported",
+      },
       streamStartSeconds: 20,
       message: null,
     });
     expect(requestedModes).toEqual(["remux", "transcode"]);
 
     const sessionId = decision?.playbackSessionId;
-    if (!sessionId) throw new Error("Expected request-driven playback session id.");
+    if (!sessionId)
+      throw new Error("Expected request-driven playback session id.");
     const job = await db
       .selectFrom("playback_session")
       .select(["status", "mode", "error_message"])
@@ -987,7 +1280,7 @@ describe("getPlaybackDecision", () => {
     });
   });
 
-  test("does not publish request-driven HLS when bounded-window support is missing", async () => {
+  test("does not publish request-driven HLS when segment generation support is missing", async () => {
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 120 })
@@ -1037,7 +1330,7 @@ describe("getPlaybackDecision", () => {
     await updateTranscodeSessionStatus(
       failedSessionId,
       "failed",
-      "NodeAV generated an invalid HLS segment.",
+      "FFmpeg generated an invalid HLS segment.",
     );
 
     let segmentGenerationCount = 0;
@@ -1067,7 +1360,7 @@ describe("getPlaybackDecision", () => {
       playbackSessionId: failedSessionId,
       streamUrl: null,
       streamStartSeconds: 20,
-      message: "NodeAV generated an invalid HLS segment.",
+      message: "FFmpeg generated an invalid HLS segment.",
     });
     expect(segmentGenerationCount).toBe(0);
 
@@ -1226,7 +1519,7 @@ describe("getPlaybackDecision", () => {
           hardwareAcceleration: input.hardwareAcceleration,
           hardwareAccelerationRequired: input.hardwareAccelerationRequired,
         });
-        throw new Error("NodeAV policy validation failed.");
+        throw new Error("FFmpeg policy validation failed.");
       },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
@@ -1247,7 +1540,7 @@ describe("getPlaybackDecision", () => {
       status: "unavailable",
       streamUrl: null,
       streamStartSeconds: 20,
-      message: "NodeAV policy validation failed.",
+      message: "FFmpeg policy validation failed.",
     });
     expect(validatedPolicies).toEqual([
       {
@@ -1274,7 +1567,7 @@ describe("getPlaybackDecision", () => {
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
       status: "failed",
-      error_message: "NodeAV policy validation failed.",
+      error_message: "FFmpeg policy validation failed.",
       path: null,
     });
   });
@@ -2235,12 +2528,91 @@ describe("getPlaybackDecision", () => {
     expect(decision).toMatchObject({
       mode: "remux",
       status: "ready",
-      modeDecision: { mode: "remux", reason: "container_unsupported" },
+      modeDecision: {
+        mode: "remux",
+        reason: "container_unsupported",
+      },
       streamUrl: sessionId
         ? `/media/playback-sessions/${sessionId}/master.m3u8`
         : null,
       message: null,
     });
+  });
+
+  test("transcodes SFTP direct-compatible media when HLS remux would be unsafe", async () => {
+    const now = new Date().toISOString();
+    await db
+      .insertInto("library")
+      .values({
+        id: "sftp-auto-hevc-library",
+        name: "Auto SFTP HEVC Movies",
+        kind: "movie",
+        source: "sftp",
+        path: "sftp://user@example.test:22/movies",
+        config_json: "{}",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    await db
+      .insertInto("media_file")
+      .values({
+        id: "sftp-auto-hevc-file",
+        library_id: "sftp-auto-hevc-library",
+        media_item_id: "movie-1",
+        path: "/movies/Movie.Auto.Hevc.mp4",
+        basename: "Movie.Auto.Hevc.mp4",
+        extension: ".mp4",
+        size_bytes: 1024,
+        mtime_ms: Date.now(),
+        duration_seconds: 120,
+        video_codec: "hevc",
+        audio_codec: "aac",
+        container: "mp4",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    const generations: Array<{
+      mode: HlsSegmentWindowTranscodeInput["mode"];
+      format: HlsSegmentWindowTranscodeInput["hlsSegmentFormat"];
+    }> = [];
+    setReadableSftpStorageForTests();
+    setTranscodeBackendForTests({
+      async startCompatibilityHls() {
+        throw new Error("linear HLS should not start for SFTP auto playback");
+      },
+      async generateHlsSegmentWindow(input) {
+        generations.push({
+          mode: input.mode,
+          format: input.hlsSegmentFormat,
+        });
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision(
+      "movie-1",
+      "sftp-auto-hevc-file",
+      "user-1",
+      0,
+      { clientCapabilities: { hevc: true } },
+    );
+    const sessionId = decision?.playbackSessionId;
+    expect(decision).toMatchObject({
+      mode: "transcode",
+      status: "ready",
+      modeDecision: { mode: "transcode", reason: "direct_unsupported" },
+      streamUrl: sessionId
+        ? `/media/playback-sessions/${sessionId}/master.m3u8`
+        : null,
+      message: null,
+    });
+    expect(generations).toEqual([{ mode: "transcode", format: "mpegts" }]);
   });
 
   test("does not stage seekable SFTP media when request-driven backend support is missing", async () => {

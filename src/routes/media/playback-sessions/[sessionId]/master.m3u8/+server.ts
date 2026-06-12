@@ -2,6 +2,7 @@ import {
   hlsPlaylistFileExists,
   hlsPlaylistHeadResponse,
   hlsPlaylistResponse,
+  hlsPlaylistSegmentFormat,
   virtualHlsPlaylistHeadResponse,
   virtualHlsPlaylistResponse,
 } from "$lib/server/transcoding/hls";
@@ -47,6 +48,10 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
         { status: 409 },
       );
     }
+    const segmentFormat = await hlsPlaylistSegmentFormat(
+      artifact.playlistPath,
+      { signal: request?.signal },
+    );
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
       userId: locals.user.id,
@@ -79,7 +84,8 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
 
     return virtualHlsPlaylistResponse({
       durationSeconds: artifact.durationSeconds,
-      startTimeSeconds: 0,
+      startTimeSeconds: artifact.startTimeSeconds,
+      segmentFormat,
     });
   }
 

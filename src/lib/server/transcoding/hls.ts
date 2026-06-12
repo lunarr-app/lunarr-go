@@ -7,6 +7,7 @@ const FMP4_SEGMENT_MIME_TYPE = "video/iso.segment";
 const SEGMENT_ROUTE_PREFIX = "segments/";
 const DEFAULT_SEGMENT_KEEP_BEHIND = 12;
 export const DEFAULT_HLS_SEGMENT_SECONDS = 16;
+export type HlsSegmentFormat = "mpegts" | "fmp4";
 
 type HlsSegmentPayload = {
   body: Uint8Array;
@@ -16,6 +17,14 @@ type HlsSegmentPayload = {
 
 type HlsReadOptions = {
   signal?: AbortSignal;
+};
+
+export type HlsPlaylistSegmentEntry = {
+  segment: string;
+  segmentIndex: number | null;
+  durationSeconds: number;
+  sequenceNumber: number;
+  startSeconds: number;
 };
 
 type PendingSegmentLoadWaiter = {
@@ -85,9 +94,13 @@ export function hlsSegmentIndex(segment: string) {
   return rawHlsSegmentIndex(segment);
 }
 
-export function hlsSegmentName(index: number) {
+export function hlsSegmentName(
+  index: number,
+  format: HlsSegmentFormat = "mpegts",
+) {
   const safeIndex = Number.isSafeInteger(index) && index >= 0 ? index : 0;
-  return `segment-${String(safeIndex).padStart(5, "0")}.ts`;
+  const extension = format === "fmp4" ? "m4s" : "ts";
+  return `segment-${String(safeIndex).padStart(5, "0")}.${extension}`;
 }
 
 function canPruneSegment(segment: string) {
@@ -224,9 +237,12 @@ async function coalescedHlsSegmentPayload(
     waiters: new Set(),
   };
   pendingSegmentLoads.set(key, pending);
-  pending.promise.finally(() => {
-    if (pendingSegmentLoads.get(key) === pending) pendingSegmentLoads.delete(key);
-  }).catch(() => undefined);
+  pending.promise
+    .finally(() => {
+      if (pendingSegmentLoads.get(key) === pending)
+        pendingSegmentLoads.delete(key);
+    })
+    .catch(() => undefined);
   return waitForPendingSegmentLoad(pending, signal);
 }
 
@@ -266,7 +282,11 @@ export function rewriteHlsPlaylistUris(playlist: string, playlistPath: string) {
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) return line;
+      if (!trimmed) return line;
+      if (trimmed.startsWith("#EXT-X-MAP:")) {
+        return rewriteHlsTagUri(line, playlistDirectory);
+      }
+      if (trimmed.startsWith("#")) return line;
 
       const segmentName = hlsPlaylistSegmentName(trimmed, playlistDirectory);
       if (segmentName) return `${SEGMENT_ROUTE_PREFIX}${segmentName}`;
@@ -276,9 +296,19 @@ export function rewriteHlsPlaylistUris(playlist: string, playlistPath: string) {
     .join("\n");
 }
 
+function rewriteHlsTagUri(line: string, playlistDirectory: string) {
+  return line.replace(/URI="([^"]+)"/g, (match, uri: string) => {
+    const segmentName = hlsPlaylistSegmentName(uri, playlistDirectory);
+    if (!segmentName) return match;
+    return `URI="${SEGMENT_ROUTE_PREFIX}${segmentName}"`;
+  });
+}
+
 function hlsPlaylistSegmentName(uri: string, playlistDirectory: string) {
   if (uri.startsWith(SEGMENT_ROUTE_PREFIX)) {
-    const segmentName = uri.slice(SEGMENT_ROUTE_PREFIX.length).split(/[?#]/, 1)[0];
+    const segmentName = uri
+      .slice(SEGMENT_ROUTE_PREFIX.length)
+      .split(/[?#]/, 1)[0];
     return isSafeHlsSegmentName(segmentName) ? segmentName : null;
   }
 
@@ -375,10 +405,127 @@ export async function hlsPlaylistFileExists(playlistPath: string) {
   }
 }
 
+export function hlsPlaylistType(playlist: string) {
+  for (const line of playlist.split("\n")) {
+    const match = /^#EXT-X-PLAYLIST-TYPE:([A-Z]+)\s*$/i.exec(line.trim());
+    if (match) return match[1]?.toUpperCase() ?? null;
+  }
+  return null;
+}
+
+export function hlsPlaylistSegmentEntries(
+  playlist: string,
+  playlistPath: string,
+): HlsPlaylistSegmentEntry[] {
+  const playlistDirectory = path.dirname(playlistPath);
+  const entries: HlsPlaylistSegmentEntry[] = [];
+  let mediaSequence = 0;
+  let pendingDuration: number | null = null;
+  let startSeconds = 0;
+
+  for (const line of playlist.split("\n")) {
+    const trimmed = line.trim();
+    const mediaSequenceMatch = /^#EXT-X-MEDIA-SEQUENCE:(\d+)\s*$/.exec(
+      trimmed,
+    );
+    if (mediaSequenceMatch) {
+      mediaSequence = Number.parseInt(mediaSequenceMatch[1] ?? "0", 10);
+      continue;
+    }
+
+    const durationMatch = /^#EXTINF:([0-9]+(?:\.[0-9]+)?)/.exec(trimmed);
+    if (durationMatch) {
+      const duration = Number.parseFloat(durationMatch[1] ?? "");
+      pendingDuration =
+        Number.isFinite(duration) && duration > 0 ? duration : null;
+      continue;
+    }
+
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const segmentName = hlsPlaylistSegmentName(trimmed, playlistDirectory);
+    if (!segmentName || pendingDuration === null) continue;
+
+    entries.push({
+      segment: segmentName,
+      segmentIndex: hlsSegmentIndex(segmentName),
+      durationSeconds: pendingDuration,
+      sequenceNumber: mediaSequence + entries.length,
+      startSeconds,
+    });
+    startSeconds += pendingDuration;
+    pendingDuration = null;
+  }
+
+  return entries;
+}
+
+export function hlsEventPlaylistContainsSegment(input: {
+  playlist: string;
+  playlistPath: string;
+  segment: string;
+}) {
+  if (hlsPlaylistType(input.playlist) !== "EVENT") return false;
+  return hlsPlaylistSegmentEntries(input.playlist, input.playlistPath).some(
+    (entry) => entry.segment === input.segment,
+  );
+}
+
+export async function hlsEventPlaylistHasSegment(
+  playlistPath: string,
+  segment: string,
+  options: HlsReadOptions = {},
+) {
+  try {
+    return hlsEventPlaylistContainsSegment({
+      playlist: await readFile(playlistPath, {
+        encoding: "utf8",
+        signal: options.signal,
+      }),
+      playlistPath,
+      segment,
+    });
+  } catch {
+    return false;
+  }
+}
+
+export function hlsPlaylistBodySegmentFormat(
+  playlist: string,
+): HlsSegmentFormat {
+  for (const line of playlist.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith("#EXT-X-MAP:")) return "fmp4";
+    if (trimmed.startsWith("#")) continue;
+
+    const segmentPath = trimmed.split(/[?#]/, 1)[0] ?? "";
+    const extension = path.extname(segmentPath).toLowerCase();
+    if (extension === ".m4s" || extension === ".cmfv") return "fmp4";
+  }
+  return "mpegts";
+}
+
+export async function hlsPlaylistSegmentFormat(
+  playlistPath: string,
+  options: HlsReadOptions = {},
+): Promise<HlsSegmentFormat> {
+  try {
+    return hlsPlaylistBodySegmentFormat(
+      await readFile(playlistPath, {
+        encoding: "utf8",
+        signal: options.signal,
+      }),
+    );
+  } catch {
+    return "mpegts";
+  }
+}
+
 export function virtualHlsPlaylist(input: {
   durationSeconds: number;
   startTimeSeconds?: number | null;
   segmentSeconds?: number | null;
+  segmentFormat?: HlsSegmentFormat;
 }) {
   const segmentSeconds =
     Number.isFinite(input.segmentSeconds) && Number(input.segmentSeconds) > 0
@@ -386,18 +533,23 @@ export function virtualHlsPlaylist(input: {
       : DEFAULT_HLS_SEGMENT_SECONDS;
   const durationSeconds = Math.max(0, Number(input.durationSeconds));
   const startTimeSeconds =
-    Number.isFinite(input.startTimeSeconds) && Number(input.startTimeSeconds) > 0
+    Number.isFinite(input.startTimeSeconds) &&
+    Number(input.startTimeSeconds) > 0
       ? Number(input.startTimeSeconds)
       : 0;
   const remainingSeconds = Math.max(0, durationSeconds - startTimeSeconds);
   const segmentCount = Math.ceil(remainingSeconds / segmentSeconds);
+  const segmentFormat = input.segmentFormat ?? "mpegts";
   const lines = [
     "#EXTM3U",
-    "#EXT-X-VERSION:3",
+    `#EXT-X-VERSION:${segmentFormat === "fmp4" ? "7" : "3"}`,
     `#EXT-X-TARGETDURATION:${Math.ceil(segmentSeconds)}`,
     "#EXT-X-PLAYLIST-TYPE:VOD",
     "#EXT-X-MEDIA-SEQUENCE:0",
   ];
+  if (segmentFormat === "fmp4") {
+    lines.push(`#EXT-X-MAP:URI="${SEGMENT_ROUTE_PREFIX}init.mp4"`);
+  }
 
   for (let index = 0; index < segmentCount; index += 1) {
     const segmentDuration =
@@ -405,7 +557,9 @@ export function virtualHlsPlaylist(input: {
         ? remainingSeconds - segmentSeconds * index
         : segmentSeconds;
     lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
-    lines.push(`${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index)}`);
+    lines.push(
+      `${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}`,
+    );
   }
 
   lines.push("#EXT-X-ENDLIST");
@@ -416,6 +570,7 @@ export function virtualHlsPlaylistResponse(input: {
   durationSeconds: number;
   startTimeSeconds?: number | null;
   segmentSeconds?: number | null;
+  segmentFormat?: HlsSegmentFormat;
 }) {
   return new Response(virtualHlsPlaylist(input), {
     headers: {
@@ -490,7 +645,10 @@ export async function hlsSegmentHeadResponse(
   });
 }
 
-export async function hlsSegmentFileExists(playlistPath: string, segment: string) {
+export async function hlsSegmentFileExists(
+  playlistPath: string,
+  segment: string,
+) {
   if (!isSafeHlsSegmentName(segment)) return false;
   try {
     const details = await stat(path.join(path.dirname(playlistPath), segment));

@@ -77,7 +77,7 @@ Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Side
 - [Libraries](docs/libraries.md): local and SFTP behavior, watchers, scheduled rescans, and remote tuning.
 - [Playback And Maintenance](docs/playback.md): direct play, HLS, transcode cache, cleanup, and job history retention.
 - [API](docs/api.md): authenticated JSON APIs and API-key usage.
-- [NodeAV Transcoding Runtime](docs/transcoding-nodeav.md): deeper transcoding implementation notes.
+- [Transcoding Runtime](docs/transcoding-runtime.md): FFmpeg playback and NodeAV probing implementation notes.
 
 ## Verification
 
@@ -85,6 +85,8 @@ Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Side
 bun run check
 bun run build
 bun test
+bun run verify:ffmpeg
+bun run verify:nodeav
 bun run smoke:transcode
 ```
 

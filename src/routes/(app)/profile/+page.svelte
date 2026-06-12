@@ -3,10 +3,15 @@
 
   let { data, form } = $props();
   let playbackPreference = $state("auto");
+  let preferredAudioLanguage = $state("");
+  let preferredSubtitleLanguage = $state("");
   let playbackForm: HTMLFormElement | null = $state(null);
 
   $effect(() => {
     playbackPreference = data.transcodePolicy.playbackPreference;
+    preferredAudioLanguage = data.transcodePolicy.preferredAudioLanguage ?? "";
+    preferredSubtitleLanguage =
+      data.transcodePolicy.preferredSubtitleLanguage ?? "";
   });
 
   function submitPlaybackPreference() {
@@ -30,7 +35,11 @@
 <div class="profile-grid">
   <section class="panel account-panel" aria-label="Account details">
     <div class="avatar" aria-hidden="true">
-      <span>{(data.user.name || data.user.email || "L").slice(0, 1).toUpperCase()}</span>
+      <span
+        >{(data.user.name || data.user.email || "L")
+          .slice(0, 1)
+          .toUpperCase()}</span
+      >
     </div>
     <div class="account-copy">
       <h2>{data.user.name || "Lunarr user"}</h2>
@@ -50,7 +59,10 @@
     <div class="section-heading">
       <div>
         <h2>Playback</h2>
-        <p class="muted">Default behavior when direct play and temporary HLS are both available.</p>
+        <p class="muted">
+          Default behavior when direct play and temporary HLS are both
+          available.
+        </p>
       </div>
       <UserRound size={18} aria-hidden="true" />
     </div>
@@ -68,9 +80,35 @@
       </select>
     </label>
 
+    <label>
+      Preferred audio language
+      <input
+        name="preferredAudioLanguage"
+        type="text"
+        maxlength="32"
+        placeholder="eng, jpn, en"
+        bind:value={preferredAudioLanguage}
+        onchange={submitPlaybackPreference}
+      />
+    </label>
+
+    <label>
+      Preferred subtitle language
+      <input
+        name="preferredSubtitleLanguage"
+        type="text"
+        maxlength="32"
+        placeholder="eng, jpn, en"
+        bind:value={preferredSubtitleLanguage}
+        onchange={submitPlaybackPreference}
+      />
+    </label>
+
     <p class="muted detail-copy">
       Auto uses direct play for browser-compatible files and temporary HLS only
-      when needed. This setting applies to your account.
+      when needed. Preferred audio language is used for temporary HLS when probe
+      metadata has a matching audio stream. Preferred subtitle language chooses
+      the default external subtitle track when available.
     </p>
 
     {#if !data.transcodePolicy.transcodingEnabled}

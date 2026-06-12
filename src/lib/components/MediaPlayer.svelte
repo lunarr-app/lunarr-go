@@ -4,12 +4,10 @@
   import { Play } from "@lucide/svelte";
   import {
     absolutePlaybackSeconds,
-    createLatestHlsRepositionScheduler,
+    createHlsSeekEventController,
     hlsRepositionHref,
-    initialPlayerTimelineSeconds,
     shouldReloadHlsPlaybackDataOnError,
     shouldRecoverHlsPlaybackError,
-    shouldRepositionHlsSeek,
     streamRelativePlaybackSeconds,
   } from "$lib/playback/seek";
   import {
@@ -257,10 +255,6 @@
         playerUiState = "starting";
         saveState = "idle";
       }
-      let lastPlaybackTime = initialPlayerTimelineSeconds({
-        startSeconds,
-        streamStartSeconds: playback.streamStartSeconds,
-      });
       const relativeStartSeconds = () =>
         streamRelativePlaybackSeconds({
           absoluteSeconds: startSeconds,
@@ -307,7 +301,10 @@
       const seekToStart = () => {
         if (startSeconds <= 0 || !Number.isFinite(startSeconds)) return;
         player.currentTime = relativeStartSeconds();
-        lastPlaybackTime = startSeconds;
+        hlsSeekController.timeUpdate({
+          relativeSeconds: player.currentTime,
+          seeking: false,
+        });
         hasPlaybackActivity = true;
       };
 
@@ -347,7 +344,6 @@
           currentUrl: new URL(window.location.href),
           mediaFileId: playback.file.id,
           startSeconds: targetSeconds,
-          forceTranscode: playback.mode === "remux",
         });
         if (href === currentPageHref()) return false;
 
@@ -359,17 +355,13 @@
         return true;
       };
 
-      const seekRepositionScheduler = createLatestHlsRepositionScheduler({
+      const hlsSeekController = createHlsSeekEventController({
+        mode: playback.mode,
+        status: playback.status,
+        startSeconds,
+        streamStartSeconds: playback.streamStartSeconds,
         reposition: repositionHlsPlayback,
       });
-
-      const shouldRepositionSeekTo = (targetSeconds: number) =>
-        shouldRepositionHlsSeek({
-          mode: playback.mode,
-          status: playback.status,
-          fromSeconds: lastPlaybackTime,
-          toSeconds: targetSeconds,
-        });
 
       const restartHlsNearCurrentTime = (
         source: "hls" | "native" = "native",
@@ -404,12 +396,17 @@
           return;
         }
 
-        seekRepositionScheduler.cancel();
+        hlsSeekController.cancel();
         repositionHlsPlayback(currentTime);
       };
 
       const onTimeUpdate = () => {
-        if (!player.seeking) lastPlaybackTime = currentPlayerTime();
+        hlsSeekController.timeUpdate({
+          relativeSeconds: Number.isFinite(player.currentTime)
+            ? player.currentTime
+            : 0,
+          seeking: player.seeking,
+        });
       };
       const onLoadStart = () => {
         if (!hasStartedPlayback) playerUiState = "starting";
@@ -443,23 +440,21 @@
         playerUiState = player.seeking ? "seeking" : "buffering";
       };
       const onSeeking = () => {
-        const targetSeconds = currentPlayerTime();
-        playerUiState = "seeking";
-        if (shouldRepositionSeekTo(targetSeconds)) {
-          seekRepositionScheduler.schedule(targetSeconds);
-          return;
-        }
-        seekRepositionScheduler.cancel();
+        const decision = hlsSeekController.seeking({
+          relativeSeconds: Number.isFinite(player.currentTime)
+            ? player.currentTime
+            : 0,
+        });
+        playerUiState = decision.uiState;
       };
       const onSeeked = () => {
-        const targetSeconds = currentPlayerTime();
-        if (shouldRepositionSeekTo(targetSeconds)) {
-          seekRepositionScheduler.schedule(targetSeconds);
-          return;
-        }
-        seekRepositionScheduler.cancel();
-        lastPlaybackTime = targetSeconds;
-        playerUiState = player.paused ? "paused" : "playing";
+        const decision = hlsSeekController.seeked({
+          relativeSeconds: Number.isFinite(player.currentTime)
+            ? player.currentTime
+            : 0,
+          paused: player.paused,
+        });
+        playerUiState = decision.uiState;
       };
       const onPlayerError = () => {
         playerUiState = "error";
@@ -496,7 +491,7 @@
       document.addEventListener("visibilitychange", onVisibilityChange);
 
       cleanup = () => {
-        seekRepositionScheduler.cancel();
+        hlsSeekController.cancel();
         player.removeEventListener("loadedmetadata", prepareInitialPlayback);
         player.removeEventListener("loadstart", onLoadStart);
         player.removeEventListener("canplay", onCanPlay);

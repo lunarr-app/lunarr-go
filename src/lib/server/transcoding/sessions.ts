@@ -86,6 +86,7 @@ export type RunningHlsTranscodeSession = {
   sessionId: string;
   playlistPath: string;
   lastSegmentIndex: number | null;
+  lastSegmentName: string | null;
   pipeline: TranscodePipeline | null;
 };
 
@@ -134,12 +135,19 @@ function defaultPlaybackSessionArtifactDirectory(sessionId: string) {
 
 function isPathInside(parent: string, candidate: string) {
   const relative = path.relative(path.resolve(parent), path.resolve(candidate));
-  return relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative);
+  return (
+    relative.length > 0 &&
+    !relative.startsWith("..") &&
+    !path.isAbsolute(relative)
+  );
 }
 
 function isPathSameOrInside(parent: string, candidate: string) {
   const relative = path.relative(path.resolve(parent), path.resolve(candidate));
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
 }
 
 function safePlaybackSessionArtifactDirectories(input: {
@@ -200,7 +208,8 @@ export function isEndedPlaybackArtifactFresh(input: {
 }
 
 export function normalizePlaybackSessionArtifactMaxBytes(value: unknown) {
-  const numeric = typeof value === "number" ? value : Number(String(value ?? ""));
+  const numeric =
+    typeof value === "number" ? value : Number(String(value ?? ""));
   return PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS.includes(
     numeric as (typeof PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS)[number],
   )
@@ -296,7 +305,9 @@ async function clearPlaybackSessionArtifacts(input: {
   return cleaned;
 }
 
-export async function createTranscodeSession(input: CreateTranscodeSessionInput) {
+export async function createTranscodeSession(
+  input: CreateTranscodeSessionInput,
+) {
   const db = await getDb();
   const now = nowIso();
   const sessionId = randomUUID();
@@ -572,8 +583,11 @@ export async function listIdleReadyHlsTranscodeSessions(
   const rows = await db
     .selectFrom("playback_session")
     .innerJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
@@ -605,12 +619,16 @@ export async function listRunningHlsTranscodeSessions(
   const rows = await db
     .selectFrom("playback_session")
     .innerJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
       "playback_session.last_segment_index as lastSegmentIndex",
+      "playback_session.last_segment_name as lastSegmentName",
       "playback_session.pipeline as pipeline",
       "playback_hls_artifact.path as playlistPath",
     ])
@@ -619,8 +637,9 @@ export async function listRunningHlsTranscodeSessions(
     .limit(limit)
     .execute();
 
-  return rows.filter((row): row is RunningHlsTranscodeSession =>
-    typeof row.playlistPath === "string" && row.playlistPath.length > 0,
+  return rows.filter(
+    (row): row is RunningHlsTranscodeSession =>
+      typeof row.playlistPath === "string" && row.playlistPath.length > 0,
   );
 }
 
@@ -633,8 +652,11 @@ export async function getAuthorizedHlsArtifact(
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
@@ -651,7 +673,8 @@ export async function getAuthorizedHlsArtifact(
       "playback_session.last_segment_request_at as lastSegmentRequestAt",
     ])
     .where("playback_session.id", "=", sessionId)
-    .where(sql<boolean>`(
+    .where(
+      sql<boolean>`(
       exists (
         select 1 from user
         where user.id = ${userId}
@@ -667,7 +690,8 @@ export async function getAuthorizedHlsArtifact(
         where library_user.library_id = media_file.library_id
           and library_user.user_id = ${userId}
       )
-    )`)
+    )`,
+    )
     .executeTakeFirst();
 
   if (!row || row.userId !== userId) return null;
@@ -685,8 +709,11 @@ export async function findActiveHlsArtifact(
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
@@ -751,8 +778,11 @@ export async function findRecentFailedHlsPlayback(
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
@@ -813,8 +843,11 @@ export async function listMismatchedActiveHlsArtifacts(
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
@@ -877,8 +910,11 @@ export async function getTranscodeSession(
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
@@ -917,8 +953,11 @@ export async function recoverInterruptedTranscodeSessions(
   const activeSessions = await db
     .selectFrom("playback_session")
     .leftJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
@@ -967,8 +1006,11 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
   const sessions = await db
     .selectFrom("playback_session")
     .leftJoin("playback_hls_artifact", (join) =>
-      join
-        .onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+      join.onRef(
+        "playback_hls_artifact.playback_session_id",
+        "=",
+        "playback_session.id",
+      ),
     )
     .select([
       "playback_session.id as sessionId",
@@ -978,14 +1020,19 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
       "playback_session.last_heartbeat_at as lastHeartbeatAt",
       "playback_session.last_segment_request_at as lastSegmentRequestAt",
     ])
-    .where("playback_session.status", "in", ["completed", "failed", "cancelled"])
+    .where("playback_session.status", "in", [
+      "completed",
+      "failed",
+      "cancelled",
+    ])
     .orderBy("playback_session.updated_at", "asc")
     .execute();
 
   const cleanedSessionIds = new Set<string>();
   const cleanedOrphanDirectories = new Set<string>();
   let cleaned = 0;
-  const orphanDirectories = await listOrphanedPlaybackSessionArtifactDirectories(knownSessionIds);
+  const orphanDirectories =
+    await listOrphanedPlaybackSessionArtifactDirectories(knownSessionIds);
   const orphanCutoffMs = Date.now() - Math.max(0, maxAgeMs);
   for (const session of sessions.filter((item) => {
     const sessionCutoff =
@@ -1010,7 +1057,9 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
     cleaned += 1;
   }
 
-  const remaining = sessions.filter((session) => !cleanedSessionIds.has(session.sessionId));
+  const remaining = sessions.filter(
+    (session) => !cleanedSessionIds.has(session.sessionId),
+  );
   const sessionSizes = await Promise.all(
     remaining.map(async (session) => {
       let bytes = 0;
@@ -1026,7 +1075,10 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
 
   let totalBytes =
     sessionSizes.reduce((total, session) => total + session.bytes, 0) +
-    remainingOrphanDirectories.reduce((total, directory) => total + directory.bytes, 0);
+    remainingOrphanDirectories.reduce(
+      (total, directory) => total + directory.bytes,
+      0,
+    );
   const byteLimit = Math.max(0, maxBytes);
   const artifactSizes = [
     ...sessionSizes.map((session) => ({

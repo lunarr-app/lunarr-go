@@ -127,6 +127,7 @@ describe("settings page server", () => {
     const transcodingForm = new FormData();
     transcodingForm.set("hardwareAcceleration", "videotoolbox");
     transcodingForm.set("hardwareAccelerationRequired", "on");
+    transcodingForm.set("transcodeQualityPreset", "720p");
     transcodingForm.set(
       "playbackSessionArtifactMaxBytes",
       String(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1]),
@@ -266,6 +267,7 @@ describe("settings page server", () => {
         playbackPreference: "auto",
         hardwareAcceleration: "videotoolbox",
         hardwareAccelerationRequired: true,
+        transcodeQualityPreset: "720p",
       },
       playbackSessionArtifactMaxBytes:
         PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1],
