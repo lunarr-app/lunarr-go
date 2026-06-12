@@ -390,7 +390,7 @@ describe("playback-session HLS routes", () => {
         segmentSeconds: 4,
       }),
     ).toBe(
-      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:4.000,\nsegments/segment-00000.ts\n#EXTINF:4.000,\nsegments/segment-00001.ts\n#EXT-X-ENDLIST\n",
+      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-START:TIME-OFFSET=5.000\n#EXTINF:4.000,\nsegments/segment-00000.ts\n#EXTINF:4.000,\nsegments/segment-00001.ts\n#EXTINF:4.000,\nsegments/segment-00002.ts\n#EXTINF:1.000,\nsegments/segment-00003.ts\n#EXT-X-ENDLIST\n",
     );
   });
 
@@ -427,7 +427,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(
-      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:16\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:8.000,\nsegments/segment-00000.ts\n#EXT-X-ENDLIST\n",
+      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:16\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-START:TIME-OFFSET=5.000\n#EXTINF:13.000,\nsegments/segment-00000.ts\n#EXT-X-ENDLIST\n",
     );
   });
 
@@ -2950,7 +2950,7 @@ describe("playback-session HLS routes", () => {
   );
 
   routeSmokeTest(
-    "serves stream-relative segment zero for a non-zero HLS playback start through real FFmpeg",
+    "serves an absolute segment for a non-zero HLS playback start through real FFmpeg",
     async () => {
       const sourcePath = path.join(tempDir, "RouteSmokeOffset.mp4");
       generateRouteSmokeInput(sourcePath, {
@@ -2994,7 +2994,7 @@ describe("playback-session HLS routes", () => {
       await updateTranscodeSessionStatus(sessionId, "running");
 
       const response = await getSegment({
-        params: { sessionId, segment: "segment-00000.ts" },
+        params: { sessionId, segment: "segment-00003.ts" },
         locals: { user: { id: "user-1" } },
       } as never);
 
@@ -3004,10 +3004,10 @@ describe("playback-session HLS routes", () => {
         Buffer.from(await response.arrayBuffer()).length,
       ).toBeGreaterThan(0);
       const generatedPlaylist = await readFile(playlistPath, "utf8");
-      expect(generatedPlaylist).toContain("#EXT-X-MEDIA-SEQUENCE:0");
-      expect(generatedPlaylist).toContain("segment-00000.ts");
-      expect(generatedPlaylist).toContain("segment-00004.ts");
-      expect(generatedPlaylist).not.toContain("segment-00005.ts");
+      expect(generatedPlaylist).toContain("#EXT-X-MEDIA-SEQUENCE:3");
+      expect(generatedPlaylist).toContain("segment-00003.ts");
+      expect(generatedPlaylist).toContain("segment-00007.ts");
+      expect(generatedPlaylist).not.toContain("segment-00002.ts");
       const session = await db
         .selectFrom("playback_session")
         .select([
@@ -3021,8 +3021,8 @@ describe("playback-session HLS routes", () => {
       expect(session).toMatchObject({
         status: "running",
         start_time_seconds: 48,
-        last_segment_name: "segment-00000.ts",
-        last_segment_index: 0,
+        last_segment_name: "segment-00003.ts",
+        last_segment_index: 3,
       });
     },
   );

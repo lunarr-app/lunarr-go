@@ -537,8 +537,7 @@ export function virtualHlsPlaylist(input: {
     Number(input.startTimeSeconds) > 0
       ? Number(input.startTimeSeconds)
       : 0;
-  const remainingSeconds = Math.max(0, durationSeconds - startTimeSeconds);
-  const segmentCount = Math.ceil(remainingSeconds / segmentSeconds);
+  const segmentCount = Math.ceil(durationSeconds / segmentSeconds);
   const segmentFormat = input.segmentFormat ?? "mpegts";
   const lines = [
     "#EXTM3U",
@@ -547,6 +546,9 @@ export function virtualHlsPlaylist(input: {
     "#EXT-X-PLAYLIST-TYPE:VOD",
     "#EXT-X-MEDIA-SEQUENCE:0",
   ];
+  if (startTimeSeconds > 0) {
+    lines.push(`#EXT-X-START:TIME-OFFSET=${startTimeSeconds.toFixed(3)}`);
+  }
   if (segmentFormat === "fmp4") {
     lines.push(`#EXT-X-MAP:URI="${SEGMENT_ROUTE_PREFIX}init.mp4"`);
   }
@@ -554,7 +556,7 @@ export function virtualHlsPlaylist(input: {
   for (let index = 0; index < segmentCount; index += 1) {
     const segmentDuration =
       index === segmentCount - 1
-        ? remainingSeconds - segmentSeconds * index
+        ? durationSeconds - segmentSeconds * index
         : segmentSeconds;
     lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
     lines.push(

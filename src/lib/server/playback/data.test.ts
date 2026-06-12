@@ -477,7 +477,7 @@ describe("playback data", () => {
         mode: "remux",
         reason: "container_unsupported"
       },
-      streamStartSeconds: 125
+      streamStartSeconds: 0
     });
     expect(result.playback.playbackSessionId).toBeTruthy();
   });
@@ -516,7 +516,7 @@ describe("playback data", () => {
         mode: "remux",
         reason: "container_unsupported"
       },
-      streamStartSeconds: 125
+      streamStartSeconds: 0
     });
     expect(result.playback.playbackSessionId).toBeTruthy();
   });

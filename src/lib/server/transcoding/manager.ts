@@ -1102,8 +1102,7 @@ function requestDrivenSegmentWindow(input: {
 
   for (let offset = 0; offset < maxSegmentCount; offset += 1) {
     const segmentIndex = input.segmentIndex + offset;
-    const segmentStartSeconds =
-      input.startTimeSeconds + segmentIndex * input.segmentSeconds;
+    const segmentStartSeconds = segmentIndex * input.segmentSeconds;
     if (segmentStartSeconds >= input.durationSeconds) break;
 
     const remainingSeconds = input.durationSeconds - segmentStartSeconds;
@@ -1180,7 +1179,10 @@ async function warmInitialRequestDrivenHlsSegment(input: {
       initialSession?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE,
     );
   }
-  const segmentIndex = 0;
+  const segmentIndex = Math.max(
+    0,
+    Math.floor(initialSession.startTimeSeconds / DEFAULT_HLS_SEGMENT_SECONDS),
+  );
   let ready = false;
   try {
     ready = await ensureHlsSegmentForRequest({
@@ -1988,7 +1990,7 @@ export async function resolveHlsPlayback(input: {
         mode: effectiveMode,
         sessionId,
         streamUrl: playbackSessionStreamUrl(sessionId),
-        streamStartSeconds: startTimeSeconds,
+        streamStartSeconds: 0,
         message: null,
       };
     } catch (error) {

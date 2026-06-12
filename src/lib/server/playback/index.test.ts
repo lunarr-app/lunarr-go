@@ -1004,7 +1004,7 @@ describe("getPlaybackDecision", () => {
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
-      streamStartSeconds: 20,
+      streamStartSeconds: 0,
       message: null,
     });
     expect(startCalled).toBe(false);
@@ -1038,9 +1038,9 @@ describe("getPlaybackDecision", () => {
     expect(job.path).toBeTruthy();
     const playlist = await readFile(job.path!, "utf8");
     expect(playlist).toContain("segments/segment-00000.ts");
-    expect(playlist).not.toContain("segments/segment-00007.ts");
-    expect(requestedWindows[0]?.[0]).toBe("segment-00000.ts");
-    expect(windowTimelineStarts).toEqual([20]);
+    expect(playlist).toContain("segments/segment-00007.ts");
+    expect(requestedWindows[0]?.[0]).toBe("segment-00001.ts");
+    expect(windowTimelineStarts).toEqual([16]);
   });
 
   test("preserves cancellation state when initial request-driven HLS warmup is cancelled", async () => {
@@ -1126,7 +1126,7 @@ describe("getPlaybackDecision", () => {
         mode: "remux",
         reason: "container_unsupported",
       },
-      streamStartSeconds: 20,
+      streamStartSeconds: 0,
       message: null,
     });
     expect(requestedModes).toEqual(["remux", "transcode"]);
@@ -1172,12 +1172,12 @@ describe("getPlaybackDecision", () => {
     expect(first).toMatchObject({
       mode: "transcode",
       status: "ready",
-      streamStartSeconds: 20,
+      streamStartSeconds: 0,
     });
     expect(second).toMatchObject({
       mode: "transcode",
       status: "ready",
-      streamStartSeconds: 20,
+      streamStartSeconds: 0,
     });
     expect(first?.playbackSessionId).toBeTruthy();
     expect(second?.playbackSessionId).toBeTruthy();
@@ -2256,7 +2256,7 @@ describe("getPlaybackDecision", () => {
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
-      streamStartSeconds: 45,
+      streamStartSeconds: 0,
       message: null,
     });
     expect(decision?.streamUrl).toMatch(
@@ -2457,7 +2457,7 @@ describe("getPlaybackDecision", () => {
       streamUrl: sessionId
         ? `/media/playback-sessions/${sessionId}/master.m3u8`
         : null,
-      streamStartSeconds: 24,
+      streamStartSeconds: 0,
       message: null,
     });
     const session = await db
