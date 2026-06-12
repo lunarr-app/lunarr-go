@@ -210,16 +210,13 @@ describe("HLS seek helpers", () => {
     controller.timeUpdate({ relativeSeconds: 8, seeking: false });
     expect(controller.lastPlaybackTime()).toBe(128);
 
-    expect(controller.seeking({ relativeSeconds: 180 })).toEqual({
+    expect(controller.seeking()).toEqual({
       uiState: "seeking",
-      pendingReposition: false,
     });
     expect(controller.seeked({ relativeSeconds: 220, paused: false })).toEqual({
       uiState: "playing",
-      pendingReposition: false,
     });
 
-    expect(controller.pending()).toBe(false);
     expect(controller.lastPlaybackTime()).toBe(340);
   });
 
@@ -232,18 +229,15 @@ describe("HLS seek helpers", () => {
     controller.timeUpdate({ relativeSeconds: 23 * 60, seeking: false });
     expect(controller.lastPlaybackTime()).toBe(23 * 60);
 
-    expect(controller.seeking({ relativeSeconds: 15 * 60 })).toEqual({
+    expect(controller.seeking()).toEqual({
       uiState: "seeking",
-      pendingReposition: false,
     });
     expect(controller.seeked({ relativeSeconds: 11 * 60, paused: false })).toEqual(
       {
         uiState: "playing",
-        pendingReposition: false,
       },
     );
 
-    expect(controller.pending()).toBe(false);
     expect(controller.lastPlaybackTime()).toBe(11 * 60);
   });
 });

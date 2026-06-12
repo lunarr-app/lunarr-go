@@ -406,7 +406,6 @@
           return;
         }
 
-        hlsSeekController.cancel();
         repositionHlsPlayback(currentTime);
       };
 
@@ -452,11 +451,7 @@
         playerUiState = player.seeking ? "seeking" : "buffering";
       };
       const onSeeking = () => {
-        const decision = hlsSeekController.seeking({
-          relativeSeconds: Number.isFinite(player.currentTime)
-            ? player.currentTime
-            : 0,
-        });
+        const decision = hlsSeekController.seeking();
         playerUiState = decision.uiState;
       };
       const onSeeked = () => {
@@ -503,7 +498,6 @@
       document.addEventListener("visibilitychange", onVisibilityChange);
 
       cleanup = () => {
-        hlsSeekController.cancel();
         player.removeEventListener("loadedmetadata", prepareInitialPlayback);
         player.removeEventListener("loadstart", onLoadStart);
         player.removeEventListener("canplay", onCanPlay);
@@ -630,13 +624,16 @@
       Resume starts at {Math.floor(data.startSeconds)}s
     {/if}
   </p>
+{:else if data.playback.status === "preparing"}
+  <div class="video-shell placeholder-shell" aria-live="polite">
+    <div class="player-overlay">
+      <span class="overlay-spinner" aria-hidden="true"></span>
+      <p>Starting playback</p>
+    </div>
+  </div>
 {:else}
   <section class="playback-message" aria-live="polite">
-    <h2>
-      {data.playback.status === "preparing"
-        ? "Preparing playback"
-        : "Playback unavailable"}
-    </h2>
+    <h2>Playback unavailable</h2>
     <p>{data.playback.message}</p>
   </section>
 {/if}
@@ -654,6 +651,11 @@
     max-height: min(72vh, calc(100dvh - 9rem));
     background: #000;
     display: block;
+  }
+
+  .placeholder-shell {
+    min-height: min(56.25vw, 32rem);
+    aspect-ratio: 16 / 9;
   }
 
   .player-overlay {

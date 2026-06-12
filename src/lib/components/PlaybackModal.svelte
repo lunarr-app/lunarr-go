@@ -193,10 +193,9 @@
             <p>{error}</p>
           </section>
         {:else if loading}
-          <section class="message" aria-live="polite">
-            <h2>Starting playback</h2>
-            <p>Preparing the selected file.</p>
-          </section>
+          <div class="player-loading" aria-live="polite" aria-label="Starting playback">
+            <span class="loading-spinner" aria-hidden="true"></span>
+          </div>
         {/if}
       </div>
     </div>
@@ -289,6 +288,31 @@
 
   .message p {
     color: #b7c3cc;
+  }
+
+  .player-loading {
+    min-height: min(56.25vw, 32rem);
+    aspect-ratio: 16 / 9;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #000;
+  }
+
+  .loading-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid rgba(255, 255, 255, 0.28);
+    border-top-color: #fff;
+    border-radius: 999px;
+    animation: spin 0.85s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   @media (max-width: 720px) {

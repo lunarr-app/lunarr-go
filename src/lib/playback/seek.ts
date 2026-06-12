@@ -69,22 +69,15 @@ export function createHlsSeekEventController(input: {
         lastPlaybackTime = absoluteSeconds(event.relativeSeconds);
       return lastPlaybackTime;
     },
-    seeking(_event: { relativeSeconds: number }) {
-      return { uiState: "seeking" as const, pendingReposition: false };
+    seeking() {
+      return { uiState: "seeking" as const };
     },
     seeked(event: { relativeSeconds: number; paused: boolean }) {
       const targetSeconds = absoluteSeconds(event.relativeSeconds);
       lastPlaybackTime = targetSeconds;
       return {
         uiState: event.paused ? ("paused" as const) : ("playing" as const),
-        pendingReposition: false,
       };
-    },
-    cancel() {
-      return;
-    },
-    pending() {
-      return false;
     },
     lastPlaybackTime() {
       return lastPlaybackTime;
