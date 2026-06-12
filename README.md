@@ -6,20 +6,7 @@ Lunarr is a self-hosted web media server for local and SFTP movie and TV librari
 
 ## Quick Start With Docker
 
-Run Lunarr with persistent app data:
-
-```sh
-docker run -d \
-  --name lunarr \
-  --restart unless-stopped \
-  -p 3000:3000 \
-  -e AUTH_SECRET=replace-with-a-random-secret-at-least-32-chars \
-  -e ORIGIN=http://127.0.0.1:3000 \
-  -v lunarr-data:/data \
-  sayem314/lunarr:latest
-```
-
-For local media libraries, mount your media into the container and add the container path in Lunarr:
+Run Lunarr with persistent app data. The `/mnt/media:/media:ro` mount is optional for local media libraries; replace `/mnt/media` with your host media path or remove that line if you only use SFTP.
 
 ```sh
 docker run -d \
@@ -33,7 +20,7 @@ docker run -d \
   sayem314/lunarr:latest
 ```
 
-Open `http://127.0.0.1:3000`, create the first admin account, add a movie or TV library, then run a scan from Libraries.
+Open `http://127.0.0.1:3000`, create the first admin account, add a movie or TV library, then run a scan from Libraries. For mounted local media, add the container path, such as `/media`.
 
 Docker Compose users can start from [docker-compose.yml](docker-compose.yml).
 
@@ -84,7 +71,7 @@ Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Side
 ```sh
 bun run check
 bun run build
-bun test
+bun run test
 bun run verify:ffmpeg
 bun run verify:nodeav
 bun run smoke:transcode

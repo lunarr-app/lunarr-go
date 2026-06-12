@@ -22,7 +22,7 @@ Direct play remains the default. Lunarr starts HLS only when the file is not bro
 
 The web player sends conservative client capability hints when opening playback. MP4 HEVC/AV1 and WebM VP8/VP9/AV1 files direct play only when the browser reports support for the matching container and codec combination. Capability checks normalize common codec-string aliases such as `avc1.*`, `mp4a.*`, `hvc1.*`, `av01.*`, and `vp09.*`. Direct-play support does not automatically make those codecs safe for HLS remux.
 
-When only the container is unsuitable for the browser, Lunarr can identify compatible HLS remux candidates such as H.264/AAC in a non-browser container. App-level request-driven playback currently transcodes those candidates instead of starting copied remux, because the virtual fixed-duration playlist must not advertise segment times that differ from source keyframe-bound remux output. Unknown video or audio codecs are treated as unsafe for copied HLS remux and use transcode instead. Stale request-driven sessions already marked as remux are upgraded to transcode before backend segment generation.
+When only the container is unsuitable for the browser, Lunarr can identify compatible HLS remux candidates such as H.264/AAC in a non-browser container. Request-driven playback can start copied remux for those candidates, waits for FFmpeg's authored event playlist before declaring a requested segment ready, and falls back to full transcode if remux generation fails while the session is still playable. Unknown video or audio codecs are treated as unsafe for copied HLS remux and use transcode instead.
 
 Unsupported codecs use FFmpeg-generated HLS transcode. The default software target is H.264 video with AAC audio. Admin quality presets can cap transcode height and adjust software CRF or hardware bitrate targets.
 
@@ -56,7 +56,7 @@ Temporary artifacts are cleaned up for failed, cancelled, completed, orphaned, a
 
 ## Audio And Subtitles
 
-Stored probe metadata drives audio stream selection. Transcode generation prefers the user's audio language when available, then the richest stream by channels and bitrate. Copied remux generation remains disabled for app-level request-driven playback until the remux path has keyframe-aware timing.
+Stored probe metadata drives audio stream selection. Transcode generation prefers the user's audio language when available, then the richest stream by channels and bitrate. Copied remux generation prefers AAC-family audio compatibility first, then applies the user's language preference when multiple compatible streams are available.
 
 External subtitle tracks remain separate from generated HLS. The user's preferred subtitle language chooses the default external track when a matching track is available.
 
