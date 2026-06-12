@@ -10,7 +10,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "test": "env -u npm_lifecycle_event bun test src/lib/server/transcoding/input-proxy.test.ts src/lib/server/transcoding/ffmpeg-cli.test.ts src/routes/media/playback-sessions/hls-routes.test.ts && env -u npm_lifecycle_event bun test --path-ignore-patterns 'src/lib/server/transcoding/input-proxy.test.ts' --path-ignore-patterns 'src/lib/server/transcoding/ffmpeg-cli.test.ts' --path-ignore-patterns 'src/routes/media/playback-sessions/hls-routes.test.ts'",
+    "test": "bun test",
     "verify:ffmpeg": "node scripts/verify-ffmpeg.mjs",
     "verify:nodeav": "node scripts/verify-nodeav-probe.mjs",
     "verify:runtime": "node scripts/verify-runtime.mjs",
