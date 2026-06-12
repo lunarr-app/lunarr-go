@@ -1746,6 +1746,100 @@ export async function ensureHlsSegmentForRequest(input: {
   return waitForPendingSegmentGeneration(created, input.signal);
 }
 
+export async function ensureHlsLookaheadForSegment(input: {
+  sessionId: string;
+  userId: string;
+  segment: string;
+  signal?: AbortSignal;
+}) {
+  const segmentIndex = hlsSegmentIndex(input.segment);
+  if (input.signal?.aborted || segmentIndex === null) return false;
+  const segmentFormat = requestDrivenHlsSegmentFormat({
+    segment: input.segment,
+  });
+  if (input.segment !== hlsSegmentName(segmentIndex, segmentFormat)) {
+    return false;
+  }
+
+  const currentSession = async () => {
+    const session = await getTranscodeSession(input.sessionId);
+    if (
+      !session ||
+      session.userId !== input.userId ||
+      session.status !== "running" ||
+      session.pipeline !== "request_driven" ||
+      !session.playlistPath ||
+      session.durationSeconds === null ||
+      !Number.isFinite(session.durationSeconds) ||
+      session.durationSeconds <= 0
+    ) {
+      return null;
+    }
+    if (
+      session.lastSegmentIndex !== null &&
+      !isSegmentIndexNearTarget(session.lastSegmentIndex, segmentIndex)
+    ) {
+      return null;
+    }
+    return session;
+  };
+
+  const session = await currentSession();
+  if (!session) return false;
+  const durationSeconds = session.durationSeconds;
+  const playlistPath = session.playlistPath;
+  if (
+    durationSeconds === null ||
+    !Number.isFinite(durationSeconds) ||
+    durationSeconds <= 0 ||
+    !playlistPath
+  ) {
+    return false;
+  }
+
+  const lastSegmentIndex =
+    Math.ceil(durationSeconds / DEFAULT_HLS_SEGMENT_SECONDS) - 1;
+  const targetSegmentIndex = Math.min(
+    lastSegmentIndex,
+    segmentIndex + REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT,
+  );
+  if (targetSegmentIndex <= segmentIndex) return true;
+
+  for (
+    let candidateIndex = segmentIndex + 1;
+    candidateIndex <= targetSegmentIndex;
+    candidateIndex += 1
+  ) {
+    if (input.signal?.aborted) return false;
+    const candidateSegment = hlsSegmentName(candidateIndex, segmentFormat);
+    const latestSession = await currentSession();
+    if (!latestSession) return false;
+    if (await hlsSegmentFileExists(playlistPath, candidateSegment)) {
+      continue;
+    }
+    const pendingLookahead = pendingLookaheadSegments.get(
+      segmentGenerationKey(input.sessionId, candidateSegment),
+    );
+    if (pendingLookahead) {
+      const ready = await waitForBooleanWithSignal(
+        pendingLookahead.promise,
+        input.signal,
+      );
+      if (!ready) return false;
+      continue;
+    }
+    const ready = await ensureHlsSegmentForRequest({
+      sessionId: input.sessionId,
+      userId: input.userId,
+      segment: candidateSegment,
+      signal: input.signal,
+    });
+    if (!ready) return false;
+  }
+
+  return true;
+}
+
 export function startStaleTranscodeExpiryLoop() {
   if (staleExpiryLoop) return;
   staleExpiryLoop = setInterval(() => {

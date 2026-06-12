@@ -63,6 +63,8 @@ export type TranscodeSessionRecord = {
   playlistPath: string | null;
   startTimeSeconds: number;
   durationSeconds: number | null;
+  lastSegmentName: string | null;
+  lastSegmentIndex: number | null;
 };
 
 export type CleanedPlaybackSessionArtifacts = {
@@ -926,6 +928,8 @@ export async function getTranscodeSession(
       "playback_session.error_message as errorMessage",
       "playback_hls_artifact.path as playlistPath",
       "playback_session.start_time_seconds as startTimeSeconds",
+      "playback_session.last_segment_name as lastSegmentName",
+      "playback_session.last_segment_index as lastSegmentIndex",
       "media_file.duration_seconds as durationSeconds",
     ])
     .where("playback_session.id", "=", sessionId)

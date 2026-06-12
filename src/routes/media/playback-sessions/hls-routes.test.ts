@@ -2231,7 +2231,12 @@ describe("playback-session HLS routes", () => {
             );
           });
         }
-        await writeRequestedWindowSegment(input, segment);
+        for (const windowSegment of input.segments) {
+          await writeFile(
+            path.join(path.dirname(input.playlistPath), windowSegment.segment),
+            windowSegment.segment,
+          );
+        }
         return completedWindowGeneration();
       },
       async cancel() {
@@ -2306,9 +2311,15 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         const segment = requestedWindowSegment(input).segment;
         requestedSegments.push(segment);
-        await writeRequestedWindowSegment(input, segment);
         if (segment === "segment-00010.ts") {
+          await writeRequestedWindowSegment(input, segment);
           return { completion: oldLookaheadCompletion };
+        }
+        for (const windowSegment of input.segments) {
+          await writeFile(
+            path.join(input.artifactDirectory, windowSegment.segment),
+            windowSegment.segment,
+          );
         }
         return completedWindowGeneration();
       },
@@ -3458,6 +3469,75 @@ describe("playback-session HLS routes", () => {
     await waitFor(() => lookaheadDone);
     expect(generationCount).toBe(1);
     expect(await second.text()).toBe("segment-00011.ts");
+  });
+
+  test("tops up request-driven lookahead after serving an existing segment", async () => {
+    await db
+      .updateTable("media_file")
+      .set({ duration_seconds: 512 })
+      .where("id", "=", "file-1")
+      .execute();
+    await writeFile(
+      playlistPath,
+      virtualHlsPlaylist({
+        durationSeconds: 512,
+        segmentSeconds: 16,
+      }),
+    );
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+
+    for (let index = 0; index <= 7; index += 1) {
+      const segment = `segment-${String(index).padStart(5, "0")}.ts`;
+      await writeFile(path.join(path.dirname(playlistPath), segment), segment);
+    }
+
+    const requestedWindows: string[][] = [];
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("not used");
+      },
+      async generateHlsSegmentWindow(input) {
+        requestedWindows.push(input.segments.map((segment) => segment.segment));
+        for (const segment of input.segments) {
+          await writeFile(
+            path.join(path.dirname(input.playlistPath), segment.segment),
+            segment.segment,
+          );
+        }
+        return completedWindowGeneration();
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const response = await getSegment({
+      params: { sessionId, segment: "segment-00006.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("segment-00006.ts");
+    await waitFor(() => requestedWindows.length === 1);
+    expect(requestedWindows[0]).toEqual([
+      "segment-00008.ts",
+      "segment-00009.ts",
+      "segment-00010.ts",
+      "segment-00011.ts",
+      "segment-00012.ts",
+      "segment-00013.ts",
+      "segment-00014.ts",
+      "segment-00015.ts",
+    ]);
+    expect(
+      await exists(path.join(path.dirname(playlistPath), "segment-00014.ts")),
+    ).toBe(true);
   });
 
   test("stops waiting for bounded lookahead when the segment request is cancelled", async () => {

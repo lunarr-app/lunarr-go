@@ -4,7 +4,10 @@ import {
   hlsSegmentResponse,
   pruneHlsSegmentsBehind,
 } from "$lib/server/transcoding/hls";
-import { ensureHlsSegmentForRequest } from "$lib/server/transcoding/manager";
+import {
+  ensureHlsLookaheadForSegment,
+  ensureHlsSegmentForRequest,
+} from "$lib/server/transcoding/manager";
 import {
   getAuthorizedHlsArtifact,
   touchTranscodeSessionHeartbeat,
@@ -161,6 +164,11 @@ export const GET: RequestHandler = async ({ params, locals, request }) => {
         }
         if (request?.signal?.aborted) return cancelledSegmentResponse();
 
+        void ensureHlsLookaheadForSegment({
+          sessionId: params.sessionId,
+          userId: locals.user.id,
+          segment: params.segment,
+        }).catch(() => undefined);
         void pruneHlsSegmentsBehind(artifact.playlistPath, params.segment).catch(() => undefined);
       }
     }
