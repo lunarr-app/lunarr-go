@@ -23,6 +23,18 @@ function cancelledPlaylistHeadResponse() {
   return new Response(null, { status: 404 });
 }
 
+function shouldServeVirtualPlaylistByDefault(artifact: {
+  pipeline: string | null;
+  status: string;
+  durationSeconds: number | null;
+}) {
+  return (
+    artifact.pipeline === "request_driven" &&
+    artifact.status === "running" &&
+    Boolean(artifact.durationSeconds && artifact.durationSeconds > 0)
+  );
+}
+
 export const GET: RequestHandler = async ({ params, locals, url, request }) => {
   if (!locals.user) return json({ error: "Unauthorized" }, { status: 401 });
 
@@ -32,7 +44,10 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
   );
   if (artifact instanceof Response) return artifact;
 
-  if (url?.searchParams.get("playlist") === "virtual") {
+  if (
+    url?.searchParams.get("playlist") === "virtual" ||
+    shouldServeVirtualPlaylistByDefault(artifact)
+  ) {
     if (artifact.status !== "running") {
       return json(
         { error: "Virtual HLS playlist is not available for this session." },
@@ -137,7 +152,10 @@ export const HEAD: RequestHandler = async ({ params, locals, url, request }) => 
   );
   if (artifact instanceof Response) return artifact;
 
-  if (url?.searchParams.get("playlist") === "virtual") {
+  if (
+    url?.searchParams.get("playlist") === "virtual" ||
+    shouldServeVirtualPlaylistByDefault(artifact)
+  ) {
     if (artifact.status !== "running") {
       return json(
         { error: "Virtual HLS playlist is not available for this session." },

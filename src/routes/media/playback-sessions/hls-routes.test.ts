@@ -485,17 +485,23 @@ describe("playback-session HLS routes", () => {
     );
   });
 
-  test("serves the same virtual playlist through the default and explicit playlist routes", async () => {
-    const playlist = virtualHlsPlaylist({
-      durationSeconds: 13,
-      startTimeSeconds: 5,
-    });
+  test("serves virtual VOD through the default playlist route for running request-driven sessions", async () => {
+    const eventPlaylist = [
+      "#EXTM3U",
+      "#EXT-X-VERSION:3",
+      "#EXT-X-TARGETDURATION:16",
+      "#EXT-X-PLAYLIST-TYPE:EVENT",
+      "#EXT-X-MEDIA-SEQUENCE:0",
+      "#EXTINF:16.000,",
+      "segment-00000.ts",
+      "",
+    ].join("\n");
     await db
       .updateTable("media_file")
       .set({ duration_seconds: 13 })
       .where("id", "=", "file-1")
       .execute();
-    await writeFile(playlistPath, playlist);
+    await writeFile(playlistPath, eventPlaylist);
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -505,7 +511,7 @@ describe("playback-session HLS routes", () => {
     await updateTranscodeSessionStatus(sessionId, "running");
     await db
       .updateTable("playback_session")
-      .set({ start_time_seconds: 5 })
+      .set({ start_time_seconds: 5, pipeline: "request_driven" })
       .where("id", "=", sessionId)
       .execute();
 
@@ -526,7 +532,12 @@ describe("playback-session HLS routes", () => {
 
     expect(defaultResponse.status).toBe(200);
     expect(explicitResponse.status).toBe(200);
-    expect(await defaultResponse.text()).toBe(await explicitResponse.text());
+    const defaultBody = await defaultResponse.text();
+    const explicitBody = await explicitResponse.text();
+    expect(defaultBody).toBe(explicitBody);
+    expect(defaultBody).toContain("#EXT-X-PLAYLIST-TYPE:VOD");
+    expect(defaultBody).toContain("#EXT-X-ENDLIST");
+    expect(defaultBody).not.toContain("#EXT-X-PLAYLIST-TYPE:EVENT");
   });
 
   test("serves playlist HEAD metadata without refreshing playback heartbeat", async () => {
