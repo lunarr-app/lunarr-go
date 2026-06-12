@@ -346,6 +346,8 @@
           player.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
         )
           return;
+        hasPlaybackActivity = true;
+        hasStartedPlayback = true;
         playerUiState = "playing";
       };
 
