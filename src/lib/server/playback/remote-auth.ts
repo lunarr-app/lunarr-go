@@ -1,14 +1,14 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { appEnv } from "$lib/server/config/env";
 
-export const CAST_TOKEN_QUERY_PARAM = "castToken";
-export const CAST_PLAYBACK_TOKEN_TTL_SECONDS = 8 * 60 * 60;
+export const REMOTE_PLAYBACK_TOKEN_QUERY_PARAM = "remoteToken";
+export const REMOTE_PLAYBACK_TOKEN_TTL_SECONDS = 8 * 60 * 60;
 
-export type CastPlaybackRoute = "direct" | "hls" | "subtitle";
+export type RemotePlaybackRoute = "direct" | "hls" | "subtitle";
 
-export type CastPlaybackTokenPayload = {
+export type RemotePlaybackTokenPayload = {
   v: 1;
-  route: CastPlaybackRoute;
+  route: RemotePlaybackRoute;
   userId: string;
   mediaFileId: string;
   playbackSessionId?: string;
@@ -16,12 +16,15 @@ export type CastPlaybackTokenPayload = {
   exp: number;
 };
 
-type CastPlaybackTokenInput = Omit<CastPlaybackTokenPayload, "v" | "exp"> & {
+type RemotePlaybackTokenInput = Omit<
+  RemotePlaybackTokenPayload,
+  "v" | "exp"
+> & {
   expiresInSeconds?: number;
 };
 
-type CastPlaybackTokenExpectation = {
-  route: CastPlaybackRoute;
+type RemotePlaybackTokenExpectation = {
+  route: RemotePlaybackRoute;
   mediaFileId?: string;
   playbackSessionId?: string;
   subtitleTrackId?: string;
@@ -50,9 +53,9 @@ function safeSignatureEqual(left: string, right: string) {
   );
 }
 
-function isCastPlaybackTokenPayload(
+function isRemotePlaybackTokenPayload(
   value: unknown,
-): value is CastPlaybackTokenPayload {
+): value is RemotePlaybackTokenPayload {
   if (!value || typeof value !== "object") return false;
   const payload = value as Record<string, unknown>;
   return (
@@ -70,24 +73,25 @@ function isCastPlaybackTokenPayload(
   );
 }
 
-export function createCastPlaybackToken(input: CastPlaybackTokenInput) {
-  const payload: CastPlaybackTokenPayload = {
+export function createRemotePlaybackToken(input: RemotePlaybackTokenInput) {
+  const payload: RemotePlaybackTokenPayload = {
     v: 1,
     route: input.route,
     userId: input.userId,
     mediaFileId: input.mediaFileId,
     playbackSessionId: input.playbackSessionId,
     subtitleTrackId: input.subtitleTrackId,
-    exp: Math.floor(Date.now() / 1000) +
-      (input.expiresInSeconds ?? CAST_PLAYBACK_TOKEN_TTL_SECONDS),
+    exp:
+      Math.floor(Date.now() / 1000) +
+      (input.expiresInSeconds ?? REMOTE_PLAYBACK_TOKEN_TTL_SECONDS),
   };
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
   return `${encodedPayload}.${sign(encodedPayload)}`;
 }
 
-export function verifyCastPlaybackToken(
+export function verifyRemotePlaybackToken(
   token: string | null | undefined,
-  expected: CastPlaybackTokenExpectation,
+  expected: RemotePlaybackTokenExpectation,
 ) {
   if (!token) return null;
   const [encodedPayload, signature, extra] = token.split(".");
@@ -100,7 +104,7 @@ export function verifyCastPlaybackToken(
   } catch {
     return null;
   }
-  if (!isCastPlaybackTokenPayload(parsed)) return null;
+  if (!isRemotePlaybackTokenPayload(parsed)) return null;
   if (parsed.exp < Math.floor(Date.now() / 1000)) return null;
   if (parsed.route !== expected.route) return null;
   if (expected.mediaFileId && parsed.mediaFileId !== expected.mediaFileId) {
@@ -122,22 +126,25 @@ export function verifyCastPlaybackToken(
   return parsed;
 }
 
-export function appendCastToken(pathname: string, token: string) {
+export function appendRemotePlaybackToken(pathname: string, token: string) {
   const separator = pathname.includes("?") ? "&" : "?";
-  return `${pathname}${separator}${CAST_TOKEN_QUERY_PARAM}=${encodeURIComponent(token)}`;
+  return `${pathname}${separator}${REMOTE_PLAYBACK_TOKEN_QUERY_PARAM}=${encodeURIComponent(token)}`;
 }
 
-export function absoluteCastUrl(pathname: string, token: string) {
-  return new URL(appendCastToken(pathname, token), appEnv.ORIGIN).toString();
+export function absoluteRemotePlaybackUrl(pathname: string, token: string) {
+  return new URL(
+    appendRemotePlaybackToken(pathname, token),
+    appEnv.ORIGIN,
+  ).toString();
 }
 
-export function castSegmentQuery(token: string | null | undefined) {
+export function remotePlaybackSegmentQuery(token: string | null | undefined) {
   return token
-    ? `?${CAST_TOKEN_QUERY_PARAM}=${encodeURIComponent(token)}`
+    ? `?${REMOTE_PLAYBACK_TOKEN_QUERY_PARAM}=${encodeURIComponent(token)}`
     : "";
 }
 
-export function castCorsHeaders() {
+export function remotePlaybackCorsHeaders() {
   return {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, HEAD, OPTIONS",
@@ -147,10 +154,10 @@ export function castCorsHeaders() {
   };
 }
 
-export function withCastCors(response: Response, enabled: boolean) {
+export function withRemotePlaybackCors(response: Response, enabled: boolean) {
   if (!enabled) return response;
   const headers = new Headers(response.headers);
-  for (const [key, value] of Object.entries(castCorsHeaders())) {
+  for (const [key, value] of Object.entries(remotePlaybackCorsHeaders())) {
     headers.set(key, value);
   }
   return new Response(response.body, {
@@ -160,9 +167,9 @@ export function withCastCors(response: Response, enabled: boolean) {
   });
 }
 
-export function castOptionsResponse() {
+export function remotePlaybackOptionsResponse() {
   return new Response(null, {
     status: 204,
-    headers: castCorsHeaders(),
+    headers: remotePlaybackCorsHeaders(),
   });
 }

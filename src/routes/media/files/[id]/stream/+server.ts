@@ -1,10 +1,13 @@
 import {
-  CAST_TOKEN_QUERY_PARAM,
-  castOptionsResponse,
-  verifyCastPlaybackToken,
-  withCastCors,
-} from "$lib/server/playback/cast";
-import { mediaStreamHeadResponse, mediaStreamResponse } from "$lib/server/media/stream";
+  REMOTE_PLAYBACK_TOKEN_QUERY_PARAM,
+  remotePlaybackOptionsResponse,
+  verifyRemotePlaybackToken,
+  withRemotePlaybackCors,
+} from "$lib/server/playback/remote-auth";
+import {
+  mediaStreamHeadResponse,
+  mediaStreamResponse,
+} from "$lib/server/media/stream";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
@@ -13,19 +16,19 @@ function authorizedUserId(input: {
   mediaFileId: string;
   token: string | null;
 }) {
-  if (input.localsUserId) return { userId: input.localsUserId, cast: false };
-  const payload = verifyCastPlaybackToken(input.token, {
+  if (input.localsUserId) return { userId: input.localsUserId, remote: false };
+  const payload = verifyRemotePlaybackToken(input.token, {
     route: "direct",
     mediaFileId: input.mediaFileId,
   });
-  return payload ? { userId: payload.userId, cast: true } : null;
+  return payload ? { userId: payload.userId, remote: true } : null;
 }
 
 export const GET: RequestHandler = async ({ params, request, locals, url }) => {
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     mediaFileId: params.id,
-    token: url?.searchParams.get(CAST_TOKEN_QUERY_PARAM) ?? null,
+    token: url?.searchParams.get(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
   });
   if (!auth) {
     return json({ error: "Unauthorized" }, { status: 401 });
@@ -36,14 +39,19 @@ export const GET: RequestHandler = async ({ params, request, locals, url }) => {
     auth.userId,
     request.headers.get("range"),
   );
-  return withCastCors(response, auth.cast);
+  return withRemotePlaybackCors(response, auth.remote);
 };
 
-export const HEAD: RequestHandler = async ({ params, request, locals, url }) => {
+export const HEAD: RequestHandler = async ({
+  params,
+  request,
+  locals,
+  url,
+}) => {
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     mediaFileId: params.id,
-    token: url?.searchParams.get(CAST_TOKEN_QUERY_PARAM) ?? null,
+    token: url?.searchParams.get(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
   });
   if (!auth) {
     return new Response(null, { status: 401 });
@@ -54,7 +62,8 @@ export const HEAD: RequestHandler = async ({ params, request, locals, url }) => 
     auth.userId,
     request.headers.get("range"),
   );
-  return withCastCors(response, auth.cast);
+  return withRemotePlaybackCors(response, auth.remote);
 };
 
-export const OPTIONS: RequestHandler = async () => castOptionsResponse();
+export const OPTIONS: RequestHandler = async () =>
+  remotePlaybackOptionsResponse();

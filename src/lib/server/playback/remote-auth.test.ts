@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
-  appendCastToken,
-  createCastPlaybackToken,
-  verifyCastPlaybackToken,
-} from "./cast";
+  appendRemotePlaybackToken,
+  createRemotePlaybackToken,
+  verifyRemotePlaybackToken,
+} from "./remote-auth";
 
-describe("cast playback tokens", () => {
+describe("remote playback tokens", () => {
   test("verifies a matching HLS token", () => {
-    const token = createCastPlaybackToken({
+    const token = createRemotePlaybackToken({
       route: "hls",
       userId: "user-1",
       mediaFileId: "file-1",
@@ -15,7 +15,7 @@ describe("cast playback tokens", () => {
     });
 
     expect(
-      verifyCastPlaybackToken(token, {
+      verifyRemotePlaybackToken(token, {
         route: "hls",
         playbackSessionId: "session-1",
       }),
@@ -28,32 +28,32 @@ describe("cast playback tokens", () => {
   });
 
   test("rejects mismatched, expired, and tampered tokens", () => {
-    const token = createCastPlaybackToken({
+    const token = createRemotePlaybackToken({
       route: "direct",
       userId: "user-1",
       mediaFileId: "file-1",
       expiresInSeconds: -1,
     });
     expect(
-      verifyCastPlaybackToken(token, {
+      verifyRemotePlaybackToken(token, {
         route: "direct",
         mediaFileId: "file-1",
       }),
     ).toBeNull();
 
-    const freshToken = createCastPlaybackToken({
+    const freshToken = createRemotePlaybackToken({
       route: "direct",
       userId: "user-1",
       mediaFileId: "file-1",
     });
     expect(
-      verifyCastPlaybackToken(freshToken, {
+      verifyRemotePlaybackToken(freshToken, {
         route: "direct",
         mediaFileId: "file-2",
       }),
     ).toBeNull();
     expect(
-      verifyCastPlaybackToken(`${freshToken}x`, {
+      verifyRemotePlaybackToken(`${freshToken}x`, {
         route: "direct",
         mediaFileId: "file-1",
       }),
@@ -61,11 +61,11 @@ describe("cast playback tokens", () => {
   });
 
   test("appends tokens without dropping existing query params", () => {
-    expect(appendCastToken("/media/file", "abc")).toBe(
-      "/media/file?castToken=abc",
+    expect(appendRemotePlaybackToken("/media/file", "abc")).toBe(
+      "/media/file?remoteToken=abc",
     );
-    expect(appendCastToken("/media/file?download=0", "abc")).toBe(
-      "/media/file?download=0&castToken=abc",
+    expect(appendRemotePlaybackToken("/media/file?download=0", "abc")).toBe(
+      "/media/file?download=0&remoteToken=abc",
     );
   });
 });

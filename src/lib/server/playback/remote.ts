@@ -2,11 +2,11 @@ import { getDb } from "$lib/server/db";
 import { getMediaFile } from "$lib/server/media";
 import { mediaContentTypeForExtension } from "$lib/server/media/stream";
 import {
-  absoluteCastUrl,
-  appendCastToken,
-  createCastPlaybackToken,
-  type CastPlaybackRoute,
-} from "$lib/server/playback/cast";
+  absoluteRemotePlaybackUrl,
+  appendRemotePlaybackToken,
+  createRemotePlaybackToken,
+  type RemotePlaybackRoute,
+} from "$lib/server/playback/remote-auth";
 import { getAuthorizedHlsArtifact } from "$lib/server/transcoding/sessions";
 
 export type RemotePlaybackRequest = {
@@ -58,8 +58,8 @@ function hlsContentType() {
 }
 
 function absoluteRemoteUrl(pathname: string, token: string, origin?: string) {
-  if (!origin) return absoluteCastUrl(pathname, token);
-  return new URL(appendCastToken(pathname, token), origin).toString();
+  if (!origin) return absoluteRemotePlaybackUrl(pathname, token);
+  return new URL(appendRemotePlaybackToken(pathname, token), origin).toString();
 }
 
 async function subtitleTracks(input: {
@@ -113,7 +113,7 @@ export async function prepareRemotePlayback(input: {
     throw new RemotePlaybackRequestError("Playable item not found.", 404);
   }
 
-  let route: CastPlaybackRoute;
+  let route: RemotePlaybackRoute;
   let streamPath: string;
   let playbackSessionId: string | null = null;
   if (mode === "direct") {
@@ -139,7 +139,7 @@ export async function prepareRemotePlayback(input: {
     streamPath = `/media/playback-sessions/${encodeURIComponent(requestedSessionId)}/master.m3u8`;
   }
 
-  const streamToken = createCastPlaybackToken({
+  const streamToken = createRemotePlaybackToken({
     route,
     userId: input.userId,
     mediaFileId,
@@ -161,7 +161,7 @@ export async function prepareRemotePlayback(input: {
     durationSeconds: file.duration_seconds,
     playbackSessionId,
     tracks: tracks.map((track) => {
-      const token = createCastPlaybackToken({
+      const token = createRemotePlaybackToken({
         route: "subtitle",
         userId: input.userId,
         mediaFileId,

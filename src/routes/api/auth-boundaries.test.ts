@@ -13,7 +13,7 @@ import {
   registerTranscodeHlsArtifact,
   setTranscodeTouchDelayForTests,
 } from "$lib/server/transcoding/sessions";
-import { verifyCastPlaybackToken } from "$lib/server/playback/cast";
+import { verifyRemotePlaybackToken } from "$lib/server/playback/remote-auth";
 import { GET as jobsGet } from "./jobs/+server";
 import { POST as airPlayPlaybackPost } from "./playback/airplay/+server";
 import { POST as castPlaybackPost } from "./playback/cast/+server";
@@ -612,10 +612,13 @@ describe("authenticated API route boundaries", () => {
       const directStreamUrl = new URL(directBody.streamUrl);
       expect(directStreamUrl.pathname).toBe("/media/files/file-1/stream");
       expect(
-        verifyCastPlaybackToken(directStreamUrl.searchParams.get("castToken"), {
-          route: "direct",
-          mediaFileId: "file-1",
-        }),
+        verifyRemotePlaybackToken(
+          directStreamUrl.searchParams.get("remoteToken"),
+          {
+            route: "direct",
+            mediaFileId: "file-1",
+          },
+        ),
       ).toMatchObject({
         route: "direct",
         userId: "user-1",
@@ -624,7 +627,7 @@ describe("authenticated API route boundaries", () => {
       const subtitleUrl = new URL(directBody.tracks[0].src);
       expect(subtitleUrl.pathname).toBe("/media/subtitles/subtitle-1");
       expect(
-        verifyCastPlaybackToken(subtitleUrl.searchParams.get("castToken"), {
+        verifyRemotePlaybackToken(subtitleUrl.searchParams.get("remoteToken"), {
           route: "subtitle",
           subtitleTrackId: "subtitle-1",
         }),
@@ -670,8 +673,8 @@ describe("authenticated API route boundaries", () => {
       expect(airPlayStreamUrl.origin).toBe("http://iphone.local");
       expect(airPlayStreamUrl.pathname).toBe("/media/files/file-1/stream");
       expect(
-        verifyCastPlaybackToken(
-          airPlayStreamUrl.searchParams.get("castToken"),
+        verifyRemotePlaybackToken(
+          airPlayStreamUrl.searchParams.get("remoteToken"),
           {
             route: "direct",
             mediaFileId: "file-1",
@@ -686,8 +689,8 @@ describe("authenticated API route boundaries", () => {
       expect(airPlaySubtitleUrl.origin).toBe("http://iphone.local");
       expect(airPlaySubtitleUrl.pathname).toBe("/media/subtitles/subtitle-1");
       expect(
-        verifyCastPlaybackToken(
-          airPlaySubtitleUrl.searchParams.get("castToken"),
+        verifyRemotePlaybackToken(
+          airPlaySubtitleUrl.searchParams.get("remoteToken"),
           {
             route: "subtitle",
             subtitleTrackId: "subtitle-1",
@@ -759,10 +762,13 @@ describe("authenticated API route boundaries", () => {
         "/media/playback-sessions/transcode-1/master.m3u8",
       );
       expect(
-        verifyCastPlaybackToken(hlsStreamUrl.searchParams.get("castToken"), {
-          route: "hls",
-          playbackSessionId: "transcode-1",
-        }),
+        verifyRemotePlaybackToken(
+          hlsStreamUrl.searchParams.get("remoteToken"),
+          {
+            route: "hls",
+            playbackSessionId: "transcode-1",
+          },
+        ),
       ).toMatchObject({
         route: "hls",
         userId: "user-1",
