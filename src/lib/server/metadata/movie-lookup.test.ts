@@ -16,7 +16,7 @@ describe("movieLookupFromPath", () => {
     ).toEqual({ title: "Pathaan", year: 2023 });
   });
 
-  test("falls back to a repaired filename parse when no movie folder is present", () => {
+  test("uses filename parser output when no movie folder is present", () => {
     expect(
       movieLookupFromPath("movies/Multiplicity (1996) [REPACK] [720p].mp4"),
     ).toEqual({ title: "Multiplicity", year: 1996 });

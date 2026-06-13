@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@better-auth/api-key": "1.6.18",
-    "@ctrl/video-filename-parser": "5.10.2",
+    "@ctrl/video-filename-parser": "5.11.0",
     "@lucide/svelte": "1.18.0",
     "better-auth": "1.6.18",
     "chokidar": "5.0.0",

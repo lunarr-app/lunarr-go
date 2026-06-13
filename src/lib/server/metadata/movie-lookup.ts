@@ -32,10 +32,6 @@ function parseTitleYearName(value: string): ParsedMovieLookup | null {
   return title && year !== null ? { title, year } : null;
 }
 
-function normalizeTitle(value: string) {
-  return cleanTitle(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
 function parseMovieFilename(basename: string): ParsedMovieLookup {
   const stem = removeFileExtension(path.basename(basename));
   const parsed = filenameParse(stem);
@@ -43,12 +39,7 @@ function parseMovieFilename(basename: string): ParsedMovieLookup {
   const parsedYear = numericYear(parsed.year);
   const simple = parseTitleYearName(stem);
 
-  if (
-    simple &&
-    (!parsedTitle ||
-      normalizeTitle(simple.title).endsWith(normalizeTitle(parsedTitle)) &&
-        simple.title.length > parsedTitle.length + 2)
-  ) {
+  if (simple && !parsedTitle) {
     return simple;
   }
 

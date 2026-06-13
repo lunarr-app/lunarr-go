@@ -6,7 +6,7 @@
       "name": "lunarr",
       "dependencies": {
         "@better-auth/api-key": "1.6.18",
-        "@ctrl/video-filename-parser": "5.10.2",
+        "@ctrl/video-filename-parser": "5.11.0",
         "@lucide/svelte": "1.18.0",
         "better-auth": "1.6.18",
         "chokidar": "5.0.0",
@@ -62,7 +62,7 @@
 
     "@better-fetch/fetch": ["@better-fetch/fetch@1.3.0", "", {}, "sha512-Lgkl18IrUURFqa1nE38GNDWXf7XGzfxXQDCE/alCQV0yZ98YrPGtlmW61ch1T4YRt3lxrSAGA+Ft73FzuWWb3A=="],
 
-    "@ctrl/video-filename-parser": ["@ctrl/video-filename-parser@5.10.2", "", {}, "sha512-zTPh47u87a0yaiAUJV77lc+VSKHhYWG0OiarnBiN8qPGJ3oQBt8m39+8Vt4/Fyrqa6ewuvrzTB1HtvMhC4E0lw=="],
+    "@ctrl/video-filename-parser": ["@ctrl/video-filename-parser@5.11.0", "", {}, "sha512-moAxON3TdWaBEJP5xWHIoh05mzjcmi2DFqevKuXGSJ5xy4rq7JWh1vzsu5O6gP/zzI+dR/TygF0cU7iAjfSdmw=="],
 
     "@emnapi/core": ["@emnapi/core@1.10.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" } }, "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw=="],
 
