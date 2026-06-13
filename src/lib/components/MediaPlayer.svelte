@@ -202,6 +202,39 @@
   let castFrameworkPromise: Promise<CastApi> | null = null;
   let airPlayPreparePromise: Promise<RemotePlaybackResponse | null> | null =
     null;
+  const playerStatusState = $derived(
+    playerStatusOverlayState({
+      uiState: playerUiState,
+      casting: isCasting(),
+    }),
+  );
+  const customControlsVisible = $derived(
+    shouldShowCustomControls({
+      controlsVisible: playerControlsVisible,
+      uiState: playerUiState,
+      casting: isCasting(),
+      subtitleMenuOpen,
+      controlsFocused: playerControlsFocused,
+      controlsHovered: playerControlsHovered,
+    }),
+  );
+  const seekSliderAria = $derived(
+    playbackSliderAriaValue({
+      seconds: displayedPlaybackSeconds(),
+      durationSeconds,
+    }),
+  );
+  const volumeAria = $derived(volumeSliderAriaValue({ volume, muted }));
+  const airPlayButton = $derived(
+    airPlayControlState({
+      available: airPlayAvailable,
+      active: airPlayActive,
+      casting: isCasting(),
+    }),
+  );
+  const playbackButtonState = $derived(
+    primaryPlaybackButtonState({ uiState: playerUiState }),
+  );
 
   function clearRemotePlaybackNotice() {
     remotePlaybackNotice = null;
@@ -458,53 +491,12 @@
       });
   }
 
-  function statusOverlayState() {
-    return playerStatusOverlayState({
-      uiState: playerUiState,
-      casting: isCasting(),
-    });
-  }
-
-  function controlsAreVisible() {
-    return shouldShowCustomControls({
-      controlsVisible: playerControlsVisible,
-      uiState: playerUiState,
-      casting: isCasting(),
-      subtitleMenuOpen,
-      controlsFocused: playerControlsFocused,
-      controlsHovered: playerControlsHovered,
-    });
-  }
-
   function displayedPlaybackSeconds() {
     return seekPreviewSeconds ?? currentPlaybackSeconds;
   }
 
   function seekSliderMax() {
     return Math.max(1, Math.ceil(durationSeconds ?? currentPlaybackSeconds ?? 1));
-  }
-
-  function seekSliderAriaValue() {
-    return playbackSliderAriaValue({
-      seconds: displayedPlaybackSeconds(),
-      durationSeconds,
-    });
-  }
-
-  function volumeAriaValue() {
-    return volumeSliderAriaValue({ volume, muted });
-  }
-
-  function airPlayButtonState() {
-    return airPlayControlState({
-      available: airPlayAvailable,
-      active: airPlayActive,
-      casting: isCasting(),
-    });
-  }
-
-  function playbackButtonState() {
-    return primaryPlaybackButtonState({ uiState: playerUiState });
   }
 
   function showControls() {
@@ -1585,6 +1577,7 @@
       };
 
       const onTimeUpdate = () => {
+        if (player.currentTime > 0) hasPlaybackActivity = true;
         hlsSeekController.timeUpdate({
           relativeSeconds: Number.isFinite(player.currentTime)
             ? player.currentTime
@@ -1965,7 +1958,7 @@
   <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
   <div
     bind:this={playerShell}
-    class:controls-hidden={!controlsAreVisible()}
+    class:controls-hidden={!customControlsVisible}
     class="video-shell custom-player"
     role="region"
     aria-roledescription="video player"
@@ -1983,9 +1976,6 @@
       playsinline
       preload={data.playback.mode === "direct" ? "metadata" : "auto"}
       onplay={() => (hasPlaybackActivity = true)}
-      ontimeupdate={() => {
-        if (video && video.currentTime > 0) hasPlaybackActivity = true;
-      }}
       onpause={() => save(false)}
     >
       {#each data.playback.tracks as track}
@@ -2036,14 +2026,14 @@
       </div>
     {/if}
 
-    {#if statusOverlayState() !== "hidden"}
+    {#if playerStatusState !== "hidden"}
       <div class="player-status-overlay" aria-live="polite">
-        {#if statusOverlayState() === "casting"}
+        {#if playerStatusState === "casting"}
           <p>Chromecast connected</p>
-        {:else if statusOverlayState() === "error"}
+        {:else if playerStatusState === "error"}
           <span class="overlay-error" aria-hidden="true">!</span>
           <p>{playerOverlayMessage()}</p>
-        {:else if statusOverlayState() === "busy"}
+        {:else if playerStatusState === "busy"}
           <span class="overlay-spinner" aria-hidden="true"></span>
           <p>{playerOverlayMessage()}</p>
         {:else}
@@ -2052,7 +2042,7 @@
       </div>
     {/if}
 
-    {#if controlsAreVisible()}
+    {#if customControlsVisible}
       <div
         class="player-controls"
         role="group"
@@ -2100,15 +2090,15 @@
               <Cast size={20} aria-hidden="true" />
             </button>
           {/if}
-          {#if airPlayButtonState().visible}
+          {#if airPlayButton.visible}
             <button
-              class:active={airPlayButtonState().active}
+              class:active={airPlayButton.active}
               class="control-button"
               type="button"
-              aria-label={airPlayButtonState().label}
-              title={airPlayButtonState().label}
+              aria-label={airPlayButton.label}
+              title={airPlayButton.label}
               onclick={showAirPlayTargetPicker}
-              disabled={airPlayButtonState().disabled}
+              disabled={airPlayButton.disabled}
             >
               <Airplay size={20} aria-hidden="true" />
             </button>
@@ -2124,10 +2114,10 @@
             step="0.1"
             value={displayedPlaybackSeconds()}
             aria-label="Playback position"
-            aria-valuemin={seekSliderAriaValue().valueMin}
-            aria-valuemax={seekSliderAriaValue().valueMax}
-            aria-valuenow={seekSliderAriaValue().valueNow}
-            aria-valuetext={seekSliderAriaValue().valueText}
+            aria-valuemin={seekSliderAria.valueMin}
+            aria-valuemax={seekSliderAria.valueMax}
+            aria-valuenow={seekSliderAria.valueNow}
+            aria-valuetext={seekSliderAria.valueText}
             oninput={(event) => {
               seekPreviewSeconds = Number(event.currentTarget.value);
               showControls();
@@ -2140,10 +2130,10 @@
               <button
                 class="control-button primary-play"
                 type="button"
-                aria-label={playbackButtonState().label}
+                aria-label={playbackButtonState.label}
                 onclick={() => void toggleLocalPlayback()}
               >
-                {#if playbackButtonState().action === "pause"}
+                {#if playbackButtonState.action === "pause"}
                   <Pause size={24} fill="currentColor" aria-hidden="true" />
                 {:else}
                   <Play size={24} fill="currentColor" aria-hidden="true" />
@@ -2196,10 +2186,10 @@
                 value={muted ? 0 : volume}
                 style={`--volume-fill: ${(muted ? 0 : volume) * 100}%`}
                 aria-label="Volume"
-                aria-valuemin={volumeAriaValue().valueMin}
-                aria-valuemax={volumeAriaValue().valueMax}
-                aria-valuenow={volumeAriaValue().valueNow}
-                aria-valuetext={volumeAriaValue().valueText}
+                aria-valuemin={volumeAria.valueMin}
+                aria-valuemax={volumeAria.valueMax}
+                aria-valuenow={volumeAria.valueNow}
+                aria-valuetext={volumeAria.valueText}
                 oninput={(event) => setVolume(Number(event.currentTarget.value))}
               />
               {#if data.playback.tracks.length > 0}
@@ -2296,6 +2286,8 @@
 <style>
   .video-shell {
     position: relative;
+    aspect-ratio: 16 / 9;
+    max-height: min(72vh, calc(100dvh - 9rem));
     overflow: hidden;
     border-radius: 8px;
     background: #000;
@@ -2318,7 +2310,8 @@
 
   video {
     width: 100%;
-    max-height: min(72vh, calc(100dvh - 9rem));
+    height: 100%;
+    object-fit: contain;
     background: #000;
     display: block;
   }
