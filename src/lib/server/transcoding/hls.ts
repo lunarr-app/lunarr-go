@@ -17,6 +17,7 @@ type HlsSegmentPayload = {
 
 type HlsReadOptions = {
   signal?: AbortSignal;
+  segmentQuery?: string | null;
 };
 
 export type HlsPlaylistSegmentEntry = {
@@ -276,31 +277,41 @@ export function setHlsHeadResponseDelayForTests(
   headResponseDelayForTests = delay;
 }
 
-export function rewriteHlsPlaylistUris(playlist: string, playlistPath: string) {
+export function rewriteHlsPlaylistUris(
+  playlist: string,
+  playlistPath: string,
+  options: { segmentQuery?: string | null } = {},
+) {
   const playlistDirectory = path.dirname(playlistPath);
+  const segmentQuery = options.segmentQuery ?? "";
   return playlist
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
       if (!trimmed) return line;
       if (trimmed.startsWith("#EXT-X-MAP:")) {
-        return rewriteHlsTagUri(line, playlistDirectory);
+        return rewriteHlsTagUri(line, playlistDirectory, segmentQuery);
       }
       if (trimmed.startsWith("#")) return line;
 
       const segmentName = hlsPlaylistSegmentName(trimmed, playlistDirectory);
-      if (segmentName) return `${SEGMENT_ROUTE_PREFIX}${segmentName}`;
+      if (segmentName)
+        return `${SEGMENT_ROUTE_PREFIX}${segmentName}${segmentQuery}`;
 
       return line;
     })
     .join("\n");
 }
 
-function rewriteHlsTagUri(line: string, playlistDirectory: string) {
+function rewriteHlsTagUri(
+  line: string,
+  playlistDirectory: string,
+  segmentQuery: string,
+) {
   return line.replace(/URI="([^"]+)"/g, (match, uri: string) => {
     const segmentName = hlsPlaylistSegmentName(uri, playlistDirectory);
     if (!segmentName) return match;
-    return `URI="${SEGMENT_ROUTE_PREFIX}${segmentName}"`;
+    return `URI="${SEGMENT_ROUTE_PREFIX}${segmentName}${segmentQuery}"`;
   });
 }
 
@@ -361,6 +372,7 @@ async function hlsPlaylistBody(
   return rewriteHlsPlaylistUris(
     await readFile(playlistPath, { encoding: "utf8", signal: options.signal }),
     playlistPath,
+    { segmentQuery: options.segmentQuery },
   );
 }
 
@@ -526,6 +538,7 @@ export function virtualHlsPlaylist(input: {
   startTimeSeconds?: number | null;
   segmentSeconds?: number | null;
   segmentFormat?: HlsSegmentFormat;
+  segmentQuery?: string | null;
 }) {
   const segmentSeconds =
     Number.isFinite(input.segmentSeconds) && Number(input.segmentSeconds) > 0
@@ -539,6 +552,7 @@ export function virtualHlsPlaylist(input: {
       : 0;
   const segmentCount = Math.ceil(durationSeconds / segmentSeconds);
   const segmentFormat = input.segmentFormat ?? "mpegts";
+  const segmentQuery = input.segmentQuery ?? "";
   const lines = [
     "#EXTM3U",
     `#EXT-X-VERSION:${segmentFormat === "fmp4" ? "7" : "3"}`,
@@ -550,7 +564,7 @@ export function virtualHlsPlaylist(input: {
     lines.push(`#EXT-X-START:TIME-OFFSET=${startTimeSeconds.toFixed(3)}`);
   }
   if (segmentFormat === "fmp4") {
-    lines.push(`#EXT-X-MAP:URI="${SEGMENT_ROUTE_PREFIX}init.mp4"`);
+    lines.push(`#EXT-X-MAP:URI="${SEGMENT_ROUTE_PREFIX}init.mp4${segmentQuery}"`);
   }
 
   for (let index = 0; index < segmentCount; index += 1) {
@@ -560,7 +574,7 @@ export function virtualHlsPlaylist(input: {
         : segmentSeconds;
     lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
     lines.push(
-      `${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}`,
+      `${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}${segmentQuery}`,
     );
   }
 
@@ -573,6 +587,7 @@ export function virtualHlsPlaylistResponse(input: {
   startTimeSeconds?: number | null;
   segmentSeconds?: number | null;
   segmentFormat?: HlsSegmentFormat;
+  segmentQuery?: string | null;
 }) {
   return new Response(virtualHlsPlaylist(input), {
     headers: {

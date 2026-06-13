@@ -1,4 +1,11 @@
 import {
+  CAST_TOKEN_QUERY_PARAM,
+  castOptionsResponse,
+  castSegmentQuery,
+  verifyCastPlaybackToken,
+  withCastCors,
+} from "$lib/server/playback/cast";
+import {
   hlsPlaylistFileExists,
   hlsPlaylistHeadResponse,
   hlsPlaylistResponse,
@@ -14,6 +21,19 @@ import {
   hlsFailedActivityResponse,
 } from "../../hls-route-state";
 import type { RequestHandler } from "./$types";
+
+function authorizedUserId(input: {
+  localsUserId?: string;
+  sessionId: string;
+  token: string | null;
+}) {
+  if (input.localsUserId) return { userId: input.localsUserId, cast: false };
+  const payload = verifyCastPlaybackToken(input.token, {
+    route: "hls",
+    playbackSessionId: input.sessionId,
+  });
+  return payload ? { userId: payload.userId, cast: true } : null;
+}
 
 function cancelledPlaylistResponse() {
   return json({ error: "Playback playlist was not found." }, { status: 404 });
@@ -36,13 +56,19 @@ function shouldServeVirtualPlaylistByDefault(artifact: {
 }
 
 export const GET: RequestHandler = async ({ params, locals, url, request }) => {
-  if (!locals.user) return json({ error: "Unauthorized" }, { status: 401 });
+  const token = url?.searchParams.get(CAST_TOKEN_QUERY_PARAM) ?? null;
+  const auth = authorizedUserId({
+    localsUserId: locals.user?.id,
+    sessionId: params.sessionId,
+    token,
+  });
+  if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 
   const artifact = await currentPlayableHlsArtifact(
     params.sessionId,
-    locals.user.id,
+    auth.userId,
   );
-  if (artifact instanceof Response) return artifact;
+  if (artifact instanceof Response) return withCastCors(artifact, auth.cast);
 
   if (
     url?.searchParams.get("playlist") === "virtual" ||
@@ -69,88 +95,103 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
     );
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
-      userId: locals.user.id,
+      userId: auth.userId,
       playlistPath: artifact.playlistPath,
       artifact: "playlist",
     });
-    if (current instanceof Response) return current;
-    if (request?.signal?.aborted) return cancelledPlaylistResponse();
+    if (current instanceof Response) return withCastCors(current, auth.cast);
+    if (request?.signal?.aborted)
+      return withCastCors(cancelledPlaylistResponse(), auth.cast);
 
     const touched = await touchTranscodeSessionHeartbeat(
       params.sessionId,
-      locals.user.id,
+      auth.userId,
       { signal: request?.signal },
     );
     if (!touched) {
-      if (request?.signal?.aborted) return cancelledPlaylistResponse();
+      if (request?.signal?.aborted)
+        return withCastCors(cancelledPlaylistResponse(), auth.cast);
 
       const stale = await hlsFailedActivityResponse({
         sessionId: params.sessionId,
-        userId: locals.user.id,
+        userId: auth.userId,
         playlistPath: artifact.playlistPath,
         artifact: "playlist",
         allowCompleted: false,
         notReadyMessage:
           "Virtual HLS playlist is not available for this session.",
       });
-      if (stale) return stale;
+      if (stale) return withCastCors(stale, auth.cast);
     }
-    if (request?.signal?.aborted) return cancelledPlaylistResponse();
+    if (request?.signal?.aborted)
+      return withCastCors(cancelledPlaylistResponse(), auth.cast);
 
-    return virtualHlsPlaylistResponse({
+    return withCastCors(virtualHlsPlaylistResponse({
       durationSeconds: artifact.durationSeconds,
       startTimeSeconds: artifact.startTimeSeconds,
       segmentFormat,
-    });
+      segmentQuery: castSegmentQuery(token),
+    }), auth.cast);
   }
 
   try {
     const response = await hlsPlaylistResponse(artifact.playlistPath, {
       signal: request?.signal,
+      segmentQuery: castSegmentQuery(token),
     });
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
-      userId: locals.user.id,
+      userId: auth.userId,
       playlistPath: artifact.playlistPath,
       artifact: "playlist",
     });
-    if (current instanceof Response) return current;
-    if (request?.signal?.aborted) return cancelledPlaylistResponse();
+    if (current instanceof Response) return withCastCors(current, auth.cast);
+    if (request?.signal?.aborted)
+      return withCastCors(cancelledPlaylistResponse(), auth.cast);
 
     const touched = await touchTranscodeSessionHeartbeat(
       params.sessionId,
-      locals.user.id,
+      auth.userId,
       { signal: request?.signal },
     );
     if (!touched) {
-      if (request?.signal?.aborted) return cancelledPlaylistResponse();
+      if (request?.signal?.aborted)
+        return withCastCors(cancelledPlaylistResponse(), auth.cast);
 
       const stale = await hlsFailedActivityResponse({
         sessionId: params.sessionId,
-        userId: locals.user.id,
+        userId: auth.userId,
         playlistPath: artifact.playlistPath,
         artifact: "playlist",
         allowCompleted: true,
       });
-      if (stale) return stale;
+      if (stale) return withCastCors(stale, auth.cast);
     }
-    if (request?.signal?.aborted) return cancelledPlaylistResponse();
+    if (request?.signal?.aborted)
+      return withCastCors(cancelledPlaylistResponse(), auth.cast);
 
-    return response;
+    return withCastCors(response, auth.cast);
   } catch {
-    if (request?.signal?.aborted) return cancelledPlaylistResponse();
-    return json({ error: "Playback playlist was not found." }, { status: 404 });
+    if (request?.signal?.aborted)
+      return withCastCors(cancelledPlaylistResponse(), auth.cast);
+    return withCastCors(json({ error: "Playback playlist was not found." }, { status: 404 }), auth.cast);
   }
 };
 
 export const HEAD: RequestHandler = async ({ params, locals, url, request }) => {
-  if (!locals.user) return json({ error: "Unauthorized" }, { status: 401 });
+  const token = url?.searchParams.get(CAST_TOKEN_QUERY_PARAM) ?? null;
+  const auth = authorizedUserId({
+    localsUserId: locals.user?.id,
+    sessionId: params.sessionId,
+    token,
+  });
+  if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 
   const artifact = await currentPlayableHlsArtifact(
     params.sessionId,
-    locals.user.id,
+    auth.userId,
   );
-  if (artifact instanceof Response) return artifact;
+  if (artifact instanceof Response) return withCastCors(artifact, auth.cast);
 
   if (
     url?.searchParams.get("playlist") === "virtual" ||
@@ -173,14 +214,15 @@ export const HEAD: RequestHandler = async ({ params, locals, url, request }) => 
     }
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
-      userId: locals.user.id,
+      userId: auth.userId,
       playlistPath: artifact.playlistPath,
       artifact: "playlist",
     });
-    if (current instanceof Response) return current;
-    if (request?.signal?.aborted) return cancelledPlaylistHeadResponse();
+    if (current instanceof Response) return withCastCors(current, auth.cast);
+    if (request?.signal?.aborted)
+      return withCastCors(cancelledPlaylistHeadResponse(), auth.cast);
 
-    return virtualHlsPlaylistHeadResponse();
+    return withCastCors(virtualHlsPlaylistHeadResponse(), auth.cast);
   }
 
   let response: Response;
@@ -189,19 +231,24 @@ export const HEAD: RequestHandler = async ({ params, locals, url, request }) => 
       signal: request?.signal,
     });
   } catch {
-    if (request?.signal?.aborted) return cancelledPlaylistHeadResponse();
-    return new Response(null, { status: 404 });
+    if (request?.signal?.aborted)
+      return withCastCors(cancelledPlaylistHeadResponse(), auth.cast);
+    return withCastCors(new Response(null, { status: 404 }), auth.cast);
   }
-  if (request?.signal?.aborted) return cancelledPlaylistHeadResponse();
+  if (request?.signal?.aborted)
+    return withCastCors(cancelledPlaylistHeadResponse(), auth.cast);
   if (response.ok) {
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
-      userId: locals.user.id,
+      userId: auth.userId,
       playlistPath: artifact.playlistPath,
       artifact: "playlist",
     });
-    if (current instanceof Response) return current;
-    if (request?.signal?.aborted) return cancelledPlaylistHeadResponse();
+    if (current instanceof Response) return withCastCors(current, auth.cast);
+    if (request?.signal?.aborted)
+      return withCastCors(cancelledPlaylistHeadResponse(), auth.cast);
   }
-  return response;
+  return withCastCors(response, auth.cast);
 };
+
+export const OPTIONS: RequestHandler = async () => castOptionsResponse();

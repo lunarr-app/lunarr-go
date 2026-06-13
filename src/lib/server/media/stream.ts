@@ -11,6 +11,10 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   ".webm": "video/webm"
 };
 
+export function mediaContentTypeForExtension(extension: string) {
+  return MIME_BY_EXTENSION[extension] ?? "application/octet-stream";
+}
+
 export type ByteRange = {
   start: number;
   end: number;
@@ -76,7 +80,7 @@ async function prepareStream(file: StreamableMediaFile, rangeHeader: string | nu
     };
   }
   const size = info.size;
-  const contentType = MIME_BY_EXTENSION[file.extension] ?? "application/octet-stream";
+  const contentType = mediaContentTypeForExtension(file.extension);
   const range = parseRange(rangeHeader, size);
 
   if (rangeHeader && !range) {

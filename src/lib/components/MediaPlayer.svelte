@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
-  import { Play } from "@lucide/svelte";
+  import { Cast, Play } from "@lucide/svelte";
   import {
     absolutePlaybackSeconds,
     createHlsSeekEventController,
@@ -28,6 +28,26 @@
     | "autoplayBlocked"
     | "error";
 
+  type CastApi = {
+    cast: any;
+    chrome: any;
+  };
+
+  type CastPlaybackResponse = {
+    streamUrl: string;
+    contentType: string;
+    title: string | null;
+    durationSeconds: number | null;
+    playbackSessionId: string | null;
+    tracks: {
+      id: string;
+      label: string;
+      language: string;
+      default: boolean;
+      src: string;
+    }[];
+  };
+
   let {
     data,
     onProgressSaved,
@@ -44,9 +64,16 @@
   let saveState = $state<"idle" | "saving" | "saved" | "error">("idle");
   let playerUiState = $state<PlayerUiState>("starting");
   let hasStartedPlayback = $state(false);
+  let castAvailable = $state(false);
+  let castLaunchState = $state<"idle" | "connecting" | "connected" | "error">(
+    "idle",
+  );
+  let castOwnedPlaybackSessionId = $state<string | null>(null);
   let hasPlaybackActivity = false;
   let playbackActivityKey: string | null = null;
   const cancelledPlaybackSessions = new Set<string>();
+  const castOwnedPlaybackSessions = new Set<string>();
+  let castFrameworkPromise: Promise<CastApi> | null = null;
 
   function isPlayOverlayVisible() {
     return (
@@ -66,6 +93,90 @@
 
   function isPlayerOverlayVisible() {
     return isPlayOverlayVisible() || isStatusOverlayVisible();
+  }
+
+  function castWindow() {
+    return window as typeof window & {
+      __onGCastApiAvailable?: (available: boolean) => void;
+      cast?: any;
+      chrome?: any;
+    };
+  }
+
+  function configureCastFramework(api: CastApi) {
+    const context = api.cast.framework.CastContext.getInstance();
+    context.setOptions({
+      receiverApplicationId: api.chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+      autoJoinPolicy: api.chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+    });
+    return context;
+  }
+
+  function ensureCastFramework() {
+    if (!browser) return Promise.reject(new Error("Cast is unavailable."));
+    if (castFrameworkPromise) return castFrameworkPromise;
+
+    castFrameworkPromise = new Promise<CastApi>((resolve, reject) => {
+      const win = castWindow();
+      const resolveApi = () => {
+        if (win.cast?.framework && win.chrome?.cast) {
+          const api = { cast: win.cast, chrome: win.chrome };
+          configureCastFramework(api);
+          castAvailable = true;
+          resolve(api);
+          return true;
+        }
+        return false;
+      };
+
+      if (resolveApi()) return;
+
+      const timeout = window.setTimeout(() => {
+        reject(new Error("Cast SDK did not become available."));
+      }, 10000);
+
+      win.__onGCastApiAvailable = (available: boolean) => {
+        window.clearTimeout(timeout);
+        if (!available || !resolveApi()) {
+          reject(new Error("Cast SDK is unavailable."));
+        }
+      };
+
+      let script = document.getElementById(
+        "google-cast-sender-sdk",
+      ) as HTMLScriptElement | null;
+      if (!script) {
+        script = document.createElement("script");
+        script.id = "google-cast-sender-sdk";
+        script.async = true;
+        script.src =
+          "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
+        script.onerror = () => {
+          window.clearTimeout(timeout);
+          reject(new Error("Cast SDK failed to load."));
+        };
+        document.head.appendChild(script);
+      }
+    });
+
+    return castFrameworkPromise;
+  }
+
+  function playbackIsCastOwned(playback: PlaybackDecision) {
+    const sessionId = activePlaybackSessionId(playback);
+    return Boolean(sessionId && castOwnedPlaybackSessions.has(sessionId));
+  }
+
+  function markCastOwnedSession(sessionId: string | null) {
+    if (!sessionId) return;
+    castOwnedPlaybackSessions.add(sessionId);
+    castOwnedPlaybackSessionId = sessionId;
+  }
+
+  function releaseCastOwnedSession(sessionId: string | null) {
+    if (!sessionId) return;
+    castOwnedPlaybackSessions.delete(sessionId);
+    if (castOwnedPlaybackSessionId === sessionId) castOwnedPlaybackSessionId = null;
   }
 
   function playerOverlayMessage() {
@@ -162,10 +273,24 @@
     });
   }
 
-  function cancelPlaybackSession(playback: PlaybackDecision = data.playback) {
+  function cancelPlaybackSession(
+    playback: PlaybackDecision = data.playback,
+    options: { includeCastOwned?: boolean } = {},
+  ) {
+    if (!options.includeCastOwned && playbackIsCastOwned(playback)) return;
     cancelPlaybackSessionOnce({
       playback,
       cancelledPlaybackSessions,
+      navigatorRef: navigator,
+      fetchFn: fetch,
+    });
+  }
+
+  function cancelPlaybackSessionById(sessionId: string) {
+    if (cancelledPlaybackSessions.has(sessionId)) return;
+    cancelledPlaybackSessions.add(sessionId);
+    postWithBeaconFallback({
+      url: `/api/playback-sessions/${encodeURIComponent(sessionId)}/cancel`,
       navigatorRef: navigator,
       fetchFn: fetch,
     });
@@ -214,6 +339,82 @@
         }
       })
       .catch(() => undefined);
+  }
+
+  function currentCastPositionSeconds() {
+    const payload = progressPayload(data, false);
+    if (payload) return payload.positionSeconds;
+    return Number.isFinite(data.startSeconds) ? data.startSeconds : 0;
+  }
+
+  async function prepareCastPlayback() {
+    const playback = data.playback;
+    const response = await fetch("/api/playback/cast", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        mediaItemId: data.item.id,
+        mediaFileId: playback.file.id,
+        playbackSessionId: playback.playbackSessionId,
+        mode: playback.mode,
+        subtitleTrackIds: playback.tracks.map((track) => track.id),
+      }),
+    });
+    if (!response.ok) throw new Error("Could not prepare Cast playback.");
+    return (await response.json()) as CastPlaybackResponse;
+  }
+
+  async function castPlayback() {
+    if (castLaunchState === "connecting") return;
+    castLaunchState = "connecting";
+    try {
+      const api = await ensureCastFramework();
+      const context = configureCastFramework(api);
+      const session =
+        context.getCurrentSession() ?? (await context.requestSession());
+      const castPlayback = await prepareCastPlayback();
+      const mediaInfo = new api.chrome.cast.media.MediaInfo(
+        castPlayback.streamUrl,
+        castPlayback.contentType,
+      );
+      const metadata = new api.chrome.cast.media.MovieMediaMetadata();
+      metadata.title = castPlayback.title ?? data.item.title;
+      mediaInfo.metadata = metadata;
+      mediaInfo.duration =
+        Number.isFinite(castPlayback.durationSeconds) &&
+        Number(castPlayback.durationSeconds) > 0
+          ? Number(castPlayback.durationSeconds)
+          : undefined;
+      mediaInfo.tracks = castPlayback.tracks.map((track, index) => {
+        const castTrack = new api.chrome.cast.media.Track(
+          index + 1,
+          api.chrome.cast.media.TrackType.TEXT,
+        );
+        castTrack.trackContentId = track.src;
+        castTrack.trackContentType = "text/vtt";
+        castTrack.name = track.label;
+        castTrack.language = track.language;
+        castTrack.subtype = api.chrome.cast.media.TextTrackType.SUBTITLES;
+        return castTrack;
+      });
+
+      const loadRequest = new api.chrome.cast.media.LoadRequest(mediaInfo);
+      loadRequest.autoplay = true;
+      loadRequest.currentTime = currentCastPositionSeconds();
+      const defaultTrackIds = castPlayback.tracks
+        .map((track, index) => (track.default ? index + 1 : null))
+        .filter((id): id is number => id !== null);
+      if (defaultTrackIds.length > 0) {
+        loadRequest.activeTrackIds = defaultTrackIds;
+      }
+
+      await session.loadMedia(loadRequest);
+      markCastOwnedSession(castPlayback.playbackSessionId);
+      video?.pause();
+      castLaunchState = "connected";
+    } catch {
+      castLaunchState = "error";
+    }
   }
 
   $effect(() => {
@@ -524,6 +725,58 @@
 
   $effect(() => {
     if (!browser) return;
+    let disposed = false;
+    let removeListener: (() => void) | undefined;
+
+    void ensureCastFramework()
+      .then((api) => {
+        if (disposed) return;
+        const context = configureCastFramework(api);
+        const onSessionStateChanged = (event: { sessionState: string }) => {
+          if (
+            event.sessionState === api.cast.framework.SessionState.SESSION_ENDED
+          ) {
+            const sessionId = castOwnedPlaybackSessionId;
+            releaseCastOwnedSession(sessionId);
+            if (sessionId) cancelPlaybackSessionById(sessionId);
+            castLaunchState = "idle";
+          } else if (
+            event.sessionState ===
+              api.cast.framework.SessionState.SESSION_STARTED ||
+            event.sessionState ===
+              api.cast.framework.SessionState.SESSION_RESUMED
+          ) {
+            castAvailable = true;
+          } else if (
+            event.sessionState ===
+            api.cast.framework.SessionState.SESSION_START_FAILED
+          ) {
+            castLaunchState = "error";
+          }
+        };
+        context.addEventListener(
+          api.cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+          onSessionStateChanged,
+        );
+        removeListener = () => {
+          context.removeEventListener(
+            api.cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+            onSessionStateChanged,
+          );
+        };
+      })
+      .catch(() => {
+        castAvailable = false;
+      });
+
+    return () => {
+      disposed = true;
+      removeListener?.();
+    };
+  });
+
+  $effect(() => {
+    if (!browser) return;
     const playback = data.playback;
     if (
       (playback.mode !== "transcode" && playback.mode !== "remux") ||
@@ -588,6 +841,21 @@
       {/each}
     </video>
 
+    {#if castAvailable}
+      <button
+        class:active={castLaunchState === "connected"}
+        class:error={castLaunchState === "error"}
+        class="cast-button"
+        type="button"
+        aria-label="Cast"
+        title="Cast"
+        onclick={castPlayback}
+        disabled={castLaunchState === "connecting"}
+      >
+        <Cast size={20} aria-hidden="true" />
+      </button>
+    {/if}
+
     {#if isPlayerOverlayVisible()}
       <div
         class:interactive={isPlayOverlayVisible()}
@@ -651,6 +919,36 @@
     max-height: min(72vh, calc(100dvh - 9rem));
     background: #000;
     display: block;
+  }
+
+  .cast-button {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 2;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 8px;
+    background: rgba(8, 12, 16, 0.68);
+    color: #f8fafc;
+  }
+
+  .cast-button:hover:not(:disabled),
+  .cast-button.active {
+    background: rgba(30, 90, 78, 0.84);
+    border-color: rgba(95, 217, 180, 0.55);
+  }
+
+  .cast-button.error {
+    background: rgba(127, 29, 29, 0.84);
+    border-color: rgba(252, 165, 165, 0.5);
+  }
+
+  .cast-button:disabled {
+    opacity: 0.72;
   }
 
   .placeholder-shell {
