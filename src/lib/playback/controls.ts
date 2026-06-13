@@ -299,7 +299,22 @@ export function playbackProgressSnapshot(input: {
 export function castPlaybackCommandForUiState(
   uiState: PlayerControlUiState,
 ): "play" | "pause" {
-  return uiState === "playing" ? "pause" : "play";
+  return primaryPlaybackButtonState({ uiState }).action;
+}
+
+export function primaryPlaybackButtonState(input: {
+  uiState: PlayerControlUiState;
+}) {
+  const action: "play" | "pause" =
+    input.uiState === "playing" ||
+    input.uiState === "buffering" ||
+    input.uiState === "seeking"
+      ? "pause"
+      : "play";
+  return {
+    action,
+    label: action === "pause" ? "Pause" : "Play",
+  };
 }
 
 export function castUiStateAfterCommand(input: {

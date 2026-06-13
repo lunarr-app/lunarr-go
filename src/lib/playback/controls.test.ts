@@ -24,6 +24,7 @@ import {
   nextControlsActivityTick,
   nextSubtitleMenuOptionIndex,
   playerKeyboardShortcuts,
+  primaryPlaybackButtonState,
   playbackProgressSnapshot,
   playbackSliderAriaValue,
   playbackSeekAction,
@@ -351,7 +352,7 @@ describe("custom player controls", () => {
   test("routes Cast play controls from the current UI state", () => {
     expect(castPlaybackCommandForUiState("playing")).toBe("pause");
     expect(castPlaybackCommandForUiState("paused")).toBe("play");
-    expect(castPlaybackCommandForUiState("buffering")).toBe("play");
+    expect(castPlaybackCommandForUiState("buffering")).toBe("pause");
     expect(
       castUiStateAfterCommand({
         command: "pause",
@@ -373,6 +374,29 @@ describe("custom player controls", () => {
         fallbackUiState: "buffering",
       }),
     ).toBe("buffering");
+  });
+
+  test("shows the primary playback button from playback intent", () => {
+    expect(primaryPlaybackButtonState({ uiState: "playing" })).toEqual({
+      action: "pause",
+      label: "Pause",
+    });
+    expect(primaryPlaybackButtonState({ uiState: "buffering" })).toEqual({
+      action: "pause",
+      label: "Pause",
+    });
+    expect(primaryPlaybackButtonState({ uiState: "seeking" })).toEqual({
+      action: "pause",
+      label: "Pause",
+    });
+    expect(primaryPlaybackButtonState({ uiState: "paused" })).toEqual({
+      action: "play",
+      label: "Play",
+    });
+    expect(primaryPlaybackButtonState({ uiState: "autoplayBlocked" })).toEqual({
+      action: "play",
+      label: "Play",
+    });
   });
 
   test("suppresses local autoplay while casting", () => {

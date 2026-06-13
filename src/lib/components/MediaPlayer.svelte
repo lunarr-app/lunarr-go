@@ -45,6 +45,7 @@
     playerSurfaceClickAction,
     playerSurfaceClickState,
     playerStatusOverlayState,
+    primaryPlaybackButtonState,
     releaseCastOwnedPlaybackSession,
     shouldAutoHideControls,
     shouldCancelPlaybackSessionForCleanup,
@@ -500,6 +501,10 @@
       active: airPlayActive,
       casting: isCasting(),
     });
+  }
+
+  function playbackButtonState() {
+    return primaryPlaybackButtonState({ uiState: playerUiState });
   }
 
   function showControls() {
@@ -2135,10 +2140,10 @@
               <button
                 class="control-button primary-play"
                 type="button"
-                aria-label={playerUiState === "playing" ? "Pause" : "Play"}
+                aria-label={playbackButtonState().label}
                 onclick={() => void toggleLocalPlayback()}
               >
-                {#if playerUiState === "playing"}
+                {#if playbackButtonState().action === "pause"}
                   <Pause size={24} fill="currentColor" aria-hidden="true" />
                 {:else}
                   <Play size={24} fill="currentColor" aria-hidden="true" />
