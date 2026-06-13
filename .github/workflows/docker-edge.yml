@@ -7,7 +7,7 @@ name: Docker Edge
 on:
   workflow_run:
     workflows:
-      - Docker
+      - Docker Test
     branches:
       - main
     types:
