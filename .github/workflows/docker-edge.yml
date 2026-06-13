@@ -5,16 +5,20 @@ name: Docker Edge
 #   Variables: DOCKERHUB_USERNAME (e.g. sayem314)
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - Docker
     branches:
       - main
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: docker-edge-${{ github.ref }}
+  group: docker-edge-${{ github.event.workflow_run.head_branch || github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -25,10 +29,13 @@ jobs:
   docker:
     name: Build and Push Edge Image
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
