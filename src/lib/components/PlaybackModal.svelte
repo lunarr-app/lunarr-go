@@ -211,7 +211,7 @@
   }
 
   .modal {
-    width: min(100%, 68rem);
+    width: min(100%, 80rem);
     max-height: calc(100dvh - 2rem);
     display: grid;
     grid-template-rows: minmax(0, 1fr);
@@ -254,7 +254,7 @@
 
   @media (max-width: 720px) {
     .overlay {
-      align-items: end;
+      align-items: center;
       padding: 0;
     }
 
