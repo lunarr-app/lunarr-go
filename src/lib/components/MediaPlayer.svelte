@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
+  import PlayerShell from "$lib/components/PlayerShell.svelte";
   import {
     Airplay,
     Captions,
@@ -1978,12 +1979,12 @@
     {/if}
   </p>
 {:else if data.playback.status === "preparing"}
-  <div class="video-shell placeholder-shell" aria-live="polite">
-    <div class="player-overlay">
-      <span class="overlay-spinner" aria-hidden="true"></span>
-      <p>Starting playback</p>
-    </div>
-  </div>
+  <PlayerShell
+    title={data.item.title}
+    busyLabel="Preparing playback"
+    {onClose}
+    backHref={onClose ? undefined : data.item.backHref}
+  />
 {:else}
   <section class="playback-message" aria-live="polite">
     <h2>Playback unavailable</h2>
@@ -2322,34 +2323,6 @@
 
   .custom-player.controls-hidden {
     cursor: none;
-  }
-
-  .placeholder-shell {
-    min-height: min(56.25vw, 32rem);
-    aspect-ratio: 16 / 9;
-  }
-
-  .player-overlay {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    align-content: center;
-    justify-items: center;
-    gap: 0.75rem;
-    padding: 1rem 1rem 4rem;
-    pointer-events: none;
-    background: rgba(0, 0, 0, 0.18);
-    color: #f8fafc;
-    text-align: center;
-  }
-
-  .player-overlay p {
-    margin: 0;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.56);
-    padding: 0.4rem 0.7rem;
-    font-size: 0.85rem;
-    font-weight: 750;
   }
 
   .overlay-spinner {

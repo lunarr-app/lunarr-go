@@ -3,6 +3,7 @@
   import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import MediaPlayer from "$lib/components/MediaPlayer.svelte";
+  import PlayerShell from "$lib/components/PlayerShell.svelte";
   import {
     appendClientPlaybackCapabilityParams,
     detectClientPlaybackCapabilities,
@@ -186,10 +187,12 @@
             <h2>Playback unavailable</h2>
             <p>{error}</p>
           </section>
-        {:else if loading}
-          <div class="player-loading" aria-live="polite" aria-label="Starting playback">
-            <span class="loading-spinner" aria-hidden="true"></span>
-          </div>
+        {:else}
+          <PlayerShell
+            title="Starting playback"
+            busyLabel="Starting playback"
+            onClose={closeModal}
+          />
         {/if}
       </div>
     </div>
@@ -247,31 +250,6 @@
 
   .message p {
     color: #b7c3cc;
-  }
-
-  .player-loading {
-    min-height: min(56.25vw, 32rem);
-    aspect-ratio: 16 / 9;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border-radius: 8px;
-    background: #000;
-  }
-
-  .loading-spinner {
-    width: 3rem;
-    height: 3rem;
-    border: 3px solid rgba(255, 255, 255, 0.28);
-    border-top-color: #fff;
-    border-radius: 999px;
-    animation: spin 0.85s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   @media (max-width: 720px) {
