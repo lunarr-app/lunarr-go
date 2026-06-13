@@ -10,13 +10,19 @@ RUN bun install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
+ARG LUNARR_APP_VERSION
+ENV LUNARR_APP_VERSION=${LUNARR_APP_VERSION}
+RUN test -n "$LUNARR_APP_VERSION" || (echo "LUNARR_APP_VERSION build arg is required" >&2; exit 1)
 RUN bun run build
 
 FROM node:${NODE_VERSION} AS runtime
+ARG LUNARR_APP_VERSION
+RUN test -n "$LUNARR_APP_VERSION" || (echo "LUNARR_APP_VERSION build arg is required" >&2; exit 1)
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
-    LUNARR_DATA_DIR=/data
+    LUNARR_DATA_DIR=/data \
+    LUNARR_APP_VERSION=${LUNARR_APP_VERSION}
 
 WORKDIR /app
 

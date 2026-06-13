@@ -126,5 +126,7 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            LUNARR_APP_VERSION=${{ steps.release.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

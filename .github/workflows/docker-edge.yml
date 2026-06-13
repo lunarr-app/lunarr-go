@@ -49,6 +49,13 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Resolve edge version
+        id: edge
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: echo "version=edge-${SOURCE_SHA::12}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push Docker edge image
         uses: docker/build-push-action@v7
         with:
@@ -57,5 +64,7 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE }}:edge
+          build-args: |
+            LUNARR_APP_VERSION=${{ steps.edge.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -5,6 +5,7 @@ BUILDER ?=
 
 BUILDER_ARG := $(if $(BUILDER),--builder $(BUILDER),)
 IMAGE_TAGS := -t $(IMAGE):latest -t $(IMAGE):$(VERSION)
+VERSION_ARG := --build-arg LUNARR_APP_VERSION=$(VERSION)
 
 .PHONY: help docker-build docker-push docker-build-push docker-run
 
@@ -22,14 +23,14 @@ help:
 	@echo "  BUILDER=$(BUILDER)"
 
 docker-build:
-	docker build $(IMAGE_TAGS) -t lunarr:local .
+	docker build $(VERSION_ARG) $(IMAGE_TAGS) -t lunarr:local .
 
 docker-push:
 	docker push $(IMAGE):latest
 	docker push $(IMAGE):$(VERSION)
 
 docker-build-push:
-	docker buildx build $(BUILDER_ARG) --platform $(PLATFORMS) $(IMAGE_TAGS) --push .
+	docker buildx build $(BUILDER_ARG) --platform $(PLATFORMS) $(VERSION_ARG) $(IMAGE_TAGS) --push .
 
 docker-run:
 	docker rm -f lunarr 2>/dev/null || true

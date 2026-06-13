@@ -92,7 +92,7 @@ Before starting, replace `AUTH_SECRET`, set `ORIGIN` to the URL users will open,
 Build and run a local image:
 
 ```sh
-docker build -t lunarr:local .
+docker build --build-arg LUNARR_APP_VERSION=local -t lunarr:local .
 docker run --rm \
   --name lunarr \
   -p 3000:3000 \

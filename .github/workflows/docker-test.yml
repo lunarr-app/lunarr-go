@@ -38,6 +38,8 @@ jobs:
           context: .
           load: true
           tags: lunarr-app:latest
+          build-args: |
+            LUNARR_APP_VERSION=ci-${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Run Docker container
         run: |
