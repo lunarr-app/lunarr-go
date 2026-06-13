@@ -172,6 +172,8 @@
   let airPlayActive = $state(false);
   let airPlayPreparedKey: string | null = null;
   let airPlayPreparedPlayback: RemotePlaybackResponse | null = null;
+  let remotePlaybackNotice = $state<string | null>(null);
+  let remotePlaybackNoticeTimeout: number | null = null;
   let castOwnedPlaybackSessionId = $state<string | null>(null);
   let castSession: any = null;
   let castMedia: any = null;
@@ -183,6 +185,40 @@
   let castFrameworkPromise: Promise<CastApi> | null = null;
   let airPlayPreparePromise: Promise<RemotePlaybackResponse | null> | null =
     null;
+
+  function clearRemotePlaybackNotice() {
+    remotePlaybackNotice = null;
+    if (remotePlaybackNoticeTimeout !== null) {
+      window.clearTimeout(remotePlaybackNoticeTimeout);
+      remotePlaybackNoticeTimeout = null;
+    }
+  }
+
+  function showRemotePlaybackNotice(message: string) {
+    remotePlaybackNotice = message;
+    if (remotePlaybackNoticeTimeout !== null) {
+      window.clearTimeout(remotePlaybackNoticeTimeout);
+    }
+    remotePlaybackNoticeTimeout = window.setTimeout(() => {
+      remotePlaybackNotice = null;
+      remotePlaybackNoticeTimeout = null;
+    }, 5000);
+    showControls();
+  }
+
+  async function remotePlaybackErrorMessage(
+    response: Response,
+    fallback: string,
+  ) {
+    try {
+      const body = (await response.json()) as { error?: unknown };
+      return typeof body.error === "string" && body.error.length > 0
+        ? body.error
+        : fallback;
+    } catch {
+      return fallback;
+    }
+  }
 
   function isCasting() {
     return castLaunchState === "connected";
@@ -226,7 +262,14 @@
         headers: { "content-type": "application/json" },
         body: JSON.stringify(remotePlaybackRequestBody()),
       });
-      if (!response.ok) throw new Error("Could not prepare AirPlay playback.");
+      if (!response.ok) {
+        throw new Error(
+          await remotePlaybackErrorMessage(
+            response,
+            "Could not prepare AirPlay playback.",
+          ),
+        );
+      }
 
       const prepared = (await response.json()) as RemotePlaybackResponse;
       airPlayPreparedKey = key;
@@ -245,6 +288,7 @@
     const player = video;
     if (!player) return;
 
+    clearRemotePlaybackNotice();
     const wasPaused = player.paused;
     const targetSeconds = currentPlaybackSeconds;
     applyAirPlayTrackSources(prepared);
@@ -324,9 +368,14 @@
         picker?.call(player);
         showControls();
       })
-      .catch(() => {
+      .catch((error) => {
         airPlayPreparedKey = null;
         airPlayPreparedPlayback = null;
+        showRemotePlaybackNotice(
+          error instanceof Error && error.message
+            ? error.message
+            : "Could not prepare AirPlay playback.",
+        );
       });
   }
 
@@ -1113,7 +1162,14 @@
       headers: { "content-type": "application/json" },
       body: JSON.stringify(remotePlaybackRequestBody()),
     });
-    if (!response.ok) throw new Error("Could not prepare Cast playback.");
+    if (!response.ok) {
+      throw new Error(
+        await remotePlaybackErrorMessage(
+          response,
+          "Could not prepare Cast playback.",
+        ),
+      );
+    }
     return (await response.json()) as RemotePlaybackResponse;
   }
 
@@ -1167,14 +1223,20 @@
       attachCastMediaUpdateListener(await session.loadMedia(loadRequest));
       markCastOwnedSession(castPlayback.playbackSessionId);
       preparedPlaybackSessionId = null;
+      clearRemotePlaybackNotice();
       castLaunchState = "connected";
       playerUiState = "playing";
       video?.pause();
-    } catch {
+    } catch (error) {
       if (preparedPlaybackSessionId) {
         cancelPlaybackSessionById(preparedPlaybackSessionId);
       }
       castLaunchState = "error";
+      showRemotePlaybackNotice(
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not prepare Cast playback.",
+      );
     }
   }
 
@@ -1747,6 +1809,7 @@
       window.clearTimeout(surfaceFeedbackTimeout);
       surfaceFeedbackTimeout = null;
     }
+    clearRemotePlaybackNotice();
     flushProgress(data);
     detachCastMediaUpdateListener();
     cancelPlaybackSession(data.playback);
@@ -1818,6 +1881,13 @@
         {:else}
           <Play size={38} fill="currentColor" aria-hidden="true" />
         {/if}
+      </div>
+    {/if}
+
+    {#if remotePlaybackNotice}
+      <div class="remote-playback-notice" aria-live="polite">
+        <span class="overlay-error" aria-hidden="true">!</span>
+        <p>{remotePlaybackNotice}</p>
       </div>
     {/if}
 
@@ -2173,6 +2243,40 @@
     padding: 0.45rem 0.75rem;
     font-size: 0.85rem;
     font-weight: 750;
+  }
+
+  .remote-playback-notice {
+    position: absolute;
+    left: 50%;
+    top: 22%;
+    z-index: 4;
+    display: flex;
+    max-width: min(30rem, calc(100% - 2rem));
+    transform: translateX(-50%);
+    align-items: center;
+    gap: 0.55rem;
+    border-radius: 999px;
+    background: rgba(7, 10, 14, 0.78);
+    padding: 0.55rem 0.75rem;
+    color: #f8fafc;
+    pointer-events: none;
+    text-align: center;
+    box-shadow: 0 0.5rem 1.8rem rgba(0, 0, 0, 0.28);
+  }
+
+  .remote-playback-notice p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.82rem;
+    font-weight: 750;
+    line-height: 1.25;
+  }
+
+  .remote-playback-notice .overlay-error {
+    width: 1.35rem;
+    height: 1.35rem;
+    flex: 0 0 auto;
+    font-size: 0.9rem;
   }
 
   .player-controls {

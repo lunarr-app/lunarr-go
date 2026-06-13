@@ -776,6 +776,51 @@ describe("authenticated API route boundaries", () => {
         playbackSessionId: "transcode-1",
       });
 
+      await db
+        .insertInto("playback_session")
+        .values({
+          id: "transcode-missing-playlist",
+          media_file_id: "file-1",
+          user_id: "user-1",
+          status: "running",
+          mode: "transcode",
+          error_message: null,
+          started_at: now,
+          finished_at: null,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+      await registerTranscodeHlsArtifact({
+        sessionId: "transcode-missing-playlist",
+        mediaFileId: "file-1",
+        path: path.join(
+          tempDir,
+          "playback-sessions",
+          "transcode-missing-playlist",
+          "master.m3u8",
+        ),
+        mimeType: "application/vnd.apple.mpegurl",
+      });
+
+      const missingPlaylistResponse = await castPlaybackPost({
+        request: new Request("http://localhost/api/playback/cast", {
+          method: "POST",
+          body: JSON.stringify({
+            mediaItemId: "movie-1",
+            mediaFileId: "file-1",
+            playbackSessionId: "transcode-missing-playlist",
+            mode: "transcode",
+          }),
+          headers: { "content-type": "application/json" },
+        }),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never);
+      expect(missingPlaylistResponse.status).toBe(409);
+      expect(await missingPlaylistResponse.json()).toEqual({
+        error: "Cast playlist is not available yet.",
+      });
+
       const missingSessionResponse = await castPlaybackPost({
         request: new Request("http://localhost/api/playback/cast", {
           method: "POST",

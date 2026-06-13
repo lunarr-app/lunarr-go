@@ -7,7 +7,11 @@ import {
   createRemotePlaybackToken,
   type RemotePlaybackRoute,
 } from "$lib/server/playback/remote-auth";
-import { getAuthorizedHlsArtifact } from "$lib/server/transcoding/sessions";
+import { hlsPlaylistFileExists } from "$lib/server/transcoding/hls";
+import {
+  getAuthorizedHlsArtifact,
+  isEndedPlaybackArtifactFresh,
+} from "$lib/server/transcoding/sessions";
 
 export type RemotePlaybackRequest = {
   mediaItemId?: unknown;
@@ -55,6 +59,46 @@ function stringArrayValue(value: unknown) {
 
 function hlsContentType() {
   return "application/vnd.apple.mpegurl";
+}
+
+async function assertRemoteHlsReady(input: {
+  label: "AirPlay" | "Cast";
+  artifact: Awaited<ReturnType<typeof getAuthorizedHlsArtifact>>;
+}) {
+  const { artifact } = input;
+  if (!artifact) {
+    throw new RemotePlaybackRequestError("Playback session not found.", 404);
+  }
+  if (artifact.status === "failed" || artifact.status === "cancelled") {
+    throw new RemotePlaybackRequestError(
+      artifact.errorMessage ?? "Remote playback stream is not playable.",
+      409,
+    );
+  }
+  if (artifact.status !== "running" && artifact.status !== "completed") {
+    throw new RemotePlaybackRequestError(
+      `${input.label} stream is not ready yet.`,
+      409,
+    );
+  }
+  if (artifact.status === "completed" && !isEndedPlaybackArtifactFresh(artifact)) {
+    throw new RemotePlaybackRequestError(
+      "Remote playback stream is no longer active.",
+      410,
+    );
+  }
+  if (!artifact.playlistPath) {
+    throw new RemotePlaybackRequestError(
+      `${input.label} stream is not ready yet.`,
+      409,
+    );
+  }
+  if (!(await hlsPlaylistFileExists(artifact.playlistPath))) {
+    throw new RemotePlaybackRequestError(
+      `${input.label} playlist is not available yet.`,
+      409,
+    );
+  }
 }
 
 function absoluteRemoteUrl(pathname: string, token: string, origin?: string) {
@@ -134,6 +178,7 @@ export async function prepareRemotePlayback(input: {
     if (!artifact || artifact.mediaFileId !== mediaFileId) {
       throw new RemotePlaybackRequestError("Playback session not found.", 404);
     }
+    await assertRemoteHlsReady({ label: input.label, artifact });
     route = "hls";
     playbackSessionId = requestedSessionId;
     streamPath = `/media/playback-sessions/${encodeURIComponent(requestedSessionId)}/master.m3u8`;
