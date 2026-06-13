@@ -114,6 +114,7 @@
   };
 
   type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
+  const POINTER_CONTROLS_REFRESH_INTERVAL_MS = 250;
 
   let {
     data,
@@ -182,6 +183,7 @@
   let castMediaUpdateListener: ((isAlive: boolean) => void) | null = null;
   let hasPlaybackActivity = false;
   let playbackActivityKey: string | null = null;
+  let lastPointerControlsRefreshAt = -Infinity;
   const cancelledPlaybackSessions = new Set<string>();
   const castOwnedPlaybackSessions = new Set<string>();
   let castFrameworkPromise: Promise<CastApi> | null = null;
@@ -444,6 +446,15 @@
         controlsHovered: playerControlsHovered,
       })
     ) {
+      const now = window.performance.now();
+      if (
+        playerControlsVisible &&
+        now - lastPointerControlsRefreshAt <
+          POINTER_CONTROLS_REFRESH_INTERVAL_MS
+      ) {
+        return;
+      }
+      lastPointerControlsRefreshAt = now;
       showControls();
     }
   }
