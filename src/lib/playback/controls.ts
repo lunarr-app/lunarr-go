@@ -279,12 +279,13 @@ export function castUiStateAfterCommand(input: {
 
 export function shouldAttemptLocalAutoplay(input: {
   autoplayAttempted: boolean;
+  retryAfterReady?: boolean;
   disposed: boolean;
   paused: boolean;
   casting: boolean;
 }) {
   return (
-    !input.autoplayAttempted &&
+    (!input.autoplayAttempted || input.retryAfterReady === true) &&
     !input.disposed &&
     input.paused &&
     !input.casting

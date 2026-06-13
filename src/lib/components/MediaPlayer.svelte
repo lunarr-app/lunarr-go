@@ -1238,17 +1238,27 @@
       };
 
       let autoplayAttempted = false;
-      const attemptAutoplay = async () => {
+      let autoplayRetriedAfterReady = false;
+      const attemptAutoplay = async (
+        options: { retryAfterReady?: boolean } = {},
+      ) => {
+        const retryAfterReady = options.retryAfterReady === true;
+        if (retryAfterReady && autoplayRetriedAfterReady) return;
         if (
           !shouldAttemptLocalAutoplay({
             autoplayAttempted,
+            retryAfterReady,
             disposed,
             paused: player.paused,
             casting: isCasting(),
           })
         )
           return;
-        autoplayAttempted = true;
+        if (retryAfterReady) {
+          autoplayRetriedAfterReady = true;
+        } else {
+          autoplayAttempted = true;
+        }
         playerUiState = "starting";
         try {
           await player.play();
@@ -1367,6 +1377,14 @@
       };
       const onCanPlay = () => {
         clearTransientOverlayIfPlaying();
+        if (
+          !hasStartedPlayback &&
+          player.paused &&
+          playerUiState !== "autoplayBlocked"
+        ) {
+          void attemptAutoplay({ retryAfterReady: true });
+          return;
+        }
         if (
           !hasStartedPlayback &&
           !autoplayAttempted &&

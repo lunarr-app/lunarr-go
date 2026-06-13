@@ -354,6 +354,15 @@ describe("custom player controls", () => {
     expect(
       shouldAttemptLocalAutoplay({
         autoplayAttempted: true,
+        retryAfterReady: true,
+        disposed: false,
+        paused: true,
+        casting: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldAttemptLocalAutoplay({
+        autoplayAttempted: true,
         disposed: false,
         paused: true,
         casting: false,
