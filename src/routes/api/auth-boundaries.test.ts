@@ -15,6 +15,7 @@ import {
 } from "$lib/server/transcoding/sessions";
 import { verifyCastPlaybackToken } from "$lib/server/playback/cast";
 import { GET as jobsGet } from "./jobs/+server";
+import { POST as airPlayPlaybackPost } from "./playback/airplay/+server";
 import { POST as castPlaybackPost } from "./playback/cast/+server";
 import { POST as playbackPost } from "./playback/[id]/+server";
 import { POST as cancelPlaybackSessionPost } from "./playback-sessions/[sessionId]/cancel/+server";
@@ -42,6 +43,19 @@ describe("authenticated API route boundaries", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
+
+    const airPlayResponse = await airPlayPlaybackPost({
+      request: new Request("http://localhost/api/playback/airplay", {
+        method: "POST",
+        body: JSON.stringify({}),
+        headers: { "content-type": "application/json" },
+      }),
+      url: new URL("http://localhost/api/playback/airplay"),
+      locals: { user: null },
+    } as never);
+
+    expect(airPlayResponse.status).toBe(401);
+    expect(await airPlayResponse.json()).toEqual({ error: "Unauthorized" });
   });
 
   test("saves playback progress for authenticated playback API calls", async () => {
@@ -469,7 +483,7 @@ describe("authenticated API route boundaries", () => {
     }
   });
 
-  test("prepares Cast receiver URLs for direct, HLS, and subtitles", async () => {
+  test("prepares remote receiver URLs for direct, HLS, and subtitles", async () => {
     const tempDir = await mkdtemp(
       path.join(tmpdir(), "lunarr-api-cast-playback-"),
     );
@@ -614,6 +628,71 @@ describe("authenticated API route boundaries", () => {
           route: "subtitle",
           subtitleTrackId: "subtitle-1",
         }),
+      ).toMatchObject({
+        route: "subtitle",
+        userId: "user-1",
+        mediaFileId: "file-1",
+        subtitleTrackId: "subtitle-1",
+      });
+
+      const airPlayResponse = await airPlayPlaybackPost({
+        request: new Request("http://iphone.local/api/playback/airplay", {
+          method: "POST",
+          body: JSON.stringify({
+            mediaItemId: "movie-1",
+            mediaFileId: "file-1",
+            mode: "direct",
+            subtitleTrackIds: ["subtitle-1"],
+          }),
+          headers: { "content-type": "application/json" },
+        }),
+        url: new URL("http://iphone.local/api/playback/airplay"),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never);
+
+      expect(airPlayResponse.status).toBe(200);
+      const airPlayBody = await airPlayResponse.json();
+      expect(airPlayBody).toMatchObject({
+        contentType: "video/mp4",
+        title: "Movie",
+        durationSeconds: 120,
+        playbackSessionId: null,
+        tracks: [
+          {
+            id: "subtitle-1",
+            label: "English",
+            language: "en",
+            default: true,
+          },
+        ],
+      });
+      const airPlayStreamUrl = new URL(airPlayBody.streamUrl);
+      expect(airPlayStreamUrl.origin).toBe("http://iphone.local");
+      expect(airPlayStreamUrl.pathname).toBe("/media/files/file-1/stream");
+      expect(
+        verifyCastPlaybackToken(
+          airPlayStreamUrl.searchParams.get("castToken"),
+          {
+            route: "direct",
+            mediaFileId: "file-1",
+          },
+        ),
+      ).toMatchObject({
+        route: "direct",
+        userId: "user-1",
+        mediaFileId: "file-1",
+      });
+      const airPlaySubtitleUrl = new URL(airPlayBody.tracks[0].src);
+      expect(airPlaySubtitleUrl.origin).toBe("http://iphone.local");
+      expect(airPlaySubtitleUrl.pathname).toBe("/media/subtitles/subtitle-1");
+      expect(
+        verifyCastPlaybackToken(
+          airPlaySubtitleUrl.searchParams.get("castToken"),
+          {
+            route: "subtitle",
+            subtitleTrackId: "subtitle-1",
+          },
+        ),
       ).toMatchObject({
         route: "subtitle",
         userId: "user-1",

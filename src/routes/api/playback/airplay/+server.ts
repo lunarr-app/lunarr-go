@@ -6,11 +6,10 @@ import {
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request, url, locals }) => {
   if (!locals.user) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = locals.user.id;
 
   let body: RemotePlaybackRequest;
   try {
@@ -23,14 +22,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     return json(
       await prepareRemotePlayback({
         request: body,
-        userId,
-        label: "Cast",
+        userId: locals.user.id,
+        label: "AirPlay",
+        origin: url.origin,
       }),
     );
   } catch (error) {
     if (error instanceof RemotePlaybackRequestError) {
       return json({ error: error.message }, { status: error.status });
     }
-    return json({ error: "Could not prepare Cast playback." }, { status: 500 });
+    return json(
+      { error: "Could not prepare AirPlay playback." },
+      { status: 500 },
+    );
   }
 };
