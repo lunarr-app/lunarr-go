@@ -1894,6 +1894,7 @@
                 max="1"
                 step="0.05"
                 value={muted ? 0 : volume}
+                style={`--volume-fill: ${(muted ? 0 : volume) * 100}%`}
                 aria-label="Volume"
                 aria-valuemin={volumeAriaValue().valueMin}
                 aria-valuemax={volumeAriaValue().valueMax}
@@ -2194,8 +2195,11 @@
     position: relative;
     width: 3.25rem;
     height: 3.25rem;
+    align-content: center;
+    gap: 0.02rem;
     border-radius: 999px;
     background: rgba(8, 12, 16, 0.38);
+    padding-top: 0.25rem;
   }
 
   .skip-button:hover:not(:disabled) {
@@ -2204,8 +2208,7 @@
   }
 
   .skip-button span {
-    position: absolute;
-    inset: auto 0 0.55rem;
+    display: block;
     font-size: 0.62rem;
     font-weight: 850;
     line-height: 1;
@@ -2239,7 +2242,11 @@
   .volume-slider::-webkit-slider-runnable-track {
     height: 0.25rem;
     border-radius: 999px;
-    background: rgba(248, 250, 252, 0.34);
+    background: linear-gradient(
+      90deg,
+      var(--player-accent-strong) 0 var(--volume-fill, 100%),
+      rgba(248, 250, 252, 0.34) var(--volume-fill, 100%) 100%
+    );
   }
 
   .volume-slider::-webkit-slider-thumb {
@@ -2261,7 +2268,7 @@
   .volume-slider::-moz-range-progress {
     height: 0.25rem;
     border-radius: 999px;
-    background: rgba(248, 250, 252, 0.34);
+    background: var(--player-accent-strong);
   }
 
   .volume-slider::-moz-range-thumb {

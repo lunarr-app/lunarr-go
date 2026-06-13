@@ -279,13 +279,15 @@
     position: relative;
     width: 3.25rem;
     height: 3.25rem;
+    align-content: center;
+    gap: 0.02rem;
     border-radius: 999px;
     background: rgba(8, 12, 16, 0.38);
+    padding-top: 0.25rem;
   }
 
   .skip-button span {
-    position: absolute;
-    inset: auto 0 0.55rem;
+    display: block;
     font-size: 0.62rem;
     font-weight: 850;
     line-height: 1;
