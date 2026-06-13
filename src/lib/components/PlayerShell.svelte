@@ -1,9 +1,9 @@
 <script lang="ts">
   import {
+    FastForward,
     Maximize,
     Play,
-    RotateCcw,
-    RotateCw,
+    Rewind,
     Volume2,
     X,
   } from "@lucide/svelte";
@@ -60,20 +60,6 @@
       <span class="control-spacer" aria-hidden="true"></span>
     </div>
 
-    <div class="center-controls" aria-hidden="true">
-      <button class="control-button skip-button" type="button" disabled>
-        <RotateCcw size={24} aria-hidden="true" />
-        <span>10</span>
-      </button>
-      <button class="control-button primary-play" type="button" disabled>
-        <Play size={34} fill="currentColor" aria-hidden="true" />
-      </button>
-      <button class="control-button skip-button" type="button" disabled>
-        <RotateCw size={24} aria-hidden="true" />
-        <span>30</span>
-      </button>
-    </div>
-
     <div class="bottom-controls" aria-hidden="true">
       <input
         class="seek-slider"
@@ -85,7 +71,20 @@
         disabled
       />
       <div class="control-row">
-        <span class="time-readout">0:00 / --:--</span>
+        <div class="primary-controls">
+          <button class="control-button primary-play" type="button" disabled>
+            <Play size={24} fill="currentColor" aria-hidden="true" />
+          </button>
+          <button class="control-button skip-button" type="button" disabled>
+            <Rewind size={20} aria-hidden="true" />
+            <span>10</span>
+          </button>
+          <button class="control-button skip-button" type="button" disabled>
+            <FastForward size={20} aria-hidden="true" />
+            <span>30</span>
+          </button>
+          <span class="time-readout">0:00 / --:--</span>
+        </div>
         <div class="right-controls">
           <button class="control-button" type="button" disabled>
             <Volume2 size={20} aria-hidden="true" />
@@ -172,6 +171,7 @@
   }
 
   .top-controls {
+    grid-row: 1;
     min-height: 4.25rem;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -204,15 +204,9 @@
     font-size: clamp(0.98rem, 2.2vw, 1.2rem);
   }
 
-  .center-controls {
-    align-self: center;
-    justify-self: center;
-    display: flex;
-    align-items: center;
-    gap: clamp(0.8rem, 3vw, 1.5rem);
-  }
-
   .bottom-controls {
+    grid-row: 3;
+    align-self: end;
     display: grid;
     gap: 0.5rem;
     padding: 0 0.9rem 0.8rem;
@@ -224,6 +218,13 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
+  }
+
+  .primary-controls {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 
   .right-controls {
@@ -268,17 +269,16 @@
   }
 
   .primary-play {
-    width: 5rem;
-    height: 5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: 999px;
-    background: rgba(8, 12, 16, 0.76);
-    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.34);
+    background: rgba(8, 12, 16, 0.58);
   }
 
   .skip-button {
     position: relative;
-    width: 3.25rem;
-    height: 3.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
     align-content: center;
     gap: 0.02rem;
     border-radius: 999px;
@@ -351,22 +351,35 @@
       height: 2.25rem;
     }
 
-    .center-controls {
-      gap: 0.75rem;
-    }
-
     .primary-play {
-      width: 4.2rem;
-      height: 4.2rem;
+      width: 2.75rem;
+      height: 2.75rem;
     }
 
     .skip-button {
-      width: 2.85rem;
-      height: 2.85rem;
+      width: 2.75rem;
+      height: 2.75rem;
     }
 
     .bottom-controls {
       padding: 0 0.65rem 0.6rem;
+    }
+
+    .control-row {
+      min-height: auto;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .primary-controls {
+      flex: 1 1 auto;
+      gap: 0.25rem;
+    }
+
+    .right-controls {
+      margin-left: auto;
+      gap: 0.25rem;
     }
 
     .volume-slider {

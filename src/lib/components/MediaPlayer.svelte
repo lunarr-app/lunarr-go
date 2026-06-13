@@ -6,12 +6,12 @@
     Airplay,
     Captions,
     Cast,
+    FastForward,
     Maximize,
     Minimize,
     Pause,
     Play,
-    RotateCcw,
-    RotateCw,
+    Rewind,
     Volume2,
     VolumeX,
     X,
@@ -1832,39 +1832,6 @@
           {/if}
         </div>
 
-        <div class="center-controls">
-          <button
-            class="control-button skip-button"
-            type="button"
-            aria-label="Skip backward 10 seconds"
-            onclick={() => skipPlayback(-10)}
-          >
-            <RotateCcw size={24} aria-hidden="true" />
-            <span>10</span>
-          </button>
-          <button
-            class="control-button primary-play"
-            type="button"
-            aria-label={playerUiState === "playing" ? "Pause" : "Play"}
-            onclick={() => void toggleLocalPlayback()}
-          >
-            {#if playerUiState === "playing"}
-              <Pause size={34} fill="currentColor" aria-hidden="true" />
-            {:else}
-              <Play size={34} fill="currentColor" aria-hidden="true" />
-            {/if}
-          </button>
-          <button
-            class="control-button skip-button"
-            type="button"
-            aria-label="Skip forward 30 seconds"
-            onclick={() => skipPlayback(30)}
-          >
-            <RotateCw size={24} aria-hidden="true" />
-            <span>30</span>
-          </button>
-        </div>
-
         <div class="bottom-controls">
           <input
             class="seek-slider"
@@ -1886,12 +1853,44 @@
               seekToPlaybackSeconds(Number(event.currentTarget.value))}
           />
           <div class="control-row">
-            <span class="time-readout">
-              {playbackTimeRangeText({
-                seconds: displayedPlaybackSeconds(),
-                durationSeconds,
-              })}
-            </span>
+            <div class="primary-controls">
+              <button
+                class="control-button primary-play"
+                type="button"
+                aria-label={playerUiState === "playing" ? "Pause" : "Play"}
+                onclick={() => void toggleLocalPlayback()}
+              >
+                {#if playerUiState === "playing"}
+                  <Pause size={24} fill="currentColor" aria-hidden="true" />
+                {:else}
+                  <Play size={24} fill="currentColor" aria-hidden="true" />
+                {/if}
+              </button>
+              <button
+                class="control-button skip-button"
+                type="button"
+                aria-label="Skip backward 10 seconds"
+                onclick={() => skipPlayback(-10)}
+              >
+                <Rewind size={20} aria-hidden="true" />
+                <span>10</span>
+              </button>
+              <button
+                class="control-button skip-button"
+                type="button"
+                aria-label="Skip forward 30 seconds"
+                onclick={() => skipPlayback(30)}
+              >
+                <FastForward size={20} aria-hidden="true" />
+                <span>30</span>
+              </button>
+              <span class="time-readout">
+                {playbackTimeRangeText({
+                  seconds: displayedPlaybackSeconds(),
+                  durationSeconds,
+                })}
+              </span>
+            </div>
             <div class="right-controls">
               <button
                 class="control-button"
@@ -2088,12 +2087,12 @@
   }
 
   .top-controls,
-  .center-controls,
   .bottom-controls {
     pointer-events: auto;
   }
 
   .top-controls {
+    grid-row: 1;
     min-height: 4.25rem;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -2125,15 +2124,9 @@
     font-size: clamp(0.98rem, 2.2vw, 1.2rem);
   }
 
-  .center-controls {
-    align-self: center;
-    justify-self: center;
-    display: flex;
-    align-items: center;
-    gap: clamp(0.8rem, 3vw, 1.5rem);
-  }
-
   .bottom-controls {
+    grid-row: 3;
+    align-self: end;
     display: grid;
     gap: 0.5rem;
     padding: 0 0.9rem 0.8rem;
@@ -2145,6 +2138,13 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
+  }
+
+  .primary-controls {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 
   .right-controls {
@@ -2179,11 +2179,6 @@
     color: var(--player-accent-active-text);
   }
 
-  .primary-play:hover:not(:disabled) {
-    background: var(--player-accent-hover);
-    color: var(--player-accent-hover-text);
-  }
-
   .control-button:focus-visible,
   .seek-slider:focus-visible,
   .volume-slider:focus-visible,
@@ -2202,27 +2197,21 @@
   }
 
   .primary-play {
-    width: 5rem;
-    height: 5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: 999px;
-    background: rgba(8, 12, 16, 0.76);
-    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.34);
+    background: rgba(8, 12, 16, 0.58);
   }
 
   .skip-button {
     position: relative;
-    width: 3.25rem;
-    height: 3.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
     align-content: center;
     gap: 0.02rem;
     border-radius: 999px;
     background: rgba(8, 12, 16, 0.38);
     padding-top: 0.25rem;
-  }
-
-  .skip-button:hover:not(:disabled) {
-    background: var(--player-accent-hover);
-    color: var(--player-accent-hover-text);
   }
 
   .skip-button span {
@@ -2430,16 +2419,6 @@
       height: 2.75rem;
     }
 
-    .primary-play {
-      width: 4.5rem;
-      height: 4.5rem;
-    }
-
-    .skip-button {
-      width: 3rem;
-      height: 3rem;
-    }
-
     .bottom-controls {
       gap: 0.35rem;
       padding: 0 0.65rem 0.65rem;
@@ -2450,6 +2429,11 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 0.45rem;
+    }
+
+    .primary-controls {
+      flex: 1 1 auto;
+      gap: 0.25rem;
     }
 
     .right-controls {
@@ -2472,18 +2456,14 @@
       display: none;
     }
 
-    .center-controls {
-      gap: 0.65rem;
-    }
-
     .primary-play {
-      width: 4rem;
-      height: 4rem;
+      width: 2.6rem;
+      height: 2.6rem;
     }
 
     .skip-button {
-      width: 2.85rem;
-      height: 2.85rem;
+      width: 2.6rem;
+      height: 2.6rem;
     }
   }
 </style>

@@ -96,6 +96,7 @@ function assertMediaPlayerSourceContract(source) {
   for (const requiredSnippet of [
     'class="video-tap-target"',
     'class="player-controls"',
+    'class="primary-controls"',
     'class="control-button primary-play"',
     'role="region"',
     'aria-roledescription="video player"',
@@ -168,19 +169,19 @@ try {
           </div>
           <button class="control-button" type="button" aria-label="Cast">Cast</button>
         </div>
-        <div class="center-controls">
-          <button class="control-button skip-button" type="button" aria-label="Skip backward 10 seconds">
-            <span>10</span>
-          </button>
-          <button class="control-button primary-play" type="button" aria-label="Play">Play</button>
-          <button class="control-button skip-button" type="button" aria-label="Skip forward 30 seconds">
-            <span>30</span>
-          </button>
-        </div>
         <div class="bottom-controls">
           <input class="seek-slider" type="range" aria-label="Playback position" />
           <div class="control-row">
-            <span class="time-readout">1:05 / 1:00:00</span>
+            <div class="primary-controls">
+              <button class="control-button primary-play" type="button" aria-label="Play">Play</button>
+              <button class="control-button skip-button" type="button" aria-label="Skip backward 10 seconds">
+                <span>10</span>
+              </button>
+              <button class="control-button skip-button" type="button" aria-label="Skip forward 30 seconds">
+                <span>30</span>
+              </button>
+              <span class="time-readout">1:05 / 1:00:00</span>
+            </div>
             <div class="right-controls">
               <button class="control-button" type="button" aria-label="Mute">Mute</button>
               <input class="volume-slider" type="range" aria-label="Volume" />
@@ -208,6 +209,9 @@ try {
     const video = document.querySelector("video");
     const tapTarget = document.querySelector(".video-tap-target");
     const playButton = document.querySelector(".primary-play");
+    const primaryControls = document.querySelector(".primary-controls");
+    const bottomControls = document.querySelector(".bottom-controls");
+    const controlRow = document.querySelector(".control-row");
     const seekSlider = document.querySelector(".seek-slider");
     const volumeSlider = document.querySelector(".volume-slider");
     const playerTitle = document.querySelector(".player-title");
@@ -222,6 +226,9 @@ try {
       !video ||
       !tapTarget ||
       !playButton ||
+      !primaryControls ||
+      !bottomControls ||
+      !controlRow ||
       !seekSlider ||
       !volumeSlider ||
       !playerTitle ||
@@ -345,6 +352,10 @@ try {
       };
     }
 
+    const playerRect = player.getBoundingClientRect();
+    const bottomControlsRect = bottomControls.getBoundingClientRect();
+    const controlRowRect = controlRow.getBoundingClientRect();
+    const seekSliderRect = seekSlider.getBoundingClientRect();
     const desktopLayout = {
       volumeDisplay: getComputedStyle(volumeSlider).display,
       titleDisplay: getComputedStyle(playerTitle).display,
@@ -353,6 +364,11 @@ try {
       subtitleCursor: getComputedStyle(subtitleOffButton).cursor,
       playWidth: playButton.getBoundingClientRect().width,
       skipWidth: skipButton.getBoundingClientRect().width,
+      playInBottomCluster: primaryControls.contains(playButton),
+      oldCenterControlsPresent: document.querySelector(".center-controls") !== null,
+      bottomControlsOffset:
+        playerRect.bottom - bottomControlsRect.bottom,
+      seekAboveControls: seekSliderRect.bottom <= controlRowRect.top,
     };
     if (
       desktopLayout.volumeDisplay === "none" ||
@@ -360,12 +376,16 @@ try {
       desktopLayout.playCursor !== "pointer" ||
       desktopLayout.seekCursor !== "pointer" ||
       desktopLayout.subtitleCursor !== "pointer" ||
-      desktopLayout.playWidth < 78 ||
-      desktopLayout.skipWidth < 50
+      desktopLayout.playWidth < 42 ||
+      desktopLayout.skipWidth < 42 ||
+      !desktopLayout.playInBottomCluster ||
+      desktopLayout.oldCenterControlsPresent ||
+      desktopLayout.bottomControlsOffset > 4 ||
+      !desktopLayout.seekAboveControls
     ) {
       return {
         ok: false,
-        message: `Expected desktop player controls to keep title, volume, pointer affordance, and large controls visible, got ${JSON.stringify(desktopLayout)}.`,
+        message: `Expected desktop player controls to use the bottom primary cluster with title, volume, and pointer affordance visible, got ${JSON.stringify(desktopLayout)}.`,
       };
     }
 
@@ -819,6 +839,7 @@ try {
     const volumeSlider = document.querySelector(".volume-slider");
     const playerTitle = document.querySelector(".player-title");
     const playButton = document.querySelector(".primary-play");
+    const primaryControls = document.querySelector(".primary-controls");
     const skipButton = document.querySelector(".skip-button");
     const seekSlider = document.querySelector(".seek-slider");
     if (
@@ -826,6 +847,7 @@ try {
       !volumeSlider ||
       !playerTitle ||
       !playButton ||
+      !primaryControls ||
       !skipButton ||
       !seekSlider
     ) {
@@ -846,15 +868,17 @@ try {
       skipHeight: skipButton.getBoundingClientRect().height,
       seekWidth: seekRect.width,
       playerWidth: playerRect.width,
+      playInBottomCluster: primaryControls.contains(playButton),
     };
     if (
       mobileLayout.volumeDisplay !== "none" ||
       mobileLayout.titleDisplay !== "none" ||
-      mobileLayout.playWidth < 64 ||
-      mobileLayout.playHeight < 64 ||
-      mobileLayout.skipWidth < 44 ||
-      mobileLayout.skipHeight < 44 ||
-      mobileLayout.seekWidth < mobileLayout.playerWidth * 0.88
+      mobileLayout.playWidth < 41 ||
+      mobileLayout.playHeight < 41 ||
+      mobileLayout.skipWidth < 41 ||
+      mobileLayout.skipHeight < 41 ||
+      mobileLayout.seekWidth < mobileLayout.playerWidth * 0.88 ||
+      !mobileLayout.playInBottomCluster
     ) {
       return {
         ok: false,
