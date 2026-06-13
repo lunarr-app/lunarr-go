@@ -302,11 +302,12 @@ try {
     const surfaceFeedbackStyle = getComputedStyle(surfaceFeedback);
     if (
       surfaceFeedbackStyle.pointerEvents !== "none" ||
-      surfaceFeedbackStyle.animationName !== "surface-feedback"
+      surfaceFeedbackStyle.animationName !== "surface-feedback" ||
+      Number(surfaceFeedbackStyle.zIndex) <= 3
     ) {
       return {
         ok: false,
-        message: `Expected surface feedback to be animated and non-interactive, got ${JSON.stringify({ pointerEvents: surfaceFeedbackStyle.pointerEvents, animationName: surfaceFeedbackStyle.animationName })}.`,
+        message: `Expected surface feedback to be animated, above controls, and non-interactive, got ${JSON.stringify({ pointerEvents: surfaceFeedbackStyle.pointerEvents, animationName: surfaceFeedbackStyle.animationName, zIndex: surfaceFeedbackStyle.zIndex })}.`,
       };
     }
     player.blur();

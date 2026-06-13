@@ -111,7 +111,7 @@
     webkitCurrentPlaybackTargetIsWireless?: boolean;
   };
 
-  type SurfaceFeedback = "seek-backward" | "toggle-playback" | "seek-forward";
+  type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
 
   let {
     data,
@@ -448,12 +448,14 @@
       width: rect.width,
     });
     showControls();
-    showSurfaceFeedback(action);
     if (action === "seek-backward") {
+      showSurfaceFeedback("seek-backward");
       skipPlayback(-10);
     } else if (action === "seek-forward") {
+      showSurfaceFeedback("seek-forward");
       skipPlayback(30);
     } else {
+      showSurfaceFeedback(video?.paused || video?.ended ? "play" : "pause");
       void toggleLocalPlayback();
     }
   }
@@ -1811,7 +1813,7 @@
         {:else if surfaceFeedback === "seek-forward"}
           <FastForward size={34} aria-hidden="true" />
           <span>30</span>
-        {:else if playerUiState === "playing"}
+        {:else if surfaceFeedback === "pause"}
           <Pause size={38} fill="currentColor" aria-hidden="true" />
         {:else}
           <Play size={38} fill="currentColor" aria-hidden="true" />
@@ -2120,7 +2122,7 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    z-index: 2;
+    z-index: 4;
     width: 5rem;
     height: 5rem;
     display: grid;
