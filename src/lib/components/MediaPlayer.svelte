@@ -113,6 +113,16 @@
     webkitCurrentPlaybackTargetIsWireless?: boolean;
   };
 
+  type ScreenWakeLockSentinel = EventTarget & {
+    release: () => Promise<void>;
+  };
+
+  type ScreenWakeLockNavigator = Navigator & {
+    wakeLock?: {
+      request: (type: "screen") => Promise<ScreenWakeLockSentinel>;
+    };
+  };
+
   type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
   const POINTER_CONTROLS_REFRESH_INTERVAL_MS = 250;
 
@@ -181,6 +191,8 @@
   let castSession: any = null;
   let castMedia: any = null;
   let castMediaUpdateListener: ((isAlive: boolean) => void) | null = null;
+  let screenWakeLock: ScreenWakeLockSentinel | null = null;
+  let screenWakeLockRequest: Promise<void> | null = null;
   let hasPlaybackActivity = false;
   let playbackActivityKey: string | null = null;
   let lastPointerControlsRefreshAt = -Infinity;
@@ -226,6 +238,68 @@
 
   function isCasting() {
     return castLaunchState === "connected";
+  }
+
+  function shouldHoldScreenWakeLock() {
+    return (
+      browser &&
+      document.visibilityState === "visible" &&
+      Boolean(video) &&
+      !isCasting() &&
+      !video?.paused &&
+      !video?.ended &&
+      (playerUiState === "starting" ||
+        playerUiState === "playing" ||
+        playerUiState === "buffering" ||
+        playerUiState === "seeking")
+    );
+  }
+
+  function releaseScreenWakeLock() {
+    const lock = screenWakeLock;
+    screenWakeLock = null;
+    void lock?.release().catch(() => undefined);
+  }
+
+  function requestScreenWakeLock() {
+    if (
+      !shouldHoldScreenWakeLock() ||
+      screenWakeLock ||
+      screenWakeLockRequest
+    )
+      return;
+    const wakeLock = (navigator as ScreenWakeLockNavigator).wakeLock;
+    if (!wakeLock?.request) return;
+
+    screenWakeLockRequest = (async () => {
+      try {
+        const lock = await wakeLock.request("screen");
+        if (!shouldHoldScreenWakeLock()) {
+          await lock.release().catch(() => undefined);
+          return;
+        }
+        screenWakeLock = lock;
+        lock.addEventListener(
+          "release",
+          () => {
+            if (screenWakeLock === lock) screenWakeLock = null;
+          },
+          { once: true },
+        );
+      } catch {
+        // Wake Lock is best-effort; unsupported or denied requests keep normal playback.
+      } finally {
+        screenWakeLockRequest = null;
+      }
+    })();
+  }
+
+  function syncScreenWakeLock() {
+    if (shouldHoldScreenWakeLock()) {
+      requestScreenWakeLock();
+      return;
+    }
+    releaseScreenWakeLock();
   }
 
   function airPlayVideoElement() {
@@ -1813,6 +1887,30 @@
 
   $effect(() => {
     if (!browser) return;
+    const player = video;
+    const uiState = playerUiState;
+    const castState = castLaunchState;
+    void player;
+    void uiState;
+    void castState;
+    syncScreenWakeLock();
+  });
+
+  $effect(() => {
+    if (!browser) return;
+    const onVisibilityChange = () => syncScreenWakeLock();
+    const onPageHide = () => releaseScreenWakeLock();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
+      releaseScreenWakeLock();
+    };
+  });
+
+  $effect(() => {
+    if (!browser) return;
     const playback = data.playback;
     if (
       (playback.mode !== "transcode" && playback.mode !== "remux") ||
@@ -1851,6 +1949,7 @@
       surfaceFeedbackTimeout = null;
     }
     clearRemotePlaybackNotice();
+    releaseScreenWakeLock();
     flushProgress(data);
     detachCastMediaUpdateListener();
     cancelPlaybackSession(data.playback);
