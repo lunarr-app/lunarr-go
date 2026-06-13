@@ -326,6 +326,61 @@ export function castControlLabel(state: CastControlState) {
   }
 }
 
+export function hasAirPlayPicker(input: {
+  showPlaybackTargetPicker: unknown;
+}) {
+  return typeof input.showPlaybackTargetPicker === "function";
+}
+
+export function airPlayAvailableFromEvent(input: {
+  canShowPicker: boolean;
+  availability: string | null | undefined;
+}) {
+  return input.canShowPicker && input.availability === "available";
+}
+
+export function airPlayActiveFromVideo(input: {
+  currentPlaybackTargetIsWireless: unknown;
+}) {
+  return input.currentPlaybackTargetIsWireless === true;
+}
+
+export function airPlayControlLabel(input: { active: boolean }) {
+  return input.active ? "AirPlay connected" : "AirPlay";
+}
+
+export function airPlayControlState(input: {
+  available: boolean;
+  active: boolean;
+  casting: boolean;
+}) {
+  const active = input.available && input.active;
+  const label = airPlayControlLabel({ active });
+  return {
+    visible: input.available,
+    active,
+    disabled: input.available && input.casting,
+    label,
+  };
+}
+
+export type AirPlayTargetPickerAction = "show-picker" | "unavailable";
+
+export function airPlayTargetPickerAction(input: {
+  available: boolean;
+  showPlaybackTargetPicker: unknown;
+}): AirPlayTargetPickerAction {
+  if (
+    input.available &&
+    hasAirPlayPicker({
+      showPlaybackTargetPicker: input.showPlaybackTargetPicker,
+    })
+  ) {
+    return "show-picker";
+  }
+  return "unavailable";
+}
+
 export function isCastOwnedPlaybackSession(input: {
   sessionId: string | null;
   castOwnedPlaybackSessions: ReadonlySet<string>;

@@ -102,6 +102,12 @@ function assertMediaPlayerSourceContract(source) {
     "aria-label={`Video player for ${data.item.title}`}",
     "aria-keyshortcuts={playerKeyboardShortcuts({",
     'aria-label="Playback controls"',
+    'safariVideo.setAttribute("x-webkit-airplay", "allow")',
+    '"webkitplaybacktargetavailabilitychanged"',
+    '"webkitcurrentplaybacktargetiswirelesschanged"',
+    "airPlayTargetPickerAction({",
+    "{#if airPlayButtonState().visible}",
+    "<Airplay size={20} aria-hidden=\"true\" />",
   ]) {
     if (!source.includes(requiredSnippet)) {
       throw new Error(

@@ -2,6 +2,7 @@
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
   import {
+    Airplay,
     Captions,
     Cast,
     Maximize,
@@ -15,6 +16,10 @@
     X,
   } from "@lucide/svelte";
   import {
+    airPlayActiveFromVideo,
+    airPlayAvailableFromEvent,
+    airPlayControlState,
+    airPlayTargetPickerAction,
     castControlLabel,
     castPlaybackSecondsAfterSeek,
     castPlaybackCommandForUiState,
@@ -23,6 +28,7 @@
     clampPlaybackSeconds,
     defaultSubtitleTrackId,
     fullscreenAction,
+    hasAirPlayPicker,
     isCastOwnedPlaybackSession,
     markCastOwnedPlaybackSession,
     mediaTimelineSeconds,
@@ -99,6 +105,8 @@
     webkitEnterFullScreen?: () => void;
     webkitEnterFullscreen?: () => void;
     webkitExitFullscreen?: () => void;
+    webkitShowPlaybackTargetPicker?: () => void;
+    webkitCurrentPlaybackTargetIsWireless?: boolean;
   };
 
   let {
@@ -154,6 +162,8 @@
   let castLaunchState = $state<"idle" | "connecting" | "connected" | "error">(
     "idle",
   );
+  let airPlayAvailable = $state(false);
+  let airPlayActive = $state(false);
   let castOwnedPlaybackSessionId = $state<string | null>(null);
   let castSession: any = null;
   let castMedia: any = null;
@@ -166,6 +176,31 @@
 
   function isCasting() {
     return castLaunchState === "connected";
+  }
+
+  function airPlayVideoElement() {
+    return video as SafariVideoElement | undefined;
+  }
+
+  function syncAirPlayActiveState() {
+    airPlayActive = airPlayActiveFromVideo({
+      currentPlaybackTargetIsWireless:
+        airPlayVideoElement()?.webkitCurrentPlaybackTargetIsWireless,
+    });
+  }
+
+  function showAirPlayTargetPicker() {
+    const player = airPlayVideoElement();
+    const picker = player?.webkitShowPlaybackTargetPicker;
+    if (
+      airPlayTargetPickerAction({
+        available: airPlayAvailable,
+        showPlaybackTargetPicker: picker,
+      }) !== "show-picker"
+    )
+      return;
+    picker?.call(player);
+    showControls();
   }
 
   function statusOverlayState() {
@@ -203,6 +238,14 @@
 
   function volumeAriaValue() {
     return volumeSliderAriaValue({ volume, muted });
+  }
+
+  function airPlayButtonState() {
+    return airPlayControlState({
+      available: airPlayAvailable,
+      active: airPlayActive,
+      casting: isCasting(),
+    });
   }
 
   function showControls() {
@@ -1416,6 +1459,52 @@
   });
 
   $effect(() => {
+    if (!browser || !video) return;
+    const safariVideo = video as SafariVideoElement;
+    safariVideo.setAttribute("x-webkit-airplay", "allow");
+    const canShowPicker = hasAirPlayPicker({
+      showPlaybackTargetPicker: safariVideo.webkitShowPlaybackTargetPicker,
+    });
+    if (!canShowPicker) {
+      airPlayAvailable = false;
+      airPlayActive = false;
+      return;
+    }
+
+    syncAirPlayActiveState();
+    const onAvailabilityChanged = (event: Event) => {
+      airPlayAvailable = airPlayAvailableFromEvent({
+        canShowPicker,
+        availability: (event as Event & { availability?: string }).availability,
+      });
+      syncAirPlayActiveState();
+    };
+    const onWirelessChanged = () => {
+      syncAirPlayActiveState();
+      showControls();
+    };
+
+    safariVideo.addEventListener(
+      "webkitplaybacktargetavailabilitychanged",
+      onAvailabilityChanged,
+    );
+    safariVideo.addEventListener(
+      "webkitcurrentplaybacktargetiswirelesschanged",
+      onWirelessChanged,
+    );
+    return () => {
+      safariVideo.removeEventListener(
+        "webkitplaybacktargetavailabilitychanged",
+        onAvailabilityChanged,
+      );
+      safariVideo.removeEventListener(
+        "webkitcurrentplaybacktargetiswirelesschanged",
+        onWirelessChanged,
+      );
+    };
+  });
+
+  $effect(() => {
     if (!browser) return;
     applyVideoVolume();
   });
@@ -1570,6 +1659,19 @@
               disabled={castLaunchState === "connecting"}
             >
               <Cast size={20} aria-hidden="true" />
+            </button>
+          {/if}
+          {#if airPlayButtonState().visible}
+            <button
+              class:active={airPlayButtonState().active}
+              class="control-button"
+              type="button"
+              aria-label={airPlayButtonState().label}
+              title={airPlayButtonState().label}
+              onclick={showAirPlayTargetPicker}
+              disabled={airPlayButtonState().disabled}
+            >
+              <Airplay size={20} aria-hidden="true" />
             </button>
           {/if}
         </div>

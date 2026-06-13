@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
+  airPlayActiveFromVideo,
+  airPlayAvailableFromEvent,
+  airPlayControlLabel,
+  airPlayControlState,
+  airPlayTargetPickerAction,
   castControlLabel,
   castPlaybackSecondsAfterSeek,
   castPlaybackCommandForUiState,
@@ -10,6 +15,7 @@ import {
   elementTimelineSeconds,
   formatPlaybackTime,
   fullscreenAction,
+  hasAirPlayPicker,
   isCastOwnedPlaybackSession,
   markCastOwnedPlaybackSession,
   mediaTimelineSeconds,
@@ -376,6 +382,119 @@ describe("custom player controls", () => {
     expect(castControlLabel("connecting")).toBe("Connecting to Chromecast");
     expect(castControlLabel("connected")).toBe("Stop casting");
     expect(castControlLabel("error")).toBe("Retry Cast");
+  });
+
+  test("guards AirPlay controls behind WebKit picker availability", () => {
+    const picker = () => undefined;
+    expect(hasAirPlayPicker({ showPlaybackTargetPicker: picker })).toBe(true);
+    expect(hasAirPlayPicker({ showPlaybackTargetPicker: undefined })).toBe(
+      false,
+    );
+    expect(
+      airPlayAvailableFromEvent({
+        canShowPicker: true,
+        availability: "available",
+      }),
+    ).toBe(true);
+    expect(
+      airPlayAvailableFromEvent({
+        canShowPicker: true,
+        availability: "not-available",
+      }),
+    ).toBe(false);
+    expect(
+      airPlayAvailableFromEvent({
+        canShowPicker: false,
+        availability: "available",
+      }),
+    ).toBe(false);
+  });
+
+  test("maps AirPlay wireless target state and labels", () => {
+    expect(
+      airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: true }),
+    ).toBe(true);
+    expect(
+      airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: false }),
+    ).toBe(false);
+    expect(
+      airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: undefined }),
+    ).toBe(false);
+    expect(airPlayControlLabel({ active: false })).toBe("AirPlay");
+    expect(airPlayControlLabel({ active: true })).toBe("AirPlay connected");
+  });
+
+  test("maps AirPlay button visibility and active state", () => {
+    expect(
+      airPlayControlState({
+        available: false,
+        active: true,
+        casting: false,
+      }),
+    ).toEqual({
+      visible: false,
+      active: false,
+      disabled: false,
+      label: "AirPlay",
+    });
+    expect(
+      airPlayControlState({
+        available: true,
+        active: false,
+        casting: false,
+      }),
+    ).toEqual({
+      visible: true,
+      active: false,
+      disabled: false,
+      label: "AirPlay",
+    });
+    expect(
+      airPlayControlState({
+        available: true,
+        active: true,
+        casting: false,
+      }),
+    ).toEqual({
+      visible: true,
+      active: true,
+      disabled: false,
+      label: "AirPlay connected",
+    });
+    expect(
+      airPlayControlState({
+        available: true,
+        active: false,
+        casting: true,
+      }),
+    ).toEqual({
+      visible: true,
+      active: false,
+      disabled: true,
+      label: "AirPlay",
+    });
+  });
+
+  test("routes AirPlay picker actions only when supported and available", () => {
+    const picker = () => undefined;
+    expect(
+      airPlayTargetPickerAction({
+        available: true,
+        showPlaybackTargetPicker: picker,
+      }),
+    ).toBe("show-picker");
+    expect(
+      airPlayTargetPickerAction({
+        available: false,
+        showPlaybackTargetPicker: picker,
+      }),
+    ).toBe("unavailable");
+    expect(
+      airPlayTargetPickerAction({
+        available: true,
+        showPlaybackTargetPicker: undefined,
+      }),
+    ).toBe("unavailable");
   });
 
   test("maps Cast receiver state back to player UI state", () => {
