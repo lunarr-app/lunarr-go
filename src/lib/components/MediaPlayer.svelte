@@ -575,6 +575,10 @@
         };
         document.head.appendChild(script);
       }
+    }).catch((error) => {
+      castFrameworkPromise = null;
+      castAvailable = false;
+      throw error;
     });
 
     return castFrameworkPromise;
@@ -1180,10 +1184,14 @@
     try {
       const api = await ensureCastFramework();
       const context = configureCastFramework(api);
-      const session =
-        context.getCurrentSession() ?? (await context.requestSession());
-      const castPlayback = await prepareCastPlayback();
-      preparedPlaybackSessionId = castPlayback.playbackSessionId;
+      const currentSession = context.getCurrentSession?.();
+      let castPlayback = currentSession ? await prepareCastPlayback() : null;
+      preparedPlaybackSessionId = castPlayback?.playbackSessionId ?? null;
+      const session = currentSession ?? (await context.requestSession());
+      if (!castPlayback) {
+        castPlayback = await prepareCastPlayback();
+        preparedPlaybackSessionId = castPlayback.playbackSessionId;
+      }
       const mediaInfo = new api.chrome.cast.media.MediaInfo(
         castPlayback.streamUrl,
         castPlayback.contentType,
