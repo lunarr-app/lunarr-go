@@ -24,24 +24,53 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
+      - name: Resolve source revision
+        id: source
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          should_build="true"
+          if [[ "${EVENT_NAME}" == "workflow_run" ]]; then
+            latest_sha="$(git ls-remote "https://github.com/${REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
+            if [[ -z "${latest_sha}" ]]; then
+              echo "Could not resolve latest main SHA." >&2
+              exit 1
+            fi
+            if [[ "${SOURCE_SHA}" != "${latest_sha}" ]]; then
+              echo "Skipping stale Docker test source ${SOURCE_SHA}; main is ${latest_sha}."
+              should_build="false"
+            fi
+          fi
+          {
+            echo "sha=${SOURCE_SHA}"
+            echo "should_build=${should_build}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
+        if: steps.source.outputs.should_build == 'true'
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ steps.source.outputs.sha }}
 
       - name: Set up Docker Buildx
+        if: steps.source.outputs.should_build == 'true'
         uses: docker/setup-buildx-action@v4
 
       - name: Build Docker image
+        if: steps.source.outputs.should_build == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
           load: true
           tags: lunarr-app:latest
           build-args: |
-            LUNARR_APP_VERSION=ci-${{ github.event.workflow_run.head_sha || github.sha }}
+            LUNARR_APP_VERSION=ci-${{ steps.source.outputs.sha }}
 
       - name: Run Docker container
+        if: steps.source.outputs.should_build == 'true'
         run: |
           docker run -d \
             -p 3000:3000 \
@@ -51,6 +80,7 @@ jobs:
             lunarr-app:latest
 
       - name: Smoke test
+        if: steps.source.outputs.should_build == 'true'
         run: |
           last_error="$(mktemp)"
           for attempt in {1..30}; do
@@ -65,5 +95,5 @@ jobs:
           exit 1
 
       - name: Stop and remove container
-        if: always()
+        if: always() && steps.source.outputs.should_build == 'true'
         run: docker rm -f lunarr-container || true
