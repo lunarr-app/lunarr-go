@@ -22,6 +22,16 @@ Users can set a preferred audio language in Profile. Temporary HLS transcoding p
 
 Users can also set a preferred subtitle language in Profile. Lunarr still returns applicable external subtitle tracks for the selected file, but marks the matching language as the default track when available.
 
+## Chromecast And AirPlay
+
+Chromecast and AirPlay receivers load media from Lunarr directly. The app must be reachable from the receiver device by its configured public origin, not only from the browser that opened the player. Use HTTPS for production deployments; Chrome and Edge rely on Google's Cast Web Sender SDK, and secure origins are required for reliable Cast discovery and launch behavior.
+
+Direct playback can be sent to a receiver when the receiver supports the served container and codecs. Non-direct playback uses the same temporary HLS sessions as the browser player. Before sending HLS to a receiver, Lunarr waits until the playlist is available, then returns signed receiver URLs for the playlist, segments, and external subtitle tracks. Remote playback tokens are scoped to the media route and expire after 8 hours.
+
+HLS receiver playback stays alive through normal playback-session heartbeats and through playlist or segment requests from the receiver. Chromecast sessions are treated as Cast-owned after media is loaded, so closing or navigating away from the browser page does not immediately cancel the Cast playback session. Stopping Cast from the player ends the Cast session and cancels the owned HLS session. AirPlay is closer to native Safari video playback: progress and lifecycle depend on Safari continuing to update the video element, and closing or navigating away from the page can stop playback and cancel temporary HLS.
+
+If Cast or AirPlay controls are missing, first check browser support, HTTPS/origin configuration, receiver network access to Lunarr, and whether the current playback decision has a ready direct stream or HLS playlist. If a receiver opens but does not play, verify the receiver can reach the generated Lunarr URL and that the stream container, codecs, and HLS segment format are supported by that receiver.
+
 ## FFmpeg Verification
 
 The runtime image verifies the baseline FFmpeg playback requirements and NodeAV probing during Docker build. Operators can also run:
