@@ -192,6 +192,9 @@
   let castSession: any = null;
   let castMedia: any = null;
   let castMediaUpdateListener: ((isAlive: boolean) => void) | null = null;
+  let castRemotePlayer: any = null;
+  let castRemotePlayerController: any = null;
+  let detachCastRemotePlayerListener: (() => void) | null = null;
   let screenWakeLock: ScreenWakeLockSentinel | null = null;
   let screenWakeLockRequest: Promise<void> | null = null;
   let hasPlaybackActivity = false;
@@ -614,6 +617,71 @@
     return context;
   }
 
+  function syncCastReceiverTimeline(input: {
+    receiverSeconds: number;
+    receiverDurationSeconds: number;
+  }) {
+    const nextDuration =
+      Number.isFinite(input.receiverDurationSeconds) &&
+      input.receiverDurationSeconds > 0
+        ? castMediaTimelineSeconds({
+            receiverSeconds: input.receiverDurationSeconds,
+            mode: data.playback.mode,
+            streamStartSeconds: data.playback.streamStartSeconds,
+          })
+        : durationSeconds;
+    if (Number.isFinite(input.receiverSeconds) && input.receiverSeconds >= 0) {
+      currentPlaybackSeconds = clampPlaybackSeconds({
+        seconds: castMediaTimelineSeconds({
+          receiverSeconds: input.receiverSeconds,
+          mode: data.playback.mode,
+          streamStartSeconds: data.playback.streamStartSeconds,
+        }),
+        durationSeconds: nextDuration,
+      });
+      if (currentPlaybackSeconds > 0) hasPlaybackActivity = true;
+    }
+    if (nextDuration !== null && Number.isFinite(nextDuration) && nextDuration > 0) {
+      durationSeconds = nextDuration;
+    }
+  }
+
+  function syncCastRemotePlayerState(player: any = castRemotePlayer) {
+    if (!player) return;
+    if (!player.isConnected || !player.isMediaLoaded) return;
+    playerUiState = castPlayerUiState({
+      alive: true,
+      playerState: player.playerState,
+      fallbackUiState: playerUiState,
+    });
+    syncCastReceiverTimeline({
+      receiverSeconds: Number(player.currentTime),
+      receiverDurationSeconds: Number(player.duration),
+    });
+  }
+
+  function ensureCastRemotePlayerController(api: CastApi) {
+    if (castRemotePlayer && castRemotePlayerController) return;
+    const player = new api.cast.framework.RemotePlayer();
+    const controller = new api.cast.framework.RemotePlayerController(player);
+    const eventType = api.cast.framework.RemotePlayerEventType.ANY_CHANGE;
+    const onPlayerChanged = () => syncCastRemotePlayerState(player);
+    controller.addEventListener(eventType, onPlayerChanged);
+    castRemotePlayer = player;
+    castRemotePlayerController = controller;
+    detachCastRemotePlayerListener = () => {
+      controller.removeEventListener(eventType, onPlayerChanged);
+    };
+    syncCastRemotePlayerState(player);
+  }
+
+  function detachCastRemotePlayerController() {
+    detachCastRemotePlayerListener?.();
+    detachCastRemotePlayerListener = null;
+    castRemotePlayerController = null;
+    castRemotePlayer = null;
+  }
+
   function ensureCastFramework() {
     if (!browser) return Promise.reject(new Error("Cast is unavailable."));
     if (castFrameworkPromise) return castFrameworkPromise;
@@ -624,6 +692,7 @@
         if (win.cast?.framework && win.chrome?.cast) {
           const api = { cast: win.cast, chrome: win.chrome };
           configureCastFramework(api);
+          ensureCastRemotePlayerController(api);
           castAvailable = true;
           resolve(api);
           return true;
@@ -708,30 +777,10 @@
       playerState: media?.playerState,
       fallbackUiState: playerUiState,
     });
-    const castCurrentTime = Number(media?.currentTime);
-    const castDuration = Number(media?.media?.duration);
-    const nextDuration =
-      Number.isFinite(castDuration) && castDuration > 0
-        ? castMediaTimelineSeconds({
-            receiverSeconds: castDuration,
-            mode: data.playback.mode,
-            streamStartSeconds: data.playback.streamStartSeconds,
-          })
-        : durationSeconds;
-    if (Number.isFinite(castCurrentTime) && castCurrentTime >= 0) {
-      currentPlaybackSeconds = clampPlaybackSeconds({
-        seconds: castMediaTimelineSeconds({
-          receiverSeconds: castCurrentTime,
-          mode: data.playback.mode,
-          streamStartSeconds: data.playback.streamStartSeconds,
-        }),
-        durationSeconds: nextDuration,
-      });
-      if (currentPlaybackSeconds > 0) hasPlaybackActivity = true;
-    }
-    if (nextDuration !== null && Number.isFinite(nextDuration) && nextDuration > 0) {
-      durationSeconds = nextDuration;
-    }
+    syncCastReceiverTimeline({
+      receiverSeconds: Number(media?.currentTime),
+      receiverDurationSeconds: Number(media?.media?.duration),
+    });
     if (!alive) showControls();
   }
 
@@ -759,6 +808,24 @@
   }
 
   function castCommand(command: "play" | "pause") {
+    if (
+      castRemotePlayer?.isConnected &&
+      castRemotePlayer?.isMediaLoaded &&
+      castRemotePlayerController?.playOrPause
+    ) {
+      const paused =
+        castRemotePlayer.isPaused === true ||
+        castRemotePlayer.playerState === "PAUSED" ||
+        castRemotePlayer.playerState === "IDLE";
+      if (
+        (command === "play" && paused) ||
+        (command === "pause" && !paused)
+      ) {
+        castRemotePlayerController.playOrPause();
+      }
+      return true;
+    }
+
     const media = activeCastMedia();
     if (!media?.[command]) return false;
     media[command](null, () => undefined, () => undefined);
@@ -766,15 +833,26 @@
   }
 
   function castSeek(seconds: number) {
-    const media = activeCastMedia();
-    const chromeApi = castWindow().chrome;
-    if (!media?.seek || !chromeApi?.cast?.media?.SeekRequest) return false;
-    const request = new chromeApi.cast.media.SeekRequest();
-    request.currentTime = castReceiverTimelineSeconds({
+    const receiverSeconds = castReceiverTimelineSeconds({
       absoluteSeconds: seconds,
       mode: data.playback.mode,
       streamStartSeconds: data.playback.streamStartSeconds,
     });
+    if (
+      castRemotePlayer?.isConnected &&
+      castRemotePlayer?.isMediaLoaded &&
+      castRemotePlayerController?.seek
+    ) {
+      castRemotePlayer.currentTime = receiverSeconds;
+      castRemotePlayerController.seek();
+      return true;
+    }
+
+    const media = activeCastMedia();
+    const chromeApi = castWindow().chrome;
+    if (!media?.seek || !chromeApi?.cast?.media?.SeekRequest) return false;
+    const request = new chromeApi.cast.media.SeekRequest();
+    request.currentTime = receiverSeconds;
     media.seek(request, () => undefined, () => undefined);
     return true;
   }
@@ -785,6 +863,7 @@
     if (sessionId) cancelPlaybackSessionById(sessionId);
     detachCastMediaUpdateListener();
     castMedia = null;
+    syncCastRemotePlayerState();
     castLaunchState = "idle";
     playerUiState = "paused";
     showControls();
@@ -1336,6 +1415,7 @@
       markCastOwnedSession(castPlayback.playbackSessionId);
       preparedPlaybackSessionId = null;
       clearRemotePlaybackNotice();
+      syncCastRemotePlayerState();
       castLaunchState = "connected";
       playerUiState = "playing";
       video?.pause();
@@ -1950,6 +2030,7 @@
     releaseScreenWakeLock();
     flushProgress(data);
     detachCastMediaUpdateListener();
+    detachCastRemotePlayerController();
     cancelPlaybackSession(data.playback);
   });
 </script>
