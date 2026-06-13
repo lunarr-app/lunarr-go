@@ -2,19 +2,19 @@
   import { browser } from "$app/environment";
   import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
-  import { X } from "@lucide/svelte";
   import MediaPlayer from "$lib/components/MediaPlayer.svelte";
   import {
     appendClientPlaybackCapabilityParams,
     detectClientPlaybackCapabilities,
   } from "$lib/playback/capabilities";
+  import { shouldClosePlaybackModalOnKeydown } from "$lib/playback/controls";
   import type { PlaybackData } from "$lib/server/playback";
 
   let playbackData: PlaybackData | null = $state(null);
   let loading = $state(false);
   let error = $state<string | null>(null);
   let reloadToken = $state(0);
-  let closeButton: HTMLButtonElement | null = $state(null);
+  let modalPanel: HTMLDivElement | null = $state(null);
   let progressInvalidationTimer: ReturnType<typeof setTimeout> | null = null;
 
   const mediaItemId = $derived(
@@ -134,9 +134,16 @@
 
   $effect(() => {
     if (!browser || !modalOpen) return;
-    closeButton?.focus();
+    modalPanel?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeModal();
+      if (
+        shouldClosePlaybackModalOnKeydown({
+          key: event.key,
+          defaultPrevented: event.defaultPrevented,
+        })
+      ) {
+        closeModal();
+      }
     };
 
     document.addEventListener("keydown", closeOnEscape);
@@ -162,27 +169,14 @@
       role="dialog"
       aria-modal="true"
       aria-label={playbackData?.item.title ?? "Playback"}
+      tabindex="-1"
+      bind:this={modalPanel}
     >
-      <header>
-        <div>
-          <p>Now playing</p>
-          <h2>{playbackData?.item.title ?? "Starting playback"}</h2>
-        </div>
-        <button
-          class="icon-button"
-          type="button"
-          aria-label="Close player"
-          bind:this={closeButton}
-          onclick={closeModal}
-        >
-          <X size={18} aria-hidden="true" />
-        </button>
-      </header>
-
       <div class="player-frame">
         {#if playbackData}
           <MediaPlayer
             data={playbackData}
+            onClose={closeModal}
             onProgressSaved={invalidatePageAfterProgress}
             onReload={requestReload}
             onReposition={repositionPlayback}
@@ -217,53 +211,18 @@
     width: min(100%, 68rem);
     max-height: calc(100dvh - 2rem);
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 0.8rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    grid-template-rows: minmax(0, 1fr);
+    border: 0;
     border-radius: 8px;
-    background: #070b0f;
-    box-shadow: 0 1.8rem 5rem rgba(0, 0, 0, 0.5);
-    padding: 0.85rem;
-    overflow: hidden;
-  }
-
-  header {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: start;
-  }
-
-  header div {
-    display: grid;
-    gap: 0.15rem;
-    min-width: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    overflow: visible;
   }
 
   p,
   h2 {
     margin: 0;
-  }
-
-  header p {
-    color: #95a4ae;
-    font-size: 0.82rem;
-    font-weight: 750;
-    text-transform: uppercase;
-  }
-
-  header h2 {
-    overflow: hidden;
-    font-size: 1.08rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .icon-button {
-    width: 2.2rem;
-    min-height: 2.2rem;
-    border-radius: 6px;
-    padding: 0;
   }
 
   .player-frame {
@@ -324,10 +283,7 @@
     .modal {
       width: 100%;
       max-height: 100dvh;
-      border-right: 0;
-      border-bottom: 0;
-      border-left: 0;
-      border-radius: 8px 8px 0 0;
+      border-radius: 0;
     }
   }
 </style>

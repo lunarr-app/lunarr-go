@@ -97,24 +97,13 @@ try {
 
     const starts = [];
     const states = [];
-    const timers = new Map();
-    let nextTimerId = 0;
     const controller = seek.createHlsSeekEventController({
       mode: "transcode",
       status: "ready",
       startSeconds: 120,
       streamStartSeconds: 120,
-      delayMs: 120,
       reposition(startSeconds) {
         starts.push(startSeconds);
-      },
-      setTimer(callback) {
-        const timerId = ++nextTimerId;
-        timers.set(timerId, callback);
-        return timerId;
-      },
-      clearTimer(timerId) {
-        timers.delete(timerId);
       },
     });
 
@@ -155,37 +144,24 @@ try {
 
     if (
       states.length !== 2 ||
-      !states.every((state) => state.pendingReposition)
+      states[0]?.uiState !== "seeking" ||
+      states[1]?.uiState !== "playing" ||
+      controller.lastPlaybackTime() !== 340
     ) {
       return {
         ok: false,
-        message: `Expected both browser seek events to keep a pending reposition, got ${JSON.stringify(states)}.`,
-      };
-    }
-    if (timers.size !== 1) {
-      return {
-        ok: false,
-        message: `Expected rapid browser seek churn to collapse to one timer, got ${timers.size}.`,
+        message: `Expected browser seek events to update UI state and absolute timeline, got ${JSON.stringify({ states, lastPlaybackTime: controller.lastPlaybackTime() })}.`,
       };
     }
 
-    timers.values().next().value();
-    if (starts.length !== 1 || starts[0] !== 340) {
+    if (starts.length !== 0) {
       return {
         ok: false,
-        message: `Expected browser seek churn to reposition at 340s, got ${JSON.stringify(starts)}.`,
-      };
-    }
-    if (controller.pending()) {
-      return {
-        ok: false,
-        message: "Reposition remained pending after timer fired.",
+        message: `Expected browser seek events to avoid legacy timer-based reposition, got ${JSON.stringify(starts)}.`,
       };
     }
 
     const cancelStarts = [];
-    const cancelTimers = new Map();
-    let cancelTimerId = 0;
     const cancelController = seek.createHlsSeekEventController({
       mode: "remux",
       status: "ready",
@@ -193,14 +169,6 @@ try {
       streamStartSeconds: 90,
       reposition(startSeconds) {
         cancelStarts.push(startSeconds);
-      },
-      setTimer(callback) {
-        const timerId = ++cancelTimerId;
-        cancelTimers.set(timerId, callback);
-        return timerId;
-      },
-      clearTimer(timerId) {
-        cancelTimers.delete(timerId);
       },
     });
 
@@ -210,12 +178,11 @@ try {
       relativeSeconds: 14,
       paused: false,
     });
-    for (const callback of cancelTimers.values()) callback();
 
-    if (cancelDecision.pendingReposition || cancelStarts.length !== 0) {
+    if (cancelDecision.uiState !== "playing" || cancelStarts.length !== 0) {
       return {
         ok: false,
-        message: `Expected near-stable browser seek to cancel reposition, got ${JSON.stringify({ cancelDecision, cancelStarts })}.`,
+        message: `Expected near-stable browser seek to stay local without reposition, got ${JSON.stringify({ cancelDecision, cancelStarts })}.`,
       };
     }
     if (cancelController.lastPlaybackTime() !== 104) {

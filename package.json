@@ -17,6 +17,7 @@
     "smoke:transcode": "node scripts/smoke-ffmpeg-transcode.mjs",
     "smoke:hardware": "node scripts/smoke-ffmpeg-hardware.mjs",
     "smoke:browser:seek": "node scripts/browser-hls-seek-smoke.mjs",
+    "smoke:browser:player": "node scripts/browser-custom-player-smoke.mjs",
     "seed:radarr": "node scripts/seed-radarr-movies.mjs",
     "verify:tmdb": "node scripts/verify-tmdb.mjs"
   },

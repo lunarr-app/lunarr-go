@@ -1,7 +1,53 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
-  import { Cast, Play } from "@lucide/svelte";
+  import {
+    Captions,
+    Cast,
+    Maximize,
+    Minimize,
+    Pause,
+    Play,
+    RotateCcw,
+    RotateCw,
+    Volume2,
+    VolumeX,
+    X,
+  } from "@lucide/svelte";
+  import {
+    castControlLabel,
+    castPlaybackSecondsAfterSeek,
+    castPlaybackCommandForUiState,
+    castPlayerUiState,
+    castUiStateAfterCommand,
+    clampPlaybackSeconds,
+    defaultSubtitleTrackId,
+    fullscreenAction,
+    isCastOwnedPlaybackSession,
+    markCastOwnedPlaybackSession,
+    mediaTimelineSeconds,
+    nextControlsActivityTick,
+    nextSubtitleMenuOptionIndex,
+    playerKeyboardShortcuts,
+    playbackProgressSnapshot,
+    playbackSliderAriaValue,
+    playbackSeekAction,
+    playbackTimeRangeText,
+    playerSurfaceClickState,
+    playerStatusOverlayState,
+    releaseCastOwnedPlaybackSession,
+    shouldAutoHideControls,
+    shouldCancelPlaybackSessionForCleanup,
+    shouldCloseSubtitleMenuOnPlayerKeydown,
+    shouldAttemptLocalAutoplay,
+    shouldHandlePlayerShortcut,
+    shouldRefreshControlsOnPointerMove,
+    shouldShowCustomControls,
+    subtitleTextTrackMode,
+    volumeSliderAriaValue,
+    volumeStateForMuteToggle,
+    volumeStateForSliderValue,
+  } from "$lib/playback/controls";
   import {
     absolutePlaybackSeconds,
     createHlsSeekEventController,
@@ -48,51 +94,166 @@
     }[];
   };
 
+  type SafariVideoElement = HTMLVideoElement & {
+    webkitDisplayingFullscreen?: boolean;
+    webkitEnterFullScreen?: () => void;
+    webkitEnterFullscreen?: () => void;
+    webkitExitFullscreen?: () => void;
+  };
+
   let {
     data,
+    onClose,
     onProgressSaved,
     onReload,
     onReposition,
   }: {
     data: PlaybackData;
+    onClose?: () => void;
     onProgressSaved: () => void;
     onReload: () => void;
     onReposition: (href: string) => void;
   } = $props();
 
+  function playbackDurationSeconds(sourceData: PlaybackData = data) {
+    const fileDurationSeconds = Number(
+      sourceData.playback.file.duration_seconds,
+    );
+    if (Number.isFinite(fileDurationSeconds) && fileDurationSeconds > 0) {
+      return fileDurationSeconds;
+    }
+    if (video && Number.isFinite(video.duration) && video.duration > 0) {
+      return mediaTimelineSeconds({
+        relativeSeconds: video.duration,
+        streamStartSeconds: sourceData.playback.streamStartSeconds,
+      });
+    }
+    return null;
+  }
+
+  let playerShell: HTMLDivElement | undefined = $state();
   let video: HTMLVideoElement | undefined = $state();
   let saveState = $state<"idle" | "saving" | "saved" | "error">("idle");
   let playerUiState = $state<PlayerUiState>("starting");
   let hasStartedPlayback = $state(false);
+  let playerControlsVisible = $state(true);
+  let playerControlsFocused = $state(false);
+  let playerControlsHovered = $state(false);
+  let playerControlsActivityTick = $state(0);
+  let currentPlaybackSeconds = $state(0);
+  let durationSeconds = $state<number | null>(null);
+  let seekPreviewSeconds = $state<number | null>(null);
+  let volume = $state(1);
+  let muted = $state(false);
+  let subtitleMenuOpen = $state(false);
+  let selectedSubtitleId = $state("off");
+  let subtitleToggleButton: HTMLButtonElement | undefined = $state();
+  let subtitleMenuElement: HTMLDivElement | undefined = $state();
+  let isFullscreen = $state(false);
   let castAvailable = $state(false);
   let castLaunchState = $state<"idle" | "connecting" | "connected" | "error">(
     "idle",
   );
   let castOwnedPlaybackSessionId = $state<string | null>(null);
+  let castSession: any = null;
+  let castMedia: any = null;
+  let castMediaUpdateListener: ((isAlive: boolean) => void) | null = null;
   let hasPlaybackActivity = false;
   let playbackActivityKey: string | null = null;
   const cancelledPlaybackSessions = new Set<string>();
   const castOwnedPlaybackSessions = new Set<string>();
   let castFrameworkPromise: Promise<CastApi> | null = null;
 
-  function isPlayOverlayVisible() {
-    return (
-      playerUiState === "autoplayBlocked" ||
-      (!hasStartedPlayback && playerUiState === "paused")
+  function isCasting() {
+    return castLaunchState === "connected";
+  }
+
+  function statusOverlayState() {
+    return playerStatusOverlayState({
+      uiState: playerUiState,
+      casting: isCasting(),
+    });
+  }
+
+  function controlsAreVisible() {
+    return shouldShowCustomControls({
+      controlsVisible: playerControlsVisible,
+      uiState: playerUiState,
+      casting: isCasting(),
+      subtitleMenuOpen,
+      controlsFocused: playerControlsFocused,
+      controlsHovered: playerControlsHovered,
+    });
+  }
+
+  function displayedPlaybackSeconds() {
+    return seekPreviewSeconds ?? currentPlaybackSeconds;
+  }
+
+  function seekSliderMax() {
+    return Math.max(1, Math.ceil(durationSeconds ?? currentPlaybackSeconds ?? 1));
+  }
+
+  function seekSliderAriaValue() {
+    return playbackSliderAriaValue({
+      seconds: displayedPlaybackSeconds(),
+      durationSeconds,
+    });
+  }
+
+  function volumeAriaValue() {
+    return volumeSliderAriaValue({ volume, muted });
+  }
+
+  function showControls() {
+    playerControlsVisible = true;
+    playerControlsActivityTick = nextControlsActivityTick(
+      playerControlsActivityTick,
     );
   }
 
-  function isStatusOverlayVisible() {
-    return (
-      playerUiState === "starting" ||
-      playerUiState === "buffering" ||
-      playerUiState === "seeking" ||
-      playerUiState === "error"
+  function handlePlayerPointerMove() {
+    if (
+      shouldRefreshControlsOnPointerMove({
+        controlsVisible: playerControlsVisible,
+        uiState: playerUiState,
+        casting: isCasting(),
+        subtitleMenuOpen,
+        controlsFocused: playerControlsFocused,
+        controlsHovered: playerControlsHovered,
+      })
+    ) {
+      showControls();
+    }
+  }
+
+  function handleControlsFocusIn() {
+    playerControlsFocused = true;
+    showControls();
+  }
+
+  function handleControlsFocusOut(event: FocusEvent) {
+    const nextTarget = event.relatedTarget;
+    const currentTarget = event.currentTarget;
+    playerControlsFocused = Boolean(
+      nextTarget instanceof Node &&
+        currentTarget instanceof HTMLElement &&
+        currentTarget.contains(nextTarget),
     );
   }
 
-  function isPlayerOverlayVisible() {
-    return isPlayOverlayVisible() || isStatusOverlayVisible();
+  function toggleControls() {
+    const next = playerSurfaceClickState({
+      uiState: playerUiState,
+      controlsVisible: playerControlsVisible,
+      subtitleMenuOpen,
+    });
+    playerControlsVisible = next.controlsVisible;
+    subtitleMenuOpen = next.subtitleMenuOpen;
+  }
+
+  function focusPlayerShell() {
+    playerShell?.focus({ preventScroll: true });
   }
 
   function castWindow() {
@@ -164,26 +325,126 @@
 
   function playbackIsCastOwned(playback: PlaybackDecision) {
     const sessionId = activePlaybackSessionId(playback);
-    return Boolean(sessionId && castOwnedPlaybackSessions.has(sessionId));
+    return isCastOwnedPlaybackSession({
+      sessionId,
+      castOwnedPlaybackSessions,
+    });
   }
 
   function markCastOwnedSession(sessionId: string | null) {
-    if (!sessionId) return;
-    castOwnedPlaybackSessions.add(sessionId);
-    castOwnedPlaybackSessionId = sessionId;
+    castOwnedPlaybackSessionId = markCastOwnedPlaybackSession({
+      sessionId,
+      castOwnedPlaybackSessions,
+    });
   }
 
   function releaseCastOwnedSession(sessionId: string | null) {
-    if (!sessionId) return;
-    castOwnedPlaybackSessions.delete(sessionId);
-    if (castOwnedPlaybackSessionId === sessionId) castOwnedPlaybackSessionId = null;
+    const next = releaseCastOwnedPlaybackSession({
+      sessionId,
+      activeSessionId: castOwnedPlaybackSessionId,
+      castOwnedPlaybackSessions,
+    });
+    castOwnedPlaybackSessionId = next.activeSessionId;
+  }
+
+  function activeCastMedia() {
+    return castMedia ?? castSession?.getMediaSession?.() ?? null;
+  }
+
+  function detachCastMediaUpdateListener(media: any = castMedia) {
+    if (!castMediaUpdateListener) return;
+    media?.removeUpdateListener?.(castMediaUpdateListener);
+    castMediaUpdateListener = null;
+  }
+
+  function syncCastMediaState(media: any, alive = true) {
+    playerUiState = castPlayerUiState({
+      alive,
+      playerState: media?.playerState,
+      fallbackUiState: playerUiState,
+    });
+    const castCurrentTime = Number(media?.currentTime);
+    const castDuration = Number(media?.media?.duration);
+    const nextDuration =
+      Number.isFinite(castDuration) && castDuration > 0
+        ? castDuration
+        : durationSeconds;
+    if (Number.isFinite(castCurrentTime) && castCurrentTime >= 0) {
+      currentPlaybackSeconds = clampPlaybackSeconds({
+        seconds: castCurrentTime,
+        durationSeconds: nextDuration,
+      });
+      if (currentPlaybackSeconds > 0) hasPlaybackActivity = true;
+    }
+    if (Number.isFinite(castDuration) && castDuration > 0) {
+      durationSeconds = castDuration;
+    }
+    if (!alive) showControls();
+  }
+
+  function attachCastMediaUpdateListener(media: any) {
+    detachCastMediaUpdateListener();
+    castMedia = media;
+    syncCastMediaState(media, true);
+    if (!media?.addUpdateListener) return;
+    const listener = (isAlive: boolean) => {
+      syncCastMediaState(media, isAlive);
+    };
+    castMediaUpdateListener = listener;
+    media.addUpdateListener(listener);
+  }
+
+  function adoptCastSession(session: any) {
+    if (!session) return;
+    castSession = session;
+    castAvailable = true;
+    castLaunchState = "connected";
+    const media = session.getMediaSession?.();
+    if (media) attachCastMediaUpdateListener(media);
+    video?.pause();
+    showControls();
+  }
+
+  function castCommand(command: "play" | "pause") {
+    const media = activeCastMedia();
+    if (!media?.[command]) return false;
+    media[command](null, () => undefined, () => undefined);
+    return true;
+  }
+
+  function castSeek(seconds: number) {
+    const media = activeCastMedia();
+    const chromeApi = castWindow().chrome;
+    if (!media?.seek || !chromeApi?.cast?.media?.SeekRequest) return false;
+    const request = new chromeApi.cast.media.SeekRequest();
+    request.currentTime = seconds;
+    media.seek(request, () => undefined, () => undefined);
+    return true;
+  }
+
+  function clearCastPlaybackState() {
+    const sessionId = castOwnedPlaybackSessionId;
+    releaseCastOwnedSession(sessionId);
+    if (sessionId) cancelPlaybackSessionById(sessionId);
+    detachCastMediaUpdateListener();
+    castMedia = null;
+    castLaunchState = "idle";
+    playerUiState = "paused";
+    showControls();
+  }
+
+  function stopCastPlayback() {
+    const session = castSession;
+    clearCastPlaybackState();
+    castSession = null;
+    session?.endSession?.(true);
   }
 
   function playerOverlayMessage() {
     switch (playerUiState) {
       case "autoplayBlocked":
       case "paused":
-        return "Tap to play";
+        return "Press play";
       case "buffering":
         return "Buffering";
       case "seeking":
@@ -197,6 +458,7 @@
 
   async function playFromOverlay() {
     if (!video) return;
+    showControls();
     playerUiState = "starting";
     try {
       await video.play();
@@ -210,31 +472,28 @@
 
   function progressPayload(sourceData: PlaybackData = data, completed = false) {
     if (!video) return null;
-    const positionSeconds = absolutePlaybackSeconds({
-      relativeSeconds: Number.isFinite(video.currentTime)
+    const snapshot = playbackProgressSnapshot({
+      casting: isCasting(),
+      videoRelativeSeconds: Number.isFinite(video.currentTime)
         ? video.currentTime
         : 0,
+      videoDurationSeconds: Number.isFinite(video.duration)
+        ? video.duration
+        : null,
+      currentPlaybackSeconds,
+      uiDurationSeconds: durationSeconds,
+      fileDurationSeconds: Number(sourceData.playback.file.duration_seconds),
       streamStartSeconds: sourceData.playback.streamStartSeconds,
     });
-    const fileDurationSeconds = Number(
-      sourceData.playback.file.duration_seconds,
-    );
-    const durationSeconds =
-      Number.isFinite(fileDurationSeconds) && fileDurationSeconds > 0
-        ? fileDurationSeconds
-        : Number.isFinite(video.duration)
-          ? absolutePlaybackSeconds({
-              relativeSeconds: video.duration,
-              streamStartSeconds: sourceData.playback.streamStartSeconds,
-            })
-          : null;
     const ended = completed || video.ended;
-    if (!ended && !hasPlaybackActivity && video.currentTime <= 0) return null;
+    const hasProgressActivity =
+      hasPlaybackActivity || (isCasting() && snapshot.positionSeconds > 0);
+    if (!ended && !hasProgressActivity && video.currentTime <= 0) return null;
 
     return {
       mediaFileId: sourceData.playback.file.id,
-      positionSeconds,
-      durationSeconds,
+      positionSeconds: snapshot.positionSeconds,
+      durationSeconds: snapshot.durationSeconds,
       completed: ended,
     };
   }
@@ -277,7 +536,13 @@
     playback: PlaybackDecision = data.playback,
     options: { includeCastOwned?: boolean } = {},
   ) {
-    if (!options.includeCastOwned && playbackIsCastOwned(playback)) return;
+    if (
+      !shouldCancelPlaybackSessionForCleanup({
+        castOwned: playbackIsCastOwned(playback),
+        includeCastOwned: options.includeCastOwned ?? false,
+      })
+    )
+      return;
     cancelPlaybackSessionOnce({
       playback,
       cancelledPlaybackSessions,
@@ -341,6 +606,282 @@
       .catch(() => undefined);
   }
 
+  function updateTimelineFromVideo(sourceData: PlaybackData = data) {
+    if (!video) return;
+    currentPlaybackSeconds = clampPlaybackSeconds({
+      seconds: mediaTimelineSeconds({
+        relativeSeconds: Number.isFinite(video.currentTime)
+          ? video.currentTime
+          : 0,
+        streamStartSeconds: sourceData.playback.streamStartSeconds,
+      }),
+      durationSeconds: playbackDurationSeconds(sourceData),
+    });
+    durationSeconds = playbackDurationSeconds(sourceData);
+  }
+
+  function applyVideoVolume() {
+    if (!video) return;
+    video.volume = Math.min(Math.max(volume, 0), 1);
+    video.muted = muted || volume === 0;
+  }
+
+  function toggleMute() {
+    const next = volumeStateForMuteToggle({ volume, muted });
+    volume = next.volume;
+    muted = next.muted;
+    applyVideoVolume();
+    showControls();
+  }
+
+  function setVolume(value: number) {
+    const next = volumeStateForSliderValue(value);
+    volume = next.volume;
+    muted = next.muted;
+    applyVideoVolume();
+    showControls();
+  }
+
+  async function applySubtitleTrack(trackId: string, focusToggle = false) {
+    selectedSubtitleId = trackId;
+    subtitleMenuOpen = false;
+    if (video) {
+      const trackElements = Array.from(video.querySelectorAll("track"));
+      for (const trackElement of trackElements) {
+        const candidate = data.playback.tracks.find(
+          (track) => track.id === trackElement.dataset.trackId,
+        );
+        const textTrack = trackElement.track;
+        if (!textTrack) continue;
+        textTrack.mode = subtitleTextTrackMode({
+          selectedTrackId: trackId,
+          track: candidate,
+        });
+      }
+    }
+    showControls();
+    if (!focusToggle) return;
+    await tick();
+    subtitleToggleButton?.focus();
+  }
+
+  async function openSubtitleMenu() {
+    if (data.playback.tracks.length === 0) return;
+    subtitleMenuOpen = true;
+    showControls();
+    await tick();
+    const selectedOption =
+      subtitleMenuElement?.querySelector<HTMLButtonElement>(
+        '[role="menuitemradio"][aria-checked="true"]',
+      ) ??
+      subtitleMenuElement?.querySelector<HTMLButtonElement>(
+        '[role="menuitemradio"]',
+      );
+    selectedOption?.focus();
+  }
+
+  async function closeSubtitleMenu(focusToggle = false) {
+    subtitleMenuOpen = false;
+    showControls();
+    if (!focusToggle) return;
+    await tick();
+    subtitleToggleButton?.focus();
+  }
+
+  function toggleSubtitleMenu() {
+    if (subtitleMenuOpen) {
+      void closeSubtitleMenu(true);
+    } else {
+      void openSubtitleMenu();
+    }
+  }
+
+  function syncDefaultSubtitleTrack() {
+    void applySubtitleTrack(defaultSubtitleTrackId(data.playback.tracks));
+  }
+
+  async function toggleLocalPlayback() {
+    if (!video) return;
+    showControls();
+    if (isCasting()) {
+      const command = castPlaybackCommandForUiState(playerUiState);
+      playerUiState = castUiStateAfterCommand({
+        command,
+        commandSent: castCommand(command),
+        fallbackUiState: playerUiState,
+      });
+      return;
+    }
+    if (video.paused || video.ended) {
+      await playFromOverlay();
+    } else {
+      video.pause();
+      playerUiState = "paused";
+    }
+  }
+
+  function repositionPlaybackTo(targetSeconds: number) {
+    const href = hlsRepositionHref({
+      currentUrl: new URL(window.location.href),
+      mediaFileId: data.playback.file.id,
+      startSeconds: targetSeconds,
+    });
+    const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (href === currentHref) return;
+    flushProgress(data);
+    cancelPlaybackSession(data.playback);
+    onReposition(href);
+  }
+
+  function seekToPlaybackSeconds(targetSeconds: number) {
+    const action = playbackSeekAction({
+      casting: isCasting(),
+      mode: data.playback.mode,
+      targetSeconds,
+      durationSeconds,
+      streamStartSeconds: data.playback.streamStartSeconds,
+    });
+    seekPreviewSeconds = null;
+    showControls();
+
+    if (action.kind === "cast") {
+      currentPlaybackSeconds = castPlaybackSecondsAfterSeek({
+        commandSent: castSeek(action.targetSeconds),
+        currentPlaybackSeconds,
+        targetSeconds: action.targetSeconds,
+      });
+      return;
+    }
+
+    if (!video) return;
+    currentPlaybackSeconds = action.targetSeconds;
+    hasPlaybackActivity = true;
+    if (action.kind === "hls-reposition") {
+      repositionPlaybackTo(action.targetSeconds);
+      return;
+    }
+
+    playerUiState = "seeking";
+    video.currentTime = action.elementSeconds;
+  }
+
+  function skipPlayback(deltaSeconds: number) {
+    seekToPlaybackSeconds(displayedPlaybackSeconds() + deltaSeconds);
+  }
+
+  async function toggleFullscreen() {
+    if (!browser || !playerShell) return;
+    const safariVideo = video as SafariVideoElement | undefined;
+    const enterVideoFullscreen =
+      safariVideo?.webkitEnterFullscreen ?? safariVideo?.webkitEnterFullScreen;
+    const videoFullscreen = Boolean(
+      safariVideo?.webkitDisplayingFullscreen ||
+        (isFullscreen && document.fullscreenElement === null),
+    );
+    const action = fullscreenAction({
+      documentFullscreen: document.fullscreenElement !== null,
+      canExitDocumentFullscreen: typeof document.exitFullscreen === "function",
+      canRequestDocumentFullscreen:
+        typeof playerShell.requestFullscreen === "function",
+      canEnterVideoFullscreen: typeof enterVideoFullscreen === "function",
+      videoFullscreen,
+      canExitVideoFullscreen:
+        typeof safariVideo?.webkitExitFullscreen === "function",
+    });
+
+    try {
+      if (action === "exit-document") {
+        await document.exitFullscreen();
+        isFullscreen = false;
+      } else if (action === "exit-video") {
+        safariVideo?.webkitExitFullscreen?.();
+        isFullscreen = false;
+      } else if (action === "enter-document") {
+        await playerShell.requestFullscreen();
+        isFullscreen = true;
+      } else if (action === "enter-video" && enterVideoFullscreen) {
+        enterVideoFullscreen.call(safariVideo);
+        isFullscreen = true;
+      }
+    } catch {
+      isFullscreen = false;
+    }
+    showControls();
+  }
+
+  function handlePlayerKeydown(event: KeyboardEvent) {
+    const key = event.key.toLowerCase();
+    if (
+      shouldCloseSubtitleMenuOnPlayerKeydown({
+        key,
+        subtitleMenuOpen,
+      })
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      void closeSubtitleMenu(true);
+      return;
+    }
+    if (!shouldHandlePlayerShortcut(event.target)) return;
+    if (key === " " || key === "k") {
+      event.preventDefault();
+      void toggleLocalPlayback();
+    } else if (key === "arrowleft") {
+      event.preventDefault();
+      skipPlayback(-10);
+    } else if (key === "arrowright") {
+      event.preventDefault();
+      skipPlayback(30);
+    } else if (key === "f") {
+      event.preventDefault();
+      void toggleFullscreen();
+    } else if (key === "m") {
+      event.preventDefault();
+      toggleMute();
+    } else if (key === "c" && data.playback.tracks.length > 0) {
+      event.preventDefault();
+      toggleSubtitleMenu();
+    }
+  }
+
+  function focusSubtitleMenuOption(current: EventTarget | null, delta: number) {
+    const options = Array.from(
+      subtitleMenuElement?.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitemradio"]',
+      ) ?? [],
+    );
+    if (options.length === 0) return;
+    const currentIndex =
+      current instanceof HTMLButtonElement ? options.indexOf(current) : -1;
+    const nextIndex = nextSubtitleMenuOptionIndex({
+      optionCount: options.length,
+      currentIndex,
+      delta,
+    });
+    options[nextIndex]?.focus();
+  }
+
+  function handleSubtitleMenuKeydown(event: KeyboardEvent) {
+    const key = event.key.toLowerCase();
+    if (key === "escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      void closeSubtitleMenu(true);
+    } else if (key === "arrowdown" || key === "arrowright") {
+      event.preventDefault();
+      focusSubtitleMenuOption(event.target, 1);
+    } else if (key === "arrowup" || key === "arrowleft") {
+      event.preventDefault();
+      focusSubtitleMenuOption(event.target, -1);
+    } else if (key === "home") {
+      event.preventDefault();
+      focusSubtitleMenuOption(null, 0);
+    } else if (key === "end") {
+      event.preventDefault();
+      focusSubtitleMenuOption(null, -1);
+    }
+  }
+
   function currentCastPositionSeconds() {
     const payload = progressPayload(data, false);
     if (payload) return payload.positionSeconds;
@@ -367,12 +908,14 @@
   async function castPlayback() {
     if (castLaunchState === "connecting") return;
     castLaunchState = "connecting";
+    let preparedPlaybackSessionId: string | null = null;
     try {
       const api = await ensureCastFramework();
       const context = configureCastFramework(api);
       const session =
         context.getCurrentSession() ?? (await context.requestSession());
       const castPlayback = await prepareCastPlayback();
+      preparedPlaybackSessionId = castPlayback.playbackSessionId;
       const mediaInfo = new api.chrome.cast.media.MediaInfo(
         castPlayback.streamUrl,
         castPlayback.contentType,
@@ -408,11 +951,17 @@
         loadRequest.activeTrackIds = defaultTrackIds;
       }
 
-      await session.loadMedia(loadRequest);
+      castSession = session;
+      attachCastMediaUpdateListener(await session.loadMedia(loadRequest));
       markCastOwnedSession(castPlayback.playbackSessionId);
-      video?.pause();
+      preparedPlaybackSessionId = null;
       castLaunchState = "connected";
+      playerUiState = "playing";
+      video?.pause();
     } catch {
+      if (preparedPlaybackSessionId) {
+        cancelPlaybackSessionById(preparedPlaybackSessionId);
+      }
       castLaunchState = "error";
     }
   }
@@ -455,6 +1004,14 @@
         hasStartedPlayback = false;
         playerUiState = "starting";
         saveState = "idle";
+        playerControlsVisible = true;
+        playerControlsFocused = false;
+        playerControlsHovered = false;
+        currentPlaybackSeconds = Math.max(0, sourceData.startSeconds);
+        durationSeconds = playbackDurationSeconds(sourceData);
+        seekPreviewSeconds = null;
+        selectedSubtitleId = defaultSubtitleTrackId(playback.tracks);
+        subtitleMenuOpen = false;
       }
       const relativeStartSeconds = () =>
         streamRelativePlaybackSeconds({
@@ -511,7 +1068,15 @@
 
       let autoplayAttempted = false;
       const attemptAutoplay = async () => {
-        if (autoplayAttempted || disposed || !player.paused) return;
+        if (
+          !shouldAttemptLocalAutoplay({
+            autoplayAttempted,
+            disposed,
+            paused: player.paused,
+            casting: isCasting(),
+          })
+        )
+          return;
         autoplayAttempted = true;
         playerUiState = "starting";
         try {
@@ -527,6 +1092,9 @@
       };
 
       const prepareInitialPlayback = () => {
+        updateTimelineFromVideo(sourceData);
+        syncDefaultSubtitleTrack();
+        applyVideoVolume();
         seekToStart();
         void attemptAutoplay();
       };
@@ -617,7 +1185,11 @@
             : 0,
           seeking: player.seeking,
         });
+        updateTimelineFromVideo(sourceData);
         clearTransientOverlayIfPlaying();
+      };
+      const onDurationChange = () => {
+        updateTimelineFromVideo(sourceData);
       };
       const onLoadStart = () => {
         if (!hasStartedPlayback) playerUiState = "starting";
@@ -636,10 +1208,12 @@
         hasPlaybackActivity = true;
         hasStartedPlayback = true;
         playerUiState = "playing";
+        showControls();
       };
       const onPause = () => {
         if (
           disposed ||
+          isCasting() ||
           player.ended ||
           repositioning ||
           playerUiState === "autoplayBlocked"
@@ -654,6 +1228,8 @@
       const onSeeking = () => {
         const decision = hlsSeekController.seeking();
         playerUiState = decision.uiState;
+        updateTimelineFromVideo(sourceData);
+        showControls();
       };
       const onSeeked = () => {
         const decision = hlsSeekController.seeked({
@@ -663,10 +1239,20 @@
           paused: player.paused,
         });
         playerUiState = decision.uiState;
+        seekPreviewSeconds = null;
+        updateTimelineFromVideo(sourceData);
       };
       const onPlayerError = () => {
         playerUiState = "error";
         restartHlsNearCurrentTime("native");
+      };
+      const onEnded = () => {
+        hasPlaybackActivity = true;
+        hasStartedPlayback = true;
+        playerUiState = "paused";
+        showControls();
+        updateTimelineFromVideo(sourceData);
+        void save(true, sourceData);
       };
 
       if (player.readyState >= HTMLMediaElement.HAVE_METADATA) {
@@ -678,6 +1264,7 @@
       }
       player.addEventListener("loadstart", onLoadStart);
       player.addEventListener("canplay", onCanPlay);
+      player.addEventListener("durationchange", onDurationChange);
       player.addEventListener("playing", onPlaying);
       player.addEventListener("pause", onPause);
       player.addEventListener("waiting", onWaiting);
@@ -686,6 +1273,7 @@
       player.addEventListener("seeking", onSeeking);
       player.addEventListener("seeked", onSeeked);
       player.addEventListener("error", onPlayerError);
+      player.addEventListener("ended", onEnded);
 
       const interval = window.setInterval(
         () => void save(false, sourceData),
@@ -702,6 +1290,7 @@
         player.removeEventListener("loadedmetadata", prepareInitialPlayback);
         player.removeEventListener("loadstart", onLoadStart);
         player.removeEventListener("canplay", onCanPlay);
+        player.removeEventListener("durationchange", onDurationChange);
         player.removeEventListener("playing", onPlaying);
         player.removeEventListener("pause", onPause);
         player.removeEventListener("waiting", onWaiting);
@@ -710,6 +1299,7 @@
         player.removeEventListener("seeking", onSeeking);
         player.removeEventListener("seeked", onSeeked);
         player.removeEventListener("error", onPlayerError);
+        player.removeEventListener("ended", onEnded);
         window.removeEventListener("pagehide", flushCapturedProgress);
         document.removeEventListener("visibilitychange", onVisibilityChange);
         window.clearInterval(interval);
@@ -732,21 +1322,20 @@
       .then((api) => {
         if (disposed) return;
         const context = configureCastFramework(api);
+        adoptCastSession(context.getCurrentSession?.());
         const onSessionStateChanged = (event: { sessionState: string }) => {
           if (
             event.sessionState === api.cast.framework.SessionState.SESSION_ENDED
           ) {
-            const sessionId = castOwnedPlaybackSessionId;
-            releaseCastOwnedSession(sessionId);
-            if (sessionId) cancelPlaybackSessionById(sessionId);
-            castLaunchState = "idle";
+            clearCastPlaybackState();
+            castSession = null;
           } else if (
             event.sessionState ===
               api.cast.framework.SessionState.SESSION_STARTED ||
             event.sessionState ===
               api.cast.framework.SessionState.SESSION_RESUMED
           ) {
-            castAvailable = true;
+            adoptCastSession(context.getCurrentSession?.());
           } else if (
             event.sessionState ===
             api.cast.framework.SessionState.SESSION_START_FAILED
@@ -773,6 +1362,62 @@
       disposed = true;
       removeListener?.();
     };
+  });
+
+  $effect(() => {
+    if (!browser) return;
+    const controlsActivityTick = playerControlsActivityTick;
+    void controlsActivityTick;
+    if (shouldAutoHideControls({
+      uiState: playerUiState,
+      controlsVisible: playerControlsVisible,
+      casting: isCasting(),
+      subtitleMenuOpen,
+      controlsFocused: playerControlsFocused,
+      controlsHovered: playerControlsHovered,
+    })) {
+      const timeout = window.setTimeout(() => {
+        playerControlsVisible = false;
+      }, 3200);
+      return () => window.clearTimeout(timeout);
+    }
+  });
+
+  $effect(() => {
+    if (!browser) return;
+    const onFullscreenChange = () => {
+      isFullscreen = document.fullscreenElement === playerShell;
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  });
+
+  $effect(() => {
+    if (!browser || !video) return;
+    const safariVideo = video as SafariVideoElement;
+    const onBeginFullscreen = () => {
+      isFullscreen = true;
+    };
+    const onEndFullscreen = () => {
+      isFullscreen = false;
+      showControls();
+    };
+    safariVideo.addEventListener("webkitbeginfullscreen", onBeginFullscreen);
+    safariVideo.addEventListener("webkitendfullscreen", onEndFullscreen);
+    return () => {
+      safariVideo.removeEventListener(
+        "webkitbeginfullscreen",
+        onBeginFullscreen,
+      );
+      safariVideo.removeEventListener("webkitendfullscreen", onEndFullscreen);
+    };
+  });
+
+  $effect(() => {
+    if (!browser) return;
+    applyVideoVolume();
   });
 
   $effect(() => {
@@ -811,16 +1456,30 @@
 
   onDestroy(() => {
     flushProgress(data);
+    detachCastMediaUpdateListener();
     cancelPlaybackSession(data.playback);
   });
 </script>
 
 {#if data.playback.status === "ready" && data.playback.streamUrl}
-  <!-- svelte-ignore a11y_media_has_caption -->
-  <div class="video-shell">
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+  <div
+    bind:this={playerShell}
+    class:controls-hidden={!controlsAreVisible()}
+    class="video-shell custom-player"
+    role="region"
+    aria-roledescription="video player"
+    aria-label={`Video player for ${data.item.title}`}
+    aria-keyshortcuts={playerKeyboardShortcuts({
+      hasSubtitleTracks: data.playback.tracks.length > 0,
+    })}
+    tabindex="0"
+    onkeydown={handlePlayerKeydown}
+    onpointermove={handlePlayerPointerMove}
+  >
+    <!-- svelte-ignore a11y_media_has_caption -->
     <video
       bind:this={video}
-      controls
       playsinline
       preload={data.playback.mode === "direct" ? "metadata" : "auto"}
       onplay={() => (hasPlaybackActivity = true)}
@@ -828,10 +1487,10 @@
         if (video && video.currentTime > 0) hasPlaybackActivity = true;
       }}
       onpause={() => save(false)}
-      onended={() => save(true)}
     >
       {#each data.playback.tracks as track}
         <track
+          data-track-id={track.id}
           kind="subtitles"
           src={track.src}
           srclang={track.language}
@@ -841,55 +1500,242 @@
       {/each}
     </video>
 
-    {#if castAvailable}
-      <button
-        class:active={castLaunchState === "connected"}
-        class:error={castLaunchState === "error"}
-        class="cast-button"
-        type="button"
-        aria-label="Cast"
-        title="Cast"
-        onclick={castPlayback}
-        disabled={castLaunchState === "connecting"}
-      >
-        <Cast size={20} aria-hidden="true" />
-      </button>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="video-tap-target"
+      aria-hidden="true"
+      onpointerdown={focusPlayerShell}
+      onclick={toggleControls}
+    ></div>
+
+    {#if statusOverlayState() !== "hidden"}
+      <div class="player-status-overlay" aria-live="polite">
+        {#if statusOverlayState() === "casting"}
+          <p>Chromecast connected</p>
+        {:else if statusOverlayState() === "error"}
+          <span class="overlay-error" aria-hidden="true">!</span>
+          <p>{playerOverlayMessage()}</p>
+        {:else if statusOverlayState() === "busy"}
+          <span class="overlay-spinner" aria-hidden="true"></span>
+          <p>{playerOverlayMessage()}</p>
+        {:else}
+          <p>{playerOverlayMessage()}</p>
+        {/if}
+      </div>
     {/if}
 
-    {#if isPlayerOverlayVisible()}
+    {#if controlsAreVisible()}
       <div
-        class:interactive={isPlayOverlayVisible()}
-        class="player-overlay"
-        aria-live="polite"
+        class="player-controls"
+        role="group"
+        aria-label="Playback controls"
+        onfocusin={handleControlsFocusIn}
+        onfocusout={handleControlsFocusOut}
+        onpointerenter={() => {
+          playerControlsHovered = true;
+          showControls();
+        }}
+        onpointerleave={() => {
+          playerControlsHovered = false;
+        }}
       >
-        {#if isPlayOverlayVisible()}
+        <div class="top-controls">
+          {#if onClose}
+            <button
+              class="control-button"
+              type="button"
+              aria-label="Close player"
+              onclick={onClose}
+            >
+              <X size={20} aria-hidden="true" />
+            </button>
+          {:else}
+            <a class="control-button" href={data.item.backHref} aria-label="Back to title">
+              <span aria-hidden="true">‹</span>
+            </a>
+          {/if}
+          <div class="player-title">
+            <p>Now playing</p>
+            <h2>{data.item.title}</h2>
+          </div>
+          {#if castAvailable}
+            <button
+              class:active={castLaunchState === "connected"}
+              class:error={castLaunchState === "error"}
+              class="control-button"
+              type="button"
+              aria-label={castControlLabel(castLaunchState)}
+              title={castControlLabel(castLaunchState)}
+              onclick={castLaunchState === "connected" ? stopCastPlayback : castPlayback}
+              disabled={castLaunchState === "connecting"}
+            >
+              <Cast size={20} aria-hidden="true" />
+            </button>
+          {/if}
+        </div>
+
+        <div class="center-controls">
           <button
-            class="overlay-play"
+            class="control-button skip-button"
             type="button"
-            aria-label="Play"
-            onclick={playFromOverlay}
+            aria-label="Skip backward 10 seconds"
+            onclick={() => skipPlayback(-10)}
           >
-            <Play size={34} fill="currentColor" aria-hidden="true" />
+            <RotateCcw size={24} aria-hidden="true" />
+            <span>10</span>
           </button>
-        {:else if playerUiState === "error"}
-          <span class="overlay-error" aria-hidden="true">!</span>
-        {:else}
-          <span class="overlay-spinner" aria-hidden="true"></span>
-        {/if}
-        <p>{playerOverlayMessage()}</p>
+          <button
+            class="control-button primary-play"
+            type="button"
+            aria-label={playerUiState === "playing" ? "Pause" : "Play"}
+            onclick={() => void toggleLocalPlayback()}
+          >
+            {#if playerUiState === "playing"}
+              <Pause size={34} fill="currentColor" aria-hidden="true" />
+            {:else}
+              <Play size={34} fill="currentColor" aria-hidden="true" />
+            {/if}
+          </button>
+          <button
+            class="control-button skip-button"
+            type="button"
+            aria-label="Skip forward 30 seconds"
+            onclick={() => skipPlayback(30)}
+          >
+            <RotateCw size={24} aria-hidden="true" />
+            <span>30</span>
+          </button>
+        </div>
+
+        <div class="bottom-controls">
+          <input
+            class="seek-slider"
+            type="range"
+            min="0"
+            max={seekSliderMax()}
+            step="0.1"
+            value={displayedPlaybackSeconds()}
+            aria-label="Playback position"
+            aria-valuemin={seekSliderAriaValue().valueMin}
+            aria-valuemax={seekSliderAriaValue().valueMax}
+            aria-valuenow={seekSliderAriaValue().valueNow}
+            aria-valuetext={seekSliderAriaValue().valueText}
+            oninput={(event) => {
+              seekPreviewSeconds = Number(event.currentTarget.value);
+              showControls();
+            }}
+            onchange={(event) =>
+              seekToPlaybackSeconds(Number(event.currentTarget.value))}
+          />
+          <div class="control-row">
+            <span class="time-readout">
+              {playbackTimeRangeText({
+                seconds: displayedPlaybackSeconds(),
+                durationSeconds,
+              })}
+            </span>
+            <div class="right-controls">
+              <button
+                class="control-button"
+                type="button"
+                aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+                onclick={toggleMute}
+              >
+                {#if muted || volume === 0}
+                  <VolumeX size={20} aria-hidden="true" />
+                {:else}
+                  <Volume2 size={20} aria-hidden="true" />
+                {/if}
+              </button>
+              <input
+                class="volume-slider"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={muted ? 0 : volume}
+                aria-label="Volume"
+                aria-valuemin={volumeAriaValue().valueMin}
+                aria-valuemax={volumeAriaValue().valueMax}
+                aria-valuenow={volumeAriaValue().valueNow}
+                aria-valuetext={volumeAriaValue().valueText}
+                oninput={(event) => setVolume(Number(event.currentTarget.value))}
+              />
+              {#if data.playback.tracks.length > 0}
+                <div class="subtitle-control">
+                  <button
+                    bind:this={subtitleToggleButton}
+                    class:active={selectedSubtitleId !== "off"}
+                    class="control-button"
+                    type="button"
+                    aria-label="Subtitles"
+                    aria-expanded={subtitleMenuOpen}
+                    aria-haspopup="menu"
+                    aria-controls="player-subtitle-menu"
+                    onclick={toggleSubtitleMenu}
+                  >
+                    <Captions size={20} aria-hidden="true" />
+                  </button>
+                  {#if subtitleMenuOpen}
+                    <div
+                      class="subtitle-menu"
+                      bind:this={subtitleMenuElement}
+                      id="player-subtitle-menu"
+                      role="menu"
+                      aria-label="Subtitle tracks"
+                      tabindex="-1"
+                      onkeydown={handleSubtitleMenuKeydown}
+                    >
+                      <button
+                        class:active={selectedSubtitleId === "off"}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={selectedSubtitleId === "off"}
+                        onclick={() => void applySubtitleTrack("off", true)}
+                      >
+                        Off
+                      </button>
+                      {#each data.playback.tracks as track}
+                        <button
+                          class:active={selectedSubtitleId === track.id}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={selectedSubtitleId === track.id}
+                          onclick={() => void applySubtitleTrack(track.id, true)}
+                        >
+                          {track.label}
+                        </button>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+              <button
+                class="control-button"
+                type="button"
+                aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                onclick={() => void toggleFullscreen()}
+              >
+                {#if isFullscreen}
+                  <Minimize size={20} aria-hidden="true" />
+                {:else}
+                  <Maximize size={20} aria-hidden="true" />
+                {/if}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     {/if}
   </div>
 
-  <p class:error={saveState === "error"} class="save-state">
+  <p class="sr-only" aria-live="polite">
     {#if saveState === "saving"}
       Saving progress
     {:else if saveState === "saved"}
       Progress saved
     {:else if saveState === "error"}
       Progress could not be saved
-    {:else}
-      Resume starts at {Math.floor(data.startSeconds)}s
     {/if}
   </p>
 {:else if data.playback.status === "preparing"}
@@ -914,6 +1760,21 @@
     background: #000;
   }
 
+  .custom-player {
+    --player-accent: #00ccff;
+    --player-accent-strong: #00ccff;
+    --player-accent-hover: rgba(0, 204, 255, 0.14);
+    --player-accent-hover-text: #00ccff;
+    --player-accent-active: rgba(0, 204, 255, 0.2);
+    --player-accent-active-text: #00ccff;
+    outline: none;
+    color: #f8fafc;
+  }
+
+  .custom-player:focus-visible {
+    box-shadow: 0 0 0 2px rgba(0, 204, 255, 0.78);
+  }
+
   video {
     width: 100%;
     max-height: min(72vh, calc(100dvh - 9rem));
@@ -921,34 +1782,307 @@
     display: block;
   }
 
-  .cast-button {
+  .video-tap-target {
     position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
+    inset: 0;
+    z-index: 1;
+    border: 0;
+    background: transparent;
+    cursor: default;
+    touch-action: manipulation;
+  }
+
+  .player-status-overlay {
+    position: absolute;
+    inset: 0;
     z-index: 2;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.12);
+    color: #f8fafc;
+    text-align: center;
+  }
+
+  .player-status-overlay p {
+    margin: 0;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.58);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 750;
+  }
+
+  .player-controls {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(0, 0, 0, 0.56), rgba(0, 0, 0, 0) 34%),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0) 42%);
+  }
+
+  .top-controls,
+  .center-controls,
+  .bottom-controls {
+    pointer-events: auto;
+  }
+
+  .top-controls {
+    min-height: 4.25rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .player-title {
+    min-width: 0;
+  }
+
+  .player-title p,
+  .player-title h2 {
+    margin: 0;
+  }
+
+  .player-title p {
+    color: rgba(248, 250, 252, 0.7);
+    font-size: 0.72rem;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+
+  .player-title h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: clamp(0.98rem, 2.2vw, 1.2rem);
+  }
+
+  .center-controls {
+    align-self: center;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: clamp(0.8rem, 3vw, 1.5rem);
+  }
+
+  .bottom-controls {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0 0.9rem 0.8rem;
+  }
+
+  .control-row {
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .right-controls {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 0.45rem;
+  }
+
+  .control-button {
     width: 2.5rem;
     height: 2.5rem;
-    display: grid;
+    display: inline-grid;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    border: 0;
     border-radius: 8px;
-    background: rgba(8, 12, 16, 0.68);
+    background: transparent;
     color: #f8fafc;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+    touch-action: manipulation;
   }
 
-  .cast-button:hover:not(:disabled),
-  .cast-button.active {
-    background: rgba(30, 90, 78, 0.84);
-    border-color: rgba(95, 217, 180, 0.55);
+  .control-button:hover:not(:disabled) {
+    background: var(--player-accent-hover);
+    color: var(--player-accent-hover-text);
   }
 
-  .cast-button.error {
-    background: rgba(127, 29, 29, 0.84);
-    border-color: rgba(252, 165, 165, 0.5);
+  .control-button.active {
+    background: var(--player-accent-active);
+    color: var(--player-accent-active-text);
   }
 
-  .cast-button:disabled {
-    opacity: 0.72;
+  .primary-play:hover:not(:disabled) {
+    background: var(--player-accent-hover);
+    color: var(--player-accent-hover-text);
+  }
+
+  .control-button:focus-visible,
+  .seek-slider:focus-visible,
+  .volume-slider:focus-visible,
+  .subtitle-menu button:focus-visible {
+    outline: 2px solid var(--player-accent-strong);
+    outline-offset: 2px;
+  }
+
+  .control-button.error {
+    background: rgba(127, 29, 29, 0.7);
+  }
+
+  .control-button:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .primary-play {
+    width: 5rem;
+    height: 5rem;
+    border-radius: 999px;
+    background: rgba(8, 12, 16, 0.76);
+    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.34);
+  }
+
+  .skip-button {
+    position: relative;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 999px;
+    background: rgba(8, 12, 16, 0.38);
+  }
+
+  .skip-button:hover:not(:disabled) {
+    background: var(--player-accent-hover);
+    color: var(--player-accent-hover-text);
+  }
+
+  .skip-button span {
+    position: absolute;
+    inset: auto 0 0.55rem;
+    font-size: 0.62rem;
+    font-weight: 850;
+    line-height: 1;
+  }
+
+  .seek-slider,
+  .volume-slider {
+    width: 100%;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .seek-slider {
+    height: 1.5rem;
+    accent-color: var(--player-accent);
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .volume-slider {
+    width: 6rem;
+    height: 1.25rem;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .volume-slider::-webkit-slider-runnable-track {
+    height: 0.25rem;
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.34);
+  }
+
+  .volume-slider::-webkit-slider-thumb {
+    width: 0.8rem;
+    height: 0.8rem;
+    margin-top: -0.275rem;
+    appearance: none;
+    border-radius: 999px;
+    background: var(--player-accent-strong);
+    box-shadow: 0 0 0 1px rgba(8, 12, 16, 0.5);
+  }
+
+  .volume-slider::-moz-range-track {
+    height: 0.25rem;
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.34);
+  }
+
+  .volume-slider::-moz-range-progress {
+    height: 0.25rem;
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.34);
+  }
+
+  .volume-slider::-moz-range-thumb {
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--player-accent-strong);
+    box-shadow: 0 0 0 1px rgba(8, 12, 16, 0.5);
+  }
+
+  .time-readout {
+    min-width: 7.5rem;
+    color: rgba(248, 250, 252, 0.82);
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .subtitle-control {
+    position: relative;
+  }
+
+  .subtitle-menu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 0.55rem);
+    min-width: 11rem;
+    max-width: min(18rem, calc(100vw - 2rem));
+    display: grid;
+    gap: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(8, 12, 16, 0.94);
+    padding: 0.35rem;
+    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.36);
+  }
+
+  .subtitle-menu button {
+    min-height: 2.15rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #f8fafc;
+    cursor: pointer;
+    padding: 0.4rem 0.55rem;
+    text-align: left;
+  }
+
+  .subtitle-menu button:hover {
+    background: var(--player-accent-hover);
+    color: var(--player-accent-hover-text);
+  }
+
+  .subtitle-menu button.active {
+    background: var(--player-accent-active);
+    color: var(--player-accent-active-text);
+  }
+
+  .custom-player.controls-hidden {
+    cursor: none;
   }
 
   .placeholder-shell {
@@ -970,10 +2104,6 @@
     text-align: center;
   }
 
-  .player-overlay.interactive {
-    pointer-events: auto;
-  }
-
   .player-overlay p {
     margin: 0;
     border-radius: 999px;
@@ -981,22 +2111,6 @@
     padding: 0.4rem 0.7rem;
     font-size: 0.85rem;
     font-weight: 750;
-  }
-
-  .overlay-play {
-    width: 5rem;
-    height: 5rem;
-    display: grid;
-    place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    border-radius: 999px;
-    background: rgba(8, 12, 16, 0.72);
-    color: #fff;
-    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.35);
-  }
-
-  .overlay-play:hover {
-    background: rgba(18, 25, 33, 0.86);
   }
 
   .overlay-spinner {
@@ -1026,6 +2140,12 @@
     }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .overlay-spinner {
+      animation: none;
+    }
+  }
+
   .playback-message {
     display: grid;
     gap: 0.35rem;
@@ -1044,8 +2164,89 @@
     font-size: 1.05rem;
   }
 
-  .save-state {
-    margin: 0;
-    color: #a8a195;
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  @media (max-width: 640px) {
+    .top-controls {
+      min-height: 3.5rem;
+      padding: 0.55rem;
+    }
+
+    .player-title p {
+      display: none;
+    }
+
+    .player-title h2 {
+      font-size: 0.95rem;
+    }
+
+    .control-button {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+
+    .primary-play {
+      width: 4.5rem;
+      height: 4.5rem;
+    }
+
+    .skip-button {
+      width: 3rem;
+      height: 3rem;
+    }
+
+    .bottom-controls {
+      gap: 0.35rem;
+      padding: 0 0.65rem 0.65rem;
+    }
+
+    .control-row {
+      min-height: auto;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .right-controls {
+      margin-left: auto;
+      gap: 0.25rem;
+    }
+
+    .volume-slider {
+      display: none;
+    }
+
+    .time-readout {
+      min-width: 6.6rem;
+      font-size: 0.76rem;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .player-title {
+      display: none;
+    }
+
+    .center-controls {
+      gap: 0.65rem;
+    }
+
+    .primary-play {
+      width: 4rem;
+      height: 4rem;
+    }
+
+    .skip-button {
+      width: 2.85rem;
+      height: 2.85rem;
+    }
   }
 </style>

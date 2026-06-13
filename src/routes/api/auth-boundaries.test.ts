@@ -13,7 +13,9 @@ import {
   registerTranscodeHlsArtifact,
   setTranscodeTouchDelayForTests,
 } from "$lib/server/transcoding/sessions";
+import { verifyCastPlaybackToken } from "$lib/server/playback/cast";
 import { GET as jobsGet } from "./jobs/+server";
+import { POST as castPlaybackPost } from "./playback/cast/+server";
 import { POST as playbackPost } from "./playback/[id]/+server";
 import { POST as cancelPlaybackSessionPost } from "./playback-sessions/[sessionId]/cancel/+server";
 import { POST as heartbeatPlaybackSessionPost } from "./playback-sessions/[sessionId]/heartbeat/+server";
@@ -462,6 +464,250 @@ describe("authenticated API route boundaries", () => {
       expect(artifact).toBeUndefined();
     } finally {
       setTranscodeTouchDelayForTests(null);
+      await closeDatabaseForTests();
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("prepares Cast receiver URLs for direct, HLS, and subtitles", async () => {
+    const tempDir = await mkdtemp(
+      path.join(tmpdir(), "lunarr-api-cast-playback-"),
+    );
+
+    try {
+      await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
+      await migrateDatabase();
+      const db = await getDb();
+      const nowMs = Date.now();
+      const now = new Date(nowMs).toISOString();
+      const filePath = path.join(tempDir, "Movie.2026.mp4");
+      await writeFile(filePath, "0123456789");
+      await db
+        .insertInto("user")
+        .values({
+          id: "user-1",
+          name: "User",
+          email: "user@example.com",
+          role: "user",
+          email_verified: 0,
+          image: null,
+          created_at: nowMs,
+          updated_at: nowMs,
+        })
+        .execute();
+      await db
+        .insertInto("library")
+        .values({
+          id: "library-1",
+          name: "Movies",
+          kind: "movie",
+          path: tempDir,
+          access_mode: "all",
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+      await db
+        .insertInto("media_item")
+        .values({
+          id: "movie-1",
+          kind: "movie",
+          title: "Movie",
+          sort_title: "movie",
+          year: 2026,
+          overview: null,
+          runtime_seconds: null,
+          poster_path: null,
+          backdrop_path: null,
+          release_date: "2026-01-01",
+          provider: null,
+          provider_id: null,
+          parent_id: null,
+          popularity: null,
+          vote_average: null,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+      await db
+        .insertInto("media_file")
+        .values({
+          id: "file-1",
+          library_id: "library-1",
+          media_item_id: "movie-1",
+          path: filePath,
+          basename: "Movie.2026.mp4",
+          extension: ".mp4",
+          size_bytes: 10,
+          mtime_ms: nowMs,
+          duration_seconds: 120,
+          video_codec: "h264",
+          audio_codec: "aac",
+          container: "mp4",
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+      await db
+        .insertInto("subtitle_track")
+        .values({
+          id: "subtitle-1",
+          media_item_id: "movie-1",
+          media_file_id: "file-1",
+          label: "English",
+          language: "en",
+          source_kind: "external",
+          path: path.join(tempDir, "Movie.2026.en.vtt"),
+          mime_type: "text/vtt",
+          is_default: 1,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+
+      const directResponse = await castPlaybackPost({
+        request: new Request("http://localhost/api/playback/cast", {
+          method: "POST",
+          body: JSON.stringify({
+            mediaItemId: "movie-1",
+            mediaFileId: "file-1",
+            mode: "direct",
+            subtitleTrackIds: ["subtitle-1"],
+          }),
+          headers: { "content-type": "application/json" },
+        }),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never);
+
+      expect(directResponse.status).toBe(200);
+      const directBody = await directResponse.json();
+      expect(directBody).toMatchObject({
+        contentType: "video/mp4",
+        title: "Movie",
+        durationSeconds: 120,
+        playbackSessionId: null,
+        tracks: [
+          {
+            id: "subtitle-1",
+            label: "English",
+            language: "en",
+            default: true,
+          },
+        ],
+      });
+      const directStreamUrl = new URL(directBody.streamUrl);
+      expect(directStreamUrl.pathname).toBe("/media/files/file-1/stream");
+      expect(
+        verifyCastPlaybackToken(directStreamUrl.searchParams.get("castToken"), {
+          route: "direct",
+          mediaFileId: "file-1",
+        }),
+      ).toMatchObject({
+        route: "direct",
+        userId: "user-1",
+        mediaFileId: "file-1",
+      });
+      const subtitleUrl = new URL(directBody.tracks[0].src);
+      expect(subtitleUrl.pathname).toBe("/media/subtitles/subtitle-1");
+      expect(
+        verifyCastPlaybackToken(subtitleUrl.searchParams.get("castToken"), {
+          route: "subtitle",
+          subtitleTrackId: "subtitle-1",
+        }),
+      ).toMatchObject({
+        route: "subtitle",
+        userId: "user-1",
+        mediaFileId: "file-1",
+        subtitleTrackId: "subtitle-1",
+      });
+
+      await db
+        .insertInto("playback_session")
+        .values({
+          id: "transcode-1",
+          media_file_id: "file-1",
+          user_id: "user-1",
+          status: "running",
+          mode: "transcode",
+          error_message: null,
+          started_at: now,
+          finished_at: null,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+      const playbackArtifactDir = path.join(
+        tempDir,
+        "playback-sessions",
+        "transcode-1",
+      );
+      const playbackPlaylistPath = path.join(
+        playbackArtifactDir,
+        "master.m3u8",
+      );
+      await mkdir(playbackArtifactDir, { recursive: true });
+      await writeFile(playbackPlaylistPath, "#EXTM3U\n");
+      await registerTranscodeHlsArtifact({
+        sessionId: "transcode-1",
+        mediaFileId: "file-1",
+        path: playbackPlaylistPath,
+        mimeType: "application/vnd.apple.mpegurl",
+      });
+
+      const hlsResponse = await castPlaybackPost({
+        request: new Request("http://localhost/api/playback/cast", {
+          method: "POST",
+          body: JSON.stringify({
+            mediaItemId: "movie-1",
+            mediaFileId: "file-1",
+            playbackSessionId: "transcode-1",
+            mode: "transcode",
+            subtitleTrackIds: ["subtitle-1"],
+          }),
+          headers: { "content-type": "application/json" },
+        }),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never);
+
+      expect(hlsResponse.status).toBe(200);
+      const hlsBody = await hlsResponse.json();
+      expect(hlsBody).toMatchObject({
+        contentType: "application/vnd.apple.mpegurl",
+        playbackSessionId: "transcode-1",
+      });
+      const hlsStreamUrl = new URL(hlsBody.streamUrl);
+      expect(hlsStreamUrl.pathname).toBe(
+        "/media/playback-sessions/transcode-1/master.m3u8",
+      );
+      expect(
+        verifyCastPlaybackToken(hlsStreamUrl.searchParams.get("castToken"), {
+          route: "hls",
+          playbackSessionId: "transcode-1",
+        }),
+      ).toMatchObject({
+        route: "hls",
+        userId: "user-1",
+        mediaFileId: "file-1",
+        playbackSessionId: "transcode-1",
+      });
+
+      const missingSessionResponse = await castPlaybackPost({
+        request: new Request("http://localhost/api/playback/cast", {
+          method: "POST",
+          body: JSON.stringify({
+            mediaItemId: "movie-1",
+            mediaFileId: "file-1",
+            mode: "transcode",
+          }),
+          headers: { "content-type": "application/json" },
+        }),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never);
+      expect(missingSessionResponse.status).toBe(400);
+      expect(await missingSessionResponse.json()).toEqual({
+        error: "Cast HLS playback requires a session.",
+      });
+    } finally {
       await closeDatabaseForTests();
       await rm(tempDir, { recursive: true, force: true });
     }
