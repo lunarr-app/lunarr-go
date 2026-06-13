@@ -550,6 +550,28 @@ export function playerSurfaceClickState(input: {
   };
 }
 
+export type PlayerSurfaceClickAction =
+  | "seek-backward"
+  | "toggle-playback"
+  | "seek-forward";
+
+export function playerSurfaceClickAction(input: {
+  clientX: number;
+  left: number;
+  width: number;
+}): PlayerSurfaceClickAction {
+  const width =
+    Number.isFinite(input.width) && input.width > 0 ? input.width : 0;
+  if (width === 0) return "toggle-playback";
+  const relativeX = Number.isFinite(input.clientX)
+    ? input.clientX - input.left
+    : width / 2;
+  const zone = Math.min(Math.max(relativeX / width, 0), 1);
+  if (zone < 1 / 3) return "seek-backward";
+  if (zone > 2 / 3) return "seek-forward";
+  return "toggle-playback";
+}
+
 export type PlaybackSubtitleTrack = {
   id: string;
   default?: boolean | null;

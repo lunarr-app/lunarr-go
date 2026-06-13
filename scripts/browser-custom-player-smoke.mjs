@@ -160,6 +160,9 @@ try {
     >
       <video playsinline></video>
       <div class="video-tap-target" aria-hidden="true"></div>
+      <div class="surface-feedback seek-forward" aria-hidden="true">
+        <span>30</span>
+      </div>
       <div class="player-controls">
         <div class="top-controls">
           <button class="control-button" type="button" aria-label="Close player">Close</button>
@@ -208,6 +211,7 @@ try {
     const player = document.querySelector(".custom-player");
     const video = document.querySelector("video");
     const tapTarget = document.querySelector(".video-tap-target");
+    const surfaceFeedback = document.querySelector(".surface-feedback");
     const playButton = document.querySelector(".primary-play");
     const primaryControls = document.querySelector(".primary-controls");
     const bottomControls = document.querySelector(".bottom-controls");
@@ -225,6 +229,7 @@ try {
       !player ||
       !video ||
       !tapTarget ||
+      !surfaceFeedback ||
       !playButton ||
       !primaryControls ||
       !bottomControls ||
@@ -292,6 +297,16 @@ try {
         ok: false,
         message:
           "Expected video tap target to be a presentational, non-tabbable layer.",
+      };
+    }
+    const surfaceFeedbackStyle = getComputedStyle(surfaceFeedback);
+    if (
+      surfaceFeedbackStyle.pointerEvents !== "none" ||
+      surfaceFeedbackStyle.animationName !== "surface-feedback"
+    ) {
+      return {
+        ok: false,
+        message: `Expected surface feedback to be animated and non-interactive, got ${JSON.stringify({ pointerEvents: surfaceFeedbackStyle.pointerEvents, animationName: surfaceFeedbackStyle.animationName })}.`,
       };
     }
     player.blur();
@@ -580,6 +595,33 @@ try {
         message: `Expected surface click to close subtitle menu before hiding controls, got ${JSON.stringify(surfaceClickWithSubtitleMenu)}.`,
       };
     }
+    const surfaceActions = {
+      left: controls.playerSurfaceClickAction({
+        clientX: 5,
+        left: 0,
+        width: 300,
+      }),
+      center: controls.playerSurfaceClickAction({
+        clientX: 150,
+        left: 0,
+        width: 300,
+      }),
+      right: controls.playerSurfaceClickAction({
+        clientX: 295,
+        left: 0,
+        width: 300,
+      }),
+    };
+    if (
+      surfaceActions.left !== "seek-backward" ||
+      surfaceActions.center !== "toggle-playback" ||
+      surfaceActions.right !== "seek-forward"
+    ) {
+      return {
+        ok: false,
+        message: `Expected surface click zones to map to seek/play actions, got ${JSON.stringify(surfaceActions)}.`,
+      };
+    }
 
     const castSeek = controls.playbackSeekAction({
       casting: true,
@@ -810,23 +852,27 @@ try {
     await motionPage.setContent(`<!doctype html>
       <meta charset="utf-8">
       <style>${playerStyle}</style>
-      <span class="overlay-spinner" aria-hidden="true"></span>`);
+      <span class="overlay-spinner" aria-hidden="true"></span>
+      <span class="surface-feedback" aria-hidden="true"></span>`);
     const reducedMotionSpinner = await motionPage.evaluate(() => {
       const spinner = document.querySelector(".overlay-spinner");
-      if (!spinner) return { found: false };
-      const style = getComputedStyle(spinner);
+      const feedback = document.querySelector(".surface-feedback");
+      if (!spinner || !feedback) return { found: false };
+      const spinnerStyle = getComputedStyle(spinner);
+      const feedbackStyle = getComputedStyle(feedback);
       return {
         found: true,
-        animationName: style.animationName,
-        animationDuration: style.animationDuration,
+        spinnerAnimationName: spinnerStyle.animationName,
+        feedbackAnimationName: feedbackStyle.animationName,
       };
     });
     if (
       !reducedMotionSpinner.found ||
-      reducedMotionSpinner.animationName !== "none"
+      reducedMotionSpinner.spinnerAnimationName !== "none" ||
+      reducedMotionSpinner.feedbackAnimationName !== "none"
     ) {
       throw new Error(
-        `Expected player spinner animation to stop for reduced motion, got ${JSON.stringify(reducedMotionSpinner)}.`,
+        `Expected player overlay animations to stop for reduced motion, got ${JSON.stringify(reducedMotionSpinner)}.`,
       );
     }
   } finally {

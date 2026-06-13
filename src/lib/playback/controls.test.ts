@@ -26,6 +26,7 @@ import {
   playbackSliderAriaValue,
   playbackSeekAction,
   playbackTimeRangeText,
+  playerSurfaceClickAction,
   playerSurfaceClickState,
   playerStatusOverlayState,
   releaseCastOwnedPlaybackSession,
@@ -933,6 +934,34 @@ describe("custom player controls", () => {
       controlsVisible: true,
       subtitleMenuOpen: false,
     });
+    expect(
+      playerSurfaceClickAction({
+        clientX: 10,
+        left: 0,
+        width: 300,
+      }),
+    ).toBe("seek-backward");
+    expect(
+      playerSurfaceClickAction({
+        clientX: 150,
+        left: 0,
+        width: 300,
+      }),
+    ).toBe("toggle-playback");
+    expect(
+      playerSurfaceClickAction({
+        clientX: 290,
+        left: 0,
+        width: 300,
+      }),
+    ).toBe("seek-forward");
+    expect(
+      playerSurfaceClickAction({
+        clientX: Number.NaN,
+        left: 0,
+        width: 0,
+      }),
+    ).toBe("toggle-playback");
   });
 
   test("selects the default subtitle track id or off", () => {

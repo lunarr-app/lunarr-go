@@ -40,6 +40,7 @@
     playbackSliderAriaValue,
     playbackSeekAction,
     playbackTimeRangeText,
+    playerSurfaceClickAction,
     playerSurfaceClickState,
     playerStatusOverlayState,
     releaseCastOwnedPlaybackSession,
@@ -110,6 +111,8 @@
     webkitCurrentPlaybackTargetIsWireless?: boolean;
   };
 
+  type SurfaceFeedback = "seek-backward" | "toggle-playback" | "seek-forward";
+
   let {
     data,
     onClose,
@@ -148,6 +151,8 @@
   let playerControlsVisible = $state(true);
   let playerControlsFocused = $state(false);
   let playerControlsHovered = $state(false);
+  let surfaceFeedback = $state<SurfaceFeedback | null>(null);
+  let surfaceFeedbackTimeout: number | null = null;
   let playerControlsActivityTick = $state(0);
   let currentPlaybackSeconds = $state(0);
   let durationSeconds = $state<number | null>(null);
@@ -415,6 +420,42 @@
     });
     playerControlsVisible = next.controlsVisible;
     subtitleMenuOpen = next.subtitleMenuOpen;
+  }
+
+  function showSurfaceFeedback(action: SurfaceFeedback) {
+    surfaceFeedback = action;
+    if (surfaceFeedbackTimeout !== null) {
+      window.clearTimeout(surfaceFeedbackTimeout);
+    }
+    surfaceFeedbackTimeout = window.setTimeout(() => {
+      surfaceFeedback = null;
+      surfaceFeedbackTimeout = null;
+    }, 620);
+  }
+
+  function handleSurfaceClick(event: MouseEvent) {
+    if (subtitleMenuOpen) {
+      toggleControls();
+      return;
+    }
+
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) return;
+    const rect = target.getBoundingClientRect();
+    const action = playerSurfaceClickAction({
+      clientX: event.clientX,
+      left: rect.left,
+      width: rect.width,
+    });
+    showControls();
+    showSurfaceFeedback(action);
+    if (action === "seek-backward") {
+      skipPlayback(-10);
+    } else if (action === "seek-forward") {
+      skipPlayback(30);
+    } else {
+      void toggleLocalPlayback();
+    }
   }
 
   function focusPlayerShell() {
@@ -1700,6 +1741,10 @@
   });
 
   onDestroy(() => {
+    if (surfaceFeedbackTimeout !== null) {
+      window.clearTimeout(surfaceFeedbackTimeout);
+      surfaceFeedbackTimeout = null;
+    }
     flushProgress(data);
     detachCastMediaUpdateListener();
     cancelPlaybackSession(data.playback);
@@ -1750,8 +1795,29 @@
       class="video-tap-target"
       aria-hidden="true"
       onpointerdown={focusPlayerShell}
-      onclick={toggleControls}
+      onclick={handleSurfaceClick}
     ></div>
+
+    {#if surfaceFeedback}
+      <div
+        class:seek-backward={surfaceFeedback === "seek-backward"}
+        class:seek-forward={surfaceFeedback === "seek-forward"}
+        class="surface-feedback"
+        aria-hidden="true"
+      >
+        {#if surfaceFeedback === "seek-backward"}
+          <Rewind size={34} aria-hidden="true" />
+          <span>10</span>
+        {:else if surfaceFeedback === "seek-forward"}
+          <FastForward size={34} aria-hidden="true" />
+          <span>30</span>
+        {:else if playerUiState === "playing"}
+          <Pause size={38} fill="currentColor" aria-hidden="true" />
+        {:else}
+          <Play size={38} fill="currentColor" aria-hidden="true" />
+        {/if}
+      </div>
+    {/if}
 
     {#if statusOverlayState() !== "hidden"}
       <div class="player-status-overlay" aria-live="polite">
@@ -2048,6 +2114,39 @@
     background: transparent;
     cursor: default;
     touch-action: manipulation;
+  }
+
+  .surface-feedback {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 2;
+    width: 5rem;
+    height: 5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.48);
+    color: #f8fafc;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: surface-feedback 0.62s ease-out both;
+  }
+
+  .surface-feedback.seek-backward {
+    left: 24%;
+  }
+
+  .surface-feedback.seek-forward {
+    left: 76%;
+  }
+
+  .surface-feedback span {
+    position: absolute;
+    bottom: 0.85rem;
+    font-size: 0.68rem;
+    font-weight: 850;
+    line-height: 1;
   }
 
   .player-status-overlay {
@@ -2366,8 +2465,24 @@
     }
   }
 
+  @keyframes surface-feedback {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.82);
+    }
+    18% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1.18);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .overlay-spinner {
+    .overlay-spinner,
+    .surface-feedback {
       animation: none;
     }
   }
