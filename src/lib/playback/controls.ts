@@ -147,6 +147,40 @@ export function elementTimelineSeconds(input: {
   });
 }
 
+export function castReceiverTimelineSeconds(input: {
+  absoluteSeconds: number;
+  mode: string;
+  streamStartSeconds?: number | null;
+}) {
+  if (input.mode !== "transcode" && input.mode !== "remux") {
+    return clampPlaybackSeconds({
+      seconds: input.absoluteSeconds,
+      durationSeconds: null,
+    });
+  }
+  return elementTimelineSeconds({
+    absoluteSeconds: input.absoluteSeconds,
+    streamStartSeconds: input.streamStartSeconds,
+  });
+}
+
+export function castMediaTimelineSeconds(input: {
+  receiverSeconds: number;
+  mode: string;
+  streamStartSeconds?: number | null;
+}) {
+  if (input.mode !== "transcode" && input.mode !== "remux") {
+    return clampPlaybackSeconds({
+      seconds: input.receiverSeconds,
+      durationSeconds: null,
+    });
+  }
+  return mediaTimelineSeconds({
+    relativeSeconds: input.receiverSeconds,
+    streamStartSeconds: input.streamStartSeconds,
+  });
+}
+
 export function shouldUseHlsRepositionForSeek(input: {
   mode: string;
   targetSeconds: number;

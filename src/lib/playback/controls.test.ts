@@ -6,9 +6,11 @@ import {
   airPlayControlState,
   airPlayTargetPickerAction,
   castControlLabel,
+  castMediaTimelineSeconds,
   castPlaybackSecondsAfterSeek,
   castPlaybackCommandForUiState,
   castPlayerUiState,
+  castReceiverTimelineSeconds,
   castUiStateAfterCommand,
   clampPlaybackSeconds,
   defaultSubtitleTrackId,
@@ -305,6 +307,44 @@ describe("custom player controls", () => {
         fileDurationSeconds: null,
         streamStartSeconds: 60,
       }).positionSeconds,
+    ).toBe(180);
+  });
+
+  test("converts Cast HLS receiver times against the stream start offset", () => {
+    expect(
+      castReceiverTimelineSeconds({
+        mode: "transcode",
+        absoluteSeconds: 780,
+        streamStartSeconds: 600,
+      }),
+    ).toBe(180);
+    expect(
+      castReceiverTimelineSeconds({
+        mode: "transcode",
+        absoluteSeconds: 1800,
+        streamStartSeconds: 600,
+      }),
+    ).toBe(1200);
+    expect(
+      castMediaTimelineSeconds({
+        mode: "transcode",
+        receiverSeconds: 180,
+        streamStartSeconds: 600,
+      }),
+    ).toBe(780);
+    expect(
+      castReceiverTimelineSeconds({
+        mode: "direct",
+        absoluteSeconds: 780,
+        streamStartSeconds: 600,
+      }),
+    ).toBe(780);
+    expect(
+      castMediaTimelineSeconds({
+        mode: "direct",
+        receiverSeconds: 180,
+        streamStartSeconds: 600,
+      }),
     ).toBe(180);
   });
 

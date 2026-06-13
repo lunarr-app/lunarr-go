@@ -173,6 +173,27 @@ describe("server hook route boundaries", () => {
     expect(await response.json()).toEqual({ error: "Unauthorized" });
   });
 
+  test("lets remote-token media requests reach route handlers without a session", async () => {
+    const response = await handle({
+      event: eventFor("/media/files/file-1/stream?remoteToken=test") as never,
+      resolve: async () => new Response("resolved"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("resolved");
+  });
+
+  test("lets media OPTIONS preflights reach route handlers without a session", async () => {
+    const response = await handle({
+      event: eventFor("/media/files/file-1/stream", {
+        method: "OPTIONS",
+      }) as never,
+      resolve: async () => new Response(null, { status: 204 }),
+    });
+
+    expect(response.status).toBe(204);
+  });
+
   test("does not treat auth-prefixed sibling API paths as public after setup", async () => {
     const response = await handle({
       event: eventFor("/api/authz") as never,

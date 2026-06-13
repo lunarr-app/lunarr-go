@@ -3,6 +3,7 @@ import { auth } from "$lib/server/auth";
 import { hasRegisteredUsers } from "$lib/server/auth/users";
 import { migrateDatabase } from "$lib/server/db";
 import { cleanupJobHistory } from "$lib/server/jobs";
+import { REMOTE_PLAYBACK_TOKEN_QUERY_PARAM } from "$lib/server/playback/remote-auth";
 import { resumeInterruptedJobs } from "$lib/server/scanner";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
@@ -11,7 +12,7 @@ import {
   cleanupConfiguredPlaybackSessionArtifacts,
   recoverInterruptedTranscodeSessions,
 } from "$lib/server/transcoding/sessions";
-import { json, redirect, type Handle } from "@sveltejs/kit";
+import { json, redirect, type Handle, type RequestEvent } from "@sveltejs/kit";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
 let startupPromise: Promise<void> | undefined;
@@ -56,6 +57,13 @@ function isMediaResourcePath(pathname: string) {
   );
 }
 
+function canResolveUnauthenticatedMediaResource(event: RequestEvent) {
+  return (
+    event.request.method === "OPTIONS" ||
+    event.url.searchParams.has(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM)
+  );
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
   await ensureStartup();
 
@@ -73,6 +81,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const pathname = event.url.pathname;
   const hasUsers = await hasRegisteredUsers();
+  const canResolveRemoteMediaResource =
+    isMediaResourcePath(pathname) && canResolveUnauthenticatedMediaResource(event);
 
   if (!hasUsers && pathname !== "/setup" && !isAuthApiPath(pathname)) {
     if (pathname.startsWith("/api/") || isMediaResourcePath(pathname))
@@ -95,11 +105,20 @@ export const handle: Handle = async ({ event, resolve }) => {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (isMediaResourcePath(pathname) && !event.locals.user) {
+  if (
+    isMediaResourcePath(pathname) &&
+    !event.locals.user &&
+    !canResolveRemoteMediaResource
+  ) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (hasUsers && !event.locals.user && !isPublicPath(pathname)) {
+  if (
+    hasUsers &&
+    !event.locals.user &&
+    !isPublicPath(pathname) &&
+    !canResolveRemoteMediaResource
+  ) {
     throw redirect(303, "/login");
   }
 

@@ -22,9 +22,11 @@
     airPlayControlState,
     airPlayTargetPickerAction,
     castControlLabel,
+    castMediaTimelineSeconds,
     castPlaybackSecondsAfterSeek,
     castPlaybackCommandForUiState,
     castPlayerUiState,
+    castReceiverTimelineSeconds,
     castUiStateAfterCommand,
     clampPlaybackSeconds,
     defaultSubtitleTrackId,
@@ -628,17 +630,25 @@
     const castDuration = Number(media?.media?.duration);
     const nextDuration =
       Number.isFinite(castDuration) && castDuration > 0
-        ? castDuration
+        ? castMediaTimelineSeconds({
+            receiverSeconds: castDuration,
+            mode: data.playback.mode,
+            streamStartSeconds: data.playback.streamStartSeconds,
+          })
         : durationSeconds;
     if (Number.isFinite(castCurrentTime) && castCurrentTime >= 0) {
       currentPlaybackSeconds = clampPlaybackSeconds({
-        seconds: castCurrentTime,
+        seconds: castMediaTimelineSeconds({
+          receiverSeconds: castCurrentTime,
+          mode: data.playback.mode,
+          streamStartSeconds: data.playback.streamStartSeconds,
+        }),
         durationSeconds: nextDuration,
       });
       if (currentPlaybackSeconds > 0) hasPlaybackActivity = true;
     }
-    if (Number.isFinite(castDuration) && castDuration > 0) {
-      durationSeconds = castDuration;
+    if (nextDuration !== null && Number.isFinite(nextDuration) && nextDuration > 0) {
+      durationSeconds = nextDuration;
     }
     if (!alive) showControls();
   }
@@ -678,7 +688,11 @@
     const chromeApi = castWindow().chrome;
     if (!media?.seek || !chromeApi?.cast?.media?.SeekRequest) return false;
     const request = new chromeApi.cast.media.SeekRequest();
-    request.currentTime = seconds;
+    request.currentTime = castReceiverTimelineSeconds({
+      absoluteSeconds: seconds,
+      mode: data.playback.mode,
+      streamStartSeconds: data.playback.streamStartSeconds,
+    });
     media.seek(request, () => undefined, () => undefined);
     return true;
   }
@@ -1202,7 +1216,11 @@
       mediaInfo.duration =
         Number.isFinite(castPlayback.durationSeconds) &&
         Number(castPlayback.durationSeconds) > 0
-          ? Number(castPlayback.durationSeconds)
+          ? castReceiverTimelineSeconds({
+              absoluteSeconds: Number(castPlayback.durationSeconds),
+              mode: data.playback.mode,
+              streamStartSeconds: data.playback.streamStartSeconds,
+            })
           : undefined;
       mediaInfo.tracks = castPlayback.tracks.map((track, index) => {
         const castTrack = new api.chrome.cast.media.Track(
@@ -1219,7 +1237,11 @@
 
       const loadRequest = new api.chrome.cast.media.LoadRequest(mediaInfo);
       loadRequest.autoplay = true;
-      loadRequest.currentTime = currentCastPositionSeconds();
+      loadRequest.currentTime = castReceiverTimelineSeconds({
+        absoluteSeconds: currentCastPositionSeconds(),
+        mode: data.playback.mode,
+        streamStartSeconds: data.playback.streamStartSeconds,
+      });
       const defaultTrackIds = castPlayback.tracks
         .map((track, index) => (track.default ? index + 1 : null))
         .filter((id): id is number => id !== null);
