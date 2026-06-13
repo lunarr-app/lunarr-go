@@ -67,6 +67,15 @@
     shouldRecoverHlsPlaybackError,
     streamRelativePlaybackSeconds,
   } from "$lib/playback/seek";
+  import { connectedCastSession } from "$lib/playback/cast";
+  import type {
+    CastApi,
+    CastMediaSession,
+    CastMediaUpdateListener,
+    CastRemotePlayer,
+    CastRemotePlayerController,
+    CastSession,
+  } from "$lib/playback/cast";
   import {
     activePlaybackSessionId,
     cancelPlaybackSessionOnce,
@@ -84,11 +93,6 @@
     | "seeking"
     | "autoplayBlocked"
     | "error";
-
-  type CastApi = {
-    cast: any;
-    chrome: any;
-  };
 
   type RemotePlaybackResponse = {
     streamUrl: string;
@@ -189,11 +193,11 @@
   let remotePlaybackNotice = $state<string | null>(null);
   let remotePlaybackNoticeTimeout: number | null = null;
   let castOwnedPlaybackSessionId = $state<string | null>(null);
-  let castSession: any = null;
-  let castMedia: any = null;
-  let castMediaUpdateListener: ((isAlive: boolean) => void) | null = null;
-  let castRemotePlayer: any = null;
-  let castRemotePlayerController: any = null;
+  let castSession: CastSession | null = null;
+  let castMedia: CastMediaSession | null = null;
+  let castMediaUpdateListener: CastMediaUpdateListener | null = null;
+  let castRemotePlayer: CastRemotePlayer | null = null;
+  let castRemotePlayerController: CastRemotePlayerController | null = null;
   let detachCastRemotePlayerListener: (() => void) | null = null;
   let screenWakeLock: ScreenWakeLockSentinel | null = null;
   let screenWakeLockRequest: Promise<void> | null = null;
@@ -603,8 +607,8 @@
   function castWindow() {
     return window as typeof window & {
       __onGCastApiAvailable?: (available: boolean) => void;
-      cast?: any;
-      chrome?: any;
+      cast?: CastApi["cast"];
+      chrome?: CastApi["chrome"];
     };
   }
 
@@ -646,7 +650,7 @@
     }
   }
 
-  function syncCastRemotePlayerState(player: any = castRemotePlayer) {
+  function syncCastRemotePlayerState(player: CastRemotePlayer | null = castRemotePlayer) {
     if (!player) return;
     if (!player.isConnected || !player.isMediaLoaded) return;
     playerUiState = castPlayerUiState({
@@ -765,13 +769,13 @@
     return castMedia ?? castSession?.getMediaSession?.() ?? null;
   }
 
-  function detachCastMediaUpdateListener(media: any = castMedia) {
+  function detachCastMediaUpdateListener(media: CastMediaSession | null = castMedia) {
     if (!castMediaUpdateListener) return;
     media?.removeUpdateListener?.(castMediaUpdateListener);
     castMediaUpdateListener = null;
   }
 
-  function syncCastMediaState(media: any, alive = true) {
+  function syncCastMediaState(media: CastMediaSession, alive = true) {
     playerUiState = castPlayerUiState({
       alive,
       playerState: media?.playerState,
@@ -784,7 +788,7 @@
     if (!alive) showControls();
   }
 
-  function attachCastMediaUpdateListener(media: any) {
+  function attachCastMediaUpdateListener(media: CastMediaSession) {
     detachCastMediaUpdateListener();
     castMedia = media;
     syncCastMediaState(media, true);
@@ -796,7 +800,7 @@
     media.addUpdateListener(listener);
   }
 
-  function adoptCastSession(session: any) {
+  function adoptCastSession(session: CastSession | null | undefined) {
     if (!session) return;
     castSession = session;
     castAvailable = true;
@@ -1359,10 +1363,22 @@
     try {
       const api = await ensureCastFramework();
       const context = configureCastFramework(api);
-      const currentSession = context.getCurrentSession?.();
+      const currentSession = connectedCastSession(
+        context.getCurrentSession?.(),
+      );
+      let session = currentSession;
+      if (!session) {
+        const requestedSession = await context.requestSession();
+        session =
+          connectedCastSession(requestedSession) ??
+          connectedCastSession(context.getCurrentSession?.());
+      }
+      if (!session) {
+        throw new Error("Cast receiver is not connected.");
+      }
+
       let castPlayback = currentSession ? await prepareCastPlayback() : null;
       preparedPlaybackSessionId = castPlayback?.playbackSessionId ?? null;
-      const session = currentSession ?? (await context.requestSession());
       if (!castPlayback) {
         castPlayback = await prepareCastPlayback();
         preparedPlaybackSessionId = castPlayback.playbackSessionId;
