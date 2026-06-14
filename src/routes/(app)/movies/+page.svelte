@@ -1,6 +1,7 @@
 <script lang="ts">
   import MovieCard from "$lib/components/MovieCard.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
+  import { twoRowRailOrder } from "$lib/media/rails";
   import { ChevronRight, Library, Search } from "@lucide/svelte";
 
   let { data } = $props();
@@ -43,6 +44,7 @@
   const hasActiveFilters = $derived(
     data.query.trim().length > 0 || data.status !== "all",
   );
+  const TWO_ROW_MOVIE_RAIL_COUNT = 9;
 
   function allMoviesHref() {
     const params = new URLSearchParams();
@@ -148,8 +150,11 @@
             <ChevronRight size={16} aria-hidden="true" />
           </a>
         </div>
-        <div class="movie-rail">
-          {#each section.movies as movie}
+        <div
+          class="movie-rail"
+          class:two-row={section.movies.length >= TWO_ROW_MOVIE_RAIL_COUNT}
+        >
+          {#each twoRowRailOrder(section.movies, TWO_ROW_MOVIE_RAIL_COUNT) as movie}
             <MovieCard {movie} />
           {/each}
         </div>
@@ -215,7 +220,7 @@
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: clamp(8.8rem, 12vw, 10.5rem);
-    grid-template-rows: repeat(2, auto);
+    grid-template-rows: auto;
     gap: 1.1rem;
     overflow-x: auto;
     overflow-y: hidden;
@@ -225,6 +230,10 @@
     scroll-padding-inline: 0.25rem;
     scrollbar-color: var(--color-scrollbar) transparent;
     scrollbar-width: thin;
+  }
+
+  .movie-rail.two-row {
+    grid-template-rows: repeat(2, auto);
   }
 
   .movie-rail :global(.movie) {

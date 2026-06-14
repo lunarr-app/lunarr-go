@@ -2,6 +2,7 @@
   import EpisodeCard from "$lib/components/EpisodeCard.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
+  import { twoRowRailOrder } from "$lib/media/rails";
   import { ChevronRight, Library, Search } from "@lucide/svelte";
 
   let { data } = $props();
@@ -37,6 +38,8 @@
       recentlyAiredShows.length > 0 ||
       popularShows.length > 0,
   );
+  const TWO_ROW_EPISODE_RAIL_COUNT = 5;
+  const TWO_ROW_SHOW_RAIL_COUNT = 9;
 
   function submitSearchNow() {
     if (searchSubmitTimer) {
@@ -121,8 +124,11 @@
           </a>
         {/if}
       </div>
-      <div class="episode-rail">
-        {#each section.episodes as episode}
+      <div
+        class="episode-rail"
+        class:two-row={section.episodes.length >= TWO_ROW_EPISODE_RAIL_COUNT}
+      >
+        {#each twoRowRailOrder(section.episodes, TWO_ROW_EPISODE_RAIL_COUNT) as episode}
           <EpisodeCard {episode} />
         {/each}
       </div>
@@ -134,8 +140,11 @@
       <div class="section-heading">
         <h2>Recently aired</h2>
       </div>
-      <div class="show-rail">
-        {#each recentlyAiredShows as show}
+      <div
+        class="show-rail"
+        class:two-row={recentlyAiredShows.length >= TWO_ROW_SHOW_RAIL_COUNT}
+      >
+        {#each twoRowRailOrder(recentlyAiredShows, TWO_ROW_SHOW_RAIL_COUNT) as show}
           <ShowCard {show} />
         {/each}
       </div>
@@ -147,8 +156,11 @@
       <div class="section-heading">
         <h2>Popular shows</h2>
       </div>
-      <div class="show-rail">
-        {#each popularShows as show}
+      <div
+        class="show-rail"
+        class:two-row={popularShows.length >= TWO_ROW_SHOW_RAIL_COUNT}
+      >
+        {#each twoRowRailOrder(popularShows, TWO_ROW_SHOW_RAIL_COUNT) as show}
           <ShowCard {show} />
         {/each}
       </div>
@@ -223,7 +235,7 @@
   .show-rail {
     display: grid;
     grid-auto-flow: column;
-    grid-template-rows: repeat(2, auto);
+    grid-template-rows: auto;
     gap: 1.1rem;
     overflow-x: auto;
     overflow-y: hidden;
@@ -233,6 +245,11 @@
     scroll-padding-inline: 0.25rem;
     scrollbar-color: var(--color-scrollbar) transparent;
     scrollbar-width: thin;
+  }
+
+  .episode-rail.two-row,
+  .show-rail.two-row {
+    grid-template-rows: repeat(2, auto);
   }
 
   .episode-rail {
