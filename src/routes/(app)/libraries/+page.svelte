@@ -400,9 +400,9 @@
   .notice {
     width: min(100%, 64rem);
     margin: 1rem 0;
-    border: 1px solid rgba(214, 163, 84, 0.35);
+    border: 1px solid var(--color-warning-border);
     border-radius: 8px;
-    background: rgba(214, 163, 84, 0.08);
+    background: var(--color-warning-soft);
     padding: 0.9rem 1rem;
     display: flex;
     align-items: center;
@@ -412,7 +412,7 @@
 
   .notice > :global(svg) {
     flex-shrink: 0;
-    color: #d6a354;
+    color: var(--color-warning);
   }
 
   .notice p {
@@ -488,7 +488,7 @@
   }
 
   fieldset {
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     margin: 0;
     padding: 0.75rem;
@@ -541,12 +541,12 @@
   }
 
   .scan-status {
-    color: #00ccff;
+    color: var(--color-accent);
     font-size: 0.92rem;
   }
 
   .scan-status.active {
-    color: #8fd7a6;
+    color: var(--color-success);
   }
 
   @media (max-width: 860px) {

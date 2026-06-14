@@ -48,7 +48,7 @@
     aspect-ratio: 2 / 3;
     border-radius: 8px;
     overflow: hidden;
-    background: #111a21;
+    background: var(--color-card);
     display: grid;
     place-items: center;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
@@ -60,7 +60,7 @@
 
   .movie:hover .poster {
     transform: translateY(-2px);
-    border-color: rgba(0, 204, 255, 0.45);
+    border-color: var(--color-accent-border);
   }
 
   img {
@@ -72,7 +72,7 @@
 
   .poster span {
     padding: 1rem;
-    color: #b7c3cc;
+    color: var(--color-subtle);
     text-align: center;
     overflow-wrap: anywhere;
   }
@@ -95,7 +95,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.55rem;
-    color: #a8a195;
+    color: var(--color-dim);
     font-size: 0.88rem;
   }
 
@@ -106,19 +106,19 @@
 
   .details span:last-child {
     overflow: hidden;
-    color: #00ccff;
+    color: var(--color-accent);
     text-overflow: ellipsis;
   }
 
   .movie:not(.has-progress) .details span:last-child {
-    color: #95a4ae;
+    color: var(--color-muted);
   }
 
   .progress {
     height: 3px;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-border);
   }
 
   .progress span {
@@ -126,6 +126,6 @@
     height: 100%;
     min-width: 0;
     border-radius: inherit;
-    background: #00ccff;
+    background: var(--color-accent);
   }
 </style>

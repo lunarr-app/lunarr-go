@@ -116,9 +116,12 @@
   }
 
   .custom-player {
-    --player-accent: #00ccff;
-    --player-accent-strong: #00ccff;
-    color: #f8fafc;
+    --color-text: #f8fafc;
+    --color-text-soft: rgba(248, 250, 252, 0.82);
+    --player-border-subtle: rgba(255, 255, 255, 0.28);
+    --player-accent: var(--color-accent);
+    --player-accent-strong: var(--color-accent);
+    color: var(--color-text);
   }
 
   .placeholder-shell {
@@ -136,7 +139,7 @@
     padding: 1rem 1rem 4rem;
     pointer-events: none;
     background: rgba(0, 0, 0, 0.18);
-    color: #f8fafc;
+    color: var(--color-text);
     text-align: center;
   }
 
@@ -152,8 +155,8 @@
   .overlay-spinner {
     width: 3rem;
     height: 3rem;
-    border: 3px solid rgba(255, 255, 255, 0.28);
-    border-top-color: #fff;
+    border: 3px solid var(--player-border-subtle);
+    border-top-color: var(--color-text);
     border-radius: 999px;
     animation: spin 0.85s linear infinite;
   }
@@ -246,7 +249,7 @@
     border: 0;
     border-radius: 8px;
     background: transparent;
-    color: #f8fafc;
+    color: var(--color-text);
     padding: 0;
     text-decoration: none;
     touch-action: manipulation;
@@ -257,8 +260,8 @@
   }
 
   .control-button:hover:not(:disabled) {
-    background: rgba(0, 204, 255, 0.14);
-    color: #00ccff;
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
   }
 
   .control-button:disabled,

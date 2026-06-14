@@ -86,9 +86,9 @@
 
   .dialog {
     width: min(100%, 26rem);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border-strong);
     border-radius: 8px;
-    background: #0b1117;
+    background: var(--color-popover);
     box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.42);
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -102,8 +102,8 @@
     width: 2.4rem;
     height: 2.4rem;
     border-radius: 8px;
-    background: rgba(214, 163, 84, 0.12);
-    color: #ffd99a;
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
   }
 
   .copy {
@@ -122,7 +122,7 @@
   }
 
   p {
-    color: #b7c3cc;
+    color: var(--color-subtle);
     line-height: 1.45;
   }
 

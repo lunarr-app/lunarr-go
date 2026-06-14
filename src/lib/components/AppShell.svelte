@@ -80,7 +80,8 @@
   <header class="app-header">
     <div class="header-primary">
       <a class="brand" href="/movies" aria-label="Lunarr home">
-        <img src="/images/lunarr-logo.svg" alt="Lunarr" />
+        <img class="brand-logo brand-logo-dark" src="/images/lunarr-logo.svg" alt="Lunarr" />
+        <img class="brand-logo brand-logo-light" src="/images/lunarr-logo-light.svg" alt="Lunarr" />
       </a>
 
       <nav class="nav-list" aria-label="App navigation">
@@ -179,8 +180,8 @@
     justify-content: space-between;
     gap: 1rem;
     min-height: 4rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(7, 11, 15, 0.92);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-strong);
     backdrop-filter: blur(14px);
     padding: 0.65rem clamp(1rem, 3vw, 2.4rem);
   }
@@ -198,10 +199,22 @@
     min-width: 0;
   }
 
-  .brand img {
+  .brand-logo {
     width: 8rem;
     max-width: 100%;
     height: auto;
+    display: block;
+  }
+
+  .brand-logo-light {
+    display: none;
+  }
+
+  :global(:root[data-theme="light"]) .brand-logo-dark {
+    display: none;
+  }
+
+  :global(:root[data-theme="light"]) .brand-logo-light {
     display: block;
   }
 
@@ -215,7 +228,7 @@
   .desktop-admin-nav {
     margin-left: 0.35rem;
     padding-left: 0.55rem;
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid var(--color-border);
   }
 
   .nav-item {
@@ -224,7 +237,7 @@
     justify-content: center;
     gap: 0.42rem;
     min-height: 2.15rem;
-    color: #b7c3cc;
+    color: var(--color-subtle);
     border-radius: 6px;
     padding: 0.42rem 0.7rem;
     font-size: 0.9rem;
@@ -233,8 +246,8 @@
   }
 
   .nav-item:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: #fff;
+    background: var(--color-surface-muted);
+    color: var(--color-text);
   }
 
   .account-menu {
@@ -248,18 +261,18 @@
   .avatar-button {
     width: 2.4rem;
     min-height: 2.4rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border-strong);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.05);
-    color: #f7f9fb;
+    background: var(--color-surface-faint);
+    color: var(--color-text);
     padding: 0.15rem;
     overflow: hidden;
   }
 
   .avatar-button:hover,
   .avatar-button[aria-expanded="true"] {
-    border-color: rgba(255, 255, 255, 0.22);
-    background: rgba(255, 255, 255, 0.09);
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-hover);
   }
 
   .avatar-button span {
@@ -273,7 +286,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #17212a;
+    background: var(--color-surface-strong);
     font-size: 0.9rem;
     font-weight: 800;
   }
@@ -284,10 +297,10 @@
     right: 0;
     z-index: 20;
     width: min(16rem, calc(100vw - 2rem));
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border-strong);
     border-radius: 6px;
-    background: #0b1117;
-    box-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.32);
+    background: var(--color-popover);
+    box-shadow: 0 1.25rem 2.5rem var(--color-shadow);
     padding: 0.35rem;
   }
 
@@ -296,7 +309,7 @@
     gap: 0.12rem;
     min-width: 0;
     padding: 0.6rem 0.65rem 0.65rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--color-border);
     margin-bottom: 0.25rem;
   }
 
@@ -308,12 +321,12 @@
   }
 
   .account-details strong {
-    color: #f7f9fb;
+    color: var(--color-text);
     font-size: 0.9rem;
   }
 
   .account-details span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.78rem;
   }
 
@@ -323,15 +336,15 @@
     gap: 0.5rem;
     min-height: 2rem;
     border-radius: 5px;
-    color: #b7c3cc;
+    color: var(--color-subtle);
     padding: 0.4rem 0.65rem;
     font-size: 0.88rem;
     font-weight: 650;
   }
 
   .account-popover a:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: #fff;
+    background: var(--color-surface-muted);
+    color: var(--color-text);
   }
 
   .account-popover a.mobile-only-admin {
@@ -362,7 +375,7 @@
       min-height: 2.15rem;
     }
 
-    .brand img {
+    .brand-logo {
       width: 6.5rem;
     }
 

@@ -342,10 +342,10 @@
     align-items: center;
     gap: 0.3rem;
     min-height: 1.8rem;
-    border: 1px solid rgba(0, 168, 214, 0.26);
+    border: 1px solid var(--color-accent-border);
     border-radius: 999px;
-    background: rgba(0, 168, 214, 0.11);
-    color: #9deaff;
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
     padding: 0 0.7rem;
     font-size: 0.8rem;
     font-weight: 800;
@@ -471,7 +471,7 @@
   }
 
   .metrics .error-count {
-    color: #ffbcc3;
+    color: var(--color-error-strong);
   }
 
   .playback-metrics {
@@ -485,7 +485,7 @@
 
   .playback-session-error {
     margin: 0;
-    color: #ffbcc3;
+    color: var(--color-error-strong);
     font-size: 0.9rem;
     overflow-wrap: anywhere;
   }
@@ -503,7 +503,7 @@
   }
 
   .job-errors {
-    color: #b7c3cc;
+    color: var(--color-subtle);
   }
 
   .job-errors summary {
@@ -552,7 +552,7 @@
   .error-meta span:not(:last-child)::after {
     content: "/";
     margin-left: 0.5rem;
-    color: #666e73;
+    color: var(--color-muted);
   }
 
   @media (max-width: 1080px) {

@@ -356,7 +356,7 @@
   }
 
   .watch-summary span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.84rem;
   }
 
@@ -364,7 +364,7 @@
   .episode-progress {
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--color-border-strong);
   }
 
   .watch-progress {
@@ -377,7 +377,7 @@
     height: 100%;
     min-width: 0;
     border-radius: inherit;
-    background: #00ccff;
+    background: var(--color-accent);
   }
 
   .season-navigation {
@@ -387,8 +387,8 @@
     display: grid;
     gap: 0.45rem;
     margin: -0.2rem 0 1.35rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(8, 12, 17, 0.92);
+    border-bottom: 1px solid var(--color-border-strong);
+    background: var(--color-surface-strong);
     backdrop-filter: blur(14px);
     padding: 0.45rem 0 0;
   }
@@ -407,10 +407,10 @@
     justify-content: center;
     gap: 0.35rem;
     min-height: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border-strong);
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.045);
-    color: #dce4e8;
+    background: var(--color-surface-faint);
+    color: var(--color-text-soft);
     padding: 0 0.65rem;
     font-size: 0.86rem;
     font-weight: 750;
@@ -419,9 +419,9 @@
 
   .back-link:hover,
   .step-link:hover {
-    border-color: rgba(0, 204, 255, 0.32);
-    background: rgba(0, 204, 255, 0.08);
-    color: #f7f9fb;
+    border-color: var(--color-accent-border);
+    background: var(--color-accent-soft);
+    color: var(--color-text);
   }
 
   .current-season {
@@ -439,7 +439,7 @@
   }
 
   .current-season span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.82rem;
   }
 
@@ -467,7 +467,7 @@
     gap: 0.45rem;
     min-height: 2.35rem;
     padding: 0 0.75rem;
-    color: #95a4ae;
+    color: var(--color-muted);
     font-weight: 700;
     white-space: nowrap;
   }
@@ -485,15 +485,15 @@
 
   .season-list a:hover,
   .season-list a.active {
-    color: #f7f9fb;
+    color: var(--color-text);
   }
 
   .season-list a.active::after {
-    background: #00ccff;
+    background: var(--color-accent);
   }
 
   .season-list small {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.78rem;
     font-weight: 800;
   }
@@ -525,7 +525,7 @@
     margin-top: 0.55rem;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-border);
   }
 
   .season-progress span {
@@ -533,7 +533,7 @@
     height: 100%;
     min-width: 0;
     border-radius: inherit;
-    background: #00ccff;
+    background: var(--color-accent);
   }
 
   .season-bulk-action {
@@ -550,7 +550,7 @@
     grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr) auto;
     gap: 1rem;
     align-items: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--color-border);
     padding: 0.8rem 0;
   }
 
@@ -559,7 +559,7 @@
   }
 
   article.missing {
-    color: #c5d0d7;
+    color: var(--color-text-soft);
   }
 
   .still {
@@ -570,22 +570,22 @@
     overflow: hidden;
     border: 1px solid transparent;
     border-radius: 8px;
-    background: #111a21;
-    color: #b7c3cc;
+    background: var(--color-card);
+    color: var(--color-subtle);
     font-weight: 800;
   }
 
   .still:hover {
-    border-color: rgba(0, 204, 255, 0.45);
+    border-color: var(--color-accent-border);
   }
 
   .missing-still {
-    border-color: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-border);
     opacity: 0.74;
   }
 
   .missing-still:hover {
-    border-color: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-border);
   }
 
   .still img {
@@ -614,7 +614,7 @@
   }
 
   .episode-heading > span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0;
@@ -632,13 +632,13 @@
 
   .episode-main p {
     margin: 0;
-    color: #b7c3cc;
+    color: var(--color-subtle);
     line-height: 1.5;
   }
 
   .missing-badge,
   .missing-note {
-    color: #ffd99a;
+    color: var(--color-warning);
   }
 
   .missing-note {

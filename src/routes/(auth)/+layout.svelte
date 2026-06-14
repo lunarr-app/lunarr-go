@@ -4,7 +4,8 @@
 
 <main class="auth-shell">
   <section class="auth-card">
-    <img class="brand" src="/images/lunarr-logo.svg" alt="Lunarr" />
+    <img class="brand brand-dark" src="/images/lunarr-logo.svg" alt="Lunarr" />
+    <img class="brand brand-light" src="/images/lunarr-logo-light.svg" alt="Lunarr" />
     {@render children()}
   </section>
 </main>
@@ -22,11 +23,11 @@
 
   .auth-card {
     width: min(100%, 28rem);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border-strong);
     border-radius: 8px;
-    background: rgba(5, 10, 14, 0.76);
+    background: var(--color-surface);
     padding: clamp(1.25rem, 4vw, 2rem);
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+    box-shadow: 0 24px 80px var(--color-shadow);
     backdrop-filter: blur(14px);
   }
 
@@ -35,6 +36,18 @@
     width: min(13rem, 72%);
     height: auto;
     margin: 0 auto 1.45rem;
+  }
+
+  .brand-light {
+    display: none;
+  }
+
+  :global(:root[data-theme="light"]) .brand-dark {
+    display: none;
+  }
+
+  :global(:root[data-theme="light"]) .brand-light {
+    display: block;
   }
 
   .auth-card :global(h1) {
@@ -57,7 +70,7 @@
   }
 
   .auth-card :global(.auth-link a) {
-    color: #9be8ff;
+    color: var(--color-accent);
     font-weight: 700;
   }
 </style>

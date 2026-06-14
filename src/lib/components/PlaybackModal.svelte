@@ -238,9 +238,9 @@
   .message {
     display: grid;
     gap: 0.35rem;
-    border: 1px solid rgba(255, 217, 154, 0.16);
+    border: 1px solid var(--color-warning-border);
     border-radius: 8px;
-    background: rgba(255, 217, 154, 0.06);
+    background: var(--color-warning-soft);
     padding: 1rem;
   }
 
@@ -249,7 +249,7 @@
   }
 
   .message p {
-    color: #b7c3cc;
+    color: var(--color-subtle);
   }
 
   @media (max-width: 720px) {

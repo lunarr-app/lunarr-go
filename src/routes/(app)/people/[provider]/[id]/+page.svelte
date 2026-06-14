@@ -121,8 +121,8 @@
     aspect-ratio: 2 / 3;
     overflow: hidden;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.07);
-    color: #95a4ae;
+    background: var(--color-surface-muted);
+    color: var(--color-muted);
     box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.28);
   }
 
@@ -171,19 +171,19 @@
 
   .eyebrow {
     width: fit-content;
-    color: #ffd99a;
+    color: var(--color-warning);
   }
 
   .facts span {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.07);
-    color: #dce4e8;
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-surface-muted);
+    color: var(--color-text-soft);
     padding: 0.16rem 0.58rem;
   }
 
   .characters span {
-    border: 1px solid rgba(214, 163, 84, 0.28);
-    color: #ffd99a;
+    border: 1px solid var(--color-warning-border);
+    color: var(--color-warning);
     padding: 0.14rem 0.55rem;
   }
 
@@ -212,7 +212,7 @@
   }
 
   .movie > span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.86rem;
     overflow: hidden;
     text-overflow: ellipsis;

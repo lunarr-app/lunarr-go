@@ -89,7 +89,7 @@
   }
 
   .summary {
-    color: var(--muted);
+    color: var(--color-muted);
     font-size: 0.92rem;
   }
 
@@ -107,7 +107,7 @@
     min-height: 2rem;
     align-items: center;
     justify-content: center;
-    color: var(--muted);
+    color: var(--color-muted);
     font-size: 0.86rem;
     font-weight: 700;
   }
@@ -123,17 +123,17 @@
   }
 
   .pager a:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f7f9fb;
+    background: var(--color-surface-muted);
+    color: var(--color-text);
   }
 
   .pager .current {
-    color: #f7f9fb;
+    color: var(--color-text);
   }
 
   .pager .disabled,
   .pager .ellipsis {
-    color: rgba(149, 164, 174, 0.55);
+    color: var(--color-scrollbar-hover);
     cursor: default;
   }
 

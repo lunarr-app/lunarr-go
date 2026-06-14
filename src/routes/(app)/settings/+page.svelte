@@ -548,9 +548,9 @@
   }
 
   .action-note {
-    border: 1px solid rgba(255, 217, 154, 0.16);
+    border: 1px solid var(--color-warning-border);
     border-radius: 8px;
-    background: rgba(255, 217, 154, 0.06);
+    background: var(--color-warning-soft);
     padding: 0.5rem 0.6rem;
     font-size: 0.86rem;
   }
@@ -560,7 +560,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.75rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--color-border);
     padding-top: 0.65rem;
   }
 
@@ -598,7 +598,7 @@
   }
 
   .subdued {
-    color: #b7c3cc;
+    color: var(--color-subtle);
     font-size: 0.9rem;
   }
 
@@ -612,9 +612,9 @@
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.75rem;
     align-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.035);
+    background: var(--color-surface-faint);
     padding: 0.6rem 0.7rem;
   }
 
@@ -625,11 +625,11 @@
   }
 
   .switch-row strong {
-    color: #f7f9fb;
+    color: var(--color-text);
   }
 
   .switch-row small {
-    color: #a8a195;
+    color: var(--color-dim);
     font-size: 0.86rem;
   }
 
@@ -654,9 +654,9 @@
 
   .switch-track {
     position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border-strong);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-border-strong);
     transition:
       background 140ms ease,
       border-color 140ms ease;
@@ -670,22 +670,22 @@
     width: 1.05rem;
     height: 1.05rem;
     border-radius: 999px;
-    background: #dce4e8;
+    background: var(--color-text-soft);
     transition: transform 140ms ease;
   }
 
   .switch input:checked + .switch-track {
-    border-color: rgba(0, 204, 255, 0.45);
-    background: rgba(0, 204, 255, 0.25);
+    border-color: var(--color-accent-border);
+    background: var(--color-accent-soft);
   }
 
   .switch input:checked + .switch-track::after {
     transform: translateX(1.22rem);
-    background: #9deaff;
+    background: var(--color-accent);
   }
 
   .switch input:focus-visible + .switch-track {
-    outline: 2px solid #00ccff;
+    outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
 

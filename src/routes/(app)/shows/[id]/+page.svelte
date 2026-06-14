@@ -237,7 +237,7 @@
   }
 
   .watch-summary span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.84rem;
   }
 
@@ -245,7 +245,7 @@
   .season-progress {
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--color-border-strong);
   }
 
   .watch-progress {
@@ -258,7 +258,7 @@
     height: 100%;
     min-width: 0;
     border-radius: inherit;
-    background: #00ccff;
+    background: var(--color-accent);
   }
 
   .cast-section {
@@ -290,7 +290,7 @@
     overflow-x: auto;
     padding-bottom: 0.4rem;
     scrollbar-width: thin;
-    scrollbar-color: rgba(149, 164, 174, 0.45) transparent;
+    scrollbar-color: var(--color-scrollbar) transparent;
   }
 
   .person {
@@ -307,8 +307,8 @@
     aspect-ratio: 2 / 3;
     overflow: hidden;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.07);
-    color: #95a4ae;
+    background: var(--color-surface-muted);
+    color: var(--color-muted);
   }
 
   .profile img,
@@ -329,7 +329,7 @@
 
   .person span,
   .season-copy span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.84rem;
   }
 
@@ -351,7 +351,7 @@
 
   .poster {
     border: 1px solid transparent;
-    background: #111a21;
+    background: var(--color-card);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
     transition:
       border-color 160ms ease,
@@ -360,12 +360,12 @@
 
   .season-card:hover .poster {
     transform: translateY(-2px);
-    border-color: rgba(0, 204, 255, 0.45);
+    border-color: var(--color-accent-border);
   }
 
   .poster span {
     padding: 1rem;
-    color: #b7c3cc;
+    color: var(--color-subtle);
     text-align: center;
     overflow-wrap: anywhere;
   }
@@ -379,7 +379,7 @@
   .season-progress {
     height: 3px;
     margin-top: 0.2rem;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-border);
   }
 
   @media (max-width: 760px) {

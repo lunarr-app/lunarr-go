@@ -68,6 +68,12 @@
 
 <style>
   .hero {
+    --hero-text: #f8fafc;
+    --hero-text-soft: rgba(248, 250, 252, 0.82);
+    --hero-chip-bg: rgba(248, 250, 252, 0.08);
+    --hero-chip-border: rgba(255, 255, 255, 0.18);
+    --hero-genre: #ffd99a;
+    --hero-genre-border: rgba(255, 217, 154, 0.24);
     position: relative;
     min-height: clamp(20rem, 44vh, 30rem);
     margin: -1.4rem calc(-1 * clamp(1rem, 3vw, 2.4rem)) var(--hero-bottom-margin);
@@ -94,8 +100,8 @@
     aspect-ratio: 2 / 3;
     border-radius: 8px;
     overflow: hidden;
-    background: #111a21;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--color-card);
+    border: 1px solid var(--color-border-strong);
     display: grid;
     place-items: center;
     box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.42);
@@ -109,7 +115,7 @@
 
   .poster span {
     padding: 1rem;
-    color: #b7c3cc;
+    color: var(--color-subtle);
     text-align: center;
     overflow-wrap: anywhere;
   }
@@ -118,6 +124,7 @@
     display: grid;
     justify-items: start;
     gap: 0.65rem;
+    color: var(--hero-text);
   }
 
   h1 {
@@ -140,23 +147,23 @@
     align-items: center;
     gap: 0.3rem;
     min-height: 1.7rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--hero-chip-border);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.07);
-    color: #dce4e8;
+    background: var(--hero-chip-bg);
+    color: var(--hero-text-soft);
     padding: 0.16rem 0.58rem;
     font-size: 0.82rem;
     font-weight: 700;
   }
 
   .genres span {
-    border-color: rgba(214, 163, 84, 0.32);
-    color: #ffd99a;
+    border-color: var(--hero-genre-border);
+    color: var(--hero-genre);
   }
 
   .overview {
     max-width: 40rem;
-    color: #dce4e8;
+    color: var(--hero-text-soft);
     line-height: 1.5;
     margin: 0;
   }

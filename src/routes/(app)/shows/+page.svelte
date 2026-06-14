@@ -209,14 +209,14 @@
     align-items: center;
     gap: 0.15rem;
     margin-left: auto;
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.9rem;
     font-weight: 700;
     white-space: nowrap;
   }
 
   .view-all:hover {
-    color: #f7f9fb;
+    color: var(--color-text);
   }
 
   .episode-rail,
@@ -231,7 +231,7 @@
     padding: 0.1rem 0 0.85rem;
     scroll-snap-type: x proximity;
     scroll-padding-inline: 0.25rem;
-    scrollbar-color: rgba(149, 164, 174, 0.45) transparent;
+    scrollbar-color: var(--color-scrollbar) transparent;
     scrollbar-width: thin;
   }
 
@@ -261,12 +261,12 @@
   .episode-rail::-webkit-scrollbar-thumb,
   .show-rail::-webkit-scrollbar-thumb {
     border-radius: 999px;
-    background: rgba(149, 164, 174, 0.35);
+    background: var(--color-scrollbar);
   }
 
   .episode-rail::-webkit-scrollbar-thumb:hover,
   .show-rail::-webkit-scrollbar-thumb:hover {
-    background: rgba(149, 164, 174, 0.55);
+    background: var(--color-scrollbar-hover);
   }
 
   .show-grid {

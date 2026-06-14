@@ -31,7 +31,7 @@
     position: absolute;
     top: 50%;
     left: 0.75rem;
-    color: #95a4ae;
+    color: var(--color-muted);
     transform: translateY(-50%);
     pointer-events: none;
   }

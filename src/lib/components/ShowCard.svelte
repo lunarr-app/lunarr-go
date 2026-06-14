@@ -33,7 +33,7 @@
     overflow: hidden;
     border: 1px solid transparent;
     border-radius: 8px;
-    background: #111a21;
+    background: var(--color-card);
     display: grid;
     place-items: center;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
@@ -44,7 +44,7 @@
 
   .show:hover .poster {
     transform: translateY(-2px);
-    border-color: rgba(0, 204, 255, 0.45);
+    border-color: var(--color-accent-border);
   }
 
   img {
@@ -56,7 +56,7 @@
 
   .poster span {
     padding: 1rem;
-    color: #b7c3cc;
+    color: var(--color-subtle);
     text-align: center;
     overflow-wrap: anywhere;
   }
@@ -79,7 +79,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.55rem;
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.88rem;
   }
 

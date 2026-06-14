@@ -372,7 +372,7 @@
     display: grid;
     gap: 0.35rem;
     width: min(100%, 24rem);
-    color: #b7c3cc;
+    color: var(--color-subtle);
     font-size: 0.9rem;
     font-weight: 700;
   }
@@ -381,14 +381,14 @@
     height: 0.28rem;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
+    background: var(--color-border-strong);
   }
 
   .resume div span {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: #00ccff;
+    background: var(--color-accent);
   }
 
   .details {
@@ -427,12 +427,12 @@
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.75rem;
     align-items: center;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--color-border);
     padding: 0.75rem 0;
   }
 
   article.featured {
-    border-color: rgba(0, 204, 255, 0.28);
+    border-color: var(--color-accent-border);
   }
 
   .file-copy {
@@ -456,7 +456,7 @@
 
   .file-title span {
     flex-shrink: 0;
-    color: #9be8ff;
+    color: var(--color-accent);
     font-size: 0.76rem;
     font-weight: 800;
   }
@@ -465,7 +465,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem 0.7rem;
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.84rem;
   }
 
@@ -477,13 +477,13 @@
   }
 
   .status {
-    color: #9be8ff;
+    color: var(--color-accent);
     font-size: 0.86rem;
     font-weight: 700;
   }
 
   .status.watched {
-    color: #8fd7a6;
+    color: var(--color-success);
   }
 
   .file-actions,
@@ -515,7 +515,7 @@
     overflow-x: auto;
     padding-bottom: 0.4rem;
     scrollbar-width: thin;
-    scrollbar-color: rgba(149, 164, 174, 0.45) transparent;
+    scrollbar-color: var(--color-scrollbar) transparent;
   }
 
   .person {
@@ -534,8 +534,8 @@
     aspect-ratio: 2 / 3;
     overflow: hidden;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.07);
-    color: #95a4ae;
+    background: var(--color-surface-muted);
+    color: var(--color-muted);
   }
 
   .profile img {
@@ -552,7 +552,7 @@
   }
 
   .person span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.84rem;
   }
 
@@ -561,7 +561,7 @@
     top: 1rem;
     display: grid;
     gap: 1rem;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 1px solid var(--color-border-strong);
     padding-left: clamp(1rem, 2vw, 1.4rem);
   }
 
@@ -579,7 +579,7 @@
   }
 
   dt {
-    color: #a8a195;
+    color: var(--color-dim);
     flex-shrink: 0;
   }
 
@@ -593,7 +593,7 @@
   .source-note {
     display: flex;
     gap: 0.55rem;
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.9rem;
     line-height: 1.45;
   }
@@ -605,9 +605,9 @@
   }
 
   .metadata-score > div {
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--color-surface-faint);
     padding: 0.75rem;
     display: grid;
     gap: 0.15rem;
@@ -619,7 +619,7 @@
   }
 
   .metadata-score span {
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.82rem;
   }
 
@@ -633,15 +633,15 @@
   .metadata-chips span,
   .keyword-list span {
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.07);
-    color: #dce4e8;
+    background: var(--color-surface-muted);
+    color: var(--color-text-soft);
     padding: 0.18rem 0.5rem;
     font-size: 0.78rem;
     font-weight: 700;
   }
 
   .metadata-chips span {
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border);
   }
 
   .metadata-blocks,
@@ -653,14 +653,14 @@
 
   .metadata-blocks section,
   .metadata-keywords {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--color-border);
     padding-top: 0.8rem;
   }
 
   .metadata-blocks h3,
   .metadata-keywords h3 {
     margin: 0;
-    color: #a8a195;
+    color: var(--color-dim);
     font-size: 0.9rem;
   }
 
@@ -681,7 +681,7 @@
     .metadata {
       position: static;
       border-left: 0;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid var(--color-border-strong);
       padding: 1rem 0 0;
     }
 

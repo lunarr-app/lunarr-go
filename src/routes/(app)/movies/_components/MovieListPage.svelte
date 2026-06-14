@@ -154,13 +154,13 @@
     align-items: center;
     gap: 0.35rem;
     margin-bottom: 0.35rem;
-    color: #95a4ae;
+    color: var(--color-muted);
     font-size: 0.9rem;
     font-weight: 700;
   }
 
   .back-link:hover {
-    color: #f7f9fb;
+    color: var(--color-text);
   }
 
   h1 {
