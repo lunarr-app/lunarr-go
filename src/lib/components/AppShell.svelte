@@ -141,10 +141,12 @@
                 </a>
               {/each}
             {/if}
-            <a role="menuitem" href="/logout">
-              <LogOut size={16} aria-hidden="true" />
-              <span>Log out</span>
-            </a>
+            <form method="POST" action="/logout" class="logout-form">
+              <button type="submit" role="menuitem">
+                <LogOut size={16} aria-hidden="true" />
+                <span>Log out</span>
+              </button>
+            </form>
           </div>
         {/if}
       </div>
@@ -330,7 +332,8 @@
     font-size: 0.78rem;
   }
 
-  .account-popover a {
+  .account-popover a,
+  .account-popover .logout-form button {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -342,9 +345,24 @@
     font-weight: 650;
   }
 
-  .account-popover a:hover {
+  .account-popover a:hover,
+  .account-popover .logout-form button:hover {
     background: var(--color-surface-muted);
     color: var(--color-text);
+  }
+
+  .logout-form {
+    margin: 0;
+    padding: 0;
+  }
+
+  .account-popover .logout-form button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    justify-content: flex-start;
+    text-align: left;
   }
 
   .account-popover a.mobile-only-admin {
