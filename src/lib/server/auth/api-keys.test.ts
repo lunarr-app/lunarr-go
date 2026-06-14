@@ -8,7 +8,12 @@ import {
   migrateDatabase,
   useDatabaseFileForTests,
 } from "$lib/server/db";
-import { createApiKey, listApiKeys } from "./api-keys";
+import {
+  createApiKey,
+  listApiKeys,
+  apiKeyHttpStatus,
+  ApiKeyError,
+} from "./api-keys";
 import { createApiKeyForUser } from "./test/create-api-key-for-user";
 import { mockAppServerForAuthTests } from "./test/app-server-mock";
 import { resetAuthForTests } from "./test/reset-auth-for-tests";
@@ -75,6 +80,21 @@ describe("API keys", () => {
     await expect(createApiKey({ headers: new Headers() })).rejects.toThrow(
       "Unauthorized",
     );
+  });
+
+  test("maps Better Auth 401 status to HTTP 401 on mapped errors", async () => {
+    try {
+      await listApiKeys(new Headers());
+      throw new Error("Expected listApiKeys to fail.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiKeyError);
+      expect(apiKeyHttpStatus(error)).toBe(401);
+    }
+  });
+
+  test("preserves status-only unauthorized errors when mapping", () => {
+    const error = new ApiKeyError("Session required", 401);
+    expect(apiKeyHttpStatus(error)).toBe(401);
   });
 
   test("creates keys for the signed-in user from session headers", async () => {

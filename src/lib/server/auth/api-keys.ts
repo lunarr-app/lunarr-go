@@ -78,15 +78,28 @@ function isUnauthorizedError(error: unknown) {
   return false;
 }
 
-function mapAuthError(error: unknown, fallback: string) {
-  if (error && typeof error === "object" && "message" in error) {
-    return new Error(String(error.message));
+export class ApiKeyError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiKeyError";
+    this.status = status;
   }
-  return new Error(fallback);
+}
+
+function mapAuthError(error: unknown, fallback: string) {
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? String(error.message)
+      : fallback;
+  const status = isUnauthorizedError(error) ? 401 : 400;
+  return new ApiKeyError(message, status);
 }
 
 export function apiKeyHttpStatus(error: unknown) {
-  if (error instanceof Error && isUnauthorizedError(error)) return 401;
+  if (error instanceof ApiKeyError) return error.status;
+  if (isUnauthorizedError(error)) return 401;
   return 400;
 }
 
@@ -155,7 +168,8 @@ export async function listApiKeys(headers: Headers) {
 }
 
 export function isApiKeyUnauthorized(error: unknown) {
-  return error instanceof Error && isUnauthorizedError(error);
+  if (error instanceof ApiKeyError) return error.status === 401;
+  return isUnauthorizedError(error);
 }
 
 export async function revokeApiKey(input: {

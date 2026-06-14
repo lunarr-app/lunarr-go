@@ -143,6 +143,11 @@ export const actions: Actions = {
     const form = await request.formData();
     const expiresPreset = String(form.get("expiresPreset") ?? "");
     const customExpiresIn = String(form.get("expiresIn") ?? "").trim();
+    if (expiresPreset === "custom" && !customExpiresIn) {
+      return fail(400, {
+        apiKeyError: "Expiration must be a positive number of seconds.",
+      });
+    }
     const expiresIn =
       expiresPreset === "custom" ? customExpiresIn : expiresPreset;
 

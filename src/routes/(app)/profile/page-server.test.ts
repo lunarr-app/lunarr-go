@@ -279,6 +279,29 @@ describe("profile page server", () => {
     });
   });
 
+  test("rejects custom expiration without a value", async () => {
+    const form = new FormData();
+    form.set("name", "Bad key");
+    form.set("expiresPreset", "custom");
+    form.set("expiresIn", "   ");
+
+    const result = await actions.createApiKey({
+      request: new Request("http://localhost/profile", {
+        method: "POST",
+        body: form,
+        headers: sessionHeaders,
+      }),
+      locals: { user: { id: "user-1", role: "user" } },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 400,
+      data: {
+        apiKeyError: "Expiration must be a positive number of seconds.",
+      },
+    });
+  });
+
   test("revokes an API key from profile", async () => {
     const created = await createApiKeyForUser({
       userId: "user-1",
