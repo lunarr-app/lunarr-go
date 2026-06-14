@@ -37,6 +37,7 @@
   --color-warning-border: rgba(255, 217, 154, 0.24);
   --color-success: #a8efc7;
   --color-success-soft: rgba(98, 211, 137, 0.13);
+  --color-success-border: rgba(98, 211, 137, 0.26);
   --color-accent: #00ccff;
   --color-accent-strong: #00a8d6;
   --color-accent-soft: rgba(0, 168, 214, 0.14);
@@ -89,6 +90,7 @@
   --color-warning-border: rgba(190, 122, 22, 0.28);
   --color-success: #176b3a;
   --color-success-soft: rgba(30, 132, 73, 0.13);
+  --color-success-border: rgba(30, 132, 73, 0.28);
   --color-accent: #007da4;
   --color-accent-strong: #007da4;
   --color-accent-soft: rgba(0, 125, 164, 0.12);

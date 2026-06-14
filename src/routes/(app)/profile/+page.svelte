@@ -1,17 +1,29 @@
 <script lang="ts">
   import { browser } from "$app/environment";
+  import ConfirmAction from "$lib/components/ConfirmAction.svelte";
   import {
     getStoredTheme,
     setStoredTheme,
     type Theme,
   } from "$lib/theme";
-  import { Save, SunMoon, UserRound } from "@lucide/svelte";
+  import {
+    Clipboard,
+    ExternalLink,
+    KeyRound,
+    Plus,
+    Save,
+    SunMoon,
+    Trash2,
+    UserRound,
+  } from "@lucide/svelte";
 
   let { data, form } = $props();
   let playbackPreference = $state("auto");
   let preferredAudioLanguage = $state("");
   let preferredSubtitleLanguage = $state("");
   let selectedTheme = $state<Theme>("dark");
+  let apiKeyExpiresPreset = $state("");
+  let copiedToken = $state(false);
   let playbackForm: HTMLFormElement | null = $state(null);
 
   $effect(() => {
@@ -33,6 +45,25 @@
   function chooseTheme(theme: Theme) {
     selectedTheme = theme;
     setStoredTheme(theme);
+  }
+
+  function formatDate(value: string | null) {
+    if (!value) return "Never";
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return "Unknown";
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  }
+
+  async function copyToken(token: string) {
+    if (!browser || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(token);
+    copiedToken = true;
+    setTimeout(() => {
+      copiedToken = false;
+    }, 1800);
   }
 </script>
 
@@ -182,6 +213,123 @@
         </button>
       </div>
     </form>
+
+    <section class="ops-panel">
+      <div class="ops-panel-header">
+        <div>
+          <h2>API Keys</h2>
+          <p class="muted">Personal tokens for mobile apps and custom clients.</p>
+        </div>
+        <KeyRound size={18} aria-hidden="true" />
+      </div>
+
+      <div class="ops-panel-body api-panel-body">
+        <div class="api-links" aria-label="API documentation">
+          <a class="button secondary" href="/api/openapi.json" target="_blank" rel="noreferrer">
+            JSON
+            <ExternalLink size={14} aria-hidden="true" />
+          </a>
+          <a class="button secondary" href="/api/openapi.yaml" target="_blank" rel="noreferrer">
+            YAML
+            <ExternalLink size={14} aria-hidden="true" />
+          </a>
+          <code>X-API-Key</code>
+        </div>
+
+        {#if form?.createdApiKeyToken}
+          <div class="token-reveal" role="status">
+            <div>
+              <strong>{form.apiKeySuccess ?? "API key created."}</strong>
+              <code>{form.createdApiKeyToken}</code>
+            </div>
+            <button
+              class="secondary"
+              type="button"
+              onclick={() => copyToken(form.createdApiKeyToken)}
+            >
+              <Clipboard size={16} aria-hidden="true" />
+              {copiedToken ? "Copied" : "Copy"}
+            </button>
+          </div>
+        {/if}
+
+        <form class="api-create-form" method="POST" action="?/createApiKey">
+          <label>
+            Name
+            <input name="name" maxlength="80" placeholder="iPhone, scripts, Jellyseerr" />
+          </label>
+
+          <div class="expiry-grid">
+            <label>
+              Expires
+              <select name="expiresPreset" bind:value={apiKeyExpiresPreset}>
+                <option value="">Never</option>
+                <option value="604800">7 days</option>
+                <option value="2592000">30 days</option>
+                <option value="7776000">90 days</option>
+                <option value="31536000">1 year</option>
+                <option value="custom">Custom seconds</option>
+              </select>
+            </label>
+
+            {#if apiKeyExpiresPreset === "custom"}
+              <label>
+                Seconds
+                <input
+                  name="expiresIn"
+                  type="number"
+                  min="1"
+                  max="315360000"
+                  step="1"
+                  inputmode="numeric"
+                  placeholder="2592000"
+                />
+              </label>
+            {/if}
+          </div>
+
+          {#if form?.apiKeyError}
+            <p class="error">{form.apiKeyError}</p>
+          {/if}
+
+          <button>
+            <Plus size={16} aria-hidden="true" />
+            Create key
+          </button>
+        </form>
+
+        <div class="api-key-list">
+          {#if data.apiKeys.length > 0}
+            {#each data.apiKeys as apiKey}
+              <article class="api-key-row">
+                <div>
+                  <h3>{apiKey.name}</h3>
+                  <p class="muted">
+                    {apiKey.tokenPrefix}...
+                    <span>Created {formatDate(apiKey.createdAt)}</span>
+                    <span>Last used {formatDate(apiKey.lastUsedAt)}</span>
+                    <span>Expires {formatDate(apiKey.expiresAt)}</span>
+                  </p>
+                </div>
+                <ConfirmAction
+                  action="?/revokeApiKey"
+                  fieldName="apiKeyId"
+                  fieldValue={apiKey.id}
+                  title="Revoke API key?"
+                  message={`This immediately disables ${apiKey.name}. Existing clients using it will lose access.`}
+                  confirmLabel="Revoke"
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  Revoke
+                </ConfirmAction>
+              </article>
+            {/each}
+          {:else}
+            <p class="muted empty-state">No API keys created.</p>
+          {/if}
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -282,8 +430,113 @@
     font-size: 0.86rem;
   }
 
+  .api-panel-body {
+    gap: 0.85rem;
+  }
+
+  .api-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+  }
+
+  .api-links a {
+    text-decoration: none;
+  }
+
+  .api-links code {
+    border: 1px solid var(--color-border-strong);
+    border-radius: 6px;
+    background: var(--color-surface-faint);
+    color: var(--color-text);
+    padding: 0.32rem 0.5rem;
+    font-size: 0.82rem;
+  }
+
+  .token-reveal {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    align-items: center;
+    border: 1px solid var(--color-success-border);
+    border-radius: 8px;
+    background: var(--color-success-soft);
+    padding: 0.7rem;
+  }
+
+  .token-reveal div {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .token-reveal code {
+    overflow: auto;
+    white-space: nowrap;
+    border-radius: 6px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    padding: 0.45rem 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  .api-create-form {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .expiry-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .api-key-list {
+    display: grid;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .api-key-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--color-surface-faint);
+  }
+
+  .api-key-row + .api-key-row {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .api-key-row h3 {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .api-key-row p {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.7rem;
+    margin-top: 0.25rem;
+    font-size: 0.82rem;
+  }
+
+  .empty-state {
+    padding: 0.75rem;
+  }
+
   @media (max-width: 760px) {
     .profile-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .token-reveal,
+    .api-key-row,
+    .expiry-grid {
       grid-template-columns: 1fr;
     }
   }
