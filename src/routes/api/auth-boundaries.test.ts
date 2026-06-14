@@ -13,7 +13,7 @@ import {
   registerTranscodeHlsArtifact,
   setTranscodeTouchDelayForTests,
 } from "$lib/server/transcoding/sessions";
-import { verifyRemotePlaybackToken } from "$lib/server/playback/remote-auth";
+import { verifySignedPlaybackToken } from "$lib/server/playback/signed-token";
 import { GET as jobsGet } from "./jobs/+server";
 import {
   GET as playbackGet,
@@ -605,7 +605,7 @@ describe("authenticated API route boundaries", () => {
       expect(directStreamUrl.origin).toBe("http://localhost");
       expect(directStreamUrl.pathname).toBe("/media/files/file-1/stream");
       expect(
-        verifyRemotePlaybackToken(
+        verifySignedPlaybackToken(
           directStreamUrl.searchParams.get("remoteToken"),
           {
             route: "direct",
@@ -621,7 +621,7 @@ describe("authenticated API route boundaries", () => {
       expect(subtitleUrl.origin).toBe("http://localhost");
       expect(subtitleUrl.pathname).toBe("/media/subtitles/subtitle-1");
       expect(
-        verifyRemotePlaybackToken(subtitleUrl.searchParams.get("remoteToken"), {
+        verifySignedPlaybackToken(subtitleUrl.searchParams.get("remoteToken"), {
           route: "subtitle",
           subtitleTrackId: "subtitle-1",
         }),
@@ -708,7 +708,7 @@ describe("authenticated API route boundaries", () => {
         "/media/playback-sessions/transcode-1/master.m3u8",
       );
       expect(
-        verifyRemotePlaybackToken(
+        verifySignedPlaybackToken(
           hlsStreamUrl.searchParams.get("remoteToken"),
           {
             route: "hls",

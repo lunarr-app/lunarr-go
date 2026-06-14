@@ -1,10 +1,10 @@
 import {
-  REMOTE_PLAYBACK_TOKEN_QUERY_PARAM,
-  remotePlaybackOptionsResponse,
-  remotePlaybackSegmentQuery,
-  verifyRemotePlaybackToken,
-  withRemotePlaybackCors,
-} from "$lib/server/playback/remote-auth";
+  SIGNED_PLAYBACK_TOKEN_QUERY_PARAM,
+  signedPlaybackOptionsResponse,
+  signedPlaybackSegmentQuery,
+  verifySignedPlaybackToken,
+  withSignedPlaybackHeaders,
+} from "$lib/server/playback/signed-token";
 import {
   hlsPlaylistFileExists,
   hlsPlaylistHeadResponse,
@@ -27,12 +27,12 @@ function authorizedUserId(input: {
   sessionId: string;
   token: string | null;
 }) {
-  if (input.localsUserId) return { userId: input.localsUserId, remote: false };
-  const payload = verifyRemotePlaybackToken(input.token, {
+  if (input.localsUserId) return { userId: input.localsUserId, signed: false };
+  const payload = verifySignedPlaybackToken(input.token, {
     route: "hls",
     playbackSessionId: input.sessionId,
   });
-  return payload ? { userId: payload.userId, remote: true } : null;
+  return payload ? { userId: payload.userId, signed: true } : null;
 }
 
 function cancelledPlaylistResponse() {
@@ -57,7 +57,7 @@ function shouldServeVirtualPlaylistByDefault(artifact: {
 
 export const GET: RequestHandler = async ({ params, locals, url, request }) => {
   const token =
-    url?.searchParams.get(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM) ?? null;
+    url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null;
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     sessionId: params.sessionId,
@@ -70,7 +70,7 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
     auth.userId,
   );
   if (artifact instanceof Response)
-    return withRemotePlaybackCors(artifact, auth.remote);
+    return withSignedPlaybackHeaders(artifact, auth.signed);
 
   if (
     url?.searchParams.get("playlist") === "virtual" ||
@@ -105,9 +105,9 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
       artifact: "playlist",
     });
     if (current instanceof Response)
-      return withRemotePlaybackCors(current, auth.remote);
+      return withSignedPlaybackHeaders(current, auth.signed);
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(cancelledPlaylistResponse(), auth.remote);
+      return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
 
     const touched = await touchTranscodeSessionHeartbeat(
       params.sessionId,
@@ -116,7 +116,7 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
     );
     if (!touched) {
       if (request?.signal?.aborted)
-        return withRemotePlaybackCors(cancelledPlaylistResponse(), auth.remote);
+        return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
 
       const stale = await hlsFailedActivityResponse({
         sessionId: params.sessionId,
@@ -127,26 +127,26 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
         notReadyMessage:
           "Virtual HLS playlist is not available for this session.",
       });
-      if (stale) return withRemotePlaybackCors(stale, auth.remote);
+      if (stale) return withSignedPlaybackHeaders(stale, auth.signed);
     }
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(cancelledPlaylistResponse(), auth.remote);
+      return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
 
-    return withRemotePlaybackCors(
+    return withSignedPlaybackHeaders(
       virtualHlsPlaylistResponse({
         durationSeconds: artifact.durationSeconds,
         startTimeSeconds: artifact.startTimeSeconds,
         segmentFormat,
-        segmentQuery: remotePlaybackSegmentQuery(token),
+        segmentQuery: signedPlaybackSegmentQuery(token),
       }),
-      auth.remote,
+      auth.signed,
     );
   }
 
   try {
     const response = await hlsPlaylistResponse(artifact.playlistPath, {
       signal: request?.signal,
-      segmentQuery: remotePlaybackSegmentQuery(token),
+      segmentQuery: signedPlaybackSegmentQuery(token),
     });
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
@@ -155,9 +155,9 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
       artifact: "playlist",
     });
     if (current instanceof Response)
-      return withRemotePlaybackCors(current, auth.remote);
+      return withSignedPlaybackHeaders(current, auth.signed);
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(cancelledPlaylistResponse(), auth.remote);
+      return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
 
     const touched = await touchTranscodeSessionHeartbeat(
       params.sessionId,
@@ -166,7 +166,7 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
     );
     if (!touched) {
       if (request?.signal?.aborted)
-        return withRemotePlaybackCors(cancelledPlaylistResponse(), auth.remote);
+        return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
 
       const stale = await hlsFailedActivityResponse({
         sessionId: params.sessionId,
@@ -175,18 +175,18 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
         artifact: "playlist",
         allowCompleted: true,
       });
-      if (stale) return withRemotePlaybackCors(stale, auth.remote);
+      if (stale) return withSignedPlaybackHeaders(stale, auth.signed);
     }
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(cancelledPlaylistResponse(), auth.remote);
+      return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
 
-    return withRemotePlaybackCors(response, auth.remote);
+    return withSignedPlaybackHeaders(response, auth.signed);
   } catch {
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(cancelledPlaylistResponse(), auth.remote);
-    return withRemotePlaybackCors(
+      return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
+    return withSignedPlaybackHeaders(
       json({ error: "Playback playlist was not found." }, { status: 404 }),
-      auth.remote,
+      auth.signed,
     );
   }
 };
@@ -198,7 +198,7 @@ export const HEAD: RequestHandler = async ({
   request,
 }) => {
   const token =
-    url?.searchParams.get(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM) ?? null;
+    url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null;
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     sessionId: params.sessionId,
@@ -211,7 +211,7 @@ export const HEAD: RequestHandler = async ({
     auth.userId,
   );
   if (artifact instanceof Response)
-    return withRemotePlaybackCors(artifact, auth.remote);
+    return withSignedPlaybackHeaders(artifact, auth.signed);
 
   if (
     url?.searchParams.get("playlist") === "virtual" ||
@@ -239,16 +239,16 @@ export const HEAD: RequestHandler = async ({
       artifact: "playlist",
     });
     if (current instanceof Response)
-      return withRemotePlaybackCors(current, auth.remote);
+      return withSignedPlaybackHeaders(current, auth.signed);
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(
+      return withSignedPlaybackHeaders(
         cancelledPlaylistHeadResponse(),
-        auth.remote,
+        auth.signed,
       );
 
-    return withRemotePlaybackCors(
+    return withSignedPlaybackHeaders(
       virtualHlsPlaylistHeadResponse(),
-      auth.remote,
+      auth.signed,
     );
   }
 
@@ -259,17 +259,17 @@ export const HEAD: RequestHandler = async ({
     });
   } catch {
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(
+      return withSignedPlaybackHeaders(
         cancelledPlaylistHeadResponse(),
-        auth.remote,
+        auth.signed,
       );
-    return withRemotePlaybackCors(
+    return withSignedPlaybackHeaders(
       new Response(null, { status: 404 }),
-      auth.remote,
+      auth.signed,
     );
   }
   if (request?.signal?.aborted)
-    return withRemotePlaybackCors(cancelledPlaylistHeadResponse(), auth.remote);
+    return withSignedPlaybackHeaders(cancelledPlaylistHeadResponse(), auth.signed);
   if (response.ok) {
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
@@ -278,15 +278,15 @@ export const HEAD: RequestHandler = async ({
       artifact: "playlist",
     });
     if (current instanceof Response)
-      return withRemotePlaybackCors(current, auth.remote);
+      return withSignedPlaybackHeaders(current, auth.signed);
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(
+      return withSignedPlaybackHeaders(
         cancelledPlaylistHeadResponse(),
-        auth.remote,
+        auth.signed,
       );
   }
-  return withRemotePlaybackCors(response, auth.remote);
+  return withSignedPlaybackHeaders(response, auth.signed);
 };
 
 export const OPTIONS: RequestHandler = async () =>
-  remotePlaybackOptionsResponse();
+  signedPlaybackOptionsResponse();

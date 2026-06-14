@@ -1,9 +1,9 @@
 import {
-  absoluteRemotePlaybackUrl,
-  appendRemotePlaybackToken,
-  createRemotePlaybackToken,
-  type RemotePlaybackRoute,
-} from "$lib/server/playback/remote-auth";
+  absoluteSignedPlaybackUrl,
+  appendSignedPlaybackToken,
+  createSignedPlaybackToken,
+  type SignedPlaybackRoute,
+} from "$lib/server/playback/signed-token";
 import { hlsPlaylistFileExists } from "$lib/server/transcoding/hls";
 import {
   getAuthorizedHlsArtifact,
@@ -22,8 +22,8 @@ export class PlaybackSourceRequestError extends Error {
 }
 
 function absoluteSignedUrl(pathname: string, token: string, origin?: string) {
-  if (!origin) return absoluteRemotePlaybackUrl(pathname, token);
-  return new URL(appendRemotePlaybackToken(pathname, token), origin).toString();
+  if (!origin) return absoluteSignedPlaybackUrl(pathname, token);
+  return new URL(appendSignedPlaybackToken(pathname, token), origin).toString();
 }
 
 async function assertSignedHlsReady(input: {
@@ -65,7 +65,7 @@ async function signedPlaybackStreamUrl(input: {
   origin: string;
 }) {
   const { playback } = input;
-  let route: RemotePlaybackRoute;
+  let route: SignedPlaybackRoute;
   let streamPath: string;
   let playbackSessionId: string | undefined;
 
@@ -94,7 +94,7 @@ async function signedPlaybackStreamUrl(input: {
     return playback.streamUrl;
   }
 
-  const token = createRemotePlaybackToken({
+  const token = createSignedPlaybackToken({
     route,
     userId: input.userId,
     mediaFileId: playback.file.id,
@@ -109,7 +109,7 @@ function signedSubtitleSrc(input: {
   userId: string;
   origin: string;
 }) {
-  const token = createRemotePlaybackToken({
+  const token = createSignedPlaybackToken({
     route: "subtitle",
     userId: input.userId,
     mediaFileId: input.mediaFileId,

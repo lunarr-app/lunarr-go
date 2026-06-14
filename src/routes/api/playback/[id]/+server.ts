@@ -6,7 +6,7 @@ import {
 import {
   PlaybackSourceRequestError,
   withSignedPlaybackSource,
-} from "$lib/server/playback/remote";
+} from "$lib/server/playback/signed-source";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 

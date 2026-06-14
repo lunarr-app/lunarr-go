@@ -173,7 +173,7 @@ describe("server hook route boundaries", () => {
     expect(await response.json()).toEqual({ error: "Unauthorized" });
   });
 
-  test("lets remote-token media requests reach route handlers without a session", async () => {
+  test("lets signed-token media requests reach route handlers without a session", async () => {
     const response = await handle({
       event: eventFor("/media/files/file-1/stream?remoteToken=test") as never,
       resolve: async () => new Response("resolved"),

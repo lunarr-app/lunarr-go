@@ -1,13 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
-  appendRemotePlaybackToken,
-  createRemotePlaybackToken,
-  verifyRemotePlaybackToken,
-} from "./remote-auth";
+  appendSignedPlaybackToken,
+  createSignedPlaybackToken,
+  verifySignedPlaybackToken,
+  withSignedPlaybackHeaders,
+} from "./signed-token";
 
-describe("remote playback tokens", () => {
+describe("signed playback tokens", () => {
   test("verifies a matching HLS token", () => {
-    const token = createRemotePlaybackToken({
+    const token = createSignedPlaybackToken({
       route: "hls",
       userId: "user-1",
       mediaFileId: "file-1",
@@ -15,7 +16,7 @@ describe("remote playback tokens", () => {
     });
 
     expect(
-      verifyRemotePlaybackToken(token, {
+      verifySignedPlaybackToken(token, {
         route: "hls",
         playbackSessionId: "session-1",
       }),
@@ -28,32 +29,32 @@ describe("remote playback tokens", () => {
   });
 
   test("rejects mismatched, expired, and tampered tokens", () => {
-    const token = createRemotePlaybackToken({
+    const token = createSignedPlaybackToken({
       route: "direct",
       userId: "user-1",
       mediaFileId: "file-1",
       expiresInSeconds: -1,
     });
     expect(
-      verifyRemotePlaybackToken(token, {
+      verifySignedPlaybackToken(token, {
         route: "direct",
         mediaFileId: "file-1",
       }),
     ).toBeNull();
 
-    const freshToken = createRemotePlaybackToken({
+    const freshToken = createSignedPlaybackToken({
       route: "direct",
       userId: "user-1",
       mediaFileId: "file-1",
     });
     expect(
-      verifyRemotePlaybackToken(freshToken, {
+      verifySignedPlaybackToken(freshToken, {
         route: "direct",
         mediaFileId: "file-2",
       }),
     ).toBeNull();
     expect(
-      verifyRemotePlaybackToken(`${freshToken}x`, {
+      verifySignedPlaybackToken(`${freshToken}x`, {
         route: "direct",
         mediaFileId: "file-1",
       }),
@@ -61,11 +62,20 @@ describe("remote playback tokens", () => {
   });
 
   test("appends tokens without dropping existing query params", () => {
-    expect(appendRemotePlaybackToken("/media/file", "abc")).toBe(
+    expect(appendSignedPlaybackToken("/media/file", "abc")).toBe(
       "/media/file?remoteToken=abc",
     );
-    expect(appendRemotePlaybackToken("/media/file?download=0", "abc")).toBe(
+    expect(appendSignedPlaybackToken("/media/file?download=0", "abc")).toBe(
       "/media/file?download=0&remoteToken=abc",
     );
+  });
+
+  test("adds receiver headers and disables caching only for signed playback", () => {
+    const unsigned = withSignedPlaybackHeaders(new Response("body"), false);
+    expect(unsigned.headers.get("cache-control")).toBeNull();
+
+    const signed = withSignedPlaybackHeaders(new Response("body"), true);
+    expect(signed.headers.get("cache-control")).toBe("no-store");
+    expect(signed.headers.get("access-control-allow-origin")).toBe("*");
   });
 });

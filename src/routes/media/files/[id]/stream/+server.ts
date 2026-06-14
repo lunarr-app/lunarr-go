@@ -1,9 +1,9 @@
 import {
-  REMOTE_PLAYBACK_TOKEN_QUERY_PARAM,
-  remotePlaybackOptionsResponse,
-  verifyRemotePlaybackToken,
-  withRemotePlaybackCors,
-} from "$lib/server/playback/remote-auth";
+  SIGNED_PLAYBACK_TOKEN_QUERY_PARAM,
+  signedPlaybackOptionsResponse,
+  verifySignedPlaybackToken,
+  withSignedPlaybackHeaders,
+} from "$lib/server/playback/signed-token";
 import {
   mediaStreamHeadResponse,
   mediaStreamResponse,
@@ -16,19 +16,19 @@ function authorizedUserId(input: {
   mediaFileId: string;
   token: string | null;
 }) {
-  if (input.localsUserId) return { userId: input.localsUserId, remote: false };
-  const payload = verifyRemotePlaybackToken(input.token, {
+  if (input.localsUserId) return { userId: input.localsUserId, signed: false };
+  const payload = verifySignedPlaybackToken(input.token, {
     route: "direct",
     mediaFileId: input.mediaFileId,
   });
-  return payload ? { userId: payload.userId, remote: true } : null;
+  return payload ? { userId: payload.userId, signed: true } : null;
 }
 
 export const GET: RequestHandler = async ({ params, request, locals, url }) => {
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     mediaFileId: params.id,
-    token: url?.searchParams.get(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
+    token: url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
   });
   if (!auth) {
     return json({ error: "Unauthorized" }, { status: 401 });
@@ -39,7 +39,7 @@ export const GET: RequestHandler = async ({ params, request, locals, url }) => {
     auth.userId,
     request.headers.get("range"),
   );
-  return withRemotePlaybackCors(response, auth.remote);
+  return withSignedPlaybackHeaders(response, auth.signed);
 };
 
 export const HEAD: RequestHandler = async ({
@@ -51,7 +51,7 @@ export const HEAD: RequestHandler = async ({
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     mediaFileId: params.id,
-    token: url?.searchParams.get(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
+    token: url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
   });
   if (!auth) {
     return new Response(null, { status: 401 });
@@ -62,8 +62,8 @@ export const HEAD: RequestHandler = async ({
     auth.userId,
     request.headers.get("range"),
   );
-  return withRemotePlaybackCors(response, auth.remote);
+  return withSignedPlaybackHeaders(response, auth.signed);
 };
 
 export const OPTIONS: RequestHandler = async () =>
-  remotePlaybackOptionsResponse();
+  signedPlaybackOptionsResponse();

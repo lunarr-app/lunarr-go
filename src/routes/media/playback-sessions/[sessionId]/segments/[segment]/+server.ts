@@ -1,9 +1,9 @@
 import {
-  REMOTE_PLAYBACK_TOKEN_QUERY_PARAM,
-  remotePlaybackOptionsResponse,
-  verifyRemotePlaybackToken,
-  withRemotePlaybackCors,
-} from "$lib/server/playback/remote-auth";
+  SIGNED_PLAYBACK_TOKEN_QUERY_PARAM,
+  signedPlaybackOptionsResponse,
+  verifySignedPlaybackToken,
+  withSignedPlaybackHeaders,
+} from "$lib/server/playback/signed-token";
 import {
   hlsSegmentIndex,
   hlsSegmentHeadResponse,
@@ -34,12 +34,12 @@ function authorizedUserId(input: {
   sessionId: string;
   token: string | null;
 }) {
-  if (input.localsUserId) return { userId: input.localsUserId, remote: false };
-  const payload = verifyRemotePlaybackToken(input.token, {
+  if (input.localsUserId) return { userId: input.localsUserId, signed: false };
+  const payload = verifySignedPlaybackToken(input.token, {
     route: "hls",
     playbackSessionId: input.sessionId,
   });
-  return payload ? { userId: payload.userId, remote: true } : null;
+  return payload ? { userId: payload.userId, signed: true } : null;
 }
 
 function cancelledSegmentResponse() {
@@ -75,7 +75,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     sessionId: params.sessionId,
-    token: url?.searchParams.get(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
+    token: url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
   });
   if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 
@@ -85,7 +85,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
     { cancelledResponse: staleCancelledPlaybackSegmentResponse },
   );
   if (artifact instanceof Response)
-    return withRemotePlaybackCors(artifact, auth.remote);
+    return withSignedPlaybackHeaders(artifact, auth.signed);
 
   if (hlsSegmentIndex(params.segment) !== null) {
     await touchTranscodeSessionHeartbeat(params.sessionId, auth.userId, {
@@ -116,7 +116,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
           auth.userId,
         );
         if (failedArtifact?.status === "cancelled") {
-          return withRemotePlaybackCors(
+          return withSignedPlaybackHeaders(
             staleCancelledPlaybackSegmentResponse(failedArtifact) ??
               json(
                 {
@@ -127,11 +127,11 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
                 },
                 { status: 409 },
               ),
-            auth.remote,
+            auth.signed,
           );
         }
         if (failedArtifact?.status === "failed") {
-          return withRemotePlaybackCors(
+          return withSignedPlaybackHeaders(
             json(
               {
                 error: playbackRouteError(
@@ -141,16 +141,16 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
               },
               { status: 409 },
             ),
-            auth.remote,
+            auth.signed,
           );
         }
         throw new Error("Playback segment generation failed.");
       }
       if (generated) {
         if (request?.signal?.aborted)
-          return withRemotePlaybackCors(
+          return withSignedPlaybackHeaders(
             cancelledSegmentResponse(),
-            auth.remote,
+            auth.signed,
           );
         response = await hlsSegmentResponse(
           artifact.playlistPath,
@@ -170,7 +170,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         options: { cancelledResponse: staleCancelledPlaybackSegmentResponse },
       });
       if (current instanceof Response)
-        return withRemotePlaybackCors(current, auth.remote);
+        return withSignedPlaybackHeaders(current, auth.signed);
     }
     if (response.ok) {
       const current = await currentUnchangedPlayableHlsArtifact({
@@ -180,9 +180,9 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         artifact: "segment",
       });
       if (current instanceof Response)
-        return withRemotePlaybackCors(current, auth.remote);
+        return withSignedPlaybackHeaders(current, auth.signed);
       if (request?.signal?.aborted)
-        return withRemotePlaybackCors(cancelledSegmentResponse(), auth.remote);
+        return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
 
       const segmentIndex = hlsSegmentIndex(params.segment);
       if (segmentIndex !== null) {
@@ -194,9 +194,9 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         );
         if (!touched) {
           if (request?.signal?.aborted)
-            return withRemotePlaybackCors(
+            return withSignedPlaybackHeaders(
               cancelledSegmentResponse(),
-              auth.remote,
+              auth.signed,
             );
 
           const stale = await hlsFailedActivityResponse({
@@ -206,12 +206,12 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
             artifact: "segment",
             allowCompleted: true,
           });
-          if (stale) return withRemotePlaybackCors(stale, auth.remote);
+          if (stale) return withSignedPlaybackHeaders(stale, auth.signed);
         }
         if (request?.signal?.aborted)
-          return withRemotePlaybackCors(
+          return withSignedPlaybackHeaders(
             cancelledSegmentResponse(),
-            auth.remote,
+            auth.signed,
           );
 
         void ensureHlsLookaheadForSegment({
@@ -225,13 +225,13 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         ).catch(() => undefined);
       }
     }
-    return withRemotePlaybackCors(response, auth.remote);
+    return withSignedPlaybackHeaders(response, auth.signed);
   } catch {
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(cancelledSegmentResponse(), auth.remote);
-    return withRemotePlaybackCors(
+      return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
+    return withSignedPlaybackHeaders(
       json({ error: "Playback segment was not found." }, { status: 404 }),
-      auth.remote,
+      auth.signed,
     );
   }
 };
@@ -245,7 +245,7 @@ export const HEAD: RequestHandler = async ({
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     sessionId: params.sessionId,
-    token: url?.searchParams.get(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
+    token: url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
   });
   if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 
@@ -255,7 +255,7 @@ export const HEAD: RequestHandler = async ({
     { cancelledResponse: staleCancelledPlaybackSegmentResponse },
   );
   if (artifact instanceof Response)
-    return withRemotePlaybackCors(artifact, auth.remote);
+    return withSignedPlaybackHeaders(artifact, auth.signed);
 
   let response: Response;
   try {
@@ -268,17 +268,17 @@ export const HEAD: RequestHandler = async ({
     );
   } catch {
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(
+      return withSignedPlaybackHeaders(
         cancelledSegmentHeadResponse(),
-        auth.remote,
+        auth.signed,
       );
-    return withRemotePlaybackCors(
+    return withSignedPlaybackHeaders(
       new Response(null, { status: 404 }),
-      auth.remote,
+      auth.signed,
     );
   }
   if (request?.signal?.aborted)
-    return withRemotePlaybackCors(cancelledSegmentHeadResponse(), auth.remote);
+    return withSignedPlaybackHeaders(cancelledSegmentHeadResponse(), auth.signed);
   if (response.ok) {
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
@@ -287,15 +287,15 @@ export const HEAD: RequestHandler = async ({
       artifact: "segment",
     });
     if (current instanceof Response)
-      return withRemotePlaybackCors(current, auth.remote);
+      return withSignedPlaybackHeaders(current, auth.signed);
     if (request?.signal?.aborted)
-      return withRemotePlaybackCors(
+      return withSignedPlaybackHeaders(
         cancelledSegmentHeadResponse(),
-        auth.remote,
+        auth.signed,
       );
   }
-  return withRemotePlaybackCors(response, auth.remote);
+  return withSignedPlaybackHeaders(response, auth.signed);
 };
 
 export const OPTIONS: RequestHandler = async () =>
-  remotePlaybackOptionsResponse();
+  signedPlaybackOptionsResponse();

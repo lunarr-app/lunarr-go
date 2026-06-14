@@ -1,19 +1,8 @@
 import { Readable } from "node:stream";
 import { getMediaFile } from ".";
+import { mediaContentTypeForExtension } from "$lib/playback/content-type";
 import type { LibrarySource } from "../db/schema";
 import { createLibraryStorage, createLocalStorage, type LibraryStorage } from "../storage";
-
-const MIME_BY_EXTENSION: Record<string, string> = {
-  ".mp4": "video/mp4",
-  ".mkv": "video/x-matroska",
-  ".mov": "video/quicktime",
-  ".avi": "video/x-msvideo",
-  ".webm": "video/webm"
-};
-
-export function mediaContentTypeForExtension(extension: string) {
-  return MIME_BY_EXTENSION[extension] ?? "application/octet-stream";
-}
 
 export type ByteRange = {
   start: number;

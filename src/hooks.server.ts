@@ -3,7 +3,7 @@ import { auth } from "$lib/server/auth";
 import { hasRegisteredUsers } from "$lib/server/auth/users";
 import { migrateDatabase } from "$lib/server/db";
 import { cleanupJobHistory } from "$lib/server/jobs";
-import { REMOTE_PLAYBACK_TOKEN_QUERY_PARAM } from "$lib/server/playback/remote-auth";
+import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM } from "$lib/server/playback/signed-token";
 import { resumeInterruptedJobs } from "$lib/server/scanner";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
@@ -60,7 +60,7 @@ function isMediaResourcePath(pathname: string) {
 function canResolveUnauthenticatedMediaResource(event: RequestEvent) {
   return (
     event.request.method === "OPTIONS" ||
-    event.url.searchParams.has(REMOTE_PLAYBACK_TOKEN_QUERY_PARAM)
+    event.url.searchParams.has(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM)
   );
 }
 
@@ -81,7 +81,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const pathname = event.url.pathname;
   const hasUsers = await hasRegisteredUsers();
-  const canResolveRemoteMediaResource =
+  const canResolveUnauthenticatedMedia =
     isMediaResourcePath(pathname) && canResolveUnauthenticatedMediaResource(event);
 
   if (!hasUsers && pathname !== "/setup" && !isAuthApiPath(pathname)) {
@@ -108,7 +108,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   if (
     isMediaResourcePath(pathname) &&
     !event.locals.user &&
-    !canResolveRemoteMediaResource
+    !canResolveUnauthenticatedMedia
   ) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -117,7 +117,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     hasUsers &&
     !event.locals.user &&
     !isPublicPath(pathname) &&
-    !canResolveRemoteMediaResource
+    !canResolveUnauthenticatedMedia
   ) {
     throw redirect(303, "/login");
   }
