@@ -38,9 +38,9 @@
       <Clapperboard size={15} aria-hidden="true" />
       Cast
     </div>
-    <h1>{data.person.name}</h1>
+    <h1 class="person-name">{data.person.name}</h1>
     {#if data.person.originalName && data.person.originalName !== data.person.name}
-      <p class="muted">{data.person.originalName}</p>
+      <p class="muted original-name">{data.person.originalName}</p>
     {/if}
     <div class="facts" aria-label="Cast facts">
       <span><Film size={15} aria-hidden="true" />{movieCountLabel}</span>
@@ -60,15 +60,12 @@
 
 <section aria-labelledby="movies-heading">
   <div class="section-heading">
-    <div>
-      <h2 id="movies-heading">Movies</h2>
-      <p class="muted">Titles in your library featuring {data.person.name}.</p>
-    </div>
+    <h2 id="movies-heading">Movies</h2>
   </div>
   {#if data.movies.length}
     <div class="grid">
       {#each data.movies as movie}
-        <div class="movie">
+        <div class="credit-item">
           <MovieCard {movie} />
           {#if movie.character}
             <span>{movie.character}</span>
@@ -83,15 +80,12 @@
 
 <section aria-labelledby="shows-heading">
   <div class="section-heading">
-    <div>
-      <h2 id="shows-heading">TV shows</h2>
-      <p class="muted">Shows in your library featuring {data.person.name}.</p>
-    </div>
+    <h2 id="shows-heading">TV shows</h2>
   </div>
   {#if data.shows.length}
     <div class="grid">
       {#each data.shows as show}
-        <div class="movie">
+        <div class="credit-item">
           <ShowCard {show} />
           {#if show.character}
             <span>{show.character}</span>
@@ -138,13 +132,13 @@
     min-width: 0;
   }
 
-  .copy p,
-  h1,
-  h2 {
+  .person-name,
+  .original-name,
+  .section-heading h2 {
     margin: 0;
   }
 
-  h1 {
+  .person-name {
     font-size: clamp(2.2rem, 5vw, 4.3rem);
     line-height: 1;
   }
@@ -195,23 +189,19 @@
     margin: 1.7rem 0 0.85rem;
   }
 
-  .section-heading p {
-    margin: 0.25rem 0 0;
-  }
-
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 1.1rem;
   }
 
-  .movie {
+  .credit-item {
     display: grid;
     gap: 0.35rem;
     min-width: 0;
   }
 
-  .movie > span {
+  .credit-item > span {
     color: var(--color-muted);
     font-size: 0.86rem;
     overflow: hidden;
@@ -225,7 +215,7 @@
       align-items: start;
     }
 
-    h1 {
+    .person-name {
       font-size: clamp(1.8rem, 12vw, 3rem);
     }
   }
