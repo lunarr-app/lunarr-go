@@ -12,10 +12,7 @@ export type ClientPlaybackCapabilities = {
 
 export const PLAYBACK_TARGETS = ["web", "cast", "airplay"] as const;
 export type PlaybackTarget = (typeof PLAYBACK_TARGETS)[number];
-export type RemotePlaybackTarget = Extract<
-  PlaybackTarget,
-  "cast" | "airplay"
->;
+export type RemotePlaybackTarget = Extract<PlaybackTarget, "cast" | "airplay">;
 
 export const CLIENT_PLAYBACK_CAPABILITY_KEYS = [
   "hevc",
@@ -43,25 +40,16 @@ export function emptyClientPlaybackCapabilities(): ClientPlaybackCapabilities {
   };
 }
 
-export function normalizePlaybackTarget(
-  value: string | null | undefined,
-): PlaybackTarget {
-  return PLAYBACK_TARGETS.includes(value as PlaybackTarget)
-    ? (value as PlaybackTarget)
-    : "web";
+export function normalizePlaybackTarget(value: string | null | undefined): PlaybackTarget {
+  return PLAYBACK_TARGETS.includes(value as PlaybackTarget) ? (value as PlaybackTarget) : "web";
 }
 
 export function parseClientPlaybackCapabilityValue(value: string | null) {
   const normalized = value?.trim().toLowerCase();
-  return (
-    normalized === "1" || normalized === "true" || normalized === "probably"
-  );
+  return normalized === "1" || normalized === "true" || normalized === "probably";
 }
 
-function canPlayAny(
-  canPlayType: (type: string) => string,
-  mediaTypes: readonly string[],
-) {
+function canPlayAny(canPlayType: (type: string) => string, mediaTypes: readonly string[]) {
   return mediaTypes.some((type) => canPlayType(type) !== "");
 }
 
@@ -69,10 +57,7 @@ export function detectClientPlaybackCapabilities(
   canPlayType: (type: string) => string,
   options: { mediaSourceSupported?: boolean } = {},
 ): ClientPlaybackCapabilities {
-  const nativeHls = canPlayAny(canPlayType, [
-    "application/vnd.apple.mpegurl",
-    "application/x-mpegURL",
-  ]);
+  const nativeHls = canPlayAny(canPlayType, ["application/vnd.apple.mpegurl", "application/x-mpegURL"]);
 
   return {
     hevc: canPlayAny(canPlayType, [

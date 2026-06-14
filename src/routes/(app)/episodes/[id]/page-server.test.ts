@@ -3,13 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql, type Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-  type Database,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import { actions, load } from "./+page.server";
 
 async function expectRedirect(operation: unknown, location: string) {
@@ -110,10 +104,7 @@ describe("episode page server", () => {
         id: "file-1",
         library_id: "library-1",
         media_item_id: "episode-1",
-        path: path.join(
-          tempDir,
-          "The Expanse/Season 01/The Expanse - S01E01.mkv",
-        ),
+        path: path.join(tempDir, "The Expanse/Season 01/The Expanse - S01E01.mkv"),
         basename: "The Expanse - S01E01.mkv",
         extension: ".mkv",
         size_bytes: 10,

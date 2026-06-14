@@ -8,14 +8,14 @@
   const primaryFile = $derived(data.files[0] ?? null);
   const completed = $derived(data.progress.some((progress) => Number(progress.completed ?? 0) > 0));
   const episodeCode = $derived(
-    `S${String(data.episode.seasonNumber ?? "?").padStart(2, "0")}E${String(data.episode.episodeNumber ?? "?").padStart(2, "0")}`
+    `S${String(data.episode.seasonNumber ?? "?").padStart(2, "0")}E${String(data.episode.episodeNumber ?? "?").padStart(2, "0")}`,
   );
 
   function playHref(fileId: string) {
     return playbackModalHref({
       currentUrl: page.url,
       mediaItemId: data.episode.id,
-      mediaFileId: fileId
+      mediaFileId: fileId,
     });
   }
 
@@ -42,7 +42,7 @@
       file.duration_seconds ? formatDuration(file.duration_seconds) : null,
       file.video_codec?.toUpperCase() ?? null,
       file.audio_codec?.toUpperCase() ?? null,
-      formatFileSize(file.size_bytes)
+      formatFileSize(file.size_bytes),
     ]
       .filter(Boolean)
       .join(" · ");

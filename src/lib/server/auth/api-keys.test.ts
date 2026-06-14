@@ -3,23 +3,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "$lib/server/db";
-import {
-  createApiKey,
-  listApiKeys,
-  apiKeyHttpStatus,
-  ApiKeyError,
-} from "./api-keys";
-import {
-  createApiKeyForUser,
-  resetAuthForTests,
-  sessionHeadersFor,
-} from "./test/setup";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
+import { createApiKey, listApiKeys, apiKeyHttpStatus, ApiKeyError } from "./api-keys";
+import { createApiKeyForUser, resetAuthForTests, sessionHeadersFor } from "./test/setup";
 
 describe("API keys", () => {
   let tempDir: string;
@@ -67,15 +53,11 @@ describe("API keys", () => {
     const expiresAt = Date.parse(String(row.expires_at));
     expect(Number.isFinite(expiresAt)).toBe(true);
     expect(expiresAt).toBeGreaterThanOrEqual(before + 7200 * 1000);
-    expect(apiKey.expiresAt).toBe(
-      new Date(String(row.expires_at)).toISOString(),
-    );
+    expect(apiKey.expiresAt).toBe(new Date(String(row.expires_at)).toISOString());
   });
 
   test("requires session headers to create API keys", async () => {
-    await expect(createApiKey({ headers: new Headers() })).rejects.toThrow(
-      "Unauthorized",
-    );
+    await expect(createApiKey({ headers: new Headers() })).rejects.toThrow("Unauthorized");
   });
 
   test("maps Better Auth 401 status to HTTP 401 on mapped errors", async () => {

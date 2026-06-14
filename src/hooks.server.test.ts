@@ -5,18 +5,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Handle } from "@sveltejs/kit";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
-import {
-  createApiKeyForUser,
-  resetAuthForTests,
-} from "$lib/server/auth/test/setup";
+import { createApiKeyForUser, resetAuthForTests } from "$lib/server/auth/test/setup";
 
 type TestEvent = {
   request: Request;
@@ -169,9 +161,7 @@ describe("server hook route boundaries", () => {
 
   test("returns JSON 401 for HLS playback-session requests without a session", async () => {
     const response = await handle({
-      event: eventFor(
-        "/media/playback-sessions/session-1/master.m3u8",
-      ) as never,
+      event: eventFor("/media/playback-sessions/session-1/master.m3u8") as never,
       resolve: async () => new Response("resolved"),
     });
 
@@ -281,13 +271,7 @@ describe("server hook route boundaries", () => {
       expect(response.status).toBe(200);
     }
 
-    expect(
-      await db
-        .selectFrom("apikey")
-        .select(["id"])
-        .where("id", "=", apiKey.id)
-        .executeTakeFirst(),
-    ).toBeTruthy();
+    expect(await db.selectFrom("apikey").select(["id"]).where("id", "=", apiKey.id).executeTakeFirst()).toBeTruthy();
   });
 
   test("rejects an invalid API key for protected media resources", async () => {

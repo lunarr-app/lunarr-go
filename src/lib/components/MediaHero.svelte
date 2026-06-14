@@ -10,7 +10,7 @@
     facts,
     actions,
     below,
-    bottomMargin = "0"
+    bottomMargin = "0",
   }: {
     title: string;
     posterUrl: string | null;

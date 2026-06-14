@@ -38,12 +38,8 @@ describe("FFmpeg transcode smoke command", () => {
   });
 
   test("maps auto hardware smoke to the platform default", () => {
-    expect(
-      hardwareSmokeModes({ FFMPEG_SMOKE_HARDWARE: "auto" }, "darwin"),
-    ).toEqual(["videotoolbox"]);
-    expect(
-      hardwareSmokeModes({ FFMPEG_SMOKE_HARDWARE: "auto" }, "linux"),
-    ).toEqual(["vaapi"]);
+    expect(hardwareSmokeModes({ FFMPEG_SMOKE_HARDWARE: "auto" }, "darwin")).toEqual(["videotoolbox"]);
+    expect(hardwareSmokeModes({ FFMPEG_SMOKE_HARDWARE: "auto" }, "linux")).toEqual(["vaapi"]);
   });
 
   test("builds a VAAPI hardware HLS smoke command with the configured device", () => {
@@ -62,11 +58,7 @@ describe("FFmpeg transcode smoke command", () => {
 
   test("reports missing VAAPI runtime device before running hardware smoke", () => {
     expect(
-      hardwareRuntimePrerequisiteErrors(
-        "vaapi",
-        { FFMPEG_VAAPI_DEVICE: "/dev/dri/missing" },
-        () => false,
-      ),
+      hardwareRuntimePrerequisiteErrors("vaapi", { FFMPEG_VAAPI_DEVICE: "/dev/dri/missing" }, () => false),
     ).toEqual([
       'VAAPI device "/dev/dri/missing" is not available. Mount the host render device into the runtime or set FFMPEG_VAAPI_DEVICE to the mounted render device path.',
     ]);
@@ -74,11 +66,7 @@ describe("FFmpeg transcode smoke command", () => {
 
   test("accepts a mounted VAAPI runtime device", () => {
     expect(
-      hardwareRuntimePrerequisiteErrors(
-        "vaapi",
-        { FFMPEG_VAAPI_DEVICE: "/dev/dri/renderD128" },
-        () => true,
-      ),
+      hardwareRuntimePrerequisiteErrors("vaapi", { FFMPEG_VAAPI_DEVICE: "/dev/dri/renderD128" }, () => true),
     ).toEqual([]);
   });
 

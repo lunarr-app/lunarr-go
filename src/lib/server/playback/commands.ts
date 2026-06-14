@@ -14,8 +14,7 @@ export async function markSeasonWatched(input: {
   if (!season) throw new Error("Season not found.");
 
   const playableEpisodes = season.episodes.filter((episode) => episode.fileId);
-  if (playableEpisodes.length === 0)
-    throw new Error("Season has no playable episodes.");
+  if (playableEpisodes.length === 0) throw new Error("Season has no playable episodes.");
 
   for (const episode of playableEpisodes) {
     await markWatched({

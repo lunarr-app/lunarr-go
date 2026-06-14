@@ -3,17 +3,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "$lib/server/db";
-import {
-  createApiKeyForUser,
-  resetAuthForTests,
-  sessionHeadersFor,
-} from "$lib/server/auth/test/setup";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
+import { createApiKeyForUser, resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
 
 describe("API key routes", () => {
   let tempDir: string | undefined;
@@ -125,12 +116,9 @@ describe("API key routes", () => {
     });
 
     const deleted = await DELETE({
-      request: new Request(
-        `http://localhost/api/api-keys/${createdBody.apiKey.id}`,
-        {
-          headers: sessionHeaders,
-        },
-      ),
+      request: new Request(`http://localhost/api/api-keys/${createdBody.apiKey.id}`, {
+        headers: sessionHeaders,
+      }),
       params: { id: createdBody.apiKey.id },
       locals: { user },
     } as never);
@@ -168,12 +156,9 @@ describe("API key routes", () => {
     });
 
     const response = await DELETE({
-      request: new Request(
-        `http://localhost/api/api-keys/${created.apiKey.id}`,
-        {
-          headers: other.sessionHeaders,
-        },
-      ),
+      request: new Request(`http://localhost/api/api-keys/${created.apiKey.id}`, {
+        headers: other.sessionHeaders,
+      }),
       params: { id: created.apiKey.id },
       locals: { user: other.user },
     } as never);

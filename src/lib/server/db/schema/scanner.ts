@@ -2,11 +2,7 @@ import type { ColumnType, Generated } from "kysely";
 import type { TimestampText } from "./common";
 
 export type ScanJobStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
-export type ScanJobKind =
-  | "library_scan"
-  | "movie_metadata_refresh"
-  | "tv_metadata_refresh"
-  | "media_probe_refresh";
+export type ScanJobKind = "library_scan" | "movie_metadata_refresh" | "tv_metadata_refresh" | "media_probe_refresh";
 
 export type ScanJobTable = {
   id: string;

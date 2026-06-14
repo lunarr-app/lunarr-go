@@ -10,36 +10,21 @@
 </svelte:head>
 
 <h1>Sign in</h1>
-<p class="muted">
-  Use your Lunarr account to manage and watch this local library.
-</p>
+<p class="muted">Use your Lunarr account to manage and watch this local library.</p>
 
 <form method="POST" action="?/signIn">
   <label>
     Email
-    <input
-      name="email"
-      type="email"
-      autocomplete="email"
-      value={formData.email ?? ""}
-      required
-    />
+    <input name="email" type="email" autocomplete="email" value={formData.email ?? ""} required />
   </label>
   <label>
     Password
-    <input
-      name="password"
-      type="password"
-      autocomplete="current-password"
-      required
-    />
+    <input name="password" type="password" autocomplete="current-password" required />
   </label>
   {#if form?.error}
     <p class="error">{form.error}</p>
   {/if}
-  <button>
-    Sign in
-  </button>
+  <button> Sign in </button>
 </form>
 
 {#if data.signupOpen}

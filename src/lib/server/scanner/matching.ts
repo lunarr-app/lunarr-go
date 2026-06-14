@@ -2,25 +2,22 @@ import {
   matchMovieMetadata,
   matchTvSeasonMetadata,
   type MatchedMovieMetadata,
-  type MatchedTvSeasonLookup
+  type MatchedTvSeasonLookup,
 } from "../metadata/tmdb";
 
-export type MovieMetadataMatcher = (
-  title: string,
-  year: number | null
-) => Promise<MatchedMovieMetadata | null>;
+export type MovieMetadataMatcher = (title: string, year: number | null) => Promise<MatchedMovieMetadata | null>;
 
 export type TvSeasonMetadataMatcher = (
   title: string,
   year: number | null,
-  seasonNumber: number
+  seasonNumber: number,
 ) => Promise<MatchedTvSeasonLookup | null>;
 
 export async function lookupMovieMetadata(
   title: string,
   year: number | null,
   onError?: (error: unknown) => Promise<void>,
-  matcher: MovieMetadataMatcher = matchMovieMetadata
+  matcher: MovieMetadataMatcher = matchMovieMetadata,
 ) {
   try {
     return await matcher(title, year);
@@ -35,7 +32,7 @@ export async function lookupTvSeasonMetadata(
   year: number | null,
   seasonNumber: number,
   onError?: (error: unknown) => Promise<void>,
-  matcher: TvSeasonMetadataMatcher = matchTvSeasonMetadata
+  matcher: TvSeasonMetadataMatcher = matchTvSeasonMetadata,
 ) {
   try {
     return await matcher(title, year, seasonNumber);

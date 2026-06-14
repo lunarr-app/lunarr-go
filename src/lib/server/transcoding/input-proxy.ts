@@ -1,10 +1,6 @@
 import type { SeekableTranscodeInputSource } from "./backend";
 import { randomInt, randomUUID } from "node:crypto";
-import {
-  createServer,
-  type IncomingMessage,
-  type ServerResponse,
-} from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { once } from "node:events";
 
@@ -70,11 +66,7 @@ function commonHeaders(size: number) {
   };
 }
 
-function writeHead(
-  response: ServerResponse,
-  status: number,
-  headers: Record<string, string>,
-) {
+function writeHead(response: ServerResponse, status: number, headers: Record<string, string>) {
   if (!response.headersSent) response.writeHead(status, headers);
 }
 
@@ -87,10 +79,7 @@ async function writeRange(input: {
   let offset = input.range.start;
   while (offset <= input.range.end) {
     if (input.signal.aborted || input.response.destroyed) return;
-    const requestedBytes = Math.min(
-      STREAM_CHUNK_BYTES,
-      input.range.end - offset + 1,
-    );
+    const requestedBytes = Math.min(STREAM_CHUNK_BYTES, input.range.end - offset + 1);
     const chunk = await input.source.read(offset, requestedBytes, input.signal);
     if (chunk.length !== requestedBytes) {
       throw new Error(
@@ -118,12 +107,8 @@ function methodNotAllowed(response: ServerResponse) {
   response.end("Method not allowed");
 }
 
-async function listenOnLoopbackUnlocked(
-  server: ReturnType<typeof createServer>,
-  attempt: number,
-) {
-  const port =
-    attempt === 0 ? 0 : randomInt(PROXY_PORT_MIN, PROXY_PORT_MAX + 1);
+async function listenOnLoopbackUnlocked(server: ReturnType<typeof createServer>, attempt: number) {
+  const port = attempt === 0 ? 0 : randomInt(PROXY_PORT_MIN, PROXY_PORT_MAX + 1);
   await new Promise<void>((resolve, reject) => {
     const cleanup = () => {
       server.off("error", onError);
@@ -148,10 +133,7 @@ async function listenOnLoopbackUnlocked(
   });
 }
 
-async function listenOnLoopback(
-  server: ReturnType<typeof createServer>,
-  attempt: number,
-) {
+async function listenOnLoopback(server: ReturnType<typeof createServer>, attempt: number) {
   const listen = listenQueue.then(
     () => listenOnLoopbackUnlocked(server, attempt),
     () => listenOnLoopbackUnlocked(server, attempt),
@@ -167,18 +149,12 @@ function isAddressInUse(error: unknown) {
   return (error as NodeJS.ErrnoException).code === "EADDRINUSE";
 }
 
-export async function startSeekableInputProxy(
-  input: SeekableInputProxyInput,
-): Promise<RunningSeekableInputProxy> {
+export async function startSeekableInputProxy(input: SeekableInputProxyInput): Promise<RunningSeekableInputProxy> {
   const token = randomUUID();
-  const expiresAt =
-    Date.now() + Math.max(1, input.ttlMs ?? DEFAULT_PROXY_TTL_MS);
+  const expiresAt = Date.now() + Math.max(1, input.ttlMs ?? DEFAULT_PROXY_TTL_MS);
   const activeRequests = new Set<AbortController>();
 
-  const handleRequest = async (
-    request: IncomingMessage,
-    response: ServerResponse,
-  ) => {
+  const handleRequest = async (request: IncomingMessage, response: ServerResponse) => {
     const controller = new AbortController();
     activeRequests.add(controller);
     const abort = () => controller.abort();
@@ -206,10 +182,7 @@ export async function startSeekableInputProxy(
 
       const size = input.inputSource.sizeBytes;
       const rangeHeader = request.headers.range;
-      const range = parseRange(
-        typeof rangeHeader === "string" ? rangeHeader : undefined,
-        size,
-      );
+      const range = parseRange(typeof rangeHeader === "string" ? rangeHeader : undefined, size);
 
       if (rangeHeader && !range) {
         writeHead(response, 416, {
@@ -286,9 +259,7 @@ export async function startSeekableInputProxy(
   }
 
   if (!server?.listening) {
-    throw lastListenError instanceof Error
-      ? lastListenError
-      : new Error("Failed to bind FFmpeg input proxy.");
+    throw lastListenError instanceof Error ? lastListenError : new Error("Failed to bind FFmpeg input proxy.");
   }
 
   const runningServer = server;

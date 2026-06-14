@@ -10,7 +10,7 @@
     hasNext = page < totalPages,
     hrefForPage,
     summary,
-    ariaLabel = "Pagination"
+    ariaLabel = "Pagination",
   }: {
     page: number;
     totalPages: number;
@@ -23,13 +23,18 @@
 
   const items = $derived.by(() => {
     const pages = new Set([1, page - 1, page, page + 1, totalPages]);
-    const visiblePages = [...pages].filter((item) => item >= 1 && item <= totalPages).sort((left, right) => left - right);
+    const visiblePages = [...pages]
+      .filter((item) => item >= 1 && item <= totalPages)
+      .sort((left, right) => left - right);
     const paginationItems: PaginationItem[] = [];
 
     for (const pageNumber of visiblePages) {
       const previous = paginationItems.at(-1);
       if (previous?.type === "page" && pageNumber - previous.page > 1) {
-        paginationItems.push({ type: "ellipsis", key: `${previous.page}-${pageNumber}` });
+        paginationItems.push({
+          type: "ellipsis",
+          key: `${previous.page}-${pageNumber}`,
+        });
       }
       paginationItems.push({ type: "page", page: pageNumber });
     }

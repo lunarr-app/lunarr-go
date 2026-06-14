@@ -22,7 +22,9 @@ describe("scheduled library scans", () => {
 
     expect(scheduledScanDelayMs(base, nowMs)).toBe(0);
     expect(scheduledScanDelayMs({ ...base, updated_at: "2026-06-10T11:30:00.000Z" }, nowMs)).toBe(30 * 60_000);
-    expect(scheduledScanDelayMs({ ...base, last_scheduled_scan_at: "2026-06-10T11:45:00.000Z" }, nowMs)).toBe(45 * 60_000);
+    expect(scheduledScanDelayMs({ ...base, last_scheduled_scan_at: "2026-06-10T11:45:00.000Z" }, nowMs)).toBe(
+      45 * 60_000,
+    );
   });
 
   test("keeps long intervals waiting after the maximum timeout slice", () => {

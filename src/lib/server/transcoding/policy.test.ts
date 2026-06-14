@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  closeDatabaseForTests,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "../db";
 import {
   getTranscodePolicy,
   normalizeHardwareAccelerationMode,
@@ -56,17 +52,13 @@ describe("transcode policy", () => {
   });
 
   test("normalizes invalid stored policy values to safe defaults", () => {
-    expect(normalizePlaybackPreference("prefer_transcode")).toBe(
-      "prefer_transcode",
-    );
+    expect(normalizePlaybackPreference("prefer_transcode")).toBe("prefer_transcode");
     expect(normalizePlaybackPreference("bad")).toBe("auto");
     expect(normalizePreferredAudioLanguage(" ENG ")).toBe("eng");
     expect(normalizePreferredAudioLanguage("")).toBe(null);
     expect(normalizePreferredSubtitleLanguage(" JPN ")).toBe("jpn");
     expect(normalizePreferredSubtitleLanguage("")).toBe(null);
-    expect(normalizeHardwareAccelerationMode("videotoolbox")).toBe(
-      "videotoolbox",
-    );
+    expect(normalizeHardwareAccelerationMode("videotoolbox")).toBe("videotoolbox");
     expect(normalizeHardwareAccelerationMode("bad")).toBe("off");
     expect(normalizeTranscodeQualityPreset("720p")).toBe("720p");
     expect(normalizeTranscodeQualityPreset("bad")).toBe("auto");
@@ -95,11 +87,7 @@ describe("transcode policy", () => {
         hardwareBitrate: "3M",
       },
     });
-    expect(
-      await getTranscodePolicy("user-2").then(
-        (policy) => policy.playbackPreference,
-      ),
-    ).toBe("auto");
+    expect(await getTranscodePolicy("user-2").then((policy) => policy.playbackPreference)).toBe("auto");
   });
 
   test("does not require hardware acceleration while hardware mode is off", async () => {

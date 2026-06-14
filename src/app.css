@@ -1,7 +1,13 @@
 :root {
   color-scheme: dark;
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
   --color-bg: #080c11;
@@ -108,12 +114,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(
-    135deg,
-    var(--color-bg) 0%,
-    var(--color-bg-soft) 58%,
-    var(--color-bg-warm) 100%
-  );
+  background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-soft) 58%, var(--color-bg-warm) 100%);
 }
 
 button,

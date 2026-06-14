@@ -4,12 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { sql, type Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import { createLibrary } from "../libraries";
 import { getMovieDetail, getShowDetail, movieRows } from "../media";
@@ -66,25 +61,14 @@ const matcher: MovieMetadataMatcher = async (title, year) => {
   };
 };
 
-async function waitForScanJob(
-  jobId: string,
-  status: "completed" | "failed" | "cancelled" = "completed",
-) {
+async function waitForScanJob(jobId: string, status: "completed" | "failed" | "cancelled" = "completed") {
   for (let index = 0; index < 50; index += 1) {
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     if (job.status === status) return job;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
 
-  return db
-    .selectFrom("scan_job")
-    .selectAll()
-    .where("id", "=", jobId)
-    .executeTakeFirstOrThrow();
+  return db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
 }
 
 beforeAll(async () => {
@@ -92,14 +76,8 @@ beforeAll(async () => {
   const mediaDir = path.join(tempDir, "movies");
   await mkdir(mediaDir);
   await writeFile(path.join(mediaDir, "The.Matrix.1999.mkv"), "matrix");
-  await writeFile(
-    path.join(mediaDir, "The.Matrix.1999.en.vtt"),
-    "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n",
-  );
-  await writeFile(
-    path.join(mediaDir, "Unavailable.Movie.2020.mp4"),
-    "metadata error",
-  );
+  await writeFile(path.join(mediaDir, "The.Matrix.1999.en.vtt"), "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n");
+  await writeFile(path.join(mediaDir, "Unavailable.Movie.2020.mp4"), "metadata error");
   await writeFile(path.join(mediaDir, "notes.txt"), "not media");
 
   await useDatabaseFileForTests(path.join(tempDir, "data", "lunarr.db"));
@@ -123,11 +101,7 @@ describe("runScanJob", () => {
     const firstJobId = await createScanJob(library.id);
     await runScanJob(firstJobId, { metadataMatcher: matcher });
 
-    const firstJob = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", firstJobId)
-      .executeTakeFirstOrThrow();
+    const firstJob = await db.selectFrom("scan_job").selectAll().where("id", "=", firstJobId).executeTakeFirstOrThrow();
     expect(firstJob).toMatchObject({
       status: "completed",
       files_seen: 2,
@@ -136,15 +110,8 @@ describe("runScanJob", () => {
       errors_count: 1,
     });
 
-    const files = await db
-      .selectFrom("media_file")
-      .selectAll()
-      .orderBy("basename")
-      .execute();
-    expect(files.map((file) => file.basename)).toEqual([
-      "The.Matrix.1999.mkv",
-      "Unavailable.Movie.2020.mp4",
-    ]);
+    const files = await db.selectFrom("media_file").selectAll().orderBy("basename").execute();
+    expect(files.map((file) => file.basename)).toEqual(["The.Matrix.1999.mkv", "Unavailable.Movie.2020.mp4"]);
     expect(files.map((file) => file.container)).toEqual(["mkv", "mp4"]);
 
     const matrix = await db
@@ -162,21 +129,12 @@ describe("runScanJob", () => {
       vote_average: 8.3,
     });
     expect(
-      await db
-        .selectFrom("media_item_genre")
-        .select(["name"])
-        .where("media_item_id", "=", matrix.id)
-        .execute(),
+      await db.selectFrom("media_item_genre").select(["name"]).where("media_item_id", "=", matrix.id).execute(),
     ).toEqual([{ name: "Science Fiction" }]);
     expect(
       await db
         .selectFrom("media_item_video")
-        .select([
-          "name",
-          "site",
-          "video_key",
-          sql<number>`official`.as("official"),
-        ])
+        .select(["name", "site", "video_key", sql<number>`official`.as("official")])
         .where("media_item_id", "=", matrix.id)
         .execute(),
     ).toEqual([
@@ -200,11 +158,7 @@ describe("runScanJob", () => {
       year: 2020,
     });
 
-    const errors = await db
-      .selectFrom("scan_job_error")
-      .selectAll()
-      .where("scan_job_id", "=", firstJobId)
-      .execute();
+    const errors = await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", firstJobId).execute();
     expect(errors).toHaveLength(1);
     expect(errors[0].path).toEndWith("Unavailable.Movie.2020.mp4");
     expect(errors[0].message).toBe("TMDb unavailable for Unavailable Movie");
@@ -293,21 +247,12 @@ describe("runScanJob", () => {
       .execute();
 
     const rowsWithOrphan = await movieRows("user-1");
-    expect(rowsWithOrphan.all.map((movie) => movie.title)).not.toContain(
-      "Metadata Only",
-    );
-    await db
-      .deleteFrom("media_item")
-      .where("id", "=", "orphan-movie")
-      .execute();
+    expect(rowsWithOrphan.all.map((movie) => movie.title)).not.toContain("Metadata Only");
+    await db.deleteFrom("media_item").where("id", "=", "orphan-movie").execute();
 
     const detail = await getMovieDetail(matrix.id, "user-1");
-    expect(detail?.posterUrl).toBe(
-      "https://image.tmdb.org/t/p/w500/matrix.jpg",
-    );
-    expect(detail?.backdropUrl).toBe(
-      "https://image.tmdb.org/t/p/w1280/matrix-backdrop.jpg",
-    );
+    expect(detail?.posterUrl).toBe("https://image.tmdb.org/t/p/w500/matrix.jpg");
+    expect(detail?.backdropUrl).toBe("https://image.tmdb.org/t/p/w1280/matrix-backdrop.jpg");
     expect(detail?.genres).toEqual(["Science Fiction"]);
     expect(detail?.progress[0]).toMatchObject({
       media_file_id: matrixFile.id,
@@ -317,10 +262,7 @@ describe("runScanJob", () => {
     });
     expect(Object.hasOwn(detail?.files[0] ?? {}, "path")).toBe(false);
 
-    const subtitles = await db
-      .selectFrom("subtitle_track")
-      .selectAll()
-      .execute();
+    const subtitles = await db.selectFrom("subtitle_track").selectAll().execute();
     expect(subtitles).toHaveLength(1);
     expect(subtitles[0]).toMatchObject({
       media_item_id: matrix.id,
@@ -518,29 +460,13 @@ describe("runScanJob", () => {
       files_removed: 1,
     });
 
-    const remainingFiles = await db
-      .selectFrom("media_file")
-      .select(["basename"])
-      .orderBy("basename")
-      .execute();
-    expect(remainingFiles.map((file) => file.basename)).toEqual([
-      "The.Matrix.1999.mkv",
-    ]);
+    const remainingFiles = await db.selectFrom("media_file").select(["basename"]).orderBy("basename").execute();
+    expect(remainingFiles.map((file) => file.basename)).toEqual(["The.Matrix.1999.mkv"]);
 
-    const remainingItems = await db
-      .selectFrom("media_item")
-      .select(["title"])
-      .orderBy("title")
-      .execute();
-    expect(remainingItems.map((item) => item.title)).toEqual([
-      "Metadata Only Preserved",
-      "The Matrix",
-    ]);
+    const remainingItems = await db.selectFrom("media_item").select(["title"]).orderBy("title").execute();
+    expect(remainingItems.map((item) => item.title)).toEqual(["Metadata Only Preserved", "The Matrix"]);
 
-    const remainingSubtitles = await db
-      .selectFrom("subtitle_track")
-      .selectAll()
-      .execute();
+    const remainingSubtitles = await db.selectFrom("subtitle_track").selectAll().execute();
     expect(remainingSubtitles).toHaveLength(0);
   });
 
@@ -558,11 +484,7 @@ describe("runScanJob", () => {
       },
     });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_seen: 0,
@@ -571,11 +493,7 @@ describe("runScanJob", () => {
       errors_count: 1,
     });
 
-    const errors = await db
-      .selectFrom("scan_job_error")
-      .selectAll()
-      .where("scan_job_id", "=", jobId)
-      .execute();
+    const errors = await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", jobId).execute();
     expect(errors).toHaveLength(1);
     expect(errors[0]).toMatchObject({
       path: errorPath,
@@ -609,11 +527,7 @@ describe("runScanJob", () => {
       },
     });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_seen: 1,
@@ -628,9 +542,7 @@ describe("runScanJob", () => {
       .select(["basename"])
       .where("library_id", "=", filteredLibrary.id)
       .execute();
-    expect(files.map((file) => file.basename)).toEqual([
-      "Only.Movie.2025.webm",
-    ]);
+    expect(files.map((file) => file.basename)).toEqual(["Only.Movie.2025.webm"]);
   });
 
   test("caches sidecar directory reads during a scan", async () => {
@@ -658,18 +570,12 @@ describe("runScanJob", () => {
         directoryReads += 1;
         return {
           ok: true,
-          paths: [firstPath, secondPath].filter(
-            (filePath) => path.dirname(filePath) === directory,
-          ),
+          paths: [firstPath, secondPath].filter((filePath) => path.dirname(filePath) === directory),
         };
       },
     });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job.files_seen).toBe(2);
     expect(directoryReads).toBe(1);
   });
@@ -695,11 +601,7 @@ describe("runScanJob", () => {
       .where("library_id", "=", sidecarLibrary.id)
       .executeTakeFirstOrThrow();
     expect(
-      await db
-        .selectFrom("subtitle_track")
-        .selectAll()
-        .where("media_file_id", "=", mediaFile.id)
-        .execute(),
+      await db.selectFrom("subtitle_track").selectAll().where("media_file_id", "=", mediaFile.id).execute(),
     ).toHaveLength(1);
 
     const secondJobId = await createScanJob(sidecarLibrary.id);
@@ -712,11 +614,7 @@ describe("runScanJob", () => {
     });
 
     expect(
-      await db
-        .selectFrom("subtitle_track")
-        .selectAll()
-        .where("media_file_id", "=", mediaFile.id)
-        .execute(),
+      await db.selectFrom("subtitle_track").selectAll().where("media_file_id", "=", mediaFile.id).execute(),
     ).toHaveLength(1);
   });
 
@@ -754,9 +652,7 @@ describe("runScanJob", () => {
         };
       },
       async listFiles(directory) {
-        throw new Error(
-          `Expected scanner to reuse the walked directory cache instead of listing ${directory}.`,
-        );
+        throw new Error(`Expected scanner to reuse the walked directory cache instead of listing ${directory}.`);
       },
       async *walkFiles(root) {
         expect(root).toBe(remoteRoot);
@@ -807,11 +703,7 @@ describe("runScanJob", () => {
       probeBackend: null,
     });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_seen: 1,
@@ -830,11 +722,7 @@ describe("runScanJob", () => {
       size_bytes: 1234,
     });
     expect(
-      await db
-        .selectFrom("subtitle_track")
-        .selectAll()
-        .where("media_file_id", "=", file.id)
-        .execute(),
+      await db.selectFrom("subtitle_track").selectAll().where("media_file_id", "=", file.id).execute(),
     ).toHaveLength(1);
 
     await db.deleteFrom("library").where("id", "=", "sftp-library").execute();
@@ -900,11 +788,7 @@ describe("runScanJob", () => {
       },
     });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_seen: 1,
@@ -914,27 +798,15 @@ describe("runScanJob", () => {
       errors_count: 1,
     });
 
-    const errors = await db
-      .selectFrom("scan_job_error")
-      .selectAll()
-      .where("scan_job_id", "=", jobId)
-      .execute();
+    const errors = await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", jobId).execute();
     expect(errors).toHaveLength(1);
     expect(errors[0].path).toBe(stalePath);
     expect(errors[0].message).toContain("Media file is no longer available.");
     expect(
-      await db
-        .selectFrom("media_file")
-        .select("id")
-        .where("id", "=", "disappearing-file")
-        .executeTakeFirst(),
+      await db.selectFrom("media_file").select("id").where("id", "=", "disappearing-file").executeTakeFirst(),
     ).toEqual({ id: "disappearing-file" });
     expect(
-      await db
-        .selectFrom("media_item")
-        .select("id")
-        .where("id", "=", "disappearing-movie")
-        .executeTakeFirst(),
+      await db.selectFrom("media_item").select("id").where("id", "=", "disappearing-movie").executeTakeFirst(),
     ).toEqual({ id: "disappearing-movie" });
 
     await db.deleteFrom("library").where("id", "=", staleLibrary.id).execute();
@@ -972,11 +844,7 @@ describe("runScanJob", () => {
 
     const firstJobId = await createScanJob(matchedLibrary.id);
     await runScanJob(firstJobId, { metadataMatcher: firstScanMatcher });
-    const firstJob = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", firstJobId)
-      .executeTakeFirstOrThrow();
+    const firstJob = await db.selectFrom("scan_job").selectAll().where("id", "=", firstJobId).executeTakeFirstOrThrow();
     expect(firstJob).toMatchObject({
       status: "completed",
       files_added: 1,
@@ -987,9 +855,7 @@ describe("runScanJob", () => {
     let repeatLookups = 0;
     const repeatMatcher: MovieMetadataMatcher = async () => {
       repeatLookups += 1;
-      throw new Error(
-        "repeat scan should not query already matched unchanged files",
-      );
+      throw new Error("repeat scan should not query already matched unchanged files");
     };
 
     const repeatJobId = await createScanJob(matchedLibrary.id);
@@ -1046,11 +912,7 @@ describe("runScanJob", () => {
     const jobId = await createScanJob(movieLibrary.id);
     await runScanJob(jobId, { metadataMatcher: matcher });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_added: 1,
@@ -1130,11 +992,7 @@ describe("runScanJob", () => {
       },
     });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_added: 1,
@@ -1195,11 +1053,7 @@ describe("runScanJob", () => {
       },
     });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job.status).toBe("completed");
     expect(calls).toEqual([{ title: "The Matrix", year: 1999 }]);
 
@@ -1260,14 +1114,8 @@ describe("runScanJob", () => {
     const showsDir = path.join(tempDir, "shows");
     const seasonDir = path.join(showsDir, "The Expanse", "Season 01");
     await mkdir(seasonDir, { recursive: true });
-    await writeFile(
-      path.join(seasonDir, "The Expanse - S01E02 - The Big Empty.mkv"),
-      "episode",
-    );
-    await writeFile(
-      path.join(seasonDir, "The Expanse - S01E02 - The Big Empty.en.vtt"),
-      "WEBVTT\n",
-    );
+    await writeFile(path.join(seasonDir, "The Expanse - S01E02 - The Big Empty.mkv"), "episode");
+    await writeFile(path.join(seasonDir, "The Expanse - S01E02 - The Big Empty.en.vtt"), "WEBVTT\n");
     const tvLibrary = await createLibrary({
       name: "Shows",
       kind: "tv",
@@ -1277,11 +1125,7 @@ describe("runScanJob", () => {
     const jobId = await createScanJob(tvLibrary.id);
     await runScanJob(jobId, { tvSeasonMetadataMatcher: async () => null });
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_seen: 1,
@@ -1351,12 +1195,7 @@ describe("runScanJob", () => {
 
     const progress = await db
       .selectFrom("watch_progress")
-      .select([
-        "media_item_id",
-        "media_file_id",
-        "position_seconds",
-        "completed",
-      ])
+      .select(["media_item_id", "media_file_id", "position_seconds", "completed"])
       .where("media_item_id", "=", episode.id)
       .executeTakeFirstOrThrow();
     expect(progress).toMatchObject({
@@ -1465,10 +1304,7 @@ describe("runScanJob", () => {
   test("prunes stale TV episode files and orphaned season/show rows", async () => {
     const showsDir = path.join(tempDir, "pruned-shows");
     const seasonDir = path.join(showsDir, "Prune Show", "Season 01");
-    const episodePath = path.join(
-      seasonDir,
-      "Prune Show - S01E02 - Gone Away.mkv",
-    );
+    const episodePath = path.join(seasonDir, "Prune Show - S01E02 - Gone Away.mkv");
     await mkdir(seasonDir, { recursive: true });
     await writeFile(episodePath, "episode");
     const tvLibrary = await createLibrary({
@@ -1494,9 +1330,7 @@ describe("runScanJob", () => {
       .select(["id", "parent_id"])
       .where("id", "=", episode.parent_id)
       .executeTakeFirstOrThrow();
-    const itemIds = [episode.id, season.id, season.parent_id ?? ""].filter(
-      Boolean,
-    );
+    const itemIds = [episode.id, season.id, season.parent_id ?? ""].filter(Boolean);
     await unlink(episodePath);
 
     const secondJobId = await createScanJob(tvLibrary.id);
@@ -1515,30 +1349,15 @@ describe("runScanJob", () => {
       files_removed: 1,
       errors_count: 0,
     });
-    expect(
-      await db
-        .selectFrom("media_file")
-        .select("id")
-        .where("library_id", "=", tvLibrary.id)
-        .execute(),
-    ).toEqual([]);
-    expect(
-      await db
-        .selectFrom("media_item")
-        .select("id")
-        .where("id", "in", itemIds)
-        .execute(),
-    ).toEqual([]);
+    expect(await db.selectFrom("media_file").select("id").where("library_id", "=", tvLibrary.id).execute()).toEqual([]);
+    expect(await db.selectFrom("media_item").select("id").where("id", "in", itemIds).execute()).toEqual([]);
   });
 
   test("enriches TV show, season, and episode rows with matched TMDb metadata", async () => {
     const showsDir = path.join(tempDir, "matched-shows");
     const seasonDir = path.join(showsDir, "Battlestar Galactica", "Season 01");
     await mkdir(seasonDir, { recursive: true });
-    await writeFile(
-      path.join(seasonDir, "Battlestar Galactica - S01E01 - 33.mkv"),
-      "episode",
-    );
+    await writeFile(path.join(seasonDir, "Battlestar Galactica - S01E01 - 33.mkv"), "episode");
     const tvLibrary = await createLibrary({
       name: "Matched Shows",
       kind: "tv",
@@ -1687,11 +1506,7 @@ describe("runScanJob", () => {
       release_date: "2004-10-25",
     });
     expect(
-      await db
-        .selectFrom("media_file")
-        .select("id")
-        .where("media_item_id", "=", missingEpisode.id)
-        .execute(),
+      await db.selectFrom("media_file").select("id").where("media_item_id", "=", missingEpisode.id).execute(),
     ).toEqual([]);
     expect(await getShowDetail(show.id, "user-1")).toMatchObject({
       seasons: [
@@ -1704,11 +1519,7 @@ describe("runScanJob", () => {
       ],
     });
     expect(
-      await db
-        .selectFrom("media_item_genre")
-        .select(["name"])
-        .where("media_item_id", "=", show.id)
-        .execute(),
+      await db.selectFrom("media_item_genre").select(["name"]).where("media_item_id", "=", show.id).execute(),
     ).toEqual([{ name: "Sci-Fi & Fantasy" }]);
     expect(
       await db
@@ -1806,11 +1617,7 @@ describe("runScanJob", () => {
     releaseWalk();
     await firstRun;
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_seen: 1,
@@ -1847,26 +1654,14 @@ describe("runScanJob", () => {
     };
     const scanPromise = runScanJob(jobId, options);
 
-    let activeJob = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    let activeJob = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     for (let index = 0; index < 20 && activeJob.files_seen < 1; index += 1) {
       await new Promise((resolve) => setTimeout(resolve, 10));
-      activeJob = await db
-        .selectFrom("scan_job")
-        .selectAll()
-        .where("id", "=", jobId)
-        .executeTakeFirstOrThrow();
+      activeJob = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     }
 
     expect(await startScan(rescanLibrary.id, options)).toBe(jobId);
-    activeJob = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    activeJob = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(activeJob.rescan_requested_at).not.toBeNull();
 
     releaseFirstScan();
@@ -1880,11 +1675,7 @@ describe("runScanJob", () => {
       .execute();
     for (
       let index = 0;
-      index < 20 &&
-      (jobs.length < 2 ||
-        jobs.some(
-          (job) => job.status === "queued" || job.status === "running",
-        ));
+      index < 20 && (jobs.length < 2 || jobs.some((job) => job.status === "queued" || job.status === "running"));
       index += 1
     ) {
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -1914,11 +1705,7 @@ describe("runScanJob", () => {
     expect(await cancelScanJob(jobId)).toBe("cancelled");
     await runScanJob(jobId);
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "cancelled",
       files_seen: 0,
@@ -1954,18 +1741,10 @@ describe("runScanJob", () => {
       },
     });
 
-    let job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    let job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     for (let index = 0; index < 20 && job.files_seen < 1; index += 1) {
       await new Promise((resolve) => setTimeout(resolve, 10));
-      job = await db
-        .selectFrom("scan_job")
-        .selectAll()
-        .where("id", "=", jobId)
-        .executeTakeFirstOrThrow();
+      job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     }
 
     expect(job).toMatchObject({ status: "running", files_seen: 1 });
@@ -1973,11 +1752,7 @@ describe("runScanJob", () => {
     resumeWalk();
     await scanPromise;
 
-    job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "cancelled",
       files_seen: 1,
@@ -1985,11 +1760,7 @@ describe("runScanJob", () => {
       files_updated: 0,
     });
     expect(
-      await db
-        .selectFrom("media_file")
-        .selectAll()
-        .where("library_id", "=", runningLibrary.id)
-        .execute(),
+      await db.selectFrom("media_file").selectAll().where("library_id", "=", runningLibrary.id).execute(),
     ).toHaveLength(1);
   });
 
@@ -2017,11 +1788,7 @@ describe("runScanJob", () => {
       })
       .execute();
 
-    const movieLibraries = await db
-      .selectFrom("library")
-      .select(["id"])
-      .where("kind", "=", "movie")
-      .execute();
+    const movieLibraries = await db.selectFrom("library").select(["id"]).where("kind", "=", "movie").execute();
     const activeJobIds: string[] = [];
     for (const movie of movieLibraries) {
       const activeJob = await db
@@ -2053,10 +1820,7 @@ describe("runScanJob", () => {
         .where("id", "=", jobId)
         .execute();
     }
-    await db
-      .deleteFrom("library")
-      .where("id", "=", "scan-all-tv-library")
-      .execute();
+    await db.deleteFrom("library").where("id", "=", "scan-all-tv-library").execute();
     await db.deleteFrom("library").where("id", "=", movieLibrary.id).execute();
   });
 
@@ -2183,11 +1947,7 @@ describe("runScanJob", () => {
 
     const newJobId = await createScanJob(resumeLibrary.id);
     expect(newJobId).not.toBe(interruptedJobId);
-    await db
-      .updateTable("scan_job")
-      .set({ status: "cancelled" })
-      .where("id", "=", newJobId)
-      .execute();
+    await db.updateTable("scan_job").set({ status: "cancelled" }).where("id", "=", newJobId).execute();
     await db.deleteFrom("library").where("id", "=", resumeLibrary.id).execute();
   });
 
@@ -2250,11 +2010,7 @@ describe("runScanJob", () => {
       metadataMatcher: async () => null,
       probeBackend,
     });
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
     expect(job).toMatchObject({
       status: "completed",
       files_seen: 1,

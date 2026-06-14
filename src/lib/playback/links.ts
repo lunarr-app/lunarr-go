@@ -1,8 +1,4 @@
-export function playbackModalHref(input: {
-  currentUrl: URL;
-  mediaItemId: string;
-  mediaFileId?: string | null;
-}) {
+export function playbackModalHref(input: { currentUrl: URL; mediaItemId: string; mediaFileId?: string | null }) {
   const url = new URL(input.currentUrl);
   url.searchParams.set("play", input.mediaItemId);
   if (input.mediaFileId) {

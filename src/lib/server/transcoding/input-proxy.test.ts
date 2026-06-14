@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-  startSeekableInputProxy,
-  type RunningSeekableInputProxy,
-} from "./input-proxy";
+import { startSeekableInputProxy, type RunningSeekableInputProxy } from "./input-proxy";
 import type { SeekableTranscodeInputSource } from "./backend";
 
 let runningProxy: RunningSeekableInputProxy | null = null;

@@ -15,21 +15,21 @@ describe("TMDb verifier", () => {
       db.prepare("insert into app_setting (key, value, updated_at) values (?, ?, ?)").run(
         "tmdb_api_key",
         "saved-key",
-        new Date().toISOString()
+        new Date().toISOString(),
       );
       db.close();
 
       const env = {
         LUNARR_DATA_DIR: "data",
         IGNORED_ACCESS_TOKEN: "",
-        IGNORED_API_KEY: "env-key"
+        IGNORED_API_KEY: "env-key",
       };
       const saved = readSavedTmdbCredentials({ cwd: dir, env });
 
       expect(saved).toEqual({ tmdb_api_key: "saved-key" });
       expect(resolveTmdbCredentials({ saved, env })).toEqual({
         token: "",
-        apiKey: "saved-key"
+        apiKey: "saved-key",
       });
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -46,34 +46,39 @@ describe("TMDb verifier", () => {
       db.prepare("insert into app_setting (key, value, updated_at) values (?, ?, ?)").run(
         "tmdb_access_token",
         "saved-token-value",
-        new Date().toISOString()
+        new Date().toISOString(),
       );
       db.close();
 
       const result = await verifyTmdb({
         cwd: dir,
-        env: { LUNARR_DATA_DIR: "data", IGNORED_ACCESS_TOKEN: "env-token-value" },
+        env: {
+          LUNARR_DATA_DIR: "data",
+          IGNORED_ACCESS_TOKEN: "env-token-value",
+        },
         fetcher: async (url, init) => {
           requestedUrls.push(String(url));
           expect(init.headers.authorization).toBe("Bearer saved-token-value");
 
           if (String(url).includes("/search/movie")) {
-            return Response.json({ results: [{ id: 603, title: "The Matrix" }] });
+            return Response.json({
+              results: [{ id: 603, title: "The Matrix" }],
+            });
           }
 
           return Response.json({
             id: 603,
             title: "The Matrix",
-            poster_path: "/matrix.jpg"
+            poster_path: "/matrix.jpg",
           });
-        }
+        },
       });
 
       expect(result).toEqual({
         ok: true,
         message: "TMDb returned The Matrix with poster /matrix.jpg.",
         title: "The Matrix",
-        posterPath: "/matrix.jpg"
+        posterPath: "/matrix.jpg",
       });
       expect(requestedUrls).toHaveLength(2);
       expect(result.message).not.toContain("saved-token-value");
@@ -98,9 +103,9 @@ describe("TMDb verifier", () => {
         return Response.json({
           id: 603,
           title: "The Matrix",
-          poster_path: "/matrix.jpg"
+          poster_path: "/matrix.jpg",
         });
-      }
+      },
     });
 
     expect(result.ok).toBe(true);

@@ -42,35 +42,26 @@ export async function updateMetadataSettings(input: InputSource) {
   const accessToken = stringInput(input, "tmdbAccessToken");
   const apiKey = stringInput(input, "tmdbApiKey");
 
-  if (booleanInput(input, "clearTmdbAccessToken"))
-    await deleteSetting("tmdb_access_token");
-  if (booleanInput(input, "clearTmdbApiKey"))
-    await deleteSetting("tmdb_api_key");
+  if (booleanInput(input, "clearTmdbAccessToken")) await deleteSetting("tmdb_access_token");
+  if (booleanInput(input, "clearTmdbApiKey")) await deleteSetting("tmdb_api_key");
   if (accessToken) await setSetting("tmdb_access_token", accessToken);
   if (apiKey) await setSetting("tmdb_api_key", apiKey);
 }
 
 export async function updateTranscodingSettings(input: InputSource) {
   const transcodingEnabled = booleanInput(input, "transcodingEnabled");
-  const hardwareAcceleration = normalizeHardwareAccelerationMode(
-    stringInput(input, "hardwareAcceleration"),
-  );
-  const transcodeQualityPreset = normalizeTranscodeQualityPreset(
-    stringInput(input, "transcodeQualityPreset"),
-  );
+  const hardwareAcceleration = normalizeHardwareAccelerationMode(stringInput(input, "hardwareAcceleration"));
+  const transcodeQualityPreset = normalizeTranscodeQualityPreset(stringInput(input, "transcodeQualityPreset"));
 
   await setTranscodingEnabled(transcodingEnabled);
   if (!transcodingEnabled) await cancelActivePlaybackSessions();
   await setHardwareAccelerationMode(hardwareAcceleration);
   await setHardwareAccelerationRequired(
-    hardwareAcceleration !== "off" &&
-      booleanInput(input, "hardwareAccelerationRequired"),
+    hardwareAcceleration !== "off" && booleanInput(input, "hardwareAccelerationRequired"),
   );
   await setTranscodeQualityPreset(transcodeQualityPreset);
   if (hasInput(input, "playbackSessionArtifactMaxBytes")) {
-    await setPlaybackSessionArtifactMaxBytes(
-      stringInput(input, "playbackSessionArtifactMaxBytes"),
-    );
+    await setPlaybackSessionArtifactMaxBytes(stringInput(input, "playbackSessionArtifactMaxBytes"));
   }
 }
 
@@ -82,14 +73,12 @@ export async function runSettingsAction(action: string) {
   }
 
   if (action === "refreshMovieMetadata") {
-    if (!(await tmdbCredentialsConfigured()))
-      throw new Error("TMDb credentials are not configured.");
+    if (!(await tmdbCredentialsConfigured())) throw new Error("TMDb credentials are not configured.");
     return startMovieMetadataRefreshJob();
   }
 
   if (action === "refreshTvMetadata") {
-    if (!(await tmdbCredentialsConfigured()))
-      throw new Error("TMDb credentials are not configured.");
+    if (!(await tmdbCredentialsConfigured())) throw new Error("TMDb credentials are not configured.");
     return startTvMetadataRefreshJob();
   }
 

@@ -11,9 +11,7 @@ export function normalizeTheme(value: unknown): Theme {
 
 function browserStorage(): ThemeStorage | null {
   try {
-    return typeof globalThis.localStorage === "undefined"
-      ? null
-      : globalThis.localStorage;
+    return typeof globalThis.localStorage === "undefined" ? null : globalThis.localStorage;
   } catch {
     return null;
   }

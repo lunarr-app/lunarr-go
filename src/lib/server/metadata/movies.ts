@@ -52,7 +52,7 @@ async function moveWatchProgress(oldMediaItemId: string, newMediaItemId: string)
             position_seconds: progress.position_seconds,
             duration_seconds: progress.duration_seconds,
             completed: progress.completed,
-            updated_at: progress.updated_at
+            updated_at: progress.updated_at,
           })
           .where("user_id", "=", progress.user_id)
           .where("media_item_id", "=", newMediaItemId)
@@ -78,7 +78,10 @@ async function moveWatchProgress(oldMediaItemId: string, newMediaItemId: string)
   }
 }
 
-export async function refreshMovieMetadataResult(mediaItemId: string, options: RefreshMetadataOptions = {}): Promise<RefreshMovieMetadataResult> {
+export async function refreshMovieMetadataResult(
+  mediaItemId: string,
+  options: RefreshMetadataOptions = {},
+): Promise<RefreshMovieMetadataResult> {
   const db = await getDb();
   const movie = await db
     .selectFrom("media_item")
@@ -99,12 +102,16 @@ export async function refreshMovieMetadataResult(mediaItemId: string, options: R
 
   if (!movie) return { status: "missing", mediaItemId: null };
 
-  const parsed = movieLookupFromPath(movie.path ?? movie.basename ?? "", {
-    title: movie.title,
-    year: movie.year,
-  }, {
-    libraryRoot: movie.library_path,
-  });
+  const parsed = movieLookupFromPath(
+    movie.path ?? movie.basename ?? "",
+    {
+      title: movie.title,
+      year: movie.year,
+    },
+    {
+      libraryRoot: movie.library_path,
+    },
+  );
   const title = parsed.title || movie.title;
   const year = parsed.year ?? movie.year;
   const metadataMatcher = options.metadataMatcher ?? matchMovieMetadata;
@@ -144,11 +151,7 @@ export async function refreshMovieMetadataResult(mediaItemId: string, options: R
     return { status: "matched", mediaItemId: existingProviderItem.id };
   }
 
-  await db
-    .updateTable("media_item")
-    .set(values)
-    .where("id", "=", mediaItemId)
-    .execute();
+  await db.updateTable("media_item").set(values).where("id", "=", mediaItemId).execute();
   await syncMovieMetadataRelations(db, mediaItemId, metadata);
 
   return { status: "matched", mediaItemId };
@@ -162,7 +165,7 @@ async function addMetadataJobError(jobId: string, item: string, error: unknown) 
       scan_job_id: jobId,
       path: item,
       message: error instanceof Error ? error.message : String(error),
-      created_at: nowIso()
+      created_at: nowIso(),
     })
     .execute();
 }
@@ -182,7 +185,7 @@ async function updateMetadataJob(
     runner_token: string | null;
     runner_heartbeat_at: string | null;
   }>,
-  runnerToken?: string
+  runnerToken?: string,
 ) {
   const db = await getDb();
   const now = nowIso();
@@ -192,11 +195,15 @@ async function updateMetadataJob(
     .set({
       ...values,
       ...(terminalStatus
-        ? { checkpoint_value: null, runner_token: null, runner_heartbeat_at: null }
+        ? {
+            checkpoint_value: null,
+            runner_token: null,
+            runner_heartbeat_at: null,
+          }
         : runnerToken
           ? { runner_heartbeat_at: now }
           : {}),
-      updated_at: now
+      updated_at: now,
     })
     .where("id", "=", jobId);
   if (runnerToken) query = query.where("runner_token", "=", runnerToken);
@@ -250,7 +257,7 @@ async function createMovieMetadataRefreshJob() {
         runner_token: null,
         runner_heartbeat_at: null,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       })
       .execute();
   } catch (error) {
@@ -296,11 +303,11 @@ export async function runMovieMetadataRefreshJob(jobId: string, options: Refresh
               files_updated: 0,
               files_removed: 0,
               errors_count: 0,
-              checkpoint_value: null
+              checkpoint_value: null,
             }),
         runner_token: runnerToken,
         runner_heartbeat_at: now,
-        updated_at: now
+        updated_at: now,
       })
       .where("id", "=", jobId)
       .where("status", "in", ["queued", "running"])
@@ -331,26 +338,34 @@ export async function runMovieMetadataRefreshJob(jobId: string, options: Refresh
       errors = 0;
       resumeCheckpoint = null;
       await db.deleteFrom("scan_job_error").where("scan_job_id", "=", jobId).execute();
-      await updateMetadataJob(jobId, {
-        files_seen: 0,
-        files_updated: 0,
-        files_removed: 0,
-        errors_count: 0,
-        checkpoint_value: null
-      }, runnerToken);
+      await updateMetadataJob(
+        jobId,
+        {
+          files_seen: 0,
+          files_updated: 0,
+          files_removed: 0,
+          errors_count: 0,
+          checkpoint_value: null,
+        },
+        runnerToken,
+      );
     }
     waitingForCheckpoint = resumeCheckpoint !== null;
 
     for (const movie of movies) {
       if (await isMetadataJobCancellationRequested(jobId)) {
-        await updateMetadataJob(jobId, {
-          status: "cancelled",
-          finished_at: nowIso(),
-          files_seen: seen,
-          files_updated: matched,
-          files_removed: merged,
-          errors_count: errors
-        }, runnerToken);
+        await updateMetadataJob(
+          jobId,
+          {
+            status: "cancelled",
+            finished_at: nowIso(),
+            files_seen: seen,
+            files_updated: matched,
+            files_removed: merged,
+            errors_count: errors,
+          },
+          runnerToken,
+        );
         return;
       }
 
@@ -371,36 +386,44 @@ export async function runMovieMetadataRefreshJob(jobId: string, options: Refresh
         await addMetadataJobError(jobId, movie.title || movie.id, error);
       }
 
-      await updateMetadataJob(jobId, {
+      await updateMetadataJob(
+        jobId,
+        {
+          files_seen: seen,
+          files_updated: matched,
+          files_removed: merged,
+          errors_count: errors,
+          checkpoint_value: movie.id,
+        },
+        runnerToken,
+      );
+    }
+
+    await updateMetadataJob(
+      jobId,
+      {
+        status: "completed",
+        finished_at: nowIso(),
         files_seen: seen,
         files_updated: matched,
         files_removed: merged,
         errors_count: errors,
-        checkpoint_value: movie.id
-      }, runnerToken);
-    }
-
-    await updateMetadataJob(jobId, {
-      status: "completed",
-      finished_at: nowIso(),
-      files_seen: seen,
-      files_updated: matched,
-      files_removed: merged,
-      errors_count: errors
-    }, runnerToken);
+      },
+      runnerToken,
+    );
   } catch (error) {
     errors += 1;
     await addMetadataJobError(jobId, "movie metadata refresh", error);
     await db
       .updateTable("scan_job")
       .set({
-        status: await isMetadataJobCancellationRequested(jobId) ? "cancelled" : "failed",
+        status: (await isMetadataJobCancellationRequested(jobId)) ? "cancelled" : "failed",
         finished_at: nowIso(),
         errors_count: sql<number>`errors_count + 1`,
         checkpoint_value: null,
         runner_token: null,
         runner_heartbeat_at: null,
-        updated_at: nowIso()
+        updated_at: nowIso(),
       })
       .where("id", "=", jobId)
       .where("runner_token", "=", runnerToken)

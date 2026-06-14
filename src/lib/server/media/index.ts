@@ -137,7 +137,10 @@ function summarizeMovieProgress(progressRows: MovieProgressRow[]) {
   return { latestProgress, latestIncompleteProgress, completedMovies };
 }
 
-function publicMovieSummary(movie: MovieBrowseRow & { character?: string | null }, progress: ReturnType<typeof summarizeMovieProgress>) {
+function publicMovieSummary(
+  movie: MovieBrowseRow & { character?: string | null },
+  progress: ReturnType<typeof summarizeMovieProgress>,
+) {
   const completed = progress.completedMovies.has(movie.id);
   const progressRow = completed
     ? progress.latestProgress.get(movie.id)
@@ -154,10 +157,13 @@ function publicMovieSummary(movie: MovieBrowseRow & { character?: string | null 
     fileCount: Number(movie.file_count ?? 0),
     resumeFileId: progressRow?.media_file_id ?? null,
     progressSeconds: Number(progressRow?.position_seconds ?? 0),
-    durationSeconds: progressRow?.duration_seconds === undefined || progressRow.duration_seconds === null ? null : Number(progressRow.duration_seconds),
+    durationSeconds:
+      progressRow?.duration_seconds === undefined || progressRow.duration_seconds === null
+        ? null
+        : Number(progressRow.duration_seconds),
     completed,
     progressUpdatedAt: progressRow?.updated_at ?? null,
-    character: movie.character ?? null
+    character: movie.character ?? null,
   };
 }
 
@@ -167,7 +173,7 @@ export async function movieRows(
   status: MovieStatusFilter = "all",
   sort: MovieSort = "title",
   pageInput = 1,
-  pageSize = MOVIE_PAGE_SIZE
+  pageSize = MOVIE_PAGE_SIZE,
 ) {
   const db = await getDb();
   const searchPattern = search.trim();
@@ -180,7 +186,9 @@ export async function movieRows(
       .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
       .where("media_item.kind", "=", "movie")
       .where(accessibleLibrarySql(userId))
-      .$if(searchPattern.length > 0, (qb) => qb.where(sql<boolean>`media_item.title like ${`%${escapeLikePattern(searchPattern)}%`} escape '\\'`))
+      .$if(searchPattern.length > 0, (qb) =>
+        qb.where(sql<boolean>`media_item.title like ${`%${escapeLikePattern(searchPattern)}%`} escape '\\'`),
+      )
       .$if(status === "watched", (qb) =>
         qb.where((eb) =>
           eb.exists(
@@ -189,9 +197,9 @@ export async function movieRows(
               .select("watch_progress.media_item_id")
               .where("watch_progress.user_id", "=", userId)
               .whereRef("watch_progress.media_item_id", "=", "media_item.id")
-              .where(sql<boolean>`watch_progress.completed = 1`)
-          )
-        )
+              .where(sql<boolean>`watch_progress.completed = 1`),
+          ),
+        ),
       )
       .$if(status === "unwatched", (qb) =>
         qb.where((eb) =>
@@ -202,10 +210,10 @@ export async function movieRows(
                 .select("watch_progress.media_item_id")
                 .where("watch_progress.user_id", "=", userId)
                 .whereRef("watch_progress.media_item_id", "=", "media_item.id")
-                .where(sql<boolean>`watch_progress.completed = 1`)
-            )
-          )
-        )
+                .where(sql<boolean>`watch_progress.completed = 1`),
+            ),
+          ),
+        ),
       );
 
   const movieSelect = () =>
@@ -220,7 +228,7 @@ export async function movieRows(
         "media_item.popularity",
         "media_item.vote_average",
         sql<number>`count(distinct media_file.id)`.as("file_count"),
-        sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at")
+        sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
       ])
       .groupBy("media_item.id");
 
@@ -243,8 +251,10 @@ export async function movieRows(
     }
     return withTitleOrder(query);
   };
-  const recentOrder = (query: ReturnType<typeof movieSelect>) => withTitleOrder(query.orderBy(sql<string | null>`max(media_file.created_at)`, "desc"));
-  const latestOrder = (query: ReturnType<typeof movieSelect>) => withTitleOrder(query.orderBy("media_item.release_date", "desc"));
+  const recentOrder = (query: ReturnType<typeof movieSelect>) =>
+    withTitleOrder(query.orderBy(sql<string | null>`max(media_file.created_at)`, "desc"));
+  const latestOrder = (query: ReturnType<typeof movieSelect>) =>
+    withTitleOrder(query.orderBy("media_item.release_date", "desc"));
   const popularOrder = (query: ReturnType<typeof movieSelect>) =>
     withTitleOrder(query.orderBy("media_item.popularity", "desc").orderBy("media_item.vote_average", "desc"));
   const continueOrder = () =>
@@ -258,9 +268,9 @@ export async function movieRows(
                 .select("watch_progress.media_item_id")
                 .where("watch_progress.user_id", "=", userId)
                 .whereRef("watch_progress.media_item_id", "=", "media_item.id")
-                .where(sql<boolean>`watch_progress.completed = 1`)
-            )
-          )
+                .where(sql<boolean>`watch_progress.completed = 1`),
+            ),
+          ),
         )
         .where((eb) =>
           eb.exists(
@@ -270,8 +280,8 @@ export async function movieRows(
               .where("watch_progress.user_id", "=", userId)
               .whereRef("watch_progress.media_item_id", "=", "media_item.id")
               .where(sql<boolean>`watch_progress.completed = 0`)
-              .where("watch_progress.position_seconds", ">", 0)
-          )
+              .where("watch_progress.position_seconds", ">", 0),
+          ),
         )
         .orderBy(
           sql<string | null>`(
@@ -282,8 +292,8 @@ export async function movieRows(
               and watch_progress.completed = 0
               and watch_progress.position_seconds > 0
           )`,
-          "desc"
-        )
+          "desc",
+        ),
     );
 
   const totalRow = await filteredMovies()
@@ -299,14 +309,19 @@ export async function movieRows(
   const recentRows = await recentOrder(movieSelect()).limit(24).execute();
   const latestRows = await latestOrder(movieSelect()).limit(24).execute();
   const popularRows = await popularOrder(movieSelect()).limit(24).execute();
-  const movieIds = [...new Set([...allRows, ...continueRows, ...recentRows, ...latestRows, ...popularRows].map((movie) => movie.id))];
-  const progressRows = movieIds.length === 0 ? [] : await db
-    .selectFrom("watch_progress")
-    .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
-    .where("user_id", "=", userId)
-    .where("media_item_id", "in", movieIds)
-    .orderBy("updated_at", "desc")
-    .execute();
+  const movieIds = [
+    ...new Set([...allRows, ...continueRows, ...recentRows, ...latestRows, ...popularRows].map((movie) => movie.id)),
+  ];
+  const progressRows =
+    movieIds.length === 0
+      ? []
+      : await db
+          .selectFrom("watch_progress")
+          .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
+          .where("user_id", "=", userId)
+          .where("media_item_id", "in", movieIds)
+          .orderBy("updated_at", "desc")
+          .execute();
 
   const progress = summarizeMovieProgress(progressRows);
 
@@ -315,7 +330,7 @@ export async function movieRows(
     return {
       ...summary,
       sortTitle: movie.sort_title,
-      latestFileCreatedAt: movie.latest_file_created_at
+      latestFileCreatedAt: movie.latest_file_created_at,
     };
   };
 
@@ -331,7 +346,7 @@ export async function movieRows(
     resumeFileId: movie.resumeFileId,
     progressSeconds: movie.progressSeconds,
     durationSeconds: movie.durationSeconds,
-    completed: movie.completed
+    completed: movie.completed,
   });
 
   return {
@@ -343,11 +358,11 @@ export async function movieRows(
       total,
       totalPages,
       hasPrevious: currentPage > 1,
-      hasNext: currentPage < totalPages
+      hasNext: currentPage < totalPages,
     },
     recent: recentRows.map(mapMovie).map(publicMovie),
     latest: latestRows.map(mapMovie).map(publicMovie),
-    popular: popularRows.map(mapMovie).map(publicMovie)
+    popular: popularRows.map(mapMovie).map(publicMovie),
   };
 }
 
@@ -357,12 +372,12 @@ export async function movieListRows(
   status: MovieStatusFilter = "all",
   sort: MovieSort = "title",
   pageInput = 1,
-  pageSize = MOVIE_PAGE_SIZE
+  pageSize = MOVIE_PAGE_SIZE,
 ) {
   const rows = await movieRows(userId, search, status, sort, pageInput, pageSize);
   return {
     movies: rows.all,
-    page: rows.allPage
+    page: rows.allPage,
   };
 }
 
@@ -380,7 +395,7 @@ function publicShowSummary(show: ShowBrowseRow) {
     episodeCount: Number(show.episode_count ?? 0),
     seasonCount: Number(show.season_count ?? 0),
     latestFileCreatedAt: show.latest_file_created_at,
-    latestEpisodeReleaseDate: show.latest_episode_release_date
+    latestEpisodeReleaseDate: show.latest_episode_release_date,
   };
 }
 
@@ -396,9 +411,9 @@ function publicEpisodeSummary(episode: EpisodeBrowseRow, progress: ReturnType<ty
       popularity: episode.popularity,
       vote_average: episode.vote_average,
       file_count: Number(episode.file_count ?? 0),
-      latest_file_created_at: episode.latest_file_created_at
+      latest_file_created_at: episode.latest_file_created_at,
     },
-    progress
+    progress,
   );
 
   return {
@@ -418,7 +433,7 @@ function publicEpisodeSummary(episode: EpisodeBrowseRow, progress: ReturnType<ty
     fileId: summary.resumeFileId ?? episode.first_file_id,
     progressSeconds: summary.progressSeconds,
     durationSeconds: summary.durationSeconds,
-    completed: summary.completed
+    completed: summary.completed,
   };
 }
 
@@ -434,7 +449,9 @@ export async function showRows(userId: string, search = "", sort: ShowSort = "ti
     .where("season.kind", "=", "season")
     .where("episode.kind", "=", "episode")
     .where(accessibleLibrarySql(userId))
-    .$if(searchPattern.length > 0, (qb) => qb.where(sql<boolean>`show.title like ${`%${escapeLikePattern(searchPattern)}%`} escape '\\'`))
+    .$if(searchPattern.length > 0, (qb) =>
+      qb.where(sql<boolean>`show.title like ${`%${escapeLikePattern(searchPattern)}%`} escape '\\'`),
+    )
     .select([
       "show.id",
       "show.title",
@@ -449,7 +466,7 @@ export async function showRows(userId: string, search = "", sort: ShowSort = "ti
       sql<number>`count(distinct episode.id)`.as("episode_count"),
       sql<number>`count(distinct season.id)`.as("season_count"),
       sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
-      sql<string | null>`max(episode.release_date)`.as("latest_episode_release_date")
+      sql<string | null>`max(episode.release_date)`.as("latest_episode_release_date"),
     ])
     .groupBy("show.id");
 
@@ -459,8 +476,11 @@ export async function showRows(userId: string, search = "", sort: ShowSort = "ti
       : sort === "latest"
         ? query.orderBy(sql<string | null>`max(episode.release_date)`, "desc").orderBy("show.sort_title", "asc")
         : sort === "popular"
-          ? query.orderBy("show.popularity", "desc").orderBy("show.vote_average", "desc").orderBy("show.sort_title", "asc")
-        : query.orderBy("show.sort_title", "asc").orderBy("show.title", "asc");
+          ? query
+              .orderBy("show.popularity", "desc")
+              .orderBy("show.vote_average", "desc")
+              .orderBy("show.sort_title", "asc")
+          : query.orderBy("show.sort_title", "asc").orderBy("show.title", "asc");
 
   return (await ordered.execute()).map(publicShowSummary);
 }
@@ -478,11 +498,7 @@ async function tvEpisodeProgress(userId: string, episodeIds: string[]) {
   return summarizeMovieProgress(rows);
 }
 
-async function tvEpisodeRows(
-  userId: string,
-  mode: "continue" | "with-progress",
-  limit = 24
-) {
+async function tvEpisodeRows(userId: string, mode: "continue" | "with-progress", limit = 24) {
   const db = await getDb();
   const where =
     mode === "continue"
@@ -575,7 +591,10 @@ async function nextUpEpisodeRows(userId: string, limit = 24) {
   const rows = await tvEpisodeRows(userId, "with-progress", 1000);
   if (rows.length === 0) return [];
 
-  const progress = await tvEpisodeProgress(userId, rows.map((episode) => episode.id));
+  const progress = await tvEpisodeProgress(
+    userId,
+    rows.map((episode) => episode.id),
+  );
   const completedEpisodes = progress.completedMovies;
   const inProgressEpisodes = new Set(
     rows
@@ -583,7 +602,7 @@ async function nextUpEpisodeRows(userId: string, limit = 24) {
         const latest = progress.latestIncompleteProgress.get(episode.id);
         return latest && Number(latest.position_seconds ?? 0) > 0;
       })
-      .map((episode) => episode.id)
+      .map((episode) => episode.id),
   );
   const byShow = new Map<string, EpisodeBrowseRow[]>();
   for (const row of rows) {
@@ -594,9 +613,14 @@ async function nextUpEpisodeRows(userId: string, limit = 24) {
 
   const nextRows: EpisodeBrowseRow[] = [];
   for (const showEpisodes of byShow.values()) {
-    const latestCompletedIndex = showEpisodes.reduce((latest, episode, index) => completedEpisodes.has(episode.id) ? index : latest, -1);
+    const latestCompletedIndex = showEpisodes.reduce(
+      (latest, episode, index) => (completedEpisodes.has(episode.id) ? index : latest),
+      -1,
+    );
     if (latestCompletedIndex === -1) continue;
-    const next = showEpisodes.slice(latestCompletedIndex + 1).find((episode) => !completedEpisodes.has(episode.id) && !inProgressEpisodes.has(episode.id));
+    const next = showEpisodes
+      .slice(latestCompletedIndex + 1)
+      .find((episode) => !completedEpisodes.has(episode.id) && !inProgressEpisodes.has(episode.id));
     if (next) nextRows.push(next);
   }
 
@@ -609,11 +633,9 @@ export async function tvRows(userId: string, search = "", sort: ShowSort = "titl
     tvEpisodeRows(userId, "continue"),
     nextUpEpisodeRows(userId),
     showRows(userId, "", "latest"),
-    showRows(userId, "", "popular")
+    showRows(userId, "", "popular"),
   ]);
-  const episodeIds = [
-    ...new Set([...continueEpisodeRows, ...nextRows].map((episode) => episode.id))
-  ];
+  const episodeIds = [...new Set([...continueEpisodeRows, ...nextRows].map((episode) => episode.id))];
   const progress = await tvEpisodeProgress(userId, episodeIds);
   const mapEpisode = (episode: EpisodeBrowseRow) => publicEpisodeSummary(episode, progress);
 
@@ -622,7 +644,7 @@ export async function tvRows(userId: string, search = "", sort: ShowSort = "titl
     nextUp: nextRows.map(mapEpisode),
     recentlyAiredShows: recentlyAiredShows.slice(0, 24),
     popularShows: popularShows.slice(0, 24),
-    allShows
+    allShows,
   };
 }
 
@@ -643,8 +665,8 @@ export async function getShowDetail(id: string, userId: string) {
           .whereRef("season.parent_id", "=", "media_item.id")
           .where("season.kind", "=", "season")
           .where("episode.kind", "=", "episode")
-          .where(accessibleLibrarySql(userId))
-      )
+          .where(accessibleLibrarySql(userId)),
+      ),
     )
     .executeTakeFirst();
   if (!show) return null;
@@ -659,37 +681,33 @@ export async function getShowDetail(id: string, userId: string) {
     .execute();
   const seasonIds = seasonRows.map((season) => season.id);
 
-  const episodeRows = seasonIds.length === 0
-    ? []
-    : await db
-        .selectFrom("media_item as episode")
-        .leftJoin("media_file", "media_file.media_item_id", "episode.id")
-        .select([
-          "episode.id",
-          "episode.parent_id",
-          "episode.title",
-          "episode.overview",
-          "episode.season_number",
-          "episode.episode_number",
-          "episode.release_date",
-          "episode.runtime_seconds",
-          "episode.poster_path",
-          sql<number>`count(media_file.id)`.as("file_count"),
-          sql<string | null>`min(media_file.id)`.as("first_file_id")
-        ])
-        .where("episode.kind", "=", "episode")
-        .where("episode.parent_id", "in", seasonIds)
-        .where((eb) =>
-          eb.or([
-            eb("media_file.id", "is", null),
-            accessibleLibrarySql(userId)
+  const episodeRows =
+    seasonIds.length === 0
+      ? []
+      : await db
+          .selectFrom("media_item as episode")
+          .leftJoin("media_file", "media_file.media_item_id", "episode.id")
+          .select([
+            "episode.id",
+            "episode.parent_id",
+            "episode.title",
+            "episode.overview",
+            "episode.season_number",
+            "episode.episode_number",
+            "episode.release_date",
+            "episode.runtime_seconds",
+            "episode.poster_path",
+            sql<number>`count(media_file.id)`.as("file_count"),
+            sql<string | null>`min(media_file.id)`.as("first_file_id"),
           ])
-        )
-        .groupBy("episode.id")
-        .orderBy("episode.season_number", "asc")
-        .orderBy("episode.episode_number", "asc")
-        .orderBy("episode.title", "asc")
-        .execute();
+          .where("episode.kind", "=", "episode")
+          .where("episode.parent_id", "in", seasonIds)
+          .where((eb) => eb.or([eb("media_file.id", "is", null), accessibleLibrarySql(userId)]))
+          .groupBy("episode.id")
+          .orderBy("episode.season_number", "asc")
+          .orderBy("episode.episode_number", "asc")
+          .orderBy("episode.title", "asc")
+          .execute();
 
   const episodeIds = episodeRows.map((episode) => episode.id);
   const genres = await db
@@ -706,15 +724,16 @@ export async function getShowDetail(id: string, userId: string) {
     .orderBy("credit_order", "asc")
     .limit(16)
     .execute();
-  const progressRows = episodeIds.length === 0
-    ? []
-    : await db
-        .selectFrom("watch_progress")
-        .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
-        .where("user_id", "=", userId)
-        .where("media_item_id", "in", episodeIds)
-        .orderBy("updated_at", "desc")
-        .execute();
+  const progressRows =
+    episodeIds.length === 0
+      ? []
+      : await db
+          .selectFrom("watch_progress")
+          .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
+          .where("user_id", "=", userId)
+          .where("media_item_id", "in", episodeIds)
+          .orderBy("updated_at", "desc")
+          .execute();
   const progress = summarizeMovieProgress(progressRows);
 
   const episodesBySeason = new Map<string, typeof episodeRows>();
@@ -736,14 +755,14 @@ export async function getShowDetail(id: string, userId: string) {
       status: show.status,
       voteAverage: show.vote_average,
       popularity: show.popularity,
-      genres: genres.map((genre) => genre.name)
+      genres: genres.map((genre) => genre.name),
     },
     cast: cast.map((credit) => ({
       provider: credit.provider,
       providerId: credit.provider_id,
       name: credit.name,
       character: credit.character_name,
-      profilePath: credit.profile_path
+      profilePath: credit.profile_path,
     })),
     seasons: seasonRows.map((season) => ({
       id: season.id,
@@ -762,9 +781,9 @@ export async function getShowDetail(id: string, userId: string) {
             popularity: null,
             vote_average: null,
             file_count: Number(episode.file_count ?? 0),
-            latest_file_created_at: null
+            latest_file_created_at: null,
           },
-          progress
+          progress,
         );
         return {
           id: episode.id,
@@ -779,10 +798,10 @@ export async function getShowDetail(id: string, userId: string) {
           fileId: summary.resumeFileId ?? episode.first_file_id,
           progressSeconds: summary.progressSeconds,
           durationSeconds: summary.durationSeconds,
-          completed: summary.completed
+          completed: summary.completed,
         };
-      })
-    }))
+      }),
+    })),
   };
 }
 
@@ -822,7 +841,7 @@ export async function getEpisodeDetail(id: string, userId: string) {
       "duration_seconds",
       "video_codec",
       "audio_codec",
-      "container"
+      "container",
     ])
     .where("media_item_id", "=", id)
     .where(accessibleLibrarySql(userId))
@@ -838,7 +857,7 @@ export async function getEpisodeDetail(id: string, userId: string) {
       "watch_progress.position_seconds",
       "watch_progress.duration_seconds",
       "watch_progress.completed",
-      "watch_progress.updated_at"
+      "watch_progress.updated_at",
     ])
     .where("watch_progress.media_item_id", "=", id)
     .where("watch_progress.user_id", "=", userId)
@@ -850,12 +869,12 @@ export async function getEpisodeDetail(id: string, userId: string) {
       id: show.id,
       title: show.title,
       posterUrl: tmdbImageUrl(show.poster_path),
-      backdropUrl: tmdbImageUrl(show.backdrop_path, "w1280")
+      backdropUrl: tmdbImageUrl(show.backdrop_path, "w1280"),
     },
     season: {
       id: season.id,
       title: season.title,
-      seasonNumber: season.season_number
+      seasonNumber: season.season_number,
     },
     episode: {
       id: episode.id,
@@ -866,10 +885,10 @@ export async function getEpisodeDetail(id: string, userId: string) {
       releaseDate: episode.release_date,
       runtimeSeconds: episode.runtime_seconds,
       stillUrl: tmdbImageUrl(episode.poster_path, "w780"),
-      voteAverage: episode.vote_average
+      voteAverage: episode.vote_average,
     },
     files,
-    progress
+    progress,
   };
 }
 
@@ -899,7 +918,7 @@ export async function getWatchItemDetail(id: string, userId: string) {
       "watch_progress.position_seconds",
       "watch_progress.duration_seconds",
       "watch_progress.completed",
-      "watch_progress.updated_at"
+      "watch_progress.updated_at",
     ])
     .where("watch_progress.media_item_id", "=", id)
     .where("watch_progress.user_id", "=", userId)
@@ -912,9 +931,9 @@ export async function getWatchItemDetail(id: string, userId: string) {
         id: item.id,
         kind: item.kind,
         title: item.title,
-        backHref: `/movies/${item.id}`
+        backHref: `/movies/${item.id}`,
       },
-      progress
+      progress,
     };
   }
 
@@ -948,9 +967,9 @@ export async function getWatchItemDetail(id: string, userId: string) {
       id: item.id,
       kind: item.kind,
       title,
-      backHref
+      backHref,
     },
-    progress
+    progress,
   };
 }
 
@@ -984,7 +1003,7 @@ export async function getMovieDetail(id: string, userId: string) {
       "collection_name",
       "provider",
       "provider_id",
-      "vote_average"
+      "vote_average",
     ])
     .where("id", "=", id)
     .where("kind", "=", "movie")
@@ -1002,7 +1021,7 @@ export async function getMovieDetail(id: string, userId: string) {
       "duration_seconds",
       "video_codec",
       "audio_codec",
-      "container"
+      "container",
     ])
     .where("media_item_id", "=", id)
     .where(accessibleLibrarySql(userId))
@@ -1073,14 +1092,14 @@ export async function getMovieDetail(id: string, userId: string) {
       providerId: credit.provider_id,
       name: credit.name,
       character: credit.character_name,
-      profilePath: credit.profile_path
+      profilePath: credit.profile_path,
     })),
     directors: directors.map((credit) => credit.name),
     writers: writers.map((credit) => credit.name),
     keywords: keywords.map((keyword) => keyword.name),
     productionCompanies: productionCompanies.map((company) => company.name),
     posterUrl: tmdbImageUrl(posterPath, "w500"),
-    backdropUrl: tmdbImageUrl(backdropPath, "w1280")
+    backdropUrl: tmdbImageUrl(backdropPath, "w1280"),
   };
 }
 
@@ -1111,7 +1130,7 @@ export async function getPersonDetail(provider: string, providerId: string, user
       "media_item.vote_average",
       "media_item_credit.character_name as character",
       sql<number>`count(distinct media_file.id)`.as("file_count"),
-      sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at")
+      sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
     ])
     .where("media_item.kind", "=", "movie")
     .where("media_item_credit.credit_type", "=", "cast")
@@ -1144,7 +1163,7 @@ export async function getPersonDetail(provider: string, providerId: string, user
       sql<number>`count(distinct episode.id)`.as("episode_count"),
       sql<number>`count(distinct season.id)`.as("season_count"),
       sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
-      sql<string | null>`max(episode.release_date)`.as("latest_episode_release_date")
+      sql<string | null>`max(episode.release_date)`.as("latest_episode_release_date"),
     ])
     .where("show.kind", "=", "show")
     .where("season.kind", "=", "season")
@@ -1160,13 +1179,16 @@ export async function getPersonDetail(provider: string, providerId: string, user
     .execute();
 
   const movieIds = rows.map((movie) => movie.id);
-  const progressRows = movieIds.length === 0 ? [] : await db
-    .selectFrom("watch_progress")
-    .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
-    .where("user_id", "=", userId)
-    .where("media_item_id", "in", movieIds)
-    .orderBy("updated_at", "desc")
-    .execute();
+  const progressRows =
+    movieIds.length === 0
+      ? []
+      : await db
+          .selectFrom("watch_progress")
+          .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
+          .where("user_id", "=", userId)
+          .where("media_item_id", "in", movieIds)
+          .orderBy("updated_at", "desc")
+          .execute();
   const progress = summarizeMovieProgress(progressRows);
 
   return {
@@ -1175,10 +1197,13 @@ export async function getPersonDetail(provider: string, providerId: string, user
       providerId: person.provider_id,
       name: person.name,
       originalName: person.original_name,
-      profileUrl: tmdbImageUrl(person.profile_path, "w342")
+      profileUrl: tmdbImageUrl(person.profile_path, "w342"),
     },
     movies: rows.map((movie) => publicMovieSummary(movie, progress)),
-    shows: showRows.map((show) => ({ ...publicShowSummary(show), character: show.character }))
+    shows: showRows.map((show) => ({
+      ...publicShowSummary(show),
+      character: show.character,
+    })),
   };
 }
 
@@ -1202,7 +1227,7 @@ export async function getMediaFile(id: string, userId: string) {
       "media_file.container",
       "library.source",
       "library.config_json",
-      "media_item.title"
+      "media_item.title",
     ])
     .where("media_file.id", "=", id)
     .where("media_item.kind", "in", ["movie", "episode"])
@@ -1226,7 +1251,7 @@ export async function getFirstPlayableFile(mediaItemId: string, userId: string) 
       "media_file.video_codec",
       "media_file.audio_codec",
       "media_file.container",
-      "library.source"
+      "library.source",
     ])
     .where("media_file.media_item_id", "=", mediaItemId)
     .where("media_item.kind", "in", ["movie", "episode"])
@@ -1251,7 +1276,7 @@ export async function getPlayableFile(mediaItemId: string, mediaFileId: string, 
       "media_file.video_codec",
       "media_file.audio_codec",
       "media_file.container",
-      "library.source"
+      "library.source",
     ])
     .where("media_file.media_item_id", "=", mediaItemId)
     .where("media_file.id", "=", mediaFileId)

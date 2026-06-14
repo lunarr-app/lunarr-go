@@ -15,7 +15,7 @@
     RotateCcw,
     Star,
     Tags,
-    Users
+    Users,
   } from "@lucide/svelte";
 
   let { data, form } = $props();
@@ -25,12 +25,12 @@
   const ratingLabel = $derived(
     data.movie.vote_average === null || data.movie.vote_average === undefined
       ? null
-      : Number(data.movie.vote_average).toFixed(1)
+      : Number(data.movie.vote_average).toFixed(1),
   );
   const voteCountLabel = $derived(
     data.movie.vote_count === null || data.movie.vote_count === undefined
       ? null
-      : new Intl.NumberFormat(undefined, { notation: "compact" }).format(Number(data.movie.vote_count))
+      : new Intl.NumberFormat(undefined, { notation: "compact" }).format(Number(data.movie.vote_count)),
   );
   const releaseLabel = $derived(data.movie.release_date ?? (data.movie.year ? String(data.movie.year) : null));
   const completedProgress = $derived.by(() => {
@@ -45,22 +45,26 @@
       .filter((item) => !Boolean(item.completed) && Number(item.position_seconds ?? 0) > 0)
       .sort((left, right) => String(right.updated_at).localeCompare(String(left.updated_at)))[0];
   });
-  const primaryFile = $derived(data.files.find((file) => file.id === (resumeProgress ?? completedProgress)?.media_file_id) ?? firstFile);
+  const primaryFile = $derived(
+    data.files.find((file) => file.id === (resumeProgress ?? completedProgress)?.media_file_id) ?? firstFile,
+  );
   const primaryHref = $derived(
     primaryFile
       ? playbackModalHref({
           currentUrl: page.url,
           mediaItemId: data.movie.id,
-          mediaFileId: primaryFile.id
+          mediaFileId: primaryFile.id,
         })
-      : `/movies/${data.movie.id}`
+      : `/movies/${data.movie.id}`,
   );
   const primaryActionLabel = $derived(resumeProgress ? "Resume" : hasCompletedProgress ? "Play again" : "Play");
   const resumeLabel = $derived.by(() => {
     if (!resumeProgress) return null;
     const position = Math.max(0, Math.floor(Number(resumeProgress.position_seconds ?? 0)));
     const duration =
-      resumeProgress.duration_seconds === null ? null : Math.max(0, Math.floor(Number(resumeProgress.duration_seconds)));
+      resumeProgress.duration_seconds === null
+        ? null
+        : Math.max(0, Math.floor(Number(resumeProgress.duration_seconds)));
     if (!duration) return `Resume at ${formatDuration(position)}`;
     return `Resume at ${formatDuration(position)} of ${formatDuration(duration)}`;
   });
@@ -68,7 +72,10 @@
     if (!resumeProgress?.duration_seconds) return 0;
     return Math.min(
       99,
-      Math.max(0, Math.round((Number(resumeProgress.position_seconds ?? 0) / Number(resumeProgress.duration_seconds)) * 100))
+      Math.max(
+        0,
+        Math.round((Number(resumeProgress.position_seconds ?? 0) / Number(resumeProgress.duration_seconds)) * 100),
+      ),
     );
   });
   const totalSizeBytes = $derived(data.files.reduce((total, file) => total + Number(file.size_bytes ?? 0), 0));
@@ -78,11 +85,18 @@
   const trailerHref = $derived(
     data.movie.trailer_site === "YouTube" && data.movie.trailer_key
       ? `https://www.youtube.com/watch?v=${encodeURIComponent(data.movie.trailer_key)}`
-      : null
+      : null,
   );
   const providerLabel = $derived(data.movie.provider ? data.movie.provider.toUpperCase() : "Local");
   const progressByFile = $derived.by(() => {
-    const rows = new Map<string, { position_seconds: number; duration_seconds: number | null; completed: boolean | number }>();
+    const rows = new Map<
+      string,
+      {
+        position_seconds: number;
+        duration_seconds: number | null;
+        completed: boolean | number;
+      }
+    >();
     for (const item of data.progress) {
       rows.set(item.media_file_id, item);
     }
@@ -100,13 +114,14 @@
           duration_seconds: number | null;
           completed: boolean | number;
         }
-      | undefined
+      | undefined,
   ) {
     if (!progress) return "Unwatched";
     if (Boolean(progress.completed)) return "Watched";
 
     const position = Math.max(0, Math.floor(Number(progress.position_seconds ?? 0)));
-    const duration = progress.duration_seconds === null ? null : Math.max(0, Math.floor(Number(progress.duration_seconds)));
+    const duration =
+      progress.duration_seconds === null ? null : Math.max(0, Math.floor(Number(progress.duration_seconds)));
     if (position <= 0) return "Unwatched";
     if (!duration) return formatClockDuration(position);
     return `${formatClockDuration(position)} / ${formatClockDuration(duration)} · ${progressPercent(position, duration)}%`;
@@ -149,7 +164,7 @@
       file.container?.toUpperCase() ?? file.extension.replace(/^\./, "").toUpperCase(),
       file.duration_seconds ? formatDuration(file.duration_seconds) : null,
       file.video_codec ? `Video ${file.video_codec}` : null,
-      file.audio_codec ? `Audio ${file.audio_codec}` : null
+      file.audio_codec ? `Audio ${file.audio_codec}` : null,
     ].filter(Boolean);
 
     return parts.join(" - ");
@@ -164,7 +179,13 @@
   />
 </svelte:head>
 
-<MediaHero title={data.movie.title} posterUrl={data.posterUrl} backdropUrl={data.backdropUrl} overview={data.movie.overview} genres={data.genres}>
+<MediaHero
+  title={data.movie.title}
+  posterUrl={data.posterUrl}
+  backdropUrl={data.backdropUrl}
+  overview={data.movie.overview}
+  genres={data.genres}
+>
   {#snippet facts()}
     {#if releaseLabel}
       <span><Calendar size={15} aria-hidden="true" />{releaseLabel}</span>
@@ -208,7 +229,9 @@
     {#if resumeLabel}
       <div class="resume">
         <span>{resumeLabel}</span>
-        <div aria-hidden="true"><span style={`width: ${resumePercent}%`}></span></div>
+        <div aria-hidden="true">
+          <span style={`width: ${resumePercent}%`}></span>
+        </div>
       </div>
     {/if}
   {/snippet}
@@ -250,7 +273,7 @@
                 href={playbackModalHref({
                   currentUrl: page.url,
                   mediaItemId: data.movie.id,
-                  mediaFileId: file.id
+                  mediaFileId: file.id,
                 })}
               >
                 <CirclePlay size={16} aria-hidden="true" />
@@ -286,7 +309,10 @@
         </div>
         <div class="cast-rail">
           {#each data.cast as person}
-            <a class="person" href={`/people/${encodeURIComponent(person.provider)}/${encodeURIComponent(person.providerId)}`}>
+            <a
+              class="person"
+              href={`/people/${encodeURIComponent(person.provider)}/${encodeURIComponent(person.providerId)}`}
+            >
               <div class="profile">
                 {#if person.profilePath}
                   <img src={tmdbImageUrl(person.profilePath, "w185")} alt="" loading="lazy" />
@@ -338,25 +364,46 @@
       <section>
         <h3>Credits</h3>
         <dl>
-          <div><dt>Director</dt><dd>{directorLabel || "Unknown"}</dd></div>
-          <div><dt>Writers</dt><dd>{writerLabel || "Unknown"}</dd></div>
+          <div>
+            <dt>Director</dt>
+            <dd>{directorLabel || "Unknown"}</dd>
+          </div>
+          <div>
+            <dt>Writers</dt>
+            <dd>{writerLabel || "Unknown"}</dd>
+          </div>
         </dl>
       </section>
       <section>
         <h3>Library</h3>
         <dl>
-          <div><dt>Files</dt><dd>{fileCountLabel}</dd></div>
-          <div><dt>Total size</dt><dd>{formatFileSize(totalSizeBytes)}</dd></div>
-          <div><dt>Provider ID</dt><dd>{data.movie.provider_id ?? "None"}</dd></div>
+          <div>
+            <dt>Files</dt>
+            <dd>{fileCountLabel}</dd>
+          </div>
+          <div>
+            <dt>Total size</dt>
+            <dd>{formatFileSize(totalSizeBytes)}</dd>
+          </div>
+          <div>
+            <dt>Provider ID</dt>
+            <dd>{data.movie.provider_id ?? "None"}</dd>
+          </div>
         </dl>
       </section>
       {#if data.movie.collection_name || data.productionCompanies.length}
         <section>
           <h3>Production</h3>
           <dl>
-            <div><dt>Collection</dt><dd>{data.movie.collection_name ?? "None"}</dd></div>
+            <div>
+              <dt>Collection</dt>
+              <dd>{data.movie.collection_name ?? "None"}</dd>
+            </div>
             {#if data.productionCompanies.length}
-              <div><dt>Studios</dt><dd>{data.productionCompanies.join(", ")}</dd></div>
+              <div>
+                <dt>Studios</dt>
+                <dd>{data.productionCompanies.join(", ")}</dd>
+              </div>
             {/if}
           </dl>
         </section>
@@ -382,7 +429,11 @@
     {/if}
     <div class="source-note">
       <Database size={16} aria-hidden="true" />
-      <span>{data.movie.provider ? "Matched metadata is stored locally after scan." : "This title is using local filename metadata."}</span>
+      <span
+        >{data.movie.provider
+          ? "Matched metadata is stored locally after scan."
+          : "This title is using local filename metadata."}</span
+      >
     </div>
   </aside>
 </div>

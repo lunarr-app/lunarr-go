@@ -28,7 +28,7 @@ describe("matchMovieMetadata", () => {
 
         if (url.includes("/search/movie")) {
           return Response.json({
-            results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }]
+            results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }],
           });
         }
 
@@ -36,12 +36,12 @@ describe("matchMovieMetadata", () => {
           id: 603,
           title: "The Matrix",
           release_date: "1999-03-31",
-          poster_path: "/matrix.jpg"
+          poster_path: "/matrix.jpg",
         });
       };
 
       const metadata = await matchMovieMetadata("The Matrix", 1999, {
-        fetch: mockedFetch as typeof fetch
+        fetch: mockedFetch as typeof fetch,
       });
 
       expect(metadata?.providerId).toBe("603");
@@ -69,9 +69,9 @@ describe("matchMovieMetadata", () => {
               poster_path: "/poster.jpg",
               backdrop_path: "/backdrop.jpg",
               popularity: 99,
-              vote_average: 8.2
-            }
-          ]
+              vote_average: 8.2,
+            },
+          ],
         });
       }
 
@@ -90,20 +90,52 @@ describe("matchMovieMetadata", () => {
         tagline: "Welcome to the Real World.",
         genres: [{ id: 28, name: "Action" }],
         credits: {
-          cast: [{ id: 6384, credit_id: "cast-1", name: "Keanu Reeves", character: "Neo", order: 0 }],
-          crew: [{ id: 1091, credit_id: "crew-1", name: "Lana Wachowski", department: "Directing", job: "Director" }]
+          cast: [
+            {
+              id: 6384,
+              credit_id: "cast-1",
+              name: "Keanu Reeves",
+              character: "Neo",
+              order: 0,
+            },
+          ],
+          crew: [
+            {
+              id: 1091,
+              credit_id: "crew-1",
+              name: "Lana Wachowski",
+              department: "Directing",
+              job: "Director",
+            },
+          ],
         },
         videos: {
-          results: [{ id: "video-1", name: "Trailer", key: "abc123", site: "YouTube", type: "Trailer", official: true }]
+          results: [
+            {
+              id: "video-1",
+              name: "Trailer",
+              key: "abc123",
+              site: "YouTube",
+              type: "Trailer",
+              official: true,
+            },
+          ],
         },
         keywords: { keywords: [{ id: 310, name: "artificial reality" }] },
-        release_dates: { results: [{ iso_3166_1: "US", release_dates: [{ certification: "R", type: 3 }] }] }
+        release_dates: {
+          results: [
+            {
+              iso_3166_1: "US",
+              release_dates: [{ certification: "R", type: 3 }],
+            },
+          ],
+        },
       });
     };
 
     const metadata = await matchMovieMetadata("The Matrix", 1999, {
       credentials: { token: "test-token" },
-      fetch: mockedFetch as typeof fetch
+      fetch: mockedFetch as typeof fetch,
     });
 
     expect(calls[0]).toContain("query=The+Matrix");
@@ -126,18 +158,24 @@ describe("matchMovieMetadata", () => {
       voteCount: 12000,
       imdbId: "tt0133093",
       tagline: "Welcome to the Real World.",
-      certification: "R"
+      certification: "R",
     });
     expect(metadata?.genres?.[0]?.name).toBe("Action");
-    expect(metadata?.cast?.[0]).toMatchObject({ name: "Keanu Reeves", character: "Neo" });
-    expect(metadata?.crew?.[0]).toMatchObject({ name: "Lana Wachowski", job: "Director" });
+    expect(metadata?.cast?.[0]).toMatchObject({
+      name: "Keanu Reeves",
+      character: "Neo",
+    });
+    expect(metadata?.crew?.[0]).toMatchObject({
+      name: "Lana Wachowski",
+      job: "Director",
+    });
     expect(metadata?.trailer).toMatchObject({ site: "YouTube", key: "abc123" });
     expect(metadata?.keywords?.[0]?.name).toBe("artificial reality");
   });
 
   test("skips matching when no TMDb credential is configured", async () => {
     const metadata = await matchMovieMetadata("The Matrix", 1999, {
-      credentials: {}
+      credentials: {},
     });
 
     expect(metadata).toBeNull();
@@ -158,19 +196,19 @@ describe("matchMovieMetadata", () => {
 
         if (url.includes("/search/movie")) {
           return Response.json({
-            results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }]
+            results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }],
           });
         }
 
         return Response.json({
           id: 603,
           title: "The Matrix",
-          release_date: "1999-03-31"
+          release_date: "1999-03-31",
         });
       };
 
       const metadata = await matchMovieMetadata("The Matrix", 1999, {
-        fetch: mockedFetch as typeof fetch
+        fetch: mockedFetch as typeof fetch,
       });
 
       expect(metadata?.providerId).toBe("603");
@@ -191,9 +229,13 @@ describe("matchMovieMetadata", () => {
       if (url.includes("/search/movie")) {
         return Response.json({
           results: [
-            { id: 604, title: "The Matrix Reloaded", release_date: "2003-05-15" },
-            { id: 603, title: "The Matrix", release_date: "1999-03-31" }
-          ]
+            {
+              id: 604,
+              title: "The Matrix Reloaded",
+              release_date: "2003-05-15",
+            },
+            { id: 603, title: "The Matrix", release_date: "1999-03-31" },
+          ],
         });
       }
 
@@ -201,13 +243,13 @@ describe("matchMovieMetadata", () => {
       return Response.json({
         id: 603,
         title: "The Matrix",
-        release_date: "1999-03-31"
+        release_date: "1999-03-31",
       });
     };
 
     const metadata = await matchMovieMetadata("The Matrix", 1999, {
       credentials: { token: "test-token" },
-      fetch: mockedFetch as typeof fetch
+      fetch: mockedFetch as typeof fetch,
     });
 
     expect(detailCalls).toHaveLength(1);
@@ -225,8 +267,8 @@ describe("matchMovieMetadata", () => {
         return Response.json({
           results: [
             { id: 8077, title: "Alien 3", release_date: "1992-05-22" },
-            { id: 348, title: "Alien", release_date: "1979-05-25" }
-          ]
+            { id: 348, title: "Alien", release_date: "1979-05-25" },
+          ],
         });
       }
 
@@ -234,13 +276,13 @@ describe("matchMovieMetadata", () => {
       return Response.json({
         id: 348,
         title: "Alien",
-        release_date: "1979-05-25"
+        release_date: "1979-05-25",
       });
     };
 
     const metadata = await matchMovieMetadata("Alien", null, {
       credentials: { token: "test-token" },
-      fetch: mockedFetch as typeof fetch
+      fetch: mockedFetch as typeof fetch,
     });
 
     expect(detailCalls).toHaveLength(1);
@@ -256,9 +298,13 @@ describe("matchMovieMetadata", () => {
       if (url.includes("/search/movie")) {
         return Response.json({
           results: [
-            { id: 604, title: "The Matrix Reloaded", release_date: "2003-05-15" },
-            { id: 603, title: "The Matrix", release_date: "1999-03-31" }
-          ]
+            {
+              id: 604,
+              title: "The Matrix Reloaded",
+              release_date: "2003-05-15",
+            },
+            { id: 603, title: "The Matrix", release_date: "1999-03-31" },
+          ],
         });
       }
 
@@ -266,13 +312,13 @@ describe("matchMovieMetadata", () => {
       return Response.json({
         id: 603,
         title: "The Matrix",
-        release_date: "1999-03-31"
+        release_date: "1999-03-31",
       });
     };
 
     const metadata = await matchMovieMetadata("The Matrix", 2000, {
       credentials: { token: "test-token" },
-      fetch: mockedFetch as typeof fetch
+      fetch: mockedFetch as typeof fetch,
     });
 
     expect(detailCalls).toHaveLength(1);
@@ -291,9 +337,9 @@ describe("matchMovieMetadata", () => {
             {
               id: 991530,
               title: "Gentlemen Of The World",
-              release_date: "2019-01-01"
-            }
-          ]
+              release_date: "2019-01-01",
+            },
+          ],
         });
       }
 
@@ -301,13 +347,13 @@ describe("matchMovieMetadata", () => {
       return Response.json({
         id: 991530,
         title: "Gentlemen Of The World",
-        release_date: "2019-01-01"
+        release_date: "2019-01-01",
       });
     };
 
     const metadata = await matchMovieMetadata("The Gentlemen", 2019, {
       credentials: { token: "test-token" },
-      fetch: mockedFetch as typeof fetch
+      fetch: mockedFetch as typeof fetch,
     });
 
     expect(metadata).toBeNull();
@@ -325,9 +371,9 @@ describe("matchMovieMetadata", () => {
             {
               id: 123,
               name: "Different Show",
-              first_air_date: "2004-01-01"
-            }
-          ]
+              first_air_date: "2004-01-01",
+            },
+          ],
         });
       }
 
@@ -337,7 +383,7 @@ describe("matchMovieMetadata", () => {
 
     const metadata = await matchTvSeasonMetadata("Battlestar Galactica", 2004, 1, {
       credentials: { token: "test-token" },
-      fetch: mockedFetch as typeof fetch
+      fetch: mockedFetch as typeof fetch,
     });
 
     expect(metadata).toBeNull();
@@ -350,7 +396,7 @@ describe("matchMovieMetadata", () => {
 
       if (url.includes("/search/movie")) {
         return Response.json({
-          results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }]
+          results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }],
         });
       }
 
@@ -358,13 +404,13 @@ describe("matchMovieMetadata", () => {
         id: 603,
         title: "The Matrix",
         release_date: "1999-03-31",
-        poster_path: "/matrix.jpg"
+        poster_path: "/matrix.jpg",
       });
     };
 
     const result = await testTmdbConnection({
       credentials: { token: "test-token" },
-      fetch: mockedFetch as typeof fetch
+      fetch: mockedFetch as typeof fetch,
     });
 
     expect(result).toEqual({
@@ -372,7 +418,7 @@ describe("matchMovieMetadata", () => {
       message: "TMDb returned The Matrix (1999).",
       title: "The Matrix",
       year: 1999,
-      posterPath: "/matrix.jpg"
+      posterPath: "/matrix.jpg",
     });
   });
 
@@ -381,7 +427,7 @@ describe("matchMovieMetadata", () => {
 
     expect(result).toEqual({
       ok: false,
-      message: "TMDb credentials are missing or no test movie was returned."
+      message: "TMDb credentials are missing or no test movie was returned.",
     });
   });
 });
@@ -401,9 +447,9 @@ describe("matchTvSeasonMetadata", () => {
               name: "Battlestar Galactica",
               first_air_date: "2004-10-18",
               poster_path: "/search-poster.jpg",
-              backdrop_path: "/search-backdrop.jpg"
-            }
-          ]
+              backdrop_path: "/search-backdrop.jpg",
+            },
+          ],
         });
       }
 
@@ -427,9 +473,9 @@ describe("matchTvSeasonMetadata", () => {
               runtime: 44,
               still_path: "/33.jpg",
               vote_average: 8.7,
-              vote_count: 20
-            }
-          ]
+              vote_count: 20,
+            },
+          ],
         });
       }
 
@@ -456,37 +502,48 @@ describe("matchTvSeasonMetadata", () => {
               name: "Edward James Olmos",
               roles: [{ credit_id: "role-1", character: "William Adama" }],
               order: 0,
-              profile_path: "/ej.jpg"
-            }
+              profile_path: "/ej.jpg",
+            },
           ],
           crew: [
             {
               id: 2,
               name: "Ronald D. Moore",
               department: "Writing",
-              jobs: [{ credit_id: "job-1", job: "Developer" }]
-            }
-          ]
+              jobs: [{ credit_id: "job-1", job: "Developer" }],
+            },
+          ],
         },
         videos: {
-          results: [{ id: "video-1", name: "Trailer", key: "abc123", site: "YouTube", type: "Trailer", official: true }]
+          results: [
+            {
+              id: "video-1",
+              name: "Trailer",
+              key: "abc123",
+              site: "YouTube",
+              type: "Trailer",
+              official: true,
+            },
+          ],
         },
         keywords: { results: [{ id: 10, name: "space opera" }] },
         content_ratings: { results: [{ iso_3166_1: "US", rating: "TV-14" }] },
-        external_ids: { imdb_id: "tt0407362" }
+        external_ids: { imdb_id: "tt0407362" },
       });
     };
 
     const metadata = await matchTvSeasonMetadata("Battlestar Galactica", 2004, 1, {
       credentials: { token: "test-token" },
-      fetch: mockedFetch as typeof fetch
+      fetch: mockedFetch as typeof fetch,
     });
 
     expect(calls[0]).toContain("/search/tv");
     expect(calls[0]).toContain("query=Battlestar+Galactica");
     expect(calls[0]).toContain("first_air_date_year=2004");
     expect(calls[1]).toContain("/tv/1972");
-    expect(calls[1]).toContain("append_to_response=aggregate_credits%2Cvideos%2Ckeywords%2Ccontent_ratings%2Cexternal_ids");
+    expect(calls[1]).toContain(
+      "append_to_response=aggregate_credits%2Cvideos%2Ckeywords%2Ccontent_ratings%2Cexternal_ids",
+    );
     expect(calls[2]).toContain("/tv/1972/season/1");
     expect(metadata?.show).toMatchObject({
       provider: "tmdb",
@@ -498,12 +555,21 @@ describe("matchTvSeasonMetadata", () => {
       backdropPath: "/backdrop.jpg",
       firstAirDate: "2004-10-18",
       certification: "TV-14",
-      imdbId: "tt0407362"
+      imdbId: "tt0407362",
     });
     expect(metadata?.show.genres?.[0]?.name).toBe("Sci-Fi & Fantasy");
-    expect(metadata?.show.cast?.[0]).toMatchObject({ name: "Edward James Olmos", character: "William Adama" });
-    expect(metadata?.show.crew?.[0]).toMatchObject({ name: "Ronald D. Moore", job: "Developer" });
-    expect(metadata?.show.trailer).toMatchObject({ site: "YouTube", key: "abc123" });
+    expect(metadata?.show.cast?.[0]).toMatchObject({
+      name: "Edward James Olmos",
+      character: "William Adama",
+    });
+    expect(metadata?.show.crew?.[0]).toMatchObject({
+      name: "Ronald D. Moore",
+      job: "Developer",
+    });
+    expect(metadata?.show.trailer).toMatchObject({
+      site: "YouTube",
+      key: "abc123",
+    });
     expect(metadata?.show.keywords?.[0]?.name).toBe("space opera");
     expect(metadata?.season).toMatchObject({
       providerId: "123",
@@ -512,7 +578,7 @@ describe("matchTvSeasonMetadata", () => {
       overview: "The first season.",
       posterPath: "/season.jpg",
       airDate: "2004-10-18",
-      voteAverage: 8.1
+      voteAverage: 8.1,
     });
     expect(metadata?.episodes[0]).toMatchObject({
       providerId: "456",
@@ -524,7 +590,7 @@ describe("matchTvSeasonMetadata", () => {
       airDate: "2004-10-18",
       runtimeSeconds: 2640,
       voteAverage: 8.7,
-      voteCount: 20
+      voteCount: 20,
     });
   });
 });

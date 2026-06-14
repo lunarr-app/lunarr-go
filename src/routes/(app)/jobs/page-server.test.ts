@@ -3,13 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-  type Database,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import { actions, load } from "./+page.server";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
 
@@ -265,14 +259,11 @@ describe("jobs page server", () => {
       cancelled: 0,
       errors: 1,
     });
-    expect(result.jobs.map((job) => job.id)).toEqual([
-      "failed-job",
-      "running-job",
-      "completed-job",
+    expect(result.jobs.map((job) => job.id)).toEqual(["failed-job", "running-job", "completed-job"]);
+    expect(result.playbackSessions.map((job) => job.playback_session_id)).toEqual([
+      "failed-transcode",
+      "completed-transcode",
     ]);
-    expect(
-      result.playbackSessions.map((job) => job.playback_session_id),
-    ).toEqual(["failed-transcode", "completed-transcode"]);
     expect(result.playbackSessions[0]).toMatchObject({
       playback_session_id: "failed-transcode",
       status: "failed",
@@ -368,11 +359,7 @@ describe("jobs page server", () => {
       "/jobs",
     );
 
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", "queued-job")
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", "queued-job").executeTakeFirstOrThrow();
     expect(job.status).toBe("cancelled");
     expect(job.finished_at).not.toBeNull();
   });

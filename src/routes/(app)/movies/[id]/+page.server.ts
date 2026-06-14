@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   return {
     ...detail,
     canManageMetadata: isAdmin(locals.user),
-    tmdbConfigured: await tmdbCredentialsConfigured()
+    tmdbConfigured: await tmdbCredentialsConfigured(),
   };
 };
 
@@ -28,11 +28,11 @@ export const actions: Actions = {
         userId: locals.user!.id,
         mediaItemId: params.id,
         mediaFileId: fileId,
-        completed
+        completed,
       });
     } catch (error) {
       return fail(400, {
-        error: error instanceof Error ? error.message : "Could not update watched status."
+        error: error instanceof Error ? error.message : "Could not update watched status.",
       });
     }
 
@@ -40,20 +40,26 @@ export const actions: Actions = {
   },
   refreshMetadata: async ({ params, locals }) => {
     if (!isAdmin(locals.user)) return fail(403, { metadataError: "Only admins can refresh metadata." });
-    if (!(await tmdbCredentialsConfigured())) return fail(400, { metadataError: "TMDb credentials are not configured." });
+    if (!(await tmdbCredentialsConfigured()))
+      return fail(400, {
+        metadataError: "TMDb credentials are not configured.",
+      });
 
     let redirectId = params.id;
     try {
       const result = await refreshMovieMetadataResult(params.id);
       if (result.status === "missing") return fail(404, { metadataError: "Movie not found." });
-      if (result.status === "unmatched") return fail(400, { metadataError: "No TMDb match was found for this movie." });
+      if (result.status === "unmatched")
+        return fail(400, {
+          metadataError: "No TMDb match was found for this movie.",
+        });
       redirectId = result.mediaItemId;
     } catch (error) {
       return fail(400, {
-        metadataError: error instanceof Error ? error.message : "Could not refresh metadata."
+        metadataError: error instanceof Error ? error.message : "Could not refresh metadata.",
       });
     }
 
     throw redirect(303, `/movies/${redirectId}`);
-  }
+  },
 };

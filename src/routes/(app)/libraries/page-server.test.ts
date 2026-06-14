@@ -3,13 +3,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-  type Database,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import type { ScanJobStatus } from "$lib/server/db/schema";
 import { actions, load } from "./+page.server";
 
@@ -127,10 +121,7 @@ describe("libraries page server", () => {
 
   test("starts a manual scan for a configured library", async () => {
     await writeFile(path.join(libraryDir, "Example.Movie.2026.mp4"), "video");
-    globalThis.fetch = (async (
-      input: URL | RequestInfo,
-      init?: RequestInit,
-    ) => {
+    globalThis.fetch = (async (input: URL | RequestInfo, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({
         authorization: expect.stringMatching(/^Bearer /),
       });
@@ -138,9 +129,7 @@ describe("libraries page server", () => {
 
       if (url.includes("/search/movie")) {
         return Response.json({
-          results: [
-            { id: 100, title: "Example Movie", release_date: "2026-01-01" },
-          ],
+          results: [{ id: 100, title: "Example Movie", release_date: "2026-01-01" }],
         });
       }
 
@@ -165,10 +154,7 @@ describe("libraries page server", () => {
       } as never),
       "/libraries",
     );
-    const library = await db
-      .selectFrom("library")
-      .selectAll()
-      .executeTakeFirstOrThrow();
+    const library = await db.selectFrom("library").selectAll().executeTakeFirstOrThrow();
 
     const scanForm = new FormData();
     scanForm.set("libraryId", library.id);
@@ -188,17 +174,9 @@ describe("libraries page server", () => {
       .selectAll()
       .where("library_id", "=", library.id)
       .executeTakeFirstOrThrow();
-    for (
-      let index = 0;
-      index < 20 && (job.status === "queued" || job.status === "running");
-      index += 1
-    ) {
+    for (let index = 0; index < 20 && (job.status === "queued" || job.status === "running"); index += 1) {
       await new Promise((resolve) => setTimeout(resolve, 10));
-      job = await db
-        .selectFrom("scan_job")
-        .selectAll()
-        .where("id", "=", job.id)
-        .executeTakeFirstOrThrow();
+      job = await db.selectFrom("scan_job").selectAll().where("id", "=", job.id).executeTakeFirstOrThrow();
     }
 
     expect(job).toMatchObject({
@@ -208,9 +186,7 @@ describe("libraries page server", () => {
       files_added: 1,
       errors_count: 0,
     });
-    expect(
-      await db.selectFrom("media_file").selectAll().execute(),
-    ).toHaveLength(1);
+    expect(await db.selectFrom("media_file").selectAll().execute()).toHaveLength(1);
   });
 
   test("removes a configured library through the admin form action", async () => {
@@ -227,10 +203,7 @@ describe("libraries page server", () => {
       } as never),
       "/libraries",
     );
-    const library = await db
-      .selectFrom("library")
-      .selectAll()
-      .executeTakeFirstOrThrow();
+    const library = await db.selectFrom("library").selectAll().executeTakeFirstOrThrow();
 
     const deleteForm = new FormData();
     deleteForm.set("libraryId", library.id);
@@ -265,10 +238,7 @@ describe("libraries page server", () => {
       } as never),
       "/libraries",
     );
-    const library = await db
-      .selectFrom("library")
-      .selectAll()
-      .executeTakeFirstOrThrow();
+    const library = await db.selectFrom("library").selectAll().executeTakeFirstOrThrow();
 
     const editForm = new FormData();
     editForm.set("libraryId", library.id);
@@ -286,11 +256,7 @@ describe("libraries page server", () => {
       "/libraries",
     );
 
-    const updated = await db
-      .selectFrom("library")
-      .selectAll()
-      .where("id", "=", library.id)
-      .executeTakeFirstOrThrow();
+    const updated = await db.selectFrom("library").selectAll().where("id", "=", library.id).executeTakeFirstOrThrow();
     expect(updated).toMatchObject({
       name: "Next",
       path: resolvedNextDir,
@@ -337,10 +303,7 @@ describe("libraries page server", () => {
       } as never),
       "/libraries",
     );
-    const library = await db
-      .selectFrom("library")
-      .selectAll()
-      .executeTakeFirstOrThrow();
+    const library = await db.selectFrom("library").selectAll().executeTakeFirstOrThrow();
 
     const accessForm = new FormData();
     accessForm.set("libraryId", library.id);
@@ -358,20 +321,13 @@ describe("libraries page server", () => {
     );
 
     expect(
-      await db
-        .selectFrom("library")
-        .select("access_mode")
-        .where("id", "=", library.id)
-        .executeTakeFirst(),
+      await db.selectFrom("library").select("access_mode").where("id", "=", library.id).executeTakeFirst(),
     ).toEqual({
       access_mode: "shared",
     });
-    expect(
-      await db
-        .selectFrom("library_user")
-        .select(["library_id", "user_id"])
-        .execute(),
-    ).toEqual([{ library_id: library.id, user_id: "user-2" }]);
+    expect(await db.selectFrom("library_user").select(["library_id", "user_id"]).execute()).toEqual([
+      { library_id: library.id, user_id: "user-2" },
+    ]);
   });
 
   test("keeps scan, edit, and delete actions admin-only", async () => {
@@ -388,10 +344,7 @@ describe("libraries page server", () => {
       } as never),
       "/libraries",
     );
-    const library = await db
-      .selectFrom("library")
-      .selectAll()
-      .executeTakeFirstOrThrow();
+    const library = await db.selectFrom("library").selectAll().executeTakeFirstOrThrow();
 
     const scanForm = new FormData();
     scanForm.set("libraryId", library.id);
@@ -444,9 +397,7 @@ describe("libraries page server", () => {
       },
     });
 
-    expect(await db.selectFrom("library").selectAll().execute()).toHaveLength(
-      1,
-    );
+    expect(await db.selectFrom("library").selectAll().execute()).toHaveLength(1);
     expect(await db.selectFrom("scan_job").selectAll().execute()).toEqual([]);
   });
 });

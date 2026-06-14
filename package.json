@@ -10,6 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "bun test",
     "verify:ffmpeg": "node scripts/verify-ffmpeg.mjs",
     "verify:nodeav": "node scripts/verify-nodeav-probe.mjs",

@@ -12,7 +12,11 @@ export type PlaybackSessionTable = {
   user_id: string | null;
   status: TranscodeSessionStatus;
   mode: TranscodeMode;
-  pipeline: ColumnType<TranscodePipeline | null, TranscodePipeline | null | undefined, TranscodePipeline | null | undefined>;
+  pipeline: ColumnType<
+    TranscodePipeline | null,
+    TranscodePipeline | null | undefined,
+    TranscodePipeline | null | undefined
+  >;
   error_message: string | null;
   last_heartbeat_at: ColumnType<string | null, string | null | undefined, string | null | undefined>;
   last_segment_request_at: ColumnType<string | null, string | null | undefined, string | null | undefined>;

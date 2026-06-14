@@ -3,12 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "./db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "./db";
 import type { Database } from "./db/schema";
 import { createLibrary } from "./libraries";
 import { getMovieDetail, movieRows } from "./media";
@@ -55,11 +50,7 @@ describe("local movie library MVP workflow", () => {
 
   async function waitForScan(jobId: string) {
     for (let attempt = 0; attempt < 40; attempt += 1) {
-      const job = await db
-        .selectFrom("scan_job")
-        .selectAll()
-        .where("id", "=", jobId)
-        .executeTakeFirstOrThrow();
+      const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
       if (job.status !== "queued" && job.status !== "running") return job;
       await Bun.sleep(25);
     }
@@ -70,10 +61,7 @@ describe("local movie library MVP workflow", () => {
   test("scans a local folder, enriches a movie, streams a range, and resumes progress", async () => {
     await writeFile(path.join(mediaDir, "The.Matrix.1999.mp4"), "0123456789");
 
-    const metadataMatcher = async (
-      title: string,
-      year: number | null,
-    ): Promise<MatchedMovieMetadata | null> => {
+    const metadataMatcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
       if (title !== "The Matrix" || year !== 1999) return null;
 
       return {
@@ -81,8 +69,7 @@ describe("local movie library MVP workflow", () => {
         providerId: "603",
         title: "The Matrix",
         year: 1999,
-        overview:
-          "A computer hacker learns about the true nature of his reality.",
+        overview: "A computer hacker learns about the true nature of his reality.",
         runtimeSeconds: 8160,
         posterPath: "/matrix.jpg",
         backdropPath: "/matrix-backdrop.jpg",
@@ -124,8 +111,7 @@ describe("local movie library MVP workflow", () => {
     expect(detail).toMatchObject({
       movie: {
         title: "The Matrix",
-        overview:
-          "A computer hacker learns about the true nature of his reality.",
+        overview: "A computer hacker learns about the true nature of his reality.",
         runtime_seconds: 8160,
       },
       posterUrl: "https://image.tmdb.org/t/p/w500/matrix.jpg",
@@ -142,15 +128,9 @@ describe("local movie library MVP workflow", () => {
         extension: ".mp4",
       },
     });
-    expect(playback?.streamUrl).toBe(
-      `/media/files/${playback?.file.id}/stream`,
-    );
+    expect(playback?.streamUrl).toBe(`/media/files/${playback?.file.id}/stream`);
 
-    const rangeResponse = await mediaStreamResponse(
-      playback!.file.id,
-      "user-1",
-      "bytes=2-5",
-    );
+    const rangeResponse = await mediaStreamResponse(playback!.file.id, "user-1", "bytes=2-5");
     expect(rangeResponse.status).toBe(206);
     expect(rangeResponse.headers.get("content-range")).toBe("bytes 2-5/10");
     expect(await rangeResponse.text()).toBe("2345");

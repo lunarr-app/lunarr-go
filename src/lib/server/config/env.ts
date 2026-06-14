@@ -44,25 +44,25 @@ const envSchema = z.object({
   LUNARR_WATCH_USE_POLLING: z
     .preprocess(
       (value) => (value === undefined || value === "" ? undefined : String(value).trim().toLowerCase()),
-      z.enum(["1", "true", "yes", "on", "0", "false", "no", "off"]).default("false")
+      z.enum(["1", "true", "yes", "on", "0", "false", "no", "off"]).default("false"),
     )
     .transform((value) => ["1", "true", "yes", "on"].includes(value)),
   LUNARR_WATCH_INTERVAL_MS: z.preprocess(
     (value) => (value === undefined || value === "" ? undefined : value),
-    z.coerce.number().int().min(1_000).max(60_000).default(5_000)
+    z.coerce.number().int().min(1_000).max(60_000).default(5_000),
   ),
   LUNARR_WATCH_BINARY_INTERVAL_MS: z.preprocess(
     (value) => (value === undefined || value === "" ? undefined : value),
-    z.coerce.number().int().min(1_000).max(120_000).default(10_000)
+    z.coerce.number().int().min(1_000).max(120_000).default(10_000),
   ),
   LUNARR_WATCH_DEBOUNCE_MS: z.preprocess(
     (value) => (value === undefined || value === "" ? undefined : value),
-    z.coerce.number().int().min(1_000).max(300_000).default(5_000)
+    z.coerce.number().int().min(1_000).max(300_000).default(5_000),
   ),
   LUNARR_WATCH_WRITE_STABILITY_MS: z.preprocess(
     (value) => (value === undefined || value === "" ? undefined : value),
-    z.coerce.number().int().min(1_000).max(300_000).default(10_000)
-  )
+    z.coerce.number().int().min(1_000).max(300_000).default(10_000),
+  ),
 });
 
 export function appEnvDefaultsForEnvironment(env: NodeJS.ProcessEnv) {
@@ -73,13 +73,16 @@ export function appEnvDefaultsForEnvironment(env: NodeJS.ProcessEnv) {
 
   return {
     AUTH_SECRET: "lunarr-local-development-secret-value",
-    ORIGIN: "http://127.0.0.1:5173"
+    ORIGIN: "http://127.0.0.1:5173",
   };
 }
 
 function parseAppEnv() {
   loadDotenv();
-  const result = envSchema.safeParse({ ...appEnvDefaultsForEnvironment(process.env), ...process.env });
+  const result = envSchema.safeParse({
+    ...appEnvDefaultsForEnvironment(process.env),
+    ...process.env,
+  });
   if (result.success) return result.data;
 
   const message = result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");

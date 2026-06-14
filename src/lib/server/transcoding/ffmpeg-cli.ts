@@ -6,18 +6,12 @@ import type {
   RunningTranscode,
   TranscodeBackend,
 } from "./backend";
-import {
-  startSeekableInputProxy,
-  type RunningSeekableInputProxy,
-} from "./input-proxy";
+import { startSeekableInputProxy, type RunningSeekableInputProxy } from "./input-proxy";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { ffmpegPath } from "node-av/ffmpeg";
-import {
-  hlsEventPlaylistHasSegment,
-  type HlsSegmentFormat,
-} from "./hls";
+import { hlsEventPlaylistHasSegment, type HlsSegmentFormat } from "./hls";
 
 const STDERR_MAX_BYTES = 32 * 1024;
 const SEGMENT_POLL_MS = 50;
@@ -55,19 +49,13 @@ const activeHlsStreams = new Map<string, ActiveHlsStream>();
 
 class FfmpegBackendError extends Error {}
 
-type KillableProcess = Pick<
-  ChildProcess,
-  "exitCode" | "signalCode" | "kill"
->;
+type KillableProcess = Pick<ChildProcess, "exitCode" | "signalCode" | "kill">;
 
 function hlsPlaylistPath(artifactDirectory: string) {
   return path.join(artifactDirectory, "master.m3u8");
 }
 
-function hlsSegmentPattern(
-  artifactDirectory: string,
-  segmentFormat: HlsSegmentFormat,
-) {
+function hlsSegmentPattern(artifactDirectory: string, segmentFormat: HlsSegmentFormat) {
   const extension = segmentFormat === "fmp4" ? "m4s" : "ts";
   return path.join(artifactDirectory, `segment-%05d.${extension}`);
 }
@@ -86,14 +74,14 @@ function killIfRunning(process: KillableProcess, signal: NodeJS.Signals) {
   return process.kill(signal);
 }
 
-export function scheduleForceKill(
-  process: KillableProcess,
-  graceMs = FFMPEG_FORCE_KILL_GRACE_MS,
-) {
+export function scheduleForceKill(process: KillableProcess, graceMs = FFMPEG_FORCE_KILL_GRACE_MS) {
   killIfRunning(process, "SIGTERM");
-  return setTimeout(() => {
-    killIfRunning(process, "SIGKILL");
-  }, Math.max(0, graceMs));
+  return setTimeout(
+    () => {
+      killIfRunning(process, "SIGKILL");
+    },
+    Math.max(0, graceMs),
+  );
 }
 
 async function terminateActiveFfmpeg(active: ActiveFfmpeg) {
@@ -105,24 +93,23 @@ async function terminateActiveFfmpeg(active: ActiveFfmpeg) {
   }
 }
 
-export function resolveFfmpegPath(input: {
-  configuredPath?: string | null;
-  bundledPath?: string | null;
-  systemPath?: string;
-  canExecute?: (binaryPath: string) => boolean;
-} = {}) {
+export function resolveFfmpegPath(
+  input: {
+    configuredPath?: string | null;
+    bundledPath?: string | null;
+    systemPath?: string;
+    canExecute?: (binaryPath: string) => boolean;
+  } = {},
+) {
   const configuredPath =
-    input.configuredPath === undefined
-      ? process.env.FFMPEG_PATH?.trim()
-      : input.configuredPath?.trim();
+    input.configuredPath === undefined ? process.env.FFMPEG_PATH?.trim() : input.configuredPath?.trim();
   if (configuredPath) return configuredPath;
 
   const canExecute = input.canExecute ?? canExecuteFfmpeg;
   const systemPath = input.systemPath ?? "ffmpeg";
   if (canExecute(systemPath)) return systemPath;
 
-  const bundledPath =
-    input.bundledPath === undefined ? ffmpegPath() : input.bundledPath;
+  const bundledPath = input.bundledPath === undefined ? ffmpegPath() : input.bundledPath;
   if (bundledPath && canExecute(bundledPath)) return bundledPath;
 
   return systemPath;
@@ -136,10 +123,7 @@ function isFfmpegCliAvailable() {
   return canExecuteFfmpeg(resolvedFfmpegPath());
 }
 
-function inputPathForFfmpeg(
-  input: Pick<HlsTranscodeInput, "inputPath" | "inputSource">,
-  options?: FfmpegHlsOptions,
-) {
+function inputPathForFfmpeg(input: Pick<HlsTranscodeInput, "inputPath" | "inputSource">, options?: FfmpegHlsOptions) {
   if (input.inputSource && !options?.inputUrl) {
     throw new FfmpegBackendError("FFmpeg input proxy URL is missing.");
   }
@@ -148,10 +132,7 @@ function inputPathForFfmpeg(
 }
 
 function audioMapArg(input: HlsTranscodeInput) {
-  if (
-    Number.isSafeInteger(input.audioStreamIndex) &&
-    Number(input.audioStreamIndex) >= 0
-  ) {
+  if (Number.isSafeInteger(input.audioStreamIndex) && Number(input.audioStreamIndex) >= 0) {
     return `0:${input.audioStreamIndex}?`;
   }
   return "0:a:0?";
@@ -169,12 +150,7 @@ function maxHeightScaleFilter(maxHeight: number | null | undefined) {
 function transcodeQualityKey(input: HlsTranscodeInput) {
   const quality = input.transcodeQuality;
   if (!quality) return "";
-  return [
-    quality.preset,
-    quality.maxHeight ?? "",
-    quality.softwareCrf,
-    quality.hardwareBitrate,
-  ].join(":");
+  return [quality.preset, quality.maxHeight ?? "", quality.softwareCrf, quality.hardwareBitrate].join(":");
 }
 
 function hlsSegmentFormat(input: HlsTranscodeInput): HlsSegmentFormat {
@@ -209,10 +185,7 @@ function hardwareInputArgs(mode: FfmpegHardwareMode) {
     case "videotoolbox":
       return ["-hwaccel", "videotoolbox"];
     case "vaapi":
-      return [
-        "-vaapi_device",
-        process.env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128",
-      ];
+      return ["-vaapi_device", process.env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128"];
     case "qsv":
       return ["-hwaccel", "qsv"];
     case "nvenc":
@@ -243,9 +216,7 @@ function hardwareVideoArgs(input: {
   switch (input.mode) {
     case "videotoolbox":
       return [
-        ...(maxHeightScaleFilter(input.maxHeight)
-          ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string]
-          : []),
+        ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
         "-c:v",
         "h264_videotoolbox",
         ...common,
@@ -253,18 +224,14 @@ function hardwareVideoArgs(input: {
     case "vaapi":
       return [
         "-vf",
-        [maxHeightScaleFilter(input.maxHeight), "format=nv12", "hwupload"]
-          .filter(Boolean)
-          .join(","),
+        [maxHeightScaleFilter(input.maxHeight), "format=nv12", "hwupload"].filter(Boolean).join(","),
         "-c:v",
         "h264_vaapi",
         ...common,
       ];
     case "qsv":
       return [
-        ...(maxHeightScaleFilter(input.maxHeight)
-          ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string]
-          : []),
+        ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
         "-c:v",
         "h264_qsv",
         "-preset",
@@ -273,9 +240,7 @@ function hardwareVideoArgs(input: {
       ];
     case "nvenc":
       return [
-        ...(maxHeightScaleFilter(input.maxHeight)
-          ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string]
-          : []),
+        ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
         "-c:v",
         "h264_nvenc",
         "-preset",
@@ -284,9 +249,7 @@ function hardwareVideoArgs(input: {
       ];
     case "amf":
       return [
-        ...(maxHeightScaleFilter(input.maxHeight)
-          ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string]
-          : []),
+        ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
         "-c:v",
         "h264_amf",
         "-quality",
@@ -296,16 +259,9 @@ function hardwareVideoArgs(input: {
   }
 }
 
-function softwareVideoArgs(input: {
-  gopSize: number;
-  segmentSeconds: number;
-  crf: number;
-  maxHeight?: number | null;
-}) {
+function softwareVideoArgs(input: { gopSize: number; segmentSeconds: number; crf: number; maxHeight?: number | null }) {
   return [
-    ...(maxHeightScaleFilter(input.maxHeight)
-      ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string]
-      : []),
+    ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
     "-c:v",
     "libx264",
     "-preset",
@@ -325,10 +281,7 @@ function softwareVideoArgs(input: {
   ];
 }
 
-export function ffmpegHlsArgs(
-  input: HlsTranscodeInput,
-  options?: FfmpegHlsOptions,
-) {
+export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptions) {
   const segmentSeconds = Math.max(1, input.segmentSeconds);
   const segmentFormat = hlsSegmentFormat(input);
   const playlistPath = hlsPlaylistPath(input.artifactDirectory);
@@ -387,22 +340,13 @@ export function ffmpegHlsArgs(
     input.mode === "remux" ? "temp_file" : "independent_segments+temp_file",
   );
   if (segmentFormat === "fmp4") {
-    args.push(
-      "-hls_segment_type",
-      "fmp4",
-      "-hls_fmp4_init_filename",
-      "init.mp4",
-    );
+    args.push("-hls_segment_type", "fmp4", "-hls_fmp4_init_filename", "init.mp4");
   }
   const startSegmentNumber = options?.startSegmentNumber;
   if (Number.isSafeInteger(startSegmentNumber)) {
     args.push("-start_number", String(startSegmentNumber));
   }
-  args.push(
-    "-hls_segment_filename",
-    hlsSegmentPattern(input.artifactDirectory, segmentFormat),
-    playlistPath,
-  );
+  args.push("-hls_segment_filename", hlsSegmentPattern(input.artifactDirectory, segmentFormat), playlistPath);
 
   return args;
 }
@@ -412,8 +356,7 @@ function ffmpegUnavailableMessage() {
 }
 
 function throwIfCancelled(signal?: AbortSignal) {
-  if (signal?.aborted)
-    throw new FfmpegBackendError("FFmpeg playback was cancelled.");
+  if (signal?.aborted) throw new FfmpegBackendError("FFmpeg playback was cancelled.");
 }
 
 function delay(milliseconds: number, signal?: AbortSignal) {
@@ -470,9 +413,7 @@ async function waitForSegmentFile(input: {
   await input.completion.catch((error) => {
     throw error;
   });
-  throw new FfmpegBackendError(
-    `FFmpeg did not produce ${path.basename(input.segmentPath)}.`,
-  );
+  throw new FfmpegBackendError(`FFmpeg did not produce ${path.basename(input.segmentPath)}.`);
 }
 
 async function waitForEventPlaylistSegment(input: {
@@ -508,15 +449,10 @@ async function waitForEventPlaylistSegment(input: {
   await input.completion.catch((error) => {
     throw error;
   });
-  throw new FfmpegBackendError(
-    `FFmpeg did not publish ${input.segment} in the HLS event playlist.`,
-  );
+  throw new FfmpegBackendError(`FFmpeg did not publish ${input.segment} in the HLS event playlist.`);
 }
 
-async function runFfmpeg(
-  input: HlsTranscodeInput,
-  options?: FfmpegHlsOptions,
-): Promise<ActiveFfmpeg> {
+async function runFfmpeg(input: HlsTranscodeInput, options?: FfmpegHlsOptions): Promise<ActiveFfmpeg> {
   throwIfCancelled(input.signal);
   if (!isFfmpegCliAvailable()) {
     throw new FfmpegBackendError(ffmpegUnavailableMessage());
@@ -568,9 +504,7 @@ async function runFfmpeg(
         return;
       }
       reject(
-        new FfmpegBackendError(
-          `FFmpeg exited with ${signal ?? `code ${code}`}.${stderr ? `\n${stderr.trim()}` : ""}`,
-        ),
+        new FfmpegBackendError(`FFmpeg exited with ${signal ?? `code ${code}`}.${stderr ? `\n${stderr.trim()}` : ""}`),
       );
     });
   });
@@ -598,10 +532,7 @@ function inputSourceKey(input: HlsSegmentWindowTranscodeInput) {
   ].join("\0");
 }
 
-function reusableHlsStream(
-  input: HlsSegmentWindowTranscodeInput,
-  firstSegment: { segmentIndex: number },
-) {
+function reusableHlsStream(input: HlsSegmentWindowTranscodeInput, firstSegment: { segmentIndex: number }) {
   const stream = activeHlsStreams.get(input.sessionId);
   if (!stream) return null;
   if (stream.artifactDirectory !== input.artifactDirectory) return null;
@@ -610,10 +541,7 @@ function reusableHlsStream(
   if (stream.mode !== input.mode) return null;
   if (stream.segmentSeconds !== input.segmentSeconds) return null;
   if (stream.hardwareAcceleration !== input.hardwareAcceleration) return null;
-  if (
-    stream.hardwareAccelerationRequired !== input.hardwareAccelerationRequired
-  )
-    return null;
+  if (stream.hardwareAccelerationRequired !== input.hardwareAccelerationRequired) return null;
   if (stream.transcodeQualityKey !== transcodeQualityKey(input)) return null;
   if (stream.hlsSegmentFormat !== hlsSegmentFormat(input)) return null;
   if (firstSegment.segmentIndex < stream.startSegmentIndex) return null;
@@ -659,9 +587,7 @@ async function startHlsStream(
 async function generateStreamingFfmpegWindow(
   input: HlsSegmentWindowTranscodeInput,
 ): Promise<HlsSegmentWindowGeneration> {
-  const requestedSegments = input.segments.filter(
-    (segment) => segment.segmentSeconds > 0,
-  );
+  const requestedSegments = input.segments.filter((segment) => segment.segmentSeconds > 0);
   const firstSegment = requestedSegments[0];
   if (!firstSegment) return { completion: Promise.resolve() };
 
@@ -696,13 +622,10 @@ async function generateStreamingFfmpegWindow(
 
 export const ffmpegCliBackend: TranscodeBackend & CompatibilityHlsBackend = {
   validateHlsSegmentGenerationPolicy(input) {
-    if (!isFfmpegCliAvailable())
-      throw new FfmpegBackendError(ffmpegUnavailableMessage());
+    if (!isFfmpegCliAvailable()) throw new FfmpegBackendError(ffmpegUnavailableMessage());
   },
 
-  async startCompatibilityHls(
-    input: HlsTranscodeInput,
-  ): Promise<RunningTranscode> {
+  async startCompatibilityHls(input: HlsTranscodeInput): Promise<RunningTranscode> {
     await mkdir(input.artifactDirectory, { recursive: true });
     const active = await runFfmpeg(input);
     active.completion.catch(() => undefined);

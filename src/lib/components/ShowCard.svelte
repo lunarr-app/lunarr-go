@@ -16,7 +16,10 @@
     <strong>{show.title}</strong>
     <div class="details">
       <span>{show.year ?? "Unknown year"}</span>
-      <span>{show.seasonCount} {show.seasonCount === 1 ? "season" : "seasons"}</span>
+      <span
+        >{show.seasonCount}
+        {show.seasonCount === 1 ? "season" : "seasons"}</span
+      >
     </div>
   </div>
 </a>

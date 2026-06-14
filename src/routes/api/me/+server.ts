@@ -9,6 +9,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 
   return json({
     user,
-    transcodePolicy: await getTranscodePolicy(user.id)
+    transcodePolicy: await getTranscodePolicy(user.id),
   });
 };

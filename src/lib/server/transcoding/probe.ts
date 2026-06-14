@@ -37,10 +37,7 @@ function primaryCodec(probe: MediaProbe, type: "video" | "audio") {
   return probe.streams.find((stream) => stream.type === type)?.codecName ?? null;
 }
 
-export function mediaFileValuesFromProbe(
-  input: FileMetadataInput,
-  probe: MediaProbe | null,
-): ProbedMediaFileValues {
+export function mediaFileValuesFromProbe(input: FileMetadataInput, probe: MediaProbe | null): ProbedMediaFileValues {
   if (!probe) {
     return {
       duration_seconds: null,
@@ -58,16 +55,9 @@ export function mediaFileValuesFromProbe(
   };
 }
 
-export async function replaceMediaStreamInfo(
-  mediaFileId: string,
-  probe: MediaProbe,
-  now: string,
-) {
+export async function replaceMediaStreamInfo(mediaFileId: string, probe: MediaProbe, now: string) {
   const db = await getDb();
-  await db
-    .deleteFrom("media_stream_info")
-    .where("media_file_id", "=", mediaFileId)
-    .execute();
+  await db.deleteFrom("media_stream_info").where("media_file_id", "=", mediaFileId).execute();
 
   if (probe.streams.length === 0) return;
 

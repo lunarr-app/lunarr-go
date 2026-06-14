@@ -3,33 +3,16 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import type { ProbeBackend } from "./backend";
 import { startMediaProbeRefreshJob } from "./probe-jobs";
 
 async function waitForProbeJob(db: Kysely<Database>, jobId: string) {
-  let job = await db
-    .selectFrom("scan_job")
-    .selectAll()
-    .where("id", "=", jobId)
-    .executeTakeFirstOrThrow();
-  for (
-    let index = 0;
-    index < 50 && (job.status === "queued" || job.status === "running");
-    index += 1
-  ) {
+  let job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
+  for (let index = 0; index < 50 && (job.status === "queued" || job.status === "running"); index += 1) {
     await new Promise((resolve) => setTimeout(resolve, 10));
-    job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
   }
   return job;
 }
@@ -158,11 +141,7 @@ describe("media probe refresh jobs", () => {
       errors_count: 0,
     });
     expect(
-      await db
-        .selectFrom("media_file")
-        .selectAll()
-        .where("id", "=", "file-1")
-        .executeTakeFirstOrThrow(),
+      await db.selectFrom("media_file").selectAll().where("id", "=", "file-1").executeTakeFirstOrThrow(),
     ).toMatchObject({
       duration_seconds: 42,
       video_codec: "h264",
@@ -170,11 +149,7 @@ describe("media probe refresh jobs", () => {
       container: "mp4",
     });
     expect(
-      await db
-        .selectFrom("media_stream_info")
-        .selectAll()
-        .where("media_file_id", "=", "file-1")
-        .execute(),
+      await db.selectFrom("media_stream_info").selectAll().where("media_file_id", "=", "file-1").execute(),
     ).toHaveLength(2);
   });
 });

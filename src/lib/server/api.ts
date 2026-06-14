@@ -21,10 +21,7 @@ export async function readJsonBody(request: Request) {
 }
 
 export function jsonError(error: unknown, fallback: string, status = 400) {
-  return json(
-    { error: error instanceof Error ? error.message : fallback },
-    { status }
-  );
+  return json({ error: error instanceof Error ? error.message : fallback }, { status });
 }
 
 export function booleanFromJson(value: unknown) {

@@ -127,11 +127,7 @@ async function readStreamToBufferWithTimeout(input: {
   label: string;
 }) {
   try {
-    return await withOperationTimeout(
-      streamToBuffer(input.stream, input.signal),
-      input.timeoutMs,
-      input.label,
-    );
+    return await withOperationTimeout(streamToBuffer(input.stream, input.signal), input.timeoutMs, input.label);
   } catch (error) {
     input.stream.destroy(error instanceof Error ? error : new Error(String(error)));
     throw error;
@@ -172,22 +168,14 @@ export function createSeekableInputSourceFromStorage(input: {
       }
       if (!Number.isSafeInteger(length) || length <= 0) return Buffer.alloc(0);
       if (start >= sizeBytes) return Buffer.alloc(0);
-      if (
-        readAhead &&
-        start >= readAhead.start &&
-        start + length <= readAhead.start + readAhead.buffer.length
-      ) {
+      if (readAhead && start >= readAhead.start && start + length <= readAhead.start + readAhead.buffer.length) {
         return readAhead.buffer.subarray(start - readAhead.start, start - readAhead.start + length);
       }
 
       const requestedBytes = Math.min(sizeBytes - start, length);
       const readAheadBytes =
         length <= SEEKABLE_MAX_BUFFER_BYTES
-          ? Math.min(
-              sizeBytes - start,
-              Math.max(length, SEEKABLE_READ_AHEAD_BYTES),
-              SEEKABLE_MAX_BUFFER_BYTES,
-            )
+          ? Math.min(sizeBytes - start, Math.max(length, SEEKABLE_READ_AHEAD_BYTES), SEEKABLE_MAX_BUFFER_BYTES)
           : requestedBytes;
       const end = start + readAheadBytes - 1;
       const readAbort = linkedAbortSignals(input.setupSignal, readSignal);

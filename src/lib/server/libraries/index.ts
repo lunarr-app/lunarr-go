@@ -12,17 +12,13 @@ import {
   parseSftpConfig,
   sftpDisplayPath,
   testSftpConnection,
-  type SftpLibraryConfig
+  type SftpLibraryConfig,
 } from "../storage";
 import { nowIso } from "../time";
 
 export async function listLibraries() {
   const db = await getDb();
-  return db
-    .selectFrom("library")
-    .selectAll()
-    .orderBy("created_at", "asc")
-    .execute();
+  return db.selectFrom("library").selectAll().orderBy("created_at", "asc").execute();
 }
 
 export async function listLibrariesWithScanStatus() {
@@ -33,7 +29,11 @@ export async function listLibrariesWithScanStatus() {
   const shares = await db
     .selectFrom("library_user")
     .select(["library_id", "user_id"])
-    .where("library_id", "in", libraries.map((library) => library.id))
+    .where(
+      "library_id",
+      "in",
+      libraries.map((library) => library.id),
+    )
     .execute();
   const sharedUsersByLibrary = new Map<string, string[]>();
   for (const share of shares) {
@@ -54,9 +54,13 @@ export async function listLibrariesWithScanStatus() {
       "files_updated",
       "files_removed",
       "errors_count",
-      "created_at"
+      "created_at",
     ])
-    .where("library_id", "in", libraries.map((library) => library.id))
+    .where(
+      "library_id",
+      "in",
+      libraries.map((library) => library.id),
+    )
     .orderBy("created_at", "desc")
     .execute();
 
@@ -69,7 +73,10 @@ export async function listLibrariesWithScanStatus() {
 
   return libraries.map((library) => {
     const latestScanJob = latestJobByLibrary.get(library.id) ?? null;
-    let sftpConfig: Pick<SftpLibraryConfig, "host" | "port" | "username" | "root" | "walkConcurrency" | "operationTimeoutMs"> | null = null;
+    let sftpConfig: Pick<
+      SftpLibraryConfig,
+      "host" | "port" | "username" | "root" | "walkConcurrency" | "operationTimeoutMs"
+    > | null = null;
     if (library.source === "sftp") {
       try {
         const config = parseExistingSftpConfig(library.config_json);
@@ -79,7 +86,7 @@ export async function listLibrariesWithScanStatus() {
           username: config.username,
           root: config.root,
           walkConcurrency: config.walkConcurrency,
-          operationTimeoutMs: config.operationTimeoutMs
+          operationTimeoutMs: config.operationTimeoutMs,
         };
       } catch {
         sftpConfig = null;
@@ -90,7 +97,7 @@ export async function listLibrariesWithScanStatus() {
       sftpConfig,
       sharedUserIds: sharedUsersByLibrary.get(library.id) ?? [],
       latestScanJob,
-      scanActive: latestScanJob?.status === "queued" || latestScanJob?.status === "running"
+      scanActive: latestScanJob?.status === "queued" || latestScanJob?.status === "running",
     };
   });
 }
@@ -118,22 +125,28 @@ export async function updateLibraryAccess(libraryId: string, accessModeInput: st
   const accessMode = normalizeAccessMode(accessModeInput);
   const cleanUserIds = [...new Set(userIds.map((id) => id.trim()).filter(Boolean))];
   const now = nowIso();
-  const allowedUsers = cleanUserIds.length === 0
-    ? []
-    : await db
-        .selectFrom("user")
-        .select("id")
-        .where("id", "in", cleanUserIds)
-        .where("role", "!=", "admin")
-        .execute();
+  const allowedUsers =
+    cleanUserIds.length === 0
+      ? []
+      : await db.selectFrom("user").select("id").where("id", "in", cleanUserIds).where("role", "!=", "admin").execute();
   const allowedUserIds = new Set(allowedUsers.map((user) => user.id));
 
-  await db.updateTable("library").set({ access_mode: accessMode, updated_at: now }).where("id", "=", libraryId).execute();
+  await db
+    .updateTable("library")
+    .set({ access_mode: accessMode, updated_at: now })
+    .where("id", "=", libraryId)
+    .execute();
   await db.deleteFrom("library_user").where("library_id", "=", libraryId).execute();
   if (accessMode === "shared" && allowedUserIds.size > 0) {
     await db
       .insertInto("library_user")
-      .values([...allowedUserIds].map((userId) => ({ library_id: libraryId, user_id: userId, created_at: now })))
+      .values(
+        [...allowedUserIds].map((userId) => ({
+          library_id: libraryId,
+          user_id: userId,
+          created_at: now,
+        })),
+      )
       .execute();
   }
 }
@@ -251,7 +264,9 @@ async function createLocalLibrary(input: CreateLocalLibraryInput) {
   if (existing) throw new Error("Library path is already configured.");
 
   const libraries = await db.selectFrom("library").select(["path"]).execute();
-  const overlapping = libraries.find((library) => pathsOverlap(library.path, resolved) || pathsOverlap(resolved, library.path));
+  const overlapping = libraries.find(
+    (library) => pathsOverlap(library.path, resolved) || pathsOverlap(resolved, library.path),
+  );
   if (overlapping) throw new Error("Library path overlaps with an existing library.");
 
   const now = nowIso();
@@ -267,7 +282,7 @@ async function createLocalLibrary(input: CreateLocalLibraryInput) {
     scan_interval_minutes: normalizeScanIntervalMinutes(input.scanIntervalMinutes),
     last_scheduled_scan_at: null,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   };
 
   await db.insertInto("library").values(library).execute();
@@ -294,7 +309,7 @@ function parseSftpInput(input: CreateSftpLibraryInput): SftpLibraryConfig {
     root,
     passwordEncrypted: encryptSecret(password),
     walkConcurrency: normalizeSftpWalkConcurrency(input.walkConcurrency),
-    operationTimeoutMs: normalizeSftpOperationTimeoutMs(input.operationTimeoutMs)
+    operationTimeoutMs: normalizeSftpOperationTimeoutMs(input.operationTimeoutMs),
   };
 }
 
@@ -321,7 +336,7 @@ function parseSftpUpdateInput(input: UpdateSftpLibraryInput, existingConfig: Sft
     root,
     passwordEncrypted: password ? encryptSecret(password) : existingConfig.passwordEncrypted,
     walkConcurrency: normalizeSftpWalkConcurrency(input.walkConcurrency ?? existingConfig.walkConcurrency),
-    operationTimeoutMs: normalizeSftpOperationTimeoutMs(input.operationTimeoutMs ?? existingConfig.operationTimeoutMs)
+    operationTimeoutMs: normalizeSftpOperationTimeoutMs(input.operationTimeoutMs ?? existingConfig.operationTimeoutMs),
   };
 }
 
@@ -355,7 +370,10 @@ async function createSftpLibrary(input: CreateSftpLibraryInput, options: CreateL
   const overlapping = libraries.find((library) => {
     if (!library.config_json) return false;
     try {
-      const existingConfig = JSON.parse(library.config_json) as Pick<SftpLibraryConfig, "host" | "port" | "username" | "root">;
+      const existingConfig = JSON.parse(library.config_json) as Pick<
+        SftpLibraryConfig,
+        "host" | "port" | "username" | "root"
+      >;
       return (
         existingConfig.host === config.host &&
         Number(existingConfig.port) === config.port &&
@@ -381,7 +399,7 @@ async function createSftpLibrary(input: CreateSftpLibraryInput, options: CreateL
     scan_interval_minutes: normalizeScanIntervalMinutes(input.scanIntervalMinutes),
     last_scheduled_scan_at: null,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   };
 
   await db.insertInto("library").values(library).execute();
@@ -398,13 +416,12 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
   if (!existingLibrary) throw new Error("Library not found.");
   if (await activeScanExists(id)) throw new Error("Library has an active scan.");
   const inputSource = input.source ?? "local";
-  if (inputSource !== existingLibrary.source) throw new Error("Library source cannot be changed. Add a new library instead.");
+  if (inputSource !== existingLibrary.source)
+    throw new Error("Library source cannot be changed. Add a new library instead.");
   const watchEnabled = normalizeWatchEnabled(existingLibrary.source, input.watchEnabled);
   const scanIntervalMinutes = normalizeScanIntervalMinutes(input.scanIntervalMinutes);
   const resetScheduledScanAt =
-    scanIntervalMinutes !== existingLibrary.scan_interval_minutes
-      ? { last_scheduled_scan_at: null }
-      : {};
+    scanIntervalMinutes !== existingLibrary.scan_interval_minutes ? { last_scheduled_scan_at: null } : {};
 
   const now = nowIso();
   if (existingLibrary.source === "sftp" && input.source === "sftp") {
@@ -453,7 +470,7 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
         watch_enabled: watchEnabled,
         scan_interval_minutes: scanIntervalMinutes,
         ...resetScheduledScanAt,
-        updated_at: now
+        updated_at: now,
       })
       .where("id", "=", id)
       .execute();
@@ -489,7 +506,9 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
   if (duplicate) throw new Error("Library path is already configured.");
 
   const libraries = await db.selectFrom("library").select(["id", "path"]).where("id", "!=", id).execute();
-  const overlapping = libraries.find((library) => pathsOverlap(library.path, resolved) || pathsOverlap(resolved, library.path));
+  const overlapping = libraries.find(
+    (library) => pathsOverlap(library.path, resolved) || pathsOverlap(resolved, library.path),
+  );
   if (overlapping) throw new Error("Library path overlaps with an existing library.");
 
   await db
@@ -501,7 +520,7 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
       watch_enabled: watchEnabled,
       scan_interval_minutes: scanIntervalMinutes,
       ...resetScheduledScanAt,
-      updated_at: now
+      updated_at: now,
     })
     .where("id", "=", id)
     .execute();
@@ -534,9 +553,9 @@ export async function deleteLibrary(id: string) {
             eb
               .selectFrom("media_file")
               .select("media_file.id")
-              .whereRef("media_file.media_item_id", "=", "media_item.id")
-          )
-        )
+              .whereRef("media_file.media_item_id", "=", "media_item.id"),
+          ),
+        ),
       )
       .execute();
 
@@ -546,12 +565,9 @@ export async function deleteLibrary(id: string) {
       .where((eb) =>
         eb.not(
           eb.exists(
-            eb
-              .selectFrom("media_item as child")
-              .select("child.id")
-              .whereRef("child.parent_id", "=", "media_item.id")
-          )
-        )
+            eb.selectFrom("media_item as child").select("child.id").whereRef("child.parent_id", "=", "media_item.id"),
+          ),
+        ),
       )
       .execute();
 
@@ -561,12 +577,9 @@ export async function deleteLibrary(id: string) {
       .where((eb) =>
         eb.not(
           eb.exists(
-            eb
-              .selectFrom("media_item as child")
-              .select("child.id")
-              .whereRef("child.parent_id", "=", "media_item.id")
-          )
-        )
+            eb.selectFrom("media_item as child").select("child.id").whereRef("child.parent_id", "=", "media_item.id"),
+          ),
+        ),
       )
       .execute();
   }

@@ -4,10 +4,7 @@ import {
   expireStalePlaybackSessions,
   TRANSCODING_DISABLED_MESSAGE,
 } from "$lib/server/transcoding/manager";
-import {
-  getTranscodeSession,
-  touchTranscodeSessionHeartbeat,
-} from "$lib/server/transcoding/sessions";
+import { getTranscodeSession, touchTranscodeSessionHeartbeat } from "$lib/server/transcoding/sessions";
 import { json, type RequestHandler } from "@sveltejs/kit";
 
 export const POST: RequestHandler = async ({ params, locals, request }) => {

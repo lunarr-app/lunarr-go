@@ -3,17 +3,9 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
-import {
-  externalMovieSubtitleResponse,
-  getExternalMovieSubtitleTrack,
-} from "./subtitles";
+import { externalMovieSubtitleResponse, getExternalMovieSubtitleTrack } from "./subtitles";
 
 describe("getExternalMovieSubtitleTrack", () => {
   let tempDir: string;
@@ -163,10 +155,7 @@ describe("getExternalMovieSubtitleTrack", () => {
       ])
       .execute();
 
-    await writeFile(
-      path.join(tempDir, "Movie.en.vtt"),
-      "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n",
-    );
+    await writeFile(path.join(tempDir, "Movie.en.vtt"), "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n");
   });
 
   afterEach(async () => {
@@ -175,40 +164,23 @@ describe("getExternalMovieSubtitleTrack", () => {
   });
 
   test("returns only external subtitle tracks for movie items", async () => {
-    expect(
-      await getExternalMovieSubtitleTrack("movie-subtitle", "user-1"),
-    ).toMatchObject({
+    expect(await getExternalMovieSubtitleTrack("movie-subtitle", "user-1")).toMatchObject({
       label: "English",
       mime_type: "text/vtt",
     });
-    expect(
-      await getExternalMovieSubtitleTrack("show-subtitle", "user-1"),
-    ).toBeUndefined();
-    expect(
-      await getExternalMovieSubtitleTrack("embedded-subtitle", "user-1"),
-    ).toBeUndefined();
+    expect(await getExternalMovieSubtitleTrack("show-subtitle", "user-1")).toBeUndefined();
+    expect(await getExternalMovieSubtitleTrack("embedded-subtitle", "user-1")).toBeUndefined();
   });
 
   test("serves external movie subtitle bodies and HEAD metadata", async () => {
-    const response = await externalMovieSubtitleResponse(
-      "movie-subtitle",
-      "user-1",
-    );
+    const response = await externalMovieSubtitleResponse("movie-subtitle", "user-1");
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/vtt");
     expect(response.headers.get("content-length")).toBe("44");
-    expect(response.headers.get("content-disposition")).toBe(
-      'inline; filename="English"',
-    );
-    expect(await response.text()).toBe(
-      "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n",
-    );
+    expect(response.headers.get("content-disposition")).toBe('inline; filename="English"');
+    expect(await response.text()).toBe("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n");
 
-    const headResponse = await externalMovieSubtitleResponse(
-      "movie-subtitle",
-      "user-1",
-      false,
-    );
+    const headResponse = await externalMovieSubtitleResponse("movie-subtitle", "user-1", false);
     expect(headResponse.status).toBe(200);
     expect(headResponse.headers.get("content-type")).toBe("text/vtt");
     expect(headResponse.headers.get("content-length")).toBe("44");
@@ -216,18 +188,11 @@ describe("getExternalMovieSubtitleTrack", () => {
   });
 
   test("returns not found for missing subtitle files", async () => {
-    const response = await externalMovieSubtitleResponse(
-      "missing-subtitle",
-      "user-1",
-    );
+    const response = await externalMovieSubtitleResponse("missing-subtitle", "user-1");
     expect(response.status).toBe(404);
 
     await rm(path.join(tempDir, "Movie.en.vtt"));
-    const staleResponse = await externalMovieSubtitleResponse(
-      "movie-subtitle",
-      "user-1",
-      false,
-    );
+    const staleResponse = await externalMovieSubtitleResponse("movie-subtitle", "user-1", false);
     expect(staleResponse.status).toBe(404);
     expect(staleResponse.body).toBeNull();
   });
@@ -236,18 +201,11 @@ describe("getExternalMovieSubtitleTrack", () => {
     await rm(path.join(tempDir, "Movie.en.vtt"));
     await mkdir(path.join(tempDir, "Movie.en.vtt"));
 
-    const response = await externalMovieSubtitleResponse(
-      "movie-subtitle",
-      "user-1",
-    );
+    const response = await externalMovieSubtitleResponse("movie-subtitle", "user-1");
     expect(response.status).toBe(404);
     expect(await response.text()).toBe("Subtitle file is no longer available");
 
-    const headResponse = await externalMovieSubtitleResponse(
-      "movie-subtitle",
-      "user-1",
-      false,
-    );
+    const headResponse = await externalMovieSubtitleResponse("movie-subtitle", "user-1", false);
     expect(headResponse.status).toBe(404);
     expect(headResponse.body).toBeNull();
   });

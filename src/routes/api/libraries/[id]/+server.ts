@@ -1,9 +1,5 @@
 import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
-import {
-  deleteLibrary,
-  getLibrary,
-  updateLibrary,
-} from "$lib/server/libraries";
+import { deleteLibrary, getLibrary, updateLibrary } from "$lib/server/libraries";
 import { parseUpdateLibraryInput } from "$lib/server/libraries/input";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
@@ -28,11 +24,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     const body = await readJsonBody(request);
     const library = await updateLibrary(
       params.id,
-      parseUpdateLibraryInput(
-        typeof body === "object" && body
-          ? (body as Record<string, unknown>)
-          : {},
-      ),
+      parseUpdateLibraryInput(typeof body === "object" && body ? (body as Record<string, unknown>) : {}),
     );
     await syncLibraryWatchers();
     await syncScheduledLibraryScans();

@@ -8,13 +8,11 @@ import { setTranscodeBackendForTests } from "$lib/server/transcoding/manager";
 import type {
   HlsSegmentWindowGeneration,
   HlsSegmentWindowTranscodeInput,
-  RunningTranscode
+  RunningTranscode,
 } from "$lib/server/transcoding/backend";
 import { getPlaybackData } from ".";
 
-async function completedWindowGeneration(
-  input: HlsSegmentWindowTranscodeInput
-): Promise<HlsSegmentWindowGeneration> {
+async function completedWindowGeneration(input: HlsSegmentWindowTranscodeInput): Promise<HlsSegmentWindowGeneration> {
   const segment = input.segments[0];
   if (!segment) throw new Error("Expected a requested HLS window segment.");
   await mkdir(input.artifactDirectory, { recursive: true });
@@ -75,7 +73,7 @@ describe("playback data", () => {
         email_verified: 0,
         image: null,
         created_at: nowMs,
-        updated_at: nowMs
+        updated_at: nowMs,
       })
       .execute();
     await db
@@ -87,7 +85,7 @@ describe("playback data", () => {
           kind: "movie",
           path: tempDir,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "library-tv",
@@ -95,8 +93,8 @@ describe("playback data", () => {
           kind: "tv",
           path: path.join(tempDir, "shows"),
           created_at: now,
-          updated_at: now
-        }
+          updated_at: now,
+        },
       ])
       .execute();
     await db
@@ -119,7 +117,7 @@ describe("playback data", () => {
           popularity: null,
           vote_average: null,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "show-1",
@@ -131,7 +129,7 @@ describe("playback data", () => {
           provider_id: null,
           parent_id: null,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "season-1",
@@ -143,7 +141,7 @@ describe("playback data", () => {
           provider_id: null,
           parent_id: "show-1",
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "episode-1",
@@ -156,8 +154,8 @@ describe("playback data", () => {
           provider_id: null,
           parent_id: "season-1",
           created_at: now,
-          updated_at: now
-        }
+          updated_at: now,
+        },
       ])
       .execute();
     await db
@@ -177,7 +175,7 @@ describe("playback data", () => {
           audio_codec: null,
           container: "mp4",
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "file-b",
@@ -193,7 +191,7 @@ describe("playback data", () => {
           audio_codec: null,
           container: "mp4",
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "episode-file",
@@ -209,14 +207,16 @@ describe("playback data", () => {
           audio_codec: "aac",
           container: "mkv",
           created_at: now,
-          updated_at: now
-        }
+          updated_at: now,
+        },
       ])
       .execute();
-    await mkdir(path.join(tempDir, "shows", "The Expanse", "Season 01"), { recursive: true });
+    await mkdir(path.join(tempDir, "shows", "The Expanse", "Season 01"), {
+      recursive: true,
+    });
     await writeFile(
       path.join(tempDir, "shows", "The Expanse", "Season 01", "The Expanse - S01E01.mkv"),
-      "episode-source"
+      "episode-source",
     );
     await db
       .insertInto("subtitle_track")
@@ -232,7 +232,7 @@ describe("playback data", () => {
           mime_type: "text/vtt",
           is_default: 1,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "subtitle-file-b",
@@ -245,7 +245,7 @@ describe("playback data", () => {
           mime_type: "text/vtt",
           is_default: 0,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "subtitle-file-a",
@@ -258,8 +258,8 @@ describe("playback data", () => {
           mime_type: "text/vtt",
           is_default: 0,
           created_at: now,
-          updated_at: now
-        }
+          updated_at: now,
+        },
       ])
       .execute();
   });
@@ -280,18 +280,23 @@ describe("playback data", () => {
         position_seconds: 45.8,
         duration_seconds: 100,
         completed: 0,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .execute();
 
     const result = (await getPlaybackData({
       mediaItemId: "movie-1",
       userId: "user-1",
-      url: new URL("http://localhost/movies/movie-1?play=movie-1&file=file-b")
+      url: new URL("http://localhost/movies/movie-1?play=movie-1&file=file-b"),
     })) as WatchLoadResult;
 
     expect(result.startSeconds).toBe(45);
-    expect(result.item).toMatchObject({ id: "movie-1", kind: "movie", title: "Movie", backHref: "/movies/movie-1" });
+    expect(result.item).toMatchObject({
+      id: "movie-1",
+      kind: "movie",
+      title: "Movie",
+      backHref: "/movies/movie-1",
+    });
     expect(result.playback.file.id).toBe("file-b");
     expect(result.playback.file.media_item_id).toBeUndefined();
     expect(result.playback.file.path).toBeUndefined();
@@ -303,13 +308,13 @@ describe("playback data", () => {
       {
         id: "subtitle-shared",
         default: true,
-        src: "/media/subtitles/subtitle-shared"
+        src: "/media/subtitles/subtitle-shared",
       },
       {
         id: "subtitle-file-b",
         default: false,
-        src: "/media/subtitles/subtitle-file-b"
-      }
+        src: "/media/subtitles/subtitle-file-b",
+      },
     ]);
   });
 
@@ -323,46 +328,47 @@ describe("playback data", () => {
         position_seconds: 95,
         duration_seconds: 100,
         completed: 1,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .execute();
 
     const result = (await getPlaybackData({
       mediaItemId: "movie-1",
       userId: "user-1",
-      url: new URL("http://localhost/movies/movie-1?play=movie-1&file=file-a")
+      url: new URL("http://localhost/movies/movie-1?play=movie-1&file=file-a"),
     })) as WatchLoadResult;
 
     expect(result.startSeconds).toBe(0);
     expect(result.playback.file.id).toBe("file-a");
   });
 
-  test("loads episode playback with show context", async () => {    setTranscodeBackendForTests({
+  test("loads episode playback with show context", async () => {
+    setTranscodeBackendForTests({
       async startCompatibilityHls() {
         throw new Error("FFmpeg test backend unavailable.");
       },
       async cancel() {
         return;
-      }
+      },
     });
     const result = (await getPlaybackData({
       mediaItemId: "episode-1",
       userId: "user-1",
-      url: new URL("http://localhost/episodes/episode-1?play=episode-1&file=episode-file")
+      url: new URL("http://localhost/episodes/episode-1?play=episode-1&file=episode-file"),
     })) as WatchLoadResult;
 
     expect(result.item).toMatchObject({
       id: "episode-1",
       kind: "episode",
       title: "The Expanse - S01E01 - Dulcinea",
-      backHref: "/shows/show-1"
+      backHref: "/shows/show-1",
     });
     expect(result.playback.file.id).toBe("episode-file");
     expect(result.playback).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
       streamUrl: null,
-      message: "Request-driven HLS segment generation is not available."
+      message: "Request-driven HLS segment generation is not available.",
     });
   });
 
@@ -377,7 +383,7 @@ describe("playback data", () => {
           position_seconds: 30,
           duration_seconds: 100,
           completed: 0,
-          updated_at: "2026-01-01T00:00:00.000Z"
+          updated_at: "2026-01-01T00:00:00.000Z",
         },
         {
           user_id: "user-1",
@@ -386,15 +392,15 @@ describe("playback data", () => {
           position_seconds: 60,
           duration_seconds: 120,
           completed: 0,
-          updated_at: "2026-01-02T00:00:00.000Z"
-        }
+          updated_at: "2026-01-02T00:00:00.000Z",
+        },
       ])
       .execute();
 
     const result = (await getPlaybackData({
       mediaItemId: "movie-1",
       userId: "user-1",
-      url: new URL("http://localhost/movies/movie-1?play=movie-1")
+      url: new URL("http://localhost/movies/movie-1?play=movie-1"),
     })) as WatchLoadResult;
 
     expect(result.playback.file.id).toBe("file-b");
@@ -412,14 +418,10 @@ describe("playback data", () => {
         access_mode: "shared",
         path: path.join(tempDir, "private"),
         created_at: now,
-        updated_at: now
+        updated_at: now,
       })
       .execute();
-    await db
-      .updateTable("media_file")
-      .set({ library_id: "library-private" })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ library_id: "library-private" }).where("id", "=", "file-b").execute();
     await db
       .insertInto("watch_progress")
       .values({
@@ -429,14 +431,14 @@ describe("playback data", () => {
         position_seconds: 60,
         duration_seconds: 120,
         completed: 0,
-        updated_at: "2026-01-02T00:00:00.000Z"
+        updated_at: "2026-01-02T00:00:00.000Z",
       })
       .execute();
 
     const result = (await getPlaybackData({
       mediaItemId: "movie-1",
       userId: "user-1",
-      url: new URL("http://localhost/movies/movie-1?play=movie-1")
+      url: new URL("http://localhost/movies/movie-1?play=movie-1"),
     })) as WatchLoadResult;
 
     expect(result.playback.file.id).toBe("file-a");
@@ -452,7 +454,7 @@ describe("playback data", () => {
           completion: new Promise<void>(() => undefined),
           async cancel() {
             return;
-          }
+          },
         };
       },
       async generateHlsSegmentWindow(input) {
@@ -460,13 +462,13 @@ describe("playback data", () => {
       },
       async cancel() {
         return;
-      }
+      },
     });
 
     const result = (await getPlaybackData({
       mediaItemId: "episode-1",
       userId: "user-1",
-      url: new URL("http://localhost/episodes/episode-1?play=episode-1&file=episode-file&start=125.8")
+      url: new URL("http://localhost/episodes/episode-1?play=episode-1&file=episode-file&start=125.8"),
     })) as WatchLoadResult;
 
     expect(result.startSeconds).toBe(125);
@@ -475,9 +477,9 @@ describe("playback data", () => {
       status: "ready",
       modeDecision: {
         mode: "remux",
-        reason: "container_unsupported"
+        reason: "container_unsupported",
       },
-      streamStartSeconds: 0
+      streamStartSeconds: 0,
     });
     expect(result.playback.playbackSessionId).toBeTruthy();
   });
@@ -491,7 +493,7 @@ describe("playback data", () => {
           completion: new Promise<void>(() => undefined),
           async cancel() {
             return;
-          }
+          },
         };
       },
       async generateHlsSegmentWindow(input) {
@@ -499,13 +501,13 @@ describe("playback data", () => {
       },
       async cancel() {
         return;
-      }
+      },
     });
 
     const result = (await getPlaybackData({
       mediaItemId: "episode-1",
       userId: "user-1",
-      url: new URL("http://localhost/episodes/episode-1?play=episode-1&file=episode-file&start=125.8&transcode=1")
+      url: new URL("http://localhost/episodes/episode-1?play=episode-1&file=episode-file&start=125.8&transcode=1"),
     })) as WatchLoadResult;
 
     expect(result.startSeconds).toBe(125);
@@ -514,9 +516,9 @@ describe("playback data", () => {
       status: "ready",
       modeDecision: {
         mode: "remux",
-        reason: "container_unsupported"
+        reason: "container_unsupported",
       },
-      streamStartSeconds: 0
+      streamStartSeconds: 0,
     });
     expect(result.playback.playbackSessionId).toBeTruthy();
   });

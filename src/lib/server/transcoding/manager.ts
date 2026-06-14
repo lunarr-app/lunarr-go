@@ -39,10 +39,7 @@ import type {
 import type { TranscodeMode } from "../db/schema/streaming";
 import { currentDatabasePaths, getDb } from "../db";
 import { getMediaFile } from "../media";
-import {
-  createLibraryStorage,
-  sftpOperationTimeoutMsFromConfig,
-} from "../storage";
+import { createLibraryStorage, sftpOperationTimeoutMsFromConfig } from "../storage";
 import { getTranscodePolicy } from "./policy";
 import { hasSeekableRemoteSize, nodeAvInputFormat } from "./seekable-input";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
@@ -50,23 +47,15 @@ import path from "node:path";
 import { Readable } from "node:stream";
 
 const PLAYBACK_CANCELLED_MESSAGE = "Playback session was cancelled.";
-const PLAYBACK_HEARTBEAT_EXPIRED_MESSAGE =
-  "Playback session expired because playback stopped.";
-const PLAYBACK_SEGMENT_IDLE_EXPIRED_MESSAGE =
-  "Playback session expired because playback stopped requesting segments.";
-const PLAYBACK_SESSION_INACTIVE_MESSAGE =
-  "Playback session is no longer active.";
-const TRANSCODE_START_OUTSIDE_DURATION_MESSAGE =
-  "Playback start is outside the media duration.";
+const PLAYBACK_HEARTBEAT_EXPIRED_MESSAGE = "Playback session expired because playback stopped.";
+const PLAYBACK_SEGMENT_IDLE_EXPIRED_MESSAGE = "Playback session expired because playback stopped requesting segments.";
+const PLAYBACK_SESSION_INACTIVE_MESSAGE = "Playback session is no longer active.";
+const TRANSCODE_START_OUTSIDE_DURATION_MESSAGE = "Playback start is outside the media duration.";
 const MEDIA_FILE_UNAVAILABLE_MESSAGE = "Media file is no longer available.";
-const REQUEST_DRIVEN_HLS_UNAVAILABLE_MESSAGE =
-  "Request-driven HLS segment generation is not available.";
-const REQUEST_DRIVEN_HLS_REQUIRES_DURATION_MESSAGE =
-  "Request-driven HLS requires known media duration.";
-const SFTP_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE =
-  "SFTP media needs probe metadata before HLS playback can start.";
-export const TRANSCODING_DISABLED_MESSAGE =
-  "Transcoding is disabled by an administrator.";
+const REQUEST_DRIVEN_HLS_UNAVAILABLE_MESSAGE = "Request-driven HLS segment generation is not available.";
+const REQUEST_DRIVEN_HLS_REQUIRES_DURATION_MESSAGE = "Request-driven HLS requires known media duration.";
+const SFTP_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE = "SFTP media needs probe metadata before HLS playback can start.";
+export const TRANSCODING_DISABLED_MESSAGE = "Transcoding is disabled by an administrator.";
 const PREPARING_PLAYBACK_MESSAGE = "Preparing playback. Try again shortly.";
 const TRANSCODE_HEARTBEAT_TIMEOUT_MS = 120_000;
 const TRANSCODE_SEGMENT_IDLE_TIMEOUT_MS = 300_000;
@@ -122,21 +111,13 @@ const defaultPlaybackBackend: TranscodeBackend & CompatibilityHlsBackend = {
     await ffmpegCliBackend.cancel(sessionId).catch(() => undefined);
   },
 };
-let transcodeBackend: TranscodeBackend & Partial<CompatibilityHlsBackend> =
-  defaultPlaybackBackend;
+let transcodeBackend: TranscodeBackend & Partial<CompatibilityHlsBackend> = defaultPlaybackBackend;
 let storageFactory: typeof createLibraryStorage = createLibraryStorage;
 let sftpSeekableOperationTimeoutMsForTests: number | null = null;
 let requestDrivenLookaheadWaitMs = REQUEST_DRIVEN_LOOKAHEAD_WAIT_MS;
-let transcodePolicyRecheckDelayForTests: (() => Promise<void> | void) | null =
-  null;
-const activeRequestDrivenSegmentSetups = new Map<
-  string,
-  Set<AbortController>
->();
-const activeRequestDrivenSegmentWindows = new Map<
-  string,
-  { firstSegmentIndex: number; lastSegmentIndex: number }
->();
+let transcodePolicyRecheckDelayForTests: (() => Promise<void> | void) | null = null;
+const activeRequestDrivenSegmentSetups = new Map<string, Set<AbortController>>();
+const activeRequestDrivenSegmentWindows = new Map<string, { firstSegmentIndex: number; lastSegmentIndex: number }>();
 type PendingSegmentGenerationWaiter = {
   signal?: AbortSignal;
   aborted: boolean;
@@ -148,10 +129,7 @@ type PendingSegmentGeneration = {
   waiters: Set<PendingSegmentGenerationWaiter>;
 };
 const pendingSegmentGenerations = new Map<string, PendingSegmentGeneration>();
-const pendingLookaheadSegments = new Map<
-  string,
-  { controller: AbortController; promise: Promise<boolean> }
->();
+const pendingLookaheadSegments = new Map<string, { controller: AbortController; promise: Promise<boolean> }>();
 const sessionSegmentGenerationQueues = new Map<string, Promise<void>>();
 let staleExpiryLoop: ReturnType<typeof setInterval> | null = null;
 let staleExpiryLoopTicks = 0;
@@ -200,11 +178,7 @@ function playbackSessionStreamUrl(sessionId: string) {
 }
 
 function playbackSessionArtifactDirectory(sessionId: string) {
-  return path.join(
-    currentDatabasePaths().dataDir,
-    "playback-sessions",
-    sessionId,
-  );
+  return path.join(currentDatabasePaths().dataDir, "playback-sessions", sessionId);
 }
 
 async function removeTranscodeSessionArtifacts(sessionId: string) {
@@ -233,10 +207,7 @@ function normalizedStartTimeSeconds(value: number | null | undefined) {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-function canUseRequestDrivenHls(
-  file: NonNullable<Awaited<ReturnType<typeof getMediaFile>>>,
-  startTimeSeconds: number,
-) {
+function canUseRequestDrivenHls(file: NonNullable<Awaited<ReturnType<typeof getMediaFile>>>, startTimeSeconds: number) {
   if (
     file.duration_seconds === null ||
     !Number.isFinite(file.duration_seconds) ||
@@ -300,9 +271,7 @@ function compareRemuxAudioCandidates(
   right: AudioStreamCandidate,
   preferredLanguage?: string | null,
 ) {
-  const codecDelta =
-    Number(isAacFamilyCodec(right.codec_name)) -
-    Number(isAacFamilyCodec(left.codec_name));
+  const codecDelta = Number(isAacFamilyCodec(right.codec_name)) - Number(isAacFamilyCodec(left.codec_name));
   if (codecDelta !== 0) return codecDelta;
   return compareTranscodeAudioCandidates(left, right, preferredLanguage);
 }
@@ -329,22 +298,14 @@ async function selectPlaybackAudioStreamIndex(input: {
   const candidates = [...streams];
   candidates.sort(
     input.mode === "remux"
-      ? (left, right) =>
-          compareRemuxAudioCandidates(left, right, input.preferredAudioLanguage)
-      : (left, right) =>
-          compareTranscodeAudioCandidates(
-            left,
-            right,
-            input.preferredAudioLanguage,
-          ),
+      ? (left, right) => compareRemuxAudioCandidates(left, right, input.preferredAudioLanguage)
+      : (left, right) => compareTranscodeAudioCandidates(left, right, input.preferredAudioLanguage),
   );
   return candidates[0]?.stream_index ?? null;
 }
 
 function isTerminalTranscodeSessionStatus(status: string | null | undefined) {
-  return (
-    status === "completed" || status === "failed" || status === "cancelled"
-  );
+  return status === "completed" || status === "failed" || status === "cancelled";
 }
 
 async function isReadableFile(filePath: string) {
@@ -416,9 +377,7 @@ function withOperationTimeout<T>(
 }
 
 function linkedAbortSignals(...signals: Array<AbortSignal | undefined>) {
-  const activeSignals = signals.filter((item): item is AbortSignal =>
-    Boolean(item),
-  );
+  const activeSignals = signals.filter((item): item is AbortSignal => Boolean(item));
   if (activeSignals.length <= 1) {
     return {
       signal: activeSignals[0],
@@ -453,15 +412,9 @@ async function readStreamToBufferWithTimeout(input: {
   label: string;
 }) {
   try {
-    return await withOperationTimeout(
-      streamToBuffer(input.stream, input.signal),
-      input.timeoutMs,
-      input.label,
-    );
+    return await withOperationTimeout(streamToBuffer(input.stream, input.signal), input.timeoutMs, input.label);
   } catch (error) {
-    input.stream.destroy(
-      error instanceof Error ? error : new Error(String(error)),
-    );
+    input.stream.destroy(error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -472,14 +425,10 @@ async function createSeekableStorageInputSource(
 ) {
   const format = nodeAvInputFormat(file);
   if (!format) {
-    throw new Error(
-      "Remote media format is not known enough for seekable transcoding.",
-    );
+    throw new Error("Remote media format is not known enough for seekable transcoding.");
   }
   if (!hasSeekableRemoteSize(file)) {
-    throw new Error(
-      "Remote media size is not known enough for seekable transcoding.",
-    );
+    throw new Error("Remote media size is not known enough for seekable transcoding.");
   }
 
   let closed = false;
@@ -487,9 +436,7 @@ async function createSeekableStorageInputSource(
     start: number;
     buffer: Buffer;
   } | null = null;
-  const timeoutMs =
-    sftpSeekableOperationTimeoutMsForTests ??
-    sftpOperationTimeoutMsFromConfig(file.config_json);
+  const timeoutMs = sftpSeekableOperationTimeoutMsForTests ?? sftpOperationTimeoutMsFromConfig(file.config_json);
   const storage = await withOperationTimeout(
     storageFactory(file),
     timeoutMs,
@@ -518,15 +465,8 @@ async function createSeekableStorageInputSource(
         return Buffer.alloc(0);
       }
       if (start >= file.size_bytes) return Buffer.alloc(0);
-      if (
-        readAhead &&
-        start >= readAhead.start &&
-        start + length <= readAhead.start + readAhead.buffer.length
-      ) {
-        return readAhead.buffer.subarray(
-          start - readAhead.start,
-          start - readAhead.start + length,
-        );
+      if (readAhead && start >= readAhead.start && start + length <= readAhead.start + readAhead.buffer.length) {
+        return readAhead.buffer.subarray(start - readAhead.start, start - readAhead.start + length);
       }
 
       const requestedBytes = Math.min(file.size_bytes - start, length);
@@ -543,11 +483,7 @@ async function createSeekableStorageInputSource(
       let buffer: Buffer;
       try {
         const stream = await withOperationTimeout(
-          storage.createReadStream(
-            file.path,
-            { start, end },
-            { keepOpen: true },
-          ),
+          storage.createReadStream(file.path, { start, end }, { keepOpen: true }),
           timeoutMs,
           `SFTP range read ${file.path}`,
           (lateStream) => {
@@ -595,16 +531,8 @@ async function createSeekableStorageInputSource(
   };
 }
 
-async function publishActiveHlsArtifact(input: {
-  sessionId: string;
-  mediaFileId: string;
-  playlistPath: string;
-}) {
-  const updated = await updateActiveTranscodeSessionStatus(
-    input.sessionId,
-    "running",
-    null,
-  );
+async function publishActiveHlsArtifact(input: { sessionId: string; mediaFileId: string; playlistPath: string }) {
+  const updated = await updateActiveTranscodeSessionStatus(input.sessionId, "running", null);
   if (!updated) {
     await deleteTranscodeHlsArtifacts(input.sessionId);
     throw new TranscodeStartupAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
@@ -623,9 +551,7 @@ async function publishActiveHlsArtifact(input: {
   }
 }
 
-export function setTranscodeBackendForTests(
-  backend: (TranscodeBackend & Partial<CompatibilityHlsBackend>) | null,
-) {
+export function setTranscodeBackendForTests(backend: (TranscodeBackend & Partial<CompatibilityHlsBackend>) | null) {
   transcodeBackend = backend ?? defaultPlaybackBackend;
   if (backend === null) {
     for (const pending of pendingLookaheadSegments.values()) {
@@ -649,34 +575,23 @@ export function setTranscodeBackendForTests(
   }
 }
 
-export function setTranscodeStorageFactoryForTests(
-  factory: typeof createLibraryStorage | null,
-) {
+export function setTranscodeStorageFactoryForTests(factory: typeof createLibraryStorage | null) {
   storageFactory = factory ?? createLibraryStorage;
   if (factory === null) {
     sftpSeekableOperationTimeoutMsForTests = null;
   }
 }
 
-export function setSftpSeekableOperationTimeoutForTests(
-  timeoutMs: number | null,
-) {
-  sftpSeekableOperationTimeoutMsForTests =
-    timeoutMs === null ? null : Math.max(1, Math.floor(timeoutMs));
+export function setSftpSeekableOperationTimeoutForTests(timeoutMs: number | null) {
+  sftpSeekableOperationTimeoutMsForTests = timeoutMs === null ? null : Math.max(1, Math.floor(timeoutMs));
 }
 
-export function setRequestDrivenLookaheadWaitForTests(
-  timeoutMs: number | null,
-) {
+export function setRequestDrivenLookaheadWaitForTests(timeoutMs: number | null) {
   requestDrivenLookaheadWaitMs =
-    timeoutMs === null
-      ? REQUEST_DRIVEN_LOOKAHEAD_WAIT_MS
-      : Math.max(1, Math.floor(timeoutMs));
+    timeoutMs === null ? REQUEST_DRIVEN_LOOKAHEAD_WAIT_MS : Math.max(1, Math.floor(timeoutMs));
 }
 
-export function setTranscodePolicyRecheckDelayForTests(
-  delay: (() => Promise<void> | void) | null,
-) {
+export function setTranscodePolicyRecheckDelayForTests(delay: (() => Promise<void> | void) | null) {
   transcodePolicyRecheckDelayForTests = delay;
 }
 
@@ -717,10 +632,7 @@ function delay(milliseconds: number, signal?: AbortSignal) {
   });
 }
 
-function waitForBooleanWithSignal(
-  promise: Promise<boolean>,
-  signal?: AbortSignal,
-) {
+function waitForBooleanWithSignal(promise: Promise<boolean>, signal?: AbortSignal) {
   if (!signal) return promise;
   if (signal.aborted) return Promise.resolve(false);
 
@@ -743,13 +655,11 @@ async function waitForHlsSegmentFile(input: {
   timeoutMs?: number;
   signal?: AbortSignal;
 }) {
-  const deadline =
-    Date.now() + Math.max(0, input.timeoutMs ?? requestDrivenLookaheadWaitMs);
+  const deadline = Date.now() + Math.max(0, input.timeoutMs ?? requestDrivenLookaheadWaitMs);
   let nextStateCheckAt = 0;
   while (Date.now() < deadline) {
     if (input.signal?.aborted) return false;
-    if (await hlsSegmentFileExists(input.playlistPath, input.segment))
-      return true;
+    if (await hlsSegmentFileExists(input.playlistPath, input.segment)) return true;
     const now = Date.now();
     if (now >= nextStateCheckAt) {
       const [session, policy] = await Promise.all([
@@ -799,22 +709,14 @@ function clearRequestDrivenSessionWork(sessionId: string) {
   sessionSegmentGenerationQueues.delete(sessionId);
 }
 
-function trackActiveRequestDrivenSegmentSetup(
-  sessionId: string,
-  controller: AbortController,
-) {
-  const active =
-    activeRequestDrivenSegmentSetups.get(sessionId) ??
-    new Set<AbortController>();
+function trackActiveRequestDrivenSegmentSetup(sessionId: string, controller: AbortController) {
+  const active = activeRequestDrivenSegmentSetups.get(sessionId) ?? new Set<AbortController>();
   active.add(controller);
   activeRequestDrivenSegmentSetups.set(sessionId, active);
 
   return () => {
     active.delete(controller);
-    if (
-      active.size === 0 &&
-      activeRequestDrivenSegmentSetups.get(sessionId) === active
-    ) {
+    if (active.size === 0 && activeRequestDrivenSegmentSetups.get(sessionId) === active) {
       activeRequestDrivenSegmentSetups.delete(sessionId);
     }
   };
@@ -839,43 +741,25 @@ function isSegmentIndexNearWindow(
   window: { firstSegmentIndex: number; lastSegmentIndex: number },
 ) {
   if (segmentIndex < window.firstSegmentIndex) {
-    return (
-      window.firstSegmentIndex - segmentIndex <=
-      REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT
-    );
+    return window.firstSegmentIndex - segmentIndex <= REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT;
   }
   if (segmentIndex > window.lastSegmentIndex) {
-    return (
-      segmentIndex - window.lastSegmentIndex <=
-      REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT
-    );
+    return segmentIndex - window.lastSegmentIndex <= REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT;
   }
   return true;
 }
 
-function isSegmentIndexNearTarget(
-  segmentIndex: number,
-  targetSegmentIndex: number,
-) {
-  return (
-    Math.abs(segmentIndex - targetSegmentIndex) <=
-    REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT
-  );
+function isSegmentIndexNearTarget(segmentIndex: number, targetSegmentIndex: number) {
+  return Math.abs(segmentIndex - targetSegmentIndex) <= REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT;
 }
 
-async function replaceStaleRequestDrivenSegmentWork(
-  sessionId: string,
-  targetSegmentIndex: number,
-) {
+async function replaceStaleRequestDrivenSegmentWork(sessionId: string, targetSegmentIndex: number) {
   let replaced = false;
   for (const [key, pending] of pendingSegmentGenerations) {
     const parts = segmentGenerationKeyParts(key);
     if (!parts || parts.sessionId !== sessionId) continue;
     const segmentIndex = hlsSegmentIndex(parts.segment);
-    if (
-      segmentIndex === null ||
-      isSegmentIndexNearTarget(segmentIndex, targetSegmentIndex)
-    ) {
+    if (segmentIndex === null || isSegmentIndexNearTarget(segmentIndex, targetSegmentIndex)) {
       continue;
     }
     pending.controller.abort();
@@ -883,10 +767,7 @@ async function replaceStaleRequestDrivenSegmentWork(
   }
 
   const activeWindow = activeRequestDrivenSegmentWindows.get(sessionId);
-  if (
-    activeWindow &&
-    !isSegmentIndexNearWindow(targetSegmentIndex, activeWindow)
-  ) {
+  if (activeWindow && !isSegmentIndexNearWindow(targetSegmentIndex, activeWindow)) {
     abortActiveRequestDrivenSegmentSetups(sessionId);
     activeRequestDrivenSegmentWindows.delete(sessionId);
     await transcodeBackend.cancel(sessionId).catch(() => undefined);
@@ -905,14 +786,8 @@ export function pendingLookaheadSegmentCountForTests(sessionId: string) {
   return count;
 }
 
-export function pendingSegmentGenerationWaiterCountForTests(
-  sessionId: string,
-  segment: string,
-) {
-  return (
-    pendingSegmentGenerations.get(segmentGenerationKey(sessionId, segment))
-      ?.waiters.size ?? 0
-  );
+export function pendingSegmentGenerationWaiterCountForTests(sessionId: string, segment: string) {
+  return pendingSegmentGenerations.get(segmentGenerationKey(sessionId, segment))?.waiters.size ?? 0;
 }
 
 function trackPendingLookaheadSegments(input: {
@@ -950,31 +825,20 @@ function trackPendingLookaheadSegments(input: {
       .catch(() => undefined);
     void completion.then(async () => {
       if (pendingLookaheadSegments.get(key) !== pending) return;
-      if (await hlsSegmentFileExists(input.playlistPath, segment.segment))
-        return;
+      if (await hlsSegmentFileExists(input.playlistPath, segment.segment)) return;
       pending.controller.abort();
     });
   }
 }
 
-async function removeGeneratedSegmentFile(
-  playlistPath: string,
-  segment: string,
-) {
+async function removeGeneratedSegmentFile(playlistPath: string, segment: string) {
   await rm(path.join(path.dirname(playlistPath), segment), {
     force: true,
   });
 }
 
-async function removeGeneratedSegmentFiles(
-  playlistPath: string,
-  segments: HlsSegmentWindowEntry[],
-) {
-  await Promise.all(
-    segments.map((segment) =>
-      removeGeneratedSegmentFile(playlistPath, segment.segment),
-    ),
-  );
+async function removeGeneratedSegmentFiles(playlistPath: string, segments: HlsSegmentWindowEntry[]) {
+  await Promise.all(segments.map((segment) => removeGeneratedSegmentFile(playlistPath, segment.segment)));
 }
 
 class SegmentGenerationAbortedError extends Error {}
@@ -987,19 +851,12 @@ function removePendingSegmentGenerationWaiter(
     waiter.signal.removeEventListener("abort", waiter.abort);
   }
   pending.waiters.delete(waiter);
-  if (
-    waiter.aborted &&
-    pending.waiters.size === 0 &&
-    !pending.controller.signal.aborted
-  ) {
+  if (waiter.aborted && pending.waiters.size === 0 && !pending.controller.signal.aborted) {
     pending.controller.abort();
   }
 }
 
-function waitForPendingSegmentGeneration(
-  pending: PendingSegmentGeneration,
-  signal?: AbortSignal,
-) {
+function waitForPendingSegmentGeneration(pending: PendingSegmentGeneration, signal?: AbortSignal) {
   if (signal?.aborted) return Promise.resolve(false);
 
   const waiter: PendingSegmentGenerationWaiter = {
@@ -1034,20 +891,10 @@ async function assertSegmentGenerationStillPlayable(input: {
   playlistPath: string;
   stopSegmentWork?: () => Promise<void>;
 }) {
-  const [session, policy] = await Promise.all([
-    getTranscodeSession(input.sessionId),
-    getTranscodePolicy(input.userId),
-  ]);
+  const [session, policy] = await Promise.all([getTranscodeSession(input.sessionId), getTranscodePolicy(input.userId)]);
   if (!policy.transcodingEnabled) {
-    await (
-      input.stopSegmentWork ??
-      (() => stopRequestDrivenSegmentWork(input.sessionId))
-    )();
-    await updateActiveTranscodeSessionStatus(
-      input.sessionId,
-      "failed",
-      TRANSCODING_DISABLED_MESSAGE,
-    );
+    await (input.stopSegmentWork ?? (() => stopRequestDrivenSegmentWork(input.sessionId)))();
+    await updateActiveTranscodeSessionStatus(input.sessionId, "failed", TRANSCODING_DISABLED_MESSAGE);
     throw new SegmentGenerationAbortedError(TRANSCODING_DISABLED_MESSAGE);
   }
   if (
@@ -1056,20 +903,13 @@ async function assertSegmentGenerationStillPlayable(input: {
     session.status !== "running" ||
     session.playlistPath !== input.playlistPath
   ) {
-    await (
-      input.stopSegmentWork ??
-      (() => stopRequestDrivenSegmentWork(input.sessionId))
-    )();
+    await (input.stopSegmentWork ?? (() => stopRequestDrivenSegmentWork(input.sessionId)))();
     throw new SegmentGenerationAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
 }
 
-async function runQueuedSegmentGeneration<T>(
-  sessionId: string,
-  task: () => Promise<T>,
-) {
-  const previous =
-    sessionSegmentGenerationQueues.get(sessionId) ?? Promise.resolve();
+async function runQueuedSegmentGeneration<T>(sessionId: string, task: () => Promise<T>) {
+  const previous = sessionSegmentGenerationQueues.get(sessionId) ?? Promise.resolve();
   const running = previous.catch(() => undefined).then(task);
   const queueTail = running.then(
     () => undefined,
@@ -1093,10 +933,7 @@ function requestDrivenSegmentWindow(input: {
   segmentFormat?: HlsSegmentFormat;
   maxSegmentCount?: number;
 }): HlsSegmentWindowEntry[] {
-  const maxSegmentCount = Math.max(
-    1,
-    Math.floor(input.maxSegmentCount ?? REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT),
-  );
+  const maxSegmentCount = Math.max(1, Math.floor(input.maxSegmentCount ?? REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT));
   const segments: HlsSegmentWindowEntry[] = [];
 
   for (let offset = 0; offset < maxSegmentCount; offset += 1) {
@@ -1135,9 +972,7 @@ async function startRequestDrivenHlsSession(input: {
   startTimeSeconds: number;
   segmentFormat: HlsSegmentFormat;
 }) {
-  if (
-    !(await updateTranscodeSessionPipeline(input.sessionId, "request_driven"))
-  ) {
+  if (!(await updateTranscodeSessionPipeline(input.sessionId, "request_driven"))) {
     throw new TranscodeStartupAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
 
@@ -1170,18 +1005,10 @@ async function warmInitialRequestDrivenHlsSegment(input: {
   segmentFormat: HlsSegmentFormat;
 }): Promise<TranscodeMode> {
   const initialSession = await getTranscodeSession(input.sessionId);
-  if (
-    !initialSession ||
-    isTerminalTranscodeSessionStatus(initialSession.status)
-  ) {
-    throw new TranscodeStartupAbortedError(
-      initialSession?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE,
-    );
+  if (!initialSession || isTerminalTranscodeSessionStatus(initialSession.status)) {
+    throw new TranscodeStartupAbortedError(initialSession?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
-  const segmentIndex = Math.max(
-    0,
-    Math.floor(initialSession.startTimeSeconds / DEFAULT_HLS_SEGMENT_SECONDS),
-  );
+  const segmentIndex = Math.max(0, Math.floor(initialSession.startTimeSeconds / DEFAULT_HLS_SEGMENT_SECONDS));
   let ready = false;
   try {
     ready = await ensureHlsSegmentForRequest({
@@ -1193,10 +1020,7 @@ async function warmInitialRequestDrivenHlsSegment(input: {
     const session = await getTranscodeSession(input.sessionId);
     if (session && isTerminalTranscodeSessionStatus(session.status)) {
       throw new TranscodeStartupAbortedError(
-        session.errorMessage ??
-          (error instanceof Error
-            ? error.message
-            : PLAYBACK_SESSION_INACTIVE_MESSAGE),
+        session.errorMessage ?? (error instanceof Error ? error.message : PLAYBACK_SESSION_INACTIVE_MESSAGE),
       );
     }
     throw error;
@@ -1204,9 +1028,7 @@ async function warmInitialRequestDrivenHlsSegment(input: {
 
   const session = await getTranscodeSession(input.sessionId);
   if (!session || isTerminalTranscodeSessionStatus(session.status)) {
-    throw new TranscodeStartupAbortedError(
-      session?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE,
-    );
+    throw new TranscodeStartupAbortedError(session?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
   if (!ready) {
     throw new Error("Initial HLS playback segment could not be generated.");
@@ -1220,28 +1042,16 @@ export async function cancelPlaybackSession(
 ): Promise<CancelPlaybackSessionResult> {
   const session = await getTranscodeSession(sessionId);
   if (!session) return "missing";
-  if (
-    session.status !== "queued" &&
-    session.status !== "running" &&
-    session.status !== "completed"
-  )
-    return "inactive";
+  if (session.status !== "queued" && session.status !== "running" && session.status !== "completed") return "inactive";
 
   const updated =
     session.status === "completed"
-      ? (await updateTranscodeSessionStatus(sessionId, "cancelled", message),
-        true)
-      : await updateActiveTranscodeSessionStatus(
-          sessionId,
-          "cancelled",
-          message,
-        );
+      ? (await updateTranscodeSessionStatus(sessionId, "cancelled", message), true)
+      : await updateActiveTranscodeSessionStatus(sessionId, "cancelled", message);
   if (!updated) return "inactive";
 
   clearRequestDrivenSessionWork(sessionId);
-  await Promise.all([
-    transcodeBackend.cancel(sessionId).catch(() => undefined),
-  ]);
+  await Promise.all([transcodeBackend.cancel(sessionId).catch(() => undefined)]);
   await rm(playbackSessionArtifactDirectory(sessionId), {
     recursive: true,
     force: true,
@@ -1251,17 +1061,12 @@ export async function cancelPlaybackSession(
   return "cancelled";
 }
 
-export async function expireStalePlaybackSessions(
-  maxIdleMs = TRANSCODE_HEARTBEAT_TIMEOUT_MS,
-): Promise<number> {
+export async function expireStalePlaybackSessions(maxIdleMs = TRANSCODE_HEARTBEAT_TIMEOUT_MS): Promise<number> {
   const cutoffIso = new Date(Date.now() - Math.max(0, maxIdleMs)).toISOString();
   const sessions = await listStaleActiveTranscodeSessions(cutoffIso);
   let expired = 0;
   for (const session of sessions) {
-    const result = await cancelPlaybackSession(
-      session.sessionId,
-      PLAYBACK_HEARTBEAT_EXPIRED_MESSAGE,
-    );
+    const result = await cancelPlaybackSession(session.sessionId, PLAYBACK_HEARTBEAT_EXPIRED_MESSAGE);
     if (result === "cancelled") expired += 1;
   }
   return expired;
@@ -1274,24 +1079,17 @@ export async function expireIdleReadyHlsPlaybackSessions(
   const sessions = await listIdleReadyHlsTranscodeSessions(cutoffIso);
   let expired = 0;
   for (const session of sessions) {
-    const result = await cancelPlaybackSession(
-      session.sessionId,
-      PLAYBACK_SEGMENT_IDLE_EXPIRED_MESSAGE,
-    );
+    const result = await cancelPlaybackSession(session.sessionId, PLAYBACK_SEGMENT_IDLE_EXPIRED_MESSAGE);
     if (result === "cancelled") expired += 1;
   }
   return expired;
 }
 
-export async function cancelActivePlaybackSessions(
-  message = TRANSCODING_DISABLED_MESSAGE,
-): Promise<number> {
+export async function cancelActivePlaybackSessions(message = TRANSCODING_DISABLED_MESSAGE): Promise<number> {
   let cancelled = 0;
 
   while (true) {
-    const sessions = await listActiveTranscodeSessions(
-      ACTIVE_TRANSCODE_CANCEL_BATCH_SIZE,
-    );
+    const sessions = await listActiveTranscodeSessions(ACTIVE_TRANSCODE_CANCEL_BATCH_SIZE);
     if (sessions.length === 0) break;
 
     let batchCancelled = 0;
@@ -1303,19 +1101,13 @@ export async function cancelActivePlaybackSessions(
       }
     }
 
-    if (
-      sessions.length < ACTIVE_TRANSCODE_CANCEL_BATCH_SIZE ||
-      batchCancelled === 0
-    )
-      break;
+    if (sessions.length < ACTIVE_TRANSCODE_CANCEL_BATCH_SIZE || batchCancelled === 0) break;
   }
 
   return cancelled;
 }
 
-export async function pruneActiveHlsSegmentArtifacts(
-  keepBehind?: number,
-): Promise<number> {
+export async function pruneActiveHlsSegmentArtifacts(keepBehind?: number): Promise<number> {
   const sessions = await listRunningHlsTranscodeSessions();
   let pruned = 0;
 
@@ -1350,17 +1142,14 @@ async function generateHlsSegmentForRequest(input: {
   };
   const segmentIndex = hlsSegmentIndex(input.segment);
   if (input.signal?.aborted) return false;
-  if (segmentIndex === null || !transcodeBackend.generateHlsSegmentWindow)
-    return false;
+  if (segmentIndex === null || !transcodeBackend.generateHlsSegmentWindow) return false;
   const segmentFormat = requestDrivenHlsSegmentFormat({
     segment: input.segment,
   });
-  if (input.segment !== hlsSegmentName(segmentIndex, segmentFormat))
-    return false;
+  if (input.segment !== hlsSegmentName(segmentIndex, segmentFormat)) return false;
 
   const session = await getTranscodeSession(input.sessionId);
-  if (!session || session.userId !== input.userId || !session.playlistPath)
-    return false;
+  if (!session || session.userId !== input.userId || !session.playlistPath) return false;
   if (session.status === "failed" || session.status === "cancelled") {
     throw new SegmentGenerationAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
@@ -1369,28 +1158,15 @@ async function generateHlsSegmentForRequest(input: {
   const policy = await getTranscodePolicy(input.userId);
   if (!policy.transcodingEnabled) {
     await stopSegmentWork();
-    await updateActiveTranscodeSessionStatus(
-      input.sessionId,
-      "failed",
-      TRANSCODING_DISABLED_MESSAGE,
-    );
+    await updateActiveTranscodeSessionStatus(input.sessionId, "failed", TRANSCODING_DISABLED_MESSAGE);
     return false;
   }
-  if (await hlsSegmentFileExists(session.playlistPath, input.segment))
-    return true;
-  const pendingLookahead = pendingLookaheadSegments.get(
-    segmentGenerationKey(input.sessionId, input.segment),
-  );
+  if (await hlsSegmentFileExists(session.playlistPath, input.segment)) return true;
+  const pendingLookahead = pendingLookaheadSegments.get(segmentGenerationKey(input.sessionId, input.segment));
   if (pendingLookahead) {
-    const ready = await waitForBooleanWithSignal(
-      pendingLookahead.promise,
-      input.signal,
-    );
+    const ready = await waitForBooleanWithSignal(pendingLookahead.promise, input.signal);
     if (input.signal?.aborted) return false;
-    if (
-      ready &&
-      (await hlsSegmentFileExists(session.playlistPath, input.segment))
-    ) {
+    if (ready && (await hlsSegmentFileExists(session.playlistPath, input.segment))) {
       await assertSegmentGenerationStillPlayable({
         sessionId: input.sessionId,
         userId: input.userId,
@@ -1406,11 +1182,7 @@ async function generateHlsSegmentForRequest(input: {
       stopSegmentWork,
     });
   }
-  if (
-    session.durationSeconds === null ||
-    !Number.isFinite(session.durationSeconds) ||
-    session.durationSeconds <= 0
-  ) {
+  if (session.durationSeconds === null || !Number.isFinite(session.durationSeconds) || session.durationSeconds <= 0) {
     return false;
   }
 
@@ -1422,26 +1194,17 @@ async function generateHlsSegmentForRequest(input: {
     segmentFormat,
   });
   const requestedSegment = segmentWindow[0];
-  if (!requestedSegment || requestedSegment.segment !== input.segment)
-    return false;
+  if (!requestedSegment || requestedSegment.segment !== input.segment) return false;
 
   const file = await getMediaFile(session.mediaFileId, input.userId);
   if (!file) {
-    await updateActiveTranscodeSessionStatus(
-      input.sessionId,
-      "failed",
-      MEDIA_FILE_UNAVAILABLE_MESSAGE,
-    );
+    await updateActiveTranscodeSessionStatus(input.sessionId, "failed", MEDIA_FILE_UNAVAILABLE_MESSAGE);
     await removeTranscodeSessionArtifacts(input.sessionId);
     await stopSegmentWork();
     throw new Error(MEDIA_FILE_UNAVAILABLE_MESSAGE);
   }
   if (file.source !== "sftp" && !(await isReadableFile(file.path))) {
-    await updateActiveTranscodeSessionStatus(
-      input.sessionId,
-      "failed",
-      MEDIA_FILE_UNAVAILABLE_MESSAGE,
-    );
+    await updateActiveTranscodeSessionStatus(input.sessionId, "failed", MEDIA_FILE_UNAVAILABLE_MESSAGE);
     await removeTranscodeSessionArtifacts(input.sessionId);
     await stopSegmentWork();
     throw new Error(MEDIA_FILE_UNAVAILABLE_MESSAGE);
@@ -1452,21 +1215,12 @@ async function generateHlsSegmentForRequest(input: {
   input.signal?.addEventListener("abort", abortSegmentSetupFromRequest, {
     once: true,
   });
-  const cleanupSegmentSetup = trackActiveRequestDrivenSegmentSetup(
-    input.sessionId,
-    segmentSetupController,
-  );
-  let activeSegmentWindow:
-    | { firstSegmentIndex: number; lastSegmentIndex: number }
-    | undefined;
-  let inputSource:
-    | Awaited<ReturnType<typeof createSeekableStorageInputSource>>
-    | undefined;
+  const cleanupSegmentSetup = trackActiveRequestDrivenSegmentSetup(input.sessionId, segmentSetupController);
+  let activeSegmentWindow: { firstSegmentIndex: number; lastSegmentIndex: number } | undefined;
+  let inputSource: Awaited<ReturnType<typeof createSeekableStorageInputSource>> | undefined;
   let segmentWindowInput: HlsSegmentWindowTranscodeInput | undefined;
   let segmentWindowGeneration: HlsSegmentWindowGeneration | undefined;
-  const generateRequestedSegment = async (
-    mode: NonNullable<typeof session.mode>,
-  ) => {
+  const generateRequestedSegment = async (mode: NonNullable<typeof session.mode>) => {
     if (!segmentWindowInput || !transcodeBackend.generateHlsSegmentWindow) {
       throw new Error("Request-driven HLS segment generation is unavailable.");
     }
@@ -1484,12 +1238,7 @@ async function generateHlsSegmentForRequest(input: {
     };
     activeRequestDrivenSegmentWindows.set(input.sessionId, activeSegmentWindow);
     inputSource =
-      file.source === "sftp"
-        ? await createSeekableStorageInputSource(
-            file,
-            segmentSetupController.signal,
-          )
-        : undefined;
+      file.source === "sftp" ? await createSeekableStorageInputSource(file, segmentSetupController.signal) : undefined;
     await assertSegmentGenerationStillPlayable({
       sessionId: input.sessionId,
       userId: input.userId,
@@ -1499,9 +1248,7 @@ async function generateHlsSegmentForRequest(input: {
     const generationMode = requestDrivenGenerationMode(session.mode);
     if (generationMode !== session.mode) {
       if (!(await updateTranscodeSessionMode(input.sessionId, generationMode))) {
-        throw new SegmentGenerationAbortedError(
-          PLAYBACK_SESSION_INACTIVE_MESSAGE,
-        );
+        throw new SegmentGenerationAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
       }
     }
     const audioStreamIndex = await selectPlaybackAudioStreamIndex({
@@ -1575,15 +1322,10 @@ async function generateHlsSegmentForRequest(input: {
         segmentWindowGeneration = await generateRequestedSegment("transcode");
         if (input.signal?.aborted) {
           await stopSegmentWork();
-          await removeGeneratedSegmentFiles(
-            session.playlistPath,
-            segmentWindow,
-          );
+          await removeGeneratedSegmentFiles(session.playlistPath, segmentWindow);
           return false;
         }
-        if (
-          !(await hlsSegmentFileExists(session.playlistPath, input.segment))
-        ) {
+        if (!(await hlsSegmentFileExists(session.playlistPath, input.segment))) {
           throw new Error(missingGeneratedSegmentMessage(input.segment));
         }
         await assertSegmentGenerationStillPlayable({
@@ -1600,9 +1342,7 @@ async function generateHlsSegmentForRequest(input: {
           completion: segmentWindowGeneration.completion,
         });
         if (!(await updateTranscodeSessionMode(input.sessionId, "transcode"))) {
-          throw new SegmentGenerationAbortedError(
-            PLAYBACK_SESSION_INACTIVE_MESSAGE,
-          );
+          throw new SegmentGenerationAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
         }
         return true;
       } catch (fallbackError) {
@@ -1615,20 +1355,12 @@ async function generateHlsSegmentForRequest(input: {
         await stopSegmentWork();
         await removeGeneratedSegmentFiles(session.playlistPath, segmentWindow);
         if (!latestPolicy.transcodingEnabled) {
-          await updateActiveTranscodeSessionStatus(
-            input.sessionId,
-            "failed",
-            fallbackMessage,
-          );
+          await updateActiveTranscodeSessionStatus(input.sessionId, "failed", fallbackMessage);
           await removeTranscodeSessionArtifacts(input.sessionId);
           throw new SegmentGenerationAbortedError(fallbackMessage);
         }
         const message = `Remux segment generation failed; full transcode fallback failed: ${fallbackMessage}`;
-        await updateActiveTranscodeSessionStatus(
-          input.sessionId,
-          "failed",
-          message,
-        );
+        await updateActiveTranscodeSessionStatus(input.sessionId, "failed", message);
         await removeTranscodeSessionArtifacts(input.sessionId);
         throw new Error(message);
       }
@@ -1644,11 +1376,7 @@ async function generateHlsSegmentForRequest(input: {
     if (segmentWindowInput) {
       await removeGeneratedSegmentFiles(session.playlistPath, segmentWindow);
     }
-    await updateActiveTranscodeSessionStatus(
-      input.sessionId,
-      "failed",
-      message,
-    );
+    await updateActiveTranscodeSessionStatus(input.sessionId, "failed", message);
     await removeTranscodeSessionArtifacts(input.sessionId);
     if (!latestPolicy.transcodingEnabled) {
       throw new SegmentGenerationAbortedError(message);
@@ -1660,32 +1388,20 @@ async function generateHlsSegmentForRequest(input: {
       if (generationCompletion) {
         void generationCompletion
           .finally(() => {
-            if (
-              activeRequestDrivenSegmentWindows.get(input.sessionId) ===
-              activeSegmentWindow
-            ) {
+            if (activeRequestDrivenSegmentWindows.get(input.sessionId) === activeSegmentWindow) {
               activeRequestDrivenSegmentWindows.delete(input.sessionId);
             }
           })
           .catch(() => undefined);
-      } else if (
-        activeRequestDrivenSegmentWindows.get(input.sessionId) ===
-        activeSegmentWindow
-      ) {
+      } else if (activeRequestDrivenSegmentWindows.get(input.sessionId) === activeSegmentWindow) {
         activeRequestDrivenSegmentWindows.delete(input.sessionId);
       }
     }
     input.signal?.removeEventListener("abort", abortSegmentSetupFromRequest);
     cleanupSegmentSetup();
-    if (
-      inputSource &&
-      segmentWindowGeneration &&
-      segmentWindowGeneration.inputSourceDisposition !== "backend"
-    ) {
+    if (inputSource && segmentWindowGeneration && segmentWindowGeneration.inputSourceDisposition !== "backend") {
       const source = inputSource;
-      void segmentWindowGeneration.completion
-        .finally(() => source.close())
-        .catch(() => undefined);
+      void segmentWindowGeneration.completion.finally(() => source.close()).catch(() => undefined);
     } else if (!segmentWindowGeneration) {
       await inputSource?.close().catch(() => undefined);
     }
@@ -1707,20 +1423,13 @@ export async function ensureHlsSegmentForRequest(input: {
   const segmentIndex = hlsSegmentIndex(input.segment);
   if (
     segmentIndex !== null &&
-    input.segment ===
-      hlsSegmentName(
-        segmentIndex,
-        requestDrivenHlsSegmentFormat({ segment: input.segment }),
-      )
+    input.segment === hlsSegmentName(segmentIndex, requestDrivenHlsSegmentFormat({ segment: input.segment }))
   ) {
     await replaceStaleRequestDrivenSegmentWork(input.sessionId, segmentIndex);
   }
   const pendingAfterStaleReplacement = pendingSegmentGenerations.get(key);
   if (pendingAfterStaleReplacement) {
-    return waitForPendingSegmentGeneration(
-      pendingAfterStaleReplacement,
-      input.signal,
-    );
+    return waitForPendingSegmentGeneration(pendingAfterStaleReplacement, input.signal);
   }
 
   const controller = new AbortController();
@@ -1775,10 +1484,7 @@ export async function ensureHlsLookaheadForSegment(input: {
     ) {
       return null;
     }
-    if (
-      session.lastSegmentIndex !== null &&
-      !isSegmentIndexNearTarget(session.lastSegmentIndex, segmentIndex)
-    ) {
+    if (session.lastSegmentIndex !== null && !isSegmentIndexNearTarget(session.lastSegmentIndex, segmentIndex)) {
       return null;
     }
     return session;
@@ -1788,28 +1494,15 @@ export async function ensureHlsLookaheadForSegment(input: {
   if (!session) return false;
   const durationSeconds = session.durationSeconds;
   const playlistPath = session.playlistPath;
-  if (
-    durationSeconds === null ||
-    !Number.isFinite(durationSeconds) ||
-    durationSeconds <= 0 ||
-    !playlistPath
-  ) {
+  if (durationSeconds === null || !Number.isFinite(durationSeconds) || durationSeconds <= 0 || !playlistPath) {
     return false;
   }
 
-  const lastSegmentIndex =
-    Math.ceil(durationSeconds / DEFAULT_HLS_SEGMENT_SECONDS) - 1;
-  const targetSegmentIndex = Math.min(
-    lastSegmentIndex,
-    segmentIndex + REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT,
-  );
+  const lastSegmentIndex = Math.ceil(durationSeconds / DEFAULT_HLS_SEGMENT_SECONDS) - 1;
+  const targetSegmentIndex = Math.min(lastSegmentIndex, segmentIndex + REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT);
   if (targetSegmentIndex <= segmentIndex) return true;
 
-  for (
-    let candidateIndex = segmentIndex + 1;
-    candidateIndex <= targetSegmentIndex;
-    candidateIndex += 1
-  ) {
+  for (let candidateIndex = segmentIndex + 1; candidateIndex <= targetSegmentIndex; candidateIndex += 1) {
     if (input.signal?.aborted) return false;
     const candidateSegment = hlsSegmentName(candidateIndex, segmentFormat);
     const latestSession = await currentSession();
@@ -1817,14 +1510,9 @@ export async function ensureHlsLookaheadForSegment(input: {
     if (await hlsSegmentFileExists(playlistPath, candidateSegment)) {
       continue;
     }
-    const pendingLookahead = pendingLookaheadSegments.get(
-      segmentGenerationKey(input.sessionId, candidateSegment),
-    );
+    const pendingLookahead = pendingLookaheadSegments.get(segmentGenerationKey(input.sessionId, candidateSegment));
     if (pendingLookahead) {
-      const ready = await waitForBooleanWithSignal(
-        pendingLookahead.promise,
-        input.signal,
-      );
+      const ready = await waitForBooleanWithSignal(pendingLookahead.promise, input.signal);
       if (!ready) return false;
       continue;
     }
@@ -1848,10 +1536,7 @@ export function startStaleTranscodeExpiryLoop() {
       await expireIdleReadyHlsPlaybackSessions();
       await pruneActiveHlsSegmentArtifacts();
       staleExpiryLoopTicks += 1;
-      if (
-        staleExpiryLoopTicks % PLAYBACK_SESSION_ARTIFACT_CLEANUP_TICKS ===
-        0
-      ) {
+      if (staleExpiryLoopTicks % PLAYBACK_SESSION_ARTIFACT_CLEANUP_TICKS === 0) {
         await cleanupConfiguredPlaybackSessionArtifacts();
         await cleanupJobHistory();
       }
@@ -1894,19 +1579,11 @@ export async function resolveHlsPlayback(input: {
       startTimeSeconds,
     );
     for (const session of mismatchedSessions) {
-      await cancelPlaybackSession(
-        session.sessionId,
-        "Playback session was repositioned.",
-      );
+      await cancelPlaybackSession(session.sessionId, "Playback session was repositioned.");
     }
   }
 
-  const recentFailed = await findRecentFailedHlsPlayback(
-    input.mediaFileId,
-    input.userId,
-    mode,
-    startTimeSeconds,
-  );
+  const recentFailed = await findRecentFailedHlsPlayback(input.mediaFileId, input.userId, mode, startTimeSeconds);
   if (recentFailed) {
     return {
       status: "unavailable",
@@ -1918,12 +1595,7 @@ export async function resolveHlsPlayback(input: {
     };
   }
 
-  let existing = await findActiveHlsArtifact(
-    input.mediaFileId,
-    input.userId,
-    mode,
-    startTimeSeconds,
-  );
+  let existing = await findActiveHlsArtifact(input.mediaFileId, input.userId, mode, startTimeSeconds);
   if (existing?.pipeline === "request_driven") {
     existing = null;
   }
@@ -1959,11 +1631,7 @@ export async function resolveHlsPlayback(input: {
 
   const file = await getMediaFile(input.mediaFileId, input.userId);
   if (!file) {
-    await updateTranscodeSessionStatus(
-      sessionId,
-      "failed",
-      MEDIA_FILE_UNAVAILABLE_MESSAGE,
-    );
+    await updateTranscodeSessionStatus(sessionId, "failed", MEDIA_FILE_UNAVAILABLE_MESSAGE);
     return {
       status: "unavailable",
       mode,
@@ -1979,11 +1647,7 @@ export async function resolveHlsPlayback(input: {
     file.duration_seconds > 0 &&
     startTimeSeconds >= file.duration_seconds
   ) {
-    await updateTranscodeSessionStatus(
-      sessionId,
-      "failed",
-      TRANSCODE_START_OUTSIDE_DURATION_MESSAGE,
-    );
+    await updateTranscodeSessionStatus(sessionId, "failed", TRANSCODE_START_OUTSIDE_DURATION_MESSAGE);
     await cleanupTranscodeStartupFailure(sessionId);
     return {
       status: "unavailable",
@@ -1997,11 +1661,7 @@ export async function resolveHlsPlayback(input: {
 
   const requestDrivenEligible = canUseRequestDrivenHls(file, startTimeSeconds);
   if (file.source !== "sftp" && !(await isReadableFile(file.path))) {
-    await updateTranscodeSessionStatus(
-      sessionId,
-      "failed",
-      MEDIA_FILE_UNAVAILABLE_MESSAGE,
-    );
+    await updateTranscodeSessionStatus(sessionId, "failed", MEDIA_FILE_UNAVAILABLE_MESSAGE);
     await cleanupTranscodeStartupFailure(sessionId);
     return {
       status: "unavailable",
@@ -2013,11 +1673,7 @@ export async function resolveHlsPlayback(input: {
     };
   }
   if (file.source === "sftp" && !requestDrivenEligible) {
-    await updateTranscodeSessionStatus(
-      sessionId,
-      "failed",
-      SFTP_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE,
-    );
+    await updateTranscodeSessionStatus(sessionId, "failed", SFTP_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE);
     await cleanupTranscodeStartupFailure(sessionId);
     return {
       status: "unavailable",
@@ -2029,15 +1685,10 @@ export async function resolveHlsPlayback(input: {
     };
   }
 
-  const validateHlsSegmentGenerationPolicy =
-    transcodeBackend.validateHlsSegmentGenerationPolicy;
+  const validateHlsSegmentGenerationPolicy = transcodeBackend.validateHlsSegmentGenerationPolicy;
   const generateHlsSegmentWindow = transcodeBackend.generateHlsSegmentWindow;
   if (requestDrivenEligible && !generateHlsSegmentWindow) {
-    await updateTranscodeSessionStatus(
-      sessionId,
-      "failed",
-      REQUEST_DRIVEN_HLS_UNAVAILABLE_MESSAGE,
-    );
+    await updateTranscodeSessionStatus(sessionId, "failed", REQUEST_DRIVEN_HLS_UNAVAILABLE_MESSAGE);
     await cleanupTranscodeStartupFailure(sessionId);
     return {
       status: "unavailable",
@@ -2098,15 +1749,9 @@ export async function resolveHlsPlayback(input: {
           message: error.message,
         };
       }
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Request-driven HLS playback failed to start.";
+      const message = error instanceof Error ? error.message : "Request-driven HLS playback failed to start.";
       const terminalSession = await getTranscodeSession(sessionId);
-      if (
-        terminalSession &&
-        isTerminalTranscodeSessionStatus(terminalSession.status)
-      ) {
+      if (terminalSession && isTerminalTranscodeSessionStatus(terminalSession.status)) {
         await cleanupTranscodeStartupFailure(sessionId);
         return {
           status: "unavailable",
@@ -2131,11 +1776,7 @@ export async function resolveHlsPlayback(input: {
     }
   }
 
-  await updateTranscodeSessionStatus(
-    sessionId,
-    "failed",
-    REQUEST_DRIVEN_HLS_REQUIRES_DURATION_MESSAGE,
-  );
+  await updateTranscodeSessionStatus(sessionId, "failed", REQUEST_DRIVEN_HLS_REQUIRES_DURATION_MESSAGE);
   await cleanupTranscodeStartupFailure(sessionId);
   return {
     status: "unavailable",

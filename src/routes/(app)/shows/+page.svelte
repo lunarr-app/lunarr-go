@@ -7,8 +7,7 @@
 
   let { data } = $props();
   let searchForm: HTMLFormElement | null = $state(null);
-  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined =
-    $state(undefined);
+  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
   const hasActiveSearch = $derived(data.query.trim().length > 0);
   const showSections = $derived([
     {
@@ -23,13 +22,9 @@
     },
   ]);
   const visibleEpisodeSections = $derived(
-    hasActiveSearch
-      ? []
-      : showSections.filter((section) => section.episodes.length > 0),
+    hasActiveSearch ? [] : showSections.filter((section) => section.episodes.length > 0),
   );
-  const recentlyAiredShows = $derived(
-    hasActiveSearch ? [] : data.rows.recentlyAiredShows,
-  );
+  const recentlyAiredShows = $derived(hasActiveSearch ? [] : data.rows.recentlyAiredShows);
   const popularShows = $derived(hasActiveSearch ? [] : data.rows.popularShows);
   const allShows = $derived(data.rows.allShows);
   const hasContent = $derived(
@@ -60,10 +55,7 @@
 
 <svelte:head>
   <title>Shows - Lunarr</title>
-  <meta
-    name="description"
-    content="Browse, search, and open scanned TV shows in your Lunarr library."
-  />
+  <meta name="description" content="Browse, search, and open scanned TV shows in your Lunarr library." />
 </svelte:head>
 
 <header class="page-header">
@@ -72,22 +64,12 @@
     <p class="muted">Browse scanned TV libraries by show and season.</p>
   </div>
   <form method="GET" role="search" bind:this={searchForm}>
-    <SearchField
-      ariaLabel="Search shows"
-      placeholder="Search shows"
-      value={data.query}
-      oninput={submitSearchSoon}
-    />
+    <SearchField ariaLabel="Search shows" placeholder="Search shows" value={data.query} oninput={submitSearchSoon} />
     <select name="sort" aria-label="Sort shows" onchange={submitSearchNow}>
       <option value="title" selected={data.sort === "title"}>Title</option>
-      <option value="recent" selected={data.sort === "recent"}
-        >Recently added</option
-      >
-      <option value="latest" selected={data.sort === "latest"}
-        >Latest aired</option
-      >
-      <option value="popular" selected={data.sort === "popular"}>Popular</option
-      >
+      <option value="recent" selected={data.sort === "recent"}>Recently added</option>
+      <option value="latest" selected={data.sort === "latest"}>Latest aired</option>
+      <option value="popular" selected={data.sort === "popular"}>Popular</option>
     </select>
   </form>
 </header>
@@ -103,9 +85,7 @@
       </a>
     {:else}
       <h2>No shows scanned yet</h2>
-      <p class="muted">
-        Add a TV library and run a scan to populate this page.
-      </p>
+      <p class="muted">Add a TV library and run a scan to populate this page.</p>
       <a class="button" href="/libraries">
         <Library size={16} aria-hidden="true" />
         Add library
@@ -124,10 +104,7 @@
           </a>
         {/if}
       </div>
-      <div
-        class="episode-rail"
-        class:two-row={section.episodes.length >= TWO_ROW_EPISODE_RAIL_COUNT}
-      >
+      <div class="episode-rail" class:two-row={section.episodes.length >= TWO_ROW_EPISODE_RAIL_COUNT}>
         {#each twoRowRailOrder(section.episodes, TWO_ROW_EPISODE_RAIL_COUNT) as episode}
           <EpisodeCard {episode} />
         {/each}
@@ -140,10 +117,7 @@
       <div class="section-heading">
         <h2>Recently aired</h2>
       </div>
-      <div
-        class="show-rail"
-        class:two-row={recentlyAiredShows.length >= TWO_ROW_SHOW_RAIL_COUNT}
-      >
+      <div class="show-rail" class:two-row={recentlyAiredShows.length >= TWO_ROW_SHOW_RAIL_COUNT}>
         {#each twoRowRailOrder(recentlyAiredShows, TWO_ROW_SHOW_RAIL_COUNT) as show}
           <ShowCard {show} />
         {/each}
@@ -156,10 +130,7 @@
       <div class="section-heading">
         <h2>Popular shows</h2>
       </div>
-      <div
-        class="show-rail"
-        class:two-row={popularShows.length >= TWO_ROW_SHOW_RAIL_COUNT}
-      >
+      <div class="show-rail" class:two-row={popularShows.length >= TWO_ROW_SHOW_RAIL_COUNT}>
         {#each twoRowRailOrder(popularShows, TWO_ROW_SHOW_RAIL_COUNT) as show}
           <ShowCard {show} />
         {/each}

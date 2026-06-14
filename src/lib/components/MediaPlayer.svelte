@@ -2,9 +2,7 @@
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
   import PlayerShell from "$lib/components/PlayerShell.svelte";
-  import type {
-    PlaybackTarget,
-  } from "$lib/playback/capabilities";
+  import type { PlaybackTarget } from "$lib/playback/capabilities";
   import {
     Airplay,
     Captions,
@@ -89,14 +87,7 @@
   } from "$lib/playback/session";
   import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
 
-  type PlayerUiState =
-    | "starting"
-    | "playing"
-    | "paused"
-    | "buffering"
-    | "seeking"
-    | "autoplayBlocked"
-    | "error";
+  type PlayerUiState = "starting" | "playing" | "paused" | "buffering" | "seeking" | "autoplayBlocked" | "error";
 
   type SafariVideoElement = HTMLVideoElement & {
     webkitDisplayingFullscreen?: boolean;
@@ -136,9 +127,7 @@
   } = $props();
 
   function playbackDurationSeconds(sourceData: PlaybackData = data) {
-    const fileDurationSeconds = Number(
-      sourceData.playback.file.duration_seconds,
-    );
+    const fileDurationSeconds = Number(sourceData.playback.file.duration_seconds);
     if (Number.isFinite(fileDurationSeconds) && fileDurationSeconds > 0) {
       return fileDurationSeconds;
     }
@@ -173,9 +162,7 @@
   let subtitleMenuElement: HTMLDivElement | undefined = $state();
   let isFullscreen = $state(false);
   let castAvailable = $state(false);
-  let castLaunchState = $state<"idle" | "connecting" | "connected" | "error">(
-    "idle",
-  );
+  let castLaunchState = $state<"idle" | "connecting" | "connected" | "error">("idle");
   let airPlayAvailable = $state(false);
   let airPlayActive = $state(false);
   let signedPlaybackNotice = $state<string | null>(null);
@@ -225,9 +212,7 @@
       casting: isCasting(),
     }),
   );
-  const playbackButtonState = $derived(
-    primaryPlaybackButtonState({ uiState: playerUiState }),
-  );
+  const playbackButtonState = $derived(primaryPlaybackButtonState({ uiState: playerUiState }));
 
   function clearSignedPlaybackNotice() {
     signedPlaybackNotice = null;
@@ -279,12 +264,7 @@
   }
 
   function requestScreenWakeLock() {
-    if (
-      !shouldHoldScreenWakeLock() ||
-      screenWakeLock ||
-      screenWakeLockRequest
-    )
-      return;
+    if (!shouldHoldScreenWakeLock() || screenWakeLock || screenWakeLockRequest) return;
     const wakeLock = (navigator as ScreenWakeLockNavigator).wakeLock;
     if (!wakeLock?.request) return;
 
@@ -325,8 +305,7 @@
 
   function syncAirPlayActiveState() {
     airPlayActive = airPlayActiveFromVideo({
-      currentPlaybackTargetIsWireless:
-        airPlayVideoElement()?.webkitCurrentPlaybackTargetIsWireless,
+      currentPlaybackTargetIsWireless: airPlayVideoElement()?.webkitCurrentPlaybackTargetIsWireless,
     });
   }
 
@@ -374,9 +353,7 @@
 
   function showControls() {
     playerControlsVisible = true;
-    playerControlsActivityTick = nextControlsActivityTick(
-      playerControlsActivityTick,
-    );
+    playerControlsActivityTick = nextControlsActivityTick(playerControlsActivityTick);
   }
 
   function handlePlayerPointerMove() {
@@ -391,11 +368,7 @@
       })
     ) {
       const now = window.performance.now();
-      if (
-        playerControlsVisible &&
-        now - lastPointerControlsRefreshAt <
-          POINTER_CONTROLS_REFRESH_INTERVAL_MS
-      ) {
+      if (playerControlsVisible && now - lastPointerControlsRefreshAt < POINTER_CONTROLS_REFRESH_INTERVAL_MS) {
         return;
       }
       lastPointerControlsRefreshAt = now;
@@ -412,9 +385,7 @@
     const nextTarget = event.relatedTarget;
     const currentTarget = event.currentTarget;
     playerControlsFocused = Boolean(
-      nextTarget instanceof Node &&
-        currentTarget instanceof HTMLElement &&
-        currentTarget.contains(nextTarget),
+      nextTarget instanceof Node && currentTarget instanceof HTMLElement && currentTarget.contains(nextTarget),
     );
   }
 
@@ -487,13 +458,9 @@
     return context;
   }
 
-  function syncCastReceiverTimeline(input: {
-    receiverSeconds: number;
-    receiverDurationSeconds: number;
-  }) {
+  function syncCastReceiverTimeline(input: { receiverSeconds: number; receiverDurationSeconds: number }) {
     const nextDuration =
-      Number.isFinite(input.receiverDurationSeconds) &&
-      input.receiverDurationSeconds > 0
+      Number.isFinite(input.receiverDurationSeconds) && input.receiverDurationSeconds > 0
         ? castMediaTimelineSeconds({
             receiverSeconds: input.receiverDurationSeconds,
             mode: data.playback.mode,
@@ -583,15 +550,12 @@
         }
       };
 
-      let script = document.getElementById(
-        "google-cast-sender-sdk",
-      ) as HTMLScriptElement | null;
+      let script = document.getElementById("google-cast-sender-sdk") as HTMLScriptElement | null;
       if (!script) {
         script = document.createElement("script");
         script.id = "google-cast-sender-sdk";
         script.async = true;
-        script.src =
-          "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
+        script.src = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
         script.onerror = () => {
           window.clearTimeout(timeout);
           reject(new Error("Cast SDK failed to load."));
@@ -678,19 +642,12 @@
   }
 
   function castCommand(command: "play" | "pause") {
-    if (
-      castRemotePlayer?.isConnected &&
-      castRemotePlayer?.isMediaLoaded &&
-      castRemotePlayerController?.playOrPause
-    ) {
+    if (castRemotePlayer?.isConnected && castRemotePlayer?.isMediaLoaded && castRemotePlayerController?.playOrPause) {
       const paused =
         castRemotePlayer.isPaused === true ||
         castRemotePlayer.playerState === "PAUSED" ||
         castRemotePlayer.playerState === "IDLE";
-      if (
-        (command === "play" && paused) ||
-        (command === "pause" && !paused)
-      ) {
+      if ((command === "play" && paused) || (command === "pause" && !paused)) {
         castRemotePlayerController.playOrPause();
       }
       return true;
@@ -698,7 +655,11 @@
 
     const media = activeCastMedia();
     if (!media?.[command]) return false;
-    media[command](null, () => undefined, () => undefined);
+    media[command](
+      null,
+      () => undefined,
+      () => undefined,
+    );
     return true;
   }
 
@@ -708,11 +669,7 @@
       mode: data.playback.mode,
       streamStartSeconds: data.playback.streamStartSeconds,
     });
-    if (
-      castRemotePlayer?.isConnected &&
-      castRemotePlayer?.isMediaLoaded &&
-      castRemotePlayerController?.seek
-    ) {
+    if (castRemotePlayer?.isConnected && castRemotePlayer?.isMediaLoaded && castRemotePlayerController?.seek) {
       castRemotePlayer.currentTime = receiverSeconds;
       castRemotePlayerController.seek();
       return true;
@@ -723,7 +680,11 @@
     if (!media?.seek || !chromeApi?.cast?.media?.SeekRequest) return false;
     const request = new chromeApi.cast.media.SeekRequest();
     request.currentTime = receiverSeconds;
-    media.seek(request, () => undefined, () => undefined);
+    media.seek(
+      request,
+      () => undefined,
+      () => undefined,
+    );
     return true;
   }
 
@@ -786,20 +747,15 @@
     if (!video) return null;
     const snapshot = playbackProgressSnapshot({
       casting: isCasting(),
-      videoRelativeSeconds: Number.isFinite(video.currentTime)
-        ? video.currentTime
-        : 0,
-      videoDurationSeconds: Number.isFinite(video.duration)
-        ? video.duration
-        : null,
+      videoRelativeSeconds: Number.isFinite(video.currentTime) ? video.currentTime : 0,
+      videoDurationSeconds: Number.isFinite(video.duration) ? video.duration : null,
       currentPlaybackSeconds,
       uiDurationSeconds: durationSeconds,
       fileDurationSeconds: Number(sourceData.playback.file.duration_seconds),
       streamStartSeconds: sourceData.playback.streamStartSeconds,
     });
     const ended = completed || video.ended;
-    const hasProgressActivity =
-      hasPlaybackActivity || (isCasting() && snapshot.positionSeconds > 0);
+    const hasProgressActivity = hasPlaybackActivity || (isCasting() && snapshot.positionSeconds > 0);
     if (!ended && !hasProgressActivity && video.currentTime <= 0) return null;
 
     return {
@@ -884,12 +840,9 @@
     if (!sessionId) return;
     const requestPathname = window.location.pathname;
     const requestSearch = window.location.search;
-    void fetch(
-      `/api/playback-sessions/${encodeURIComponent(sessionId)}/heartbeat`,
-      {
-        method: "POST",
-      },
-    )
+    void fetch(`/api/playback-sessions/${encodeURIComponent(sessionId)}/heartbeat`, {
+      method: "POST",
+    })
       .then((response) => {
         if (
           shouldInvalidateAfterHeartbeat({
@@ -912,9 +865,7 @@
     if (!video) return;
     currentPlaybackSeconds = clampPlaybackSeconds({
       seconds: mediaTimelineSeconds({
-        relativeSeconds: Number.isFinite(video.currentTime)
-          ? video.currentTime
-          : 0,
+        relativeSeconds: Number.isFinite(video.currentTime) ? video.currentTime : 0,
         streamStartSeconds: sourceData.playback.streamStartSeconds,
       }),
       durationSeconds: playbackDurationSeconds(sourceData),
@@ -950,9 +901,7 @@
     if (video) {
       const trackElements = Array.from(video.querySelectorAll("track"));
       for (const trackElement of trackElements) {
-        const candidate = data.playback.tracks.find(
-          (track) => track.id === trackElement.dataset.trackId,
-        );
+        const candidate = data.playback.tracks.find((track) => track.id === trackElement.dataset.trackId);
         const textTrack = trackElement.track;
         if (!textTrack) continue;
         textTrack.mode = subtitleTextTrackMode({
@@ -973,12 +922,8 @@
     showControls();
     await tick();
     const selectedOption =
-      subtitleMenuElement?.querySelector<HTMLButtonElement>(
-        '[role="menuitemradio"][aria-checked="true"]',
-      ) ??
-      subtitleMenuElement?.querySelector<HTMLButtonElement>(
-        '[role="menuitemradio"]',
-      );
+      subtitleMenuElement?.querySelector<HTMLButtonElement>('[role="menuitemradio"][aria-checked="true"]') ??
+      subtitleMenuElement?.querySelector<HTMLButtonElement>('[role="menuitemradio"]');
     selectedOption?.focus();
   }
 
@@ -1105,21 +1050,17 @@
   async function toggleFullscreen() {
     if (!browser || !playerShell) return;
     const safariVideo = video as SafariVideoElement | undefined;
-    const enterVideoFullscreen =
-      safariVideo?.webkitEnterFullscreen ?? safariVideo?.webkitEnterFullScreen;
+    const enterVideoFullscreen = safariVideo?.webkitEnterFullscreen ?? safariVideo?.webkitEnterFullScreen;
     const videoFullscreen = Boolean(
-      safariVideo?.webkitDisplayingFullscreen ||
-        (isFullscreen && document.fullscreenElement === null),
+      safariVideo?.webkitDisplayingFullscreen || (isFullscreen && document.fullscreenElement === null),
     );
     const action = fullscreenAction({
       documentFullscreen: document.fullscreenElement !== null,
       canExitDocumentFullscreen: typeof document.exitFullscreen === "function",
-      canRequestDocumentFullscreen:
-        typeof playerShell.requestFullscreen === "function",
+      canRequestDocumentFullscreen: typeof playerShell.requestFullscreen === "function",
       canEnterVideoFullscreen: typeof enterVideoFullscreen === "function",
       videoFullscreen,
-      canExitVideoFullscreen:
-        typeof safariVideo?.webkitExitFullscreen === "function",
+      canExitVideoFullscreen: typeof safariVideo?.webkitExitFullscreen === "function",
     });
 
     try {
@@ -1179,13 +1120,10 @@
 
   function focusSubtitleMenuOption(current: EventTarget | null, delta: number) {
     const options = Array.from(
-      subtitleMenuElement?.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]',
-      ) ?? [],
+      subtitleMenuElement?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? [],
     );
     if (options.length === 0) return;
-    const currentIndex =
-      current instanceof HTMLButtonElement ? options.indexOf(current) : -1;
+    const currentIndex = current instanceof HTMLButtonElement ? options.indexOf(current) : -1;
     const nextIndex = nextSubtitleMenuOptionIndex({
       optionCount: options.length,
       currentIndex,
@@ -1232,15 +1170,11 @@
       }
       const api = await ensureCastFramework();
       const context = configureCastFramework(api);
-      const currentSession = connectedCastSession(
-        context.getCurrentSession?.(),
-      );
+      const currentSession = connectedCastSession(context.getCurrentSession?.());
       let session = currentSession;
       if (!session) {
         const requestedSession = await context.requestSession();
-        session =
-          connectedCastSession(requestedSession) ??
-          connectedCastSession(context.getCurrentSession?.());
+        session = connectedCastSession(requestedSession) ?? connectedCastSession(context.getCurrentSession?.());
       }
       if (!session) {
         throw new Error("Cast receiver is not connected.");
@@ -1257,8 +1191,7 @@
       metadata.title = data.item.title;
       mediaInfo.metadata = metadata;
       mediaInfo.duration =
-        Number.isFinite(data.playback.file.duration_seconds) &&
-        Number(data.playback.file.duration_seconds) > 0
+        Number.isFinite(data.playback.file.duration_seconds) && Number(data.playback.file.duration_seconds) > 0
           ? castReceiverTimelineSeconds({
               absoluteSeconds: Number(data.playback.file.duration_seconds),
               mode: data.playback.mode,
@@ -1266,10 +1199,7 @@
             })
           : undefined;
       mediaInfo.tracks = data.playback.tracks.map((track, index) => {
-        const castTrack = new api.chrome.cast.media.Track(
-          index + 1,
-          api.chrome.cast.media.TrackType.TEXT,
-        );
+        const castTrack = new api.chrome.cast.media.Track(index + 1, api.chrome.cast.media.TrackType.TEXT);
         castTrack.trackContentId = track.src;
         castTrack.trackContentType = "text/vtt";
         castTrack.name = track.label;
@@ -1304,9 +1234,7 @@
       castLaunchState = "error";
       playerUiState = previousUiState;
       showSignedPlaybackNotice(
-        error instanceof Error && error.message
-          ? error.message
-          : "Could not prepare Cast playback.",
+        error instanceof Error && error.message ? error.message : "Could not prepare Cast playback.",
       );
     }
   }
@@ -1365,8 +1293,7 @@
         });
       let repositioning = false;
       const streamUrl = playback.streamUrl;
-      const currentPageHref = () =>
-        `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      const currentPageHref = () => `${window.location.pathname}${window.location.search}${window.location.hash}`;
       const stopHlsTransport = () => {
         hls?.destroy();
         hls = null;
@@ -1388,8 +1315,7 @@
               startPosition: relativeStartSeconds(),
             });
             hls.on(Hls.Events.ERROR, (_event, eventData) => {
-              if (!disposed && eventData.fatal)
-                restartHlsNearCurrentTime("hls");
+              if (!disposed && eventData.fatal) restartHlsNearCurrentTime("hls");
             });
             hls.loadSource(streamUrl);
             hls.attachMedia(player);
@@ -1413,9 +1339,7 @@
 
       let autoplayAttempted = false;
       let autoplayRetriedAfterReady = false;
-      const attemptAutoplay = async (
-        options: { retryAfterReady?: boolean } = {},
-      ) => {
+      const attemptAutoplay = async (options: { retryAfterReady?: boolean } = {}) => {
         const retryAfterReady = options.retryAfterReady === true;
         if (retryAfterReady && autoplayRetriedAfterReady) return;
         if (
@@ -1441,8 +1365,7 @@
           hasStartedPlayback = true;
           playerUiState = "playing";
         } catch {
-          if (!disposed && !castControlsPlayback() && !hasStartedPlayback)
-            playerUiState = "autoplayBlocked";
+          if (!disposed && !castControlsPlayback() && !hasStartedPlayback) playerUiState = "autoplayBlocked";
         }
       };
 
@@ -1456,9 +1379,7 @@
 
       const currentPlayerTime = () =>
         absolutePlaybackSeconds({
-          relativeSeconds: Number.isFinite(player.currentTime)
-            ? player.currentTime
-            : 0,
+          relativeSeconds: Number.isFinite(player.currentTime) ? player.currentTime : 0,
           streamStartSeconds: playback.streamStartSeconds,
         });
       const clearTransientOverlayIfPlaying = () => {
@@ -1498,9 +1419,7 @@
         streamStartSeconds: playback.streamStartSeconds,
       });
 
-      const restartHlsNearCurrentTime = (
-        source: "hls" | "native" = "native",
-      ) => {
+      const restartHlsNearCurrentTime = (source: "hls" | "native" = "native") => {
         if (disposed) return;
         if (source === "native" && hls) return;
         const currentTime = currentPlayerTime();
@@ -1519,8 +1438,7 @@
               status: playback.status,
               currentSeconds: currentTime,
               hasPlaybackActivity,
-              hasLoadedMetadata:
-                player.readyState >= HTMLMediaElement.HAVE_METADATA,
+              hasLoadedMetadata: player.readyState >= HTMLMediaElement.HAVE_METADATA,
             })
           ) {
             repositioning = true;
@@ -1538,9 +1456,7 @@
         if (castControlsPlayback()) return;
         if (player.currentTime > 0) hasPlaybackActivity = true;
         hlsSeekController.timeUpdate({
-          relativeSeconds: Number.isFinite(player.currentTime)
-            ? player.currentTime
-            : 0,
+          relativeSeconds: Number.isFinite(player.currentTime) ? player.currentTime : 0,
           seeking: player.seeking,
         });
         updateTimelineFromVideo(sourceData);
@@ -1557,19 +1473,11 @@
       const onCanPlay = () => {
         if (castControlsPlayback()) return;
         clearTransientOverlayIfPlaying();
-        if (
-          !hasStartedPlayback &&
-          player.paused &&
-          playerUiState !== "autoplayBlocked"
-        ) {
+        if (!hasStartedPlayback && player.paused && playerUiState !== "autoplayBlocked") {
           void attemptAutoplay({ retryAfterReady: true });
           return;
         }
-        if (
-          !hasStartedPlayback &&
-          !autoplayAttempted &&
-          playerUiState !== "autoplayBlocked"
-        ) {
+        if (!hasStartedPlayback && !autoplayAttempted && playerUiState !== "autoplayBlocked") {
           playerUiState = "paused";
         }
       };
@@ -1581,13 +1489,7 @@
         showControls();
       };
       const onPause = () => {
-        if (
-          disposed ||
-          castControlsPlayback() ||
-          player.ended ||
-          repositioning ||
-          playerUiState === "autoplayBlocked"
-        )
+        if (disposed || castControlsPlayback() || player.ended || repositioning || playerUiState === "autoplayBlocked")
           return;
         playerUiState = "paused";
       };
@@ -1613,9 +1515,7 @@
       const onSeeked = () => {
         if (castControlsPlayback()) return;
         const decision = hlsSeekController.seeked({
-          relativeSeconds: Number.isFinite(player.currentTime)
-            ? player.currentTime
-            : 0,
+          relativeSeconds: Number.isFinite(player.currentTime) ? player.currentTime : 0,
           paused: player.paused,
         });
         playerUiState = decision.uiState;
@@ -1657,10 +1557,7 @@
       player.addEventListener("error", onPlayerError);
       player.addEventListener("ended", onEnded);
 
-      const interval = window.setInterval(
-        () => void save(false, sourceData),
-        10000,
-      );
+      const interval = window.setInterval(() => void save(false, sourceData), 10000);
       const onVisibilityChange = () => {
         if (document.visibilityState === "hidden") flushProgress(sourceData);
       };
@@ -1706,29 +1603,19 @@
         const context = configureCastFramework(api);
         adoptCastSession(context.getCurrentSession?.());
         const onSessionStateChanged = (event: { sessionState: string }) => {
-          if (
-            event.sessionState === api.cast.framework.SessionState.SESSION_ENDED
-          ) {
+          if (event.sessionState === api.cast.framework.SessionState.SESSION_ENDED) {
             clearCastPlaybackState();
             castSession = null;
           } else if (
-            event.sessionState ===
-              api.cast.framework.SessionState.SESSION_STARTED ||
-            event.sessionState ===
-              api.cast.framework.SessionState.SESSION_RESUMED
+            event.sessionState === api.cast.framework.SessionState.SESSION_STARTED ||
+            event.sessionState === api.cast.framework.SessionState.SESSION_RESUMED
           ) {
             adoptCastSession(context.getCurrentSession?.());
-          } else if (
-            event.sessionState ===
-            api.cast.framework.SessionState.SESSION_START_FAILED
-          ) {
+          } else if (event.sessionState === api.cast.framework.SessionState.SESSION_START_FAILED) {
             castLaunchState = "error";
           }
         };
-        context.addEventListener(
-          api.cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-          onSessionStateChanged,
-        );
+        context.addEventListener(api.cast.framework.CastContextEventType.SESSION_STATE_CHANGED, onSessionStateChanged);
         removeListener = () => {
           context.removeEventListener(
             api.cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
@@ -1750,14 +1637,16 @@
     if (!browser) return;
     const controlsActivityTick = playerControlsActivityTick;
     void controlsActivityTick;
-    if (shouldAutoHideControls({
-      uiState: playerUiState,
-      controlsVisible: playerControlsVisible,
-      casting: isCasting(),
-      subtitleMenuOpen,
-      controlsFocused: playerControlsFocused,
-      controlsHovered: playerControlsHovered,
-    })) {
+    if (
+      shouldAutoHideControls({
+        uiState: playerUiState,
+        controlsVisible: playerControlsVisible,
+        casting: isCasting(),
+        subtitleMenuOpen,
+        controlsFocused: playerControlsFocused,
+        controlsHovered: playerControlsHovered,
+      })
+    ) {
       const timeout = window.setTimeout(() => {
         playerControlsVisible = false;
       }, 3200);
@@ -1789,10 +1678,7 @@
     safariVideo.addEventListener("webkitbeginfullscreen", onBeginFullscreen);
     safariVideo.addEventListener("webkitendfullscreen", onEndFullscreen);
     return () => {
-      safariVideo.removeEventListener(
-        "webkitbeginfullscreen",
-        onBeginFullscreen,
-      );
+      safariVideo.removeEventListener("webkitbeginfullscreen", onBeginFullscreen);
       safariVideo.removeEventListener("webkitendfullscreen", onEndFullscreen);
     };
   });
@@ -1823,23 +1709,11 @@
       showControls();
     };
 
-    safariVideo.addEventListener(
-      "webkitplaybacktargetavailabilitychanged",
-      onAvailabilityChanged,
-    );
-    safariVideo.addEventListener(
-      "webkitcurrentplaybacktargetiswirelesschanged",
-      onWirelessChanged,
-    );
+    safariVideo.addEventListener("webkitplaybacktargetavailabilitychanged", onAvailabilityChanged);
+    safariVideo.addEventListener("webkitcurrentplaybacktargetiswirelesschanged", onWirelessChanged);
     return () => {
-      safariVideo.removeEventListener(
-        "webkitplaybacktargetavailabilitychanged",
-        onAvailabilityChanged,
-      );
-      safariVideo.removeEventListener(
-        "webkitcurrentplaybacktargetiswirelesschanged",
-        onWirelessChanged,
-      );
+      safariVideo.removeEventListener("webkitplaybacktargetavailabilitychanged", onAvailabilityChanged);
+      safariVideo.removeEventListener("webkitcurrentplaybacktargetiswirelesschanged", onWirelessChanged);
     };
   });
 
@@ -2025,12 +1899,7 @@
       >
         <div class="top-controls">
           {#if onClose}
-            <button
-              class="control-button"
-              type="button"
-              aria-label="Close player"
-              onclick={onClose}
-            >
+            <button class="control-button" type="button" aria-label="Close player" onclick={onClose}>
               <X size={20} aria-hidden="true" />
             </button>
           {:else}
@@ -2088,8 +1957,7 @@
               seekPreviewSeconds = Number(event.currentTarget.value);
               showControls();
             }}
-            onchange={(event) =>
-              seekToPlaybackSeconds(Number(event.currentTarget.value))}
+            onchange={(event) => seekToPlaybackSeconds(Number(event.currentTarget.value))}
           />
           <div class="control-row">
             <div class="primary-controls">

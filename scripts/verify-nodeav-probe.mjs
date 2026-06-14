@@ -13,16 +13,10 @@ export function validateNodeAvProbeSummary(summary) {
   if (!summary.container) {
     throw new Error("NodeAV probe did not report a container.");
   }
-  if (
-    !Number.isFinite(summary.durationSeconds) ||
-    summary.durationSeconds <= 0
-  ) {
+  if (!Number.isFinite(summary.durationSeconds) || summary.durationSeconds <= 0) {
     throw new Error("NodeAV probe did not report a positive duration.");
   }
-  if (
-    !Number.isSafeInteger(summary.videoStreamCount) ||
-    summary.videoStreamCount <= 0
-  ) {
+  if (!Number.isSafeInteger(summary.videoStreamCount) || summary.videoStreamCount <= 0) {
     throw new Error("NodeAV probe did not find a video stream.");
   }
 }
@@ -37,9 +31,7 @@ async function loadNodeAvModules() {
     lib.Log.setLevel(constants.AV_LOG_QUIET);
     return { api, constants };
   } catch (error) {
-    throw new Error(
-      `NodeAV failed to load for probing: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new Error(`NodeAV failed to load for probing: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -49,13 +41,9 @@ export async function probeWithNodeAv(sourcePath) {
   try {
     demuxer = await modules.api.Demuxer.open(sourcePath);
     const videoStreamCount = demuxer.streams.filter(
-      (stream) =>
-        stream.codecpar.codecType === modules.constants.AVMEDIA_TYPE_VIDEO,
+      (stream) => stream.codecpar.codecType === modules.constants.AVMEDIA_TYPE_VIDEO,
     ).length;
-    const durationSeconds =
-      Number.isFinite(demuxer.duration) && demuxer.duration > 0
-        ? demuxer.duration
-        : null;
+    const durationSeconds = Number.isFinite(demuxer.duration) && demuxer.duration > 0 ? demuxer.duration : null;
     const summary = {
       container: demuxer.formatName === "unknown" ? null : demuxer.formatName,
       durationSeconds,
@@ -85,9 +73,6 @@ export async function runNodeAvProbeVerification(env = process.env) {
   }
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await runNodeAvProbeVerification();
 }

@@ -1,11 +1,5 @@
 <script lang="ts">
-  import {
-    RefreshCw,
-    Save,
-    ScanSearch,
-    SearchCheck,
-    Wrench,
-  } from "@lucide/svelte";
+  import { RefreshCw, Save, ScanSearch, SearchCheck, Wrench } from "@lucide/svelte";
 
   let { data, form } = $props();
 
@@ -22,18 +16,14 @@
   let transcodeQualityPreset = $state("auto");
 
   const metadataChanged = $derived(
-    tmdbAccessToken.trim().length > 0 ||
-      tmdbApiKey.trim().length > 0 ||
-      clearTmdbAccessToken ||
-      clearTmdbApiKey,
+    tmdbAccessToken.trim().length > 0 || tmdbApiKey.trim().length > 0 || clearTmdbAccessToken || clearTmdbApiKey,
   );
 
   $effect(() => {
     signupOpen = data.signupOpen;
     transcodingEnabled = data.transcodePolicy.transcodingEnabled;
     hardwareAcceleration = data.transcodePolicy.hardwareAcceleration;
-    hardwareAccelerationRequired =
-      data.transcodePolicy.hardwareAccelerationRequired;
+    hardwareAccelerationRequired = data.transcodePolicy.hardwareAccelerationRequired;
     transcodeQualityPreset = data.transcodePolicy.transcodeQualityPreset;
   });
 
@@ -70,20 +60,13 @@
 <div class="ops-page-header">
   <div>
     <h1>Settings</h1>
-    <p class="muted">
-      Server configuration for this self-hosted Lunarr instance.
-    </p>
+    <p class="muted">Server configuration for this self-hosted Lunarr instance.</p>
   </div>
 </div>
 
 <div class="settings-grid">
   <section class="left-column" aria-label="Access and metadata settings">
-    <form
-      class="ops-panel"
-      method="POST"
-      action="?/saveRegistration"
-      bind:this={registrationForm}
-    >
+    <form class="ops-panel" method="POST" action="?/saveRegistration" bind:this={registrationForm}>
       <div class="ops-panel-header">
         <div>
           <h2>User registration</h2>
@@ -95,23 +78,16 @@
         <label class="switch-row">
           <span>
             <strong>Allow new users</strong>
-            <small
-              >{signupOpen ? "Registration open" : "Registration closed"}</small
-            >
+            <small>{signupOpen ? "Registration open" : "Registration closed"}</small>
           </span>
           <span class="switch">
-            <input
-              type="checkbox"
-              name="signupOpen"
-              bind:checked={signupOpen}
-              onchange={submitRegistration}
-            />
+            <input type="checkbox" name="signupOpen" bind:checked={signupOpen} onchange={submitRegistration} />
             <span class="switch-track" aria-hidden="true"></span>
           </span>
         </label>
         <p class="muted detail-copy">
-          Existing users and admins are unaffected when registration is
-          disabled. Manage per-library sharing from Libraries.
+          Existing users and admins are unaffected when registration is disabled. Manage per-library sharing from
+          Libraries.
         </p>
 
         {#if form?.registrationError}
@@ -120,12 +96,7 @@
       </div>
     </form>
 
-    <form
-      class="ops-panel"
-      method="POST"
-      action="?/saveTranscoding"
-      bind:this={transcodingForm}
-    >
+    <form class="ops-panel" method="POST" action="?/saveTranscoding" bind:this={transcodingForm}>
       <div class="ops-panel-header">
         <div>
           <h2>Transcoding</h2>
@@ -137,11 +108,7 @@
         <label class="switch-row">
           <span>
             <strong>Allow transcoding</strong>
-            <small
-              >{transcodingEnabled
-                ? "Unsupported files can use HLS playback"
-                : "Direct play only"}</small
-            >
+            <small>{transcodingEnabled ? "Unsupported files can use HLS playback" : "Direct play only"}</small>
           </span>
           <span class="switch">
             <input
@@ -156,11 +123,7 @@
 
         <label>
           Hardware acceleration
-          <select
-            name="hardwareAcceleration"
-            bind:value={hardwareAcceleration}
-            onchange={submitTranscoding}
-          >
+          <select name="hardwareAcceleration" bind:value={hardwareAcceleration} onchange={submitTranscoding}>
             <option value="off">Off</option>
             <option value="auto">Auto</option>
             <option value="videotoolbox">VideoToolbox</option>
@@ -173,11 +136,7 @@
 
         <label>
           HLS quality
-          <select
-            name="transcodeQualityPreset"
-            bind:value={transcodeQualityPreset}
-            onchange={submitTranscoding}
-          >
+          <select name="transcodeQualityPreset" bind:value={transcodeQualityPreset} onchange={submitTranscoding}>
             <option value="auto">Auto</option>
             <option value="720p">720p</option>
             <option value="1080p">1080p</option>
@@ -187,15 +146,9 @@
 
         <label>
           Temporary transcode storage
-          <select
-            name="playbackSessionArtifactMaxBytes"
-            onchange={submitTranscoding}
-          >
+          <select name="playbackSessionArtifactMaxBytes" onchange={submitTranscoding}>
             {#each data.playbackSessionArtifactMaxBytesOptions as bytes}
-              <option
-                value={bytes}
-                selected={bytes === data.playbackSessionArtifactMaxBytes}
-              >
+              <option value={bytes} selected={bytes === data.playbackSessionArtifactMaxBytes}>
                 {formatBytes(bytes)}
               </option>
             {/each}
@@ -214,14 +167,11 @@
         </label>
 
         <p class="muted detail-copy">
-          Direct play stays first. Transcoding uses temporary FFmpeg HLS
-          sessions when the browser cannot play a file directly or the user
-          prefers HLS. HLS quality controls FFmpeg transcode resolution and
-          bitrate; Auto keeps the current server default. Temporary HLS files
-          are stored under LUNARR_DATA_DIR/playback-sessions and cleaned
-          automatically. Hardware acceleration is best-effort unless required;
-          when required, playback fails if FFmpeg cannot use the selected device
-          or H.264 encoder.
+          Direct play stays first. Transcoding uses temporary FFmpeg HLS sessions when the browser cannot play a file
+          directly or the user prefers HLS. HLS quality controls FFmpeg transcode resolution and bitrate; Auto keeps the
+          current server default. Temporary HLS files are stored under LUNARR_DATA_DIR/playback-sessions and cleaned
+          automatically. Hardware acceleration is best-effort unless required; when required, playback fails if FFmpeg
+          cannot use the selected device or H.264 encoder.
         </p>
 
         {#if form?.transcodingError}
@@ -230,11 +180,7 @@
       </div>
     </form>
 
-    <form
-      class="ops-panel"
-      method="POST"
-      action="?/saveMetadata"
-    >
+    <form class="ops-panel" method="POST" action="?/saveMetadata">
       <div class="ops-panel-header">
         <div>
           <h2>TMDb metadata</h2>
@@ -244,8 +190,8 @@
 
       <div class="ops-panel-body">
         <p class="muted detail-copy">
-          Provide either a TMDb read access token or an API key; both are not
-          required. A read access token is preferred.
+          Provide either a TMDb read access token or an API key; both are not required. A read access token is
+          preferred.
         </p>
 
         <label>
@@ -257,19 +203,13 @@
             autocomplete="off"
             autocapitalize="off"
             spellcheck="false"
-            placeholder={data.tmdbAccessTokenConfigured
-              ? "Configured"
-              : "Read access token"}
+            placeholder={data.tmdbAccessTokenConfigured ? "Configured" : "Read access token"}
           />
         </label>
 
         {#if data.tmdbAccessTokenSaved}
           <label class="check subdued">
-            <input
-              type="checkbox"
-              name="clearTmdbAccessToken"
-              bind:checked={clearTmdbAccessToken}
-            />
+            <input type="checkbox" name="clearTmdbAccessToken" bind:checked={clearTmdbAccessToken} />
             <span>Clear saved TMDb access token</span>
           </label>
         {/if}
@@ -289,11 +229,7 @@
 
         {#if data.tmdbApiKeySaved}
           <label class="check subdued">
-            <input
-              type="checkbox"
-              name="clearTmdbApiKey"
-              bind:checked={clearTmdbApiKey}
-            />
+            <input type="checkbox" name="clearTmdbApiKey" bind:checked={clearTmdbApiKey} />
             <span>Clear saved TMDb API key</span>
           </label>
         {/if}
@@ -309,10 +245,7 @@
     </form>
   </section>
 
-  <section
-    class="ops-panel maintenance-panel"
-    aria-label="Settings actions"
-  >
+  <section class="ops-panel maintenance-panel" aria-label="Settings actions">
     <div class="ops-panel-header">
       <div>
         <h2>Actions</h2>
@@ -364,19 +297,13 @@
         </div>
         <div class="button-group">
           <form method="POST" action="?/refreshMetadata">
-            <button
-              class="secondary compact-action"
-              disabled={!data.tmdbConfigured}
-            >
+            <button class="secondary compact-action" disabled={!data.tmdbConfigured}>
               <RefreshCw size={16} aria-hidden="true" />
               Movies
             </button>
           </form>
           <form method="POST" action="?/refreshTvMetadata">
-            <button
-              class="secondary compact-action"
-              disabled={!data.tmdbConfigured}
-            >
+            <button class="secondary compact-action" disabled={!data.tmdbConfigured}>
               <RefreshCw size={16} aria-hidden="true" />
               TV
             </button>
@@ -436,9 +363,7 @@
   <div class="ops-panel-body">
     <div class="status-cards" aria-label="Server summary">
       <div class="ops-stat-card">
-        <span>Registration</span><strong
-          >{data.signupOpen ? "Open" : "Closed"}</strong
-        >
+        <span>Registration</span><strong>{data.signupOpen ? "Open" : "Closed"}</strong>
       </div>
       <div class="ops-stat-card">
         <span>Libraries</span><strong>{data.status.libraries}</strong>

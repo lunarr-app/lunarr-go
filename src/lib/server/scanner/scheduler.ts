@@ -23,7 +23,12 @@ function isScannableLibraryKind(kind: string) {
 
 export function shouldScheduleLibraryScan(library: { kind: string; scan_interval_minutes: number | null }) {
   const intervalMinutes = library.scan_interval_minutes;
-  return isScannableLibraryKind(library.kind) && intervalMinutes !== null && Number.isInteger(intervalMinutes) && intervalMinutes > 0;
+  return (
+    isScannableLibraryKind(library.kind) &&
+    intervalMinutes !== null &&
+    Number.isInteger(intervalMinutes) &&
+    intervalMinutes > 0
+  );
 }
 
 function timestampMs(value: string | null | undefined) {
@@ -68,11 +73,7 @@ async function runScheduledScan(libraryId: string) {
     const remainingDelayMs = scheduledScanDelayMs(library);
     if (remainingDelayMs === null || remainingDelayMs > 0) return;
 
-    await db
-      .updateTable("library")
-      .set({ last_scheduled_scan_at: nowIso() })
-      .where("id", "=", libraryId)
-      .execute();
+    await db.updateTable("library").set({ last_scheduled_scan_at: nowIso() }).where("id", "=", libraryId).execute();
 
     await startScan(libraryId);
   } catch (error) {

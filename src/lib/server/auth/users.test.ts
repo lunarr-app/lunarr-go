@@ -3,21 +3,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-  type Database,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "../db";
 import { setBooleanSetting } from "../settings";
-import {
-  hasRegisteredUsers,
-  isAdmin,
-  requireAdmin,
-  roleForNewUser,
-  signupAllowed,
-} from "./users";
+import { hasRegisteredUsers, isAdmin, requireAdmin, roleForNewUser, signupAllowed } from "./users";
 
 let tempDir: string;
 let db: Kysely<Database>;

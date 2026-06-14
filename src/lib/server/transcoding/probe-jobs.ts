@@ -38,7 +38,7 @@ async function addProbeJobError(jobId: string, item: string, error: unknown) {
       scan_job_id: jobId,
       path: item,
       message: error instanceof Error ? error.message : String(error),
-      created_at: nowIso()
+      created_at: nowIso(),
     })
     .execute();
 }
@@ -58,7 +58,7 @@ async function updateProbeJob(
     runner_token: string | null;
     runner_heartbeat_at: string | null;
   }>,
-  runnerToken?: string
+  runnerToken?: string,
 ) {
   const db = await getDb();
   const now = nowIso();
@@ -68,11 +68,15 @@ async function updateProbeJob(
     .set({
       ...values,
       ...(terminalStatus
-        ? { checkpoint_value: null, runner_token: null, runner_heartbeat_at: null }
+        ? {
+            checkpoint_value: null,
+            runner_token: null,
+            runner_heartbeat_at: null,
+          }
         : runnerToken
           ? { runner_heartbeat_at: now }
           : {}),
-      updated_at: now
+      updated_at: now,
     })
     .where("id", "=", jobId);
   if (runnerToken) query = query.where("runner_token", "=", runnerToken);
@@ -120,7 +124,7 @@ async function createMediaProbeRefreshJob() {
         runner_token: null,
         runner_heartbeat_at: null,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       })
       .execute();
   } catch (error) {
@@ -151,14 +155,14 @@ async function loadProbeRepairFiles() {
       "media_file.size_bytes",
       "media_file.container",
       "library.source",
-      "library.config_json"
+      "library.config_json",
     ])
     .where((eb) =>
       eb.or([
         eb("media_file.duration_seconds", "is", null),
         eb("media_file.video_codec", "is", null),
-        eb("media_file.audio_codec", "is", null)
-      ])
+        eb("media_file.audio_codec", "is", null),
+      ]),
     )
     .orderBy("media_file.library_id", "asc")
     .orderBy("media_file.path", "asc")
@@ -166,15 +170,11 @@ async function loadProbeRepairFiles() {
     .execute();
 }
 
-async function probeFile(input: {
-  file: ProbeRepairFile;
-  storage: LibraryStorage;
-  probeBackend: ProbeBackend;
-}) {
+async function probeFile(input: { file: ProbeRepairFile; storage: LibraryStorage; probeBackend: ProbeBackend }) {
   if (input.file.source !== "sftp") {
     return input.probeBackend.probe({
       mediaFileId: input.file.id,
-      path: input.file.path
+      path: input.file.path,
     });
   }
 
@@ -184,15 +184,15 @@ async function probeFile(input: {
       path: input.file.path,
       extension: input.file.extension,
       container: input.file.container ?? fallbackValues.container,
-      sizeBytes: input.file.size_bytes
+      sizeBytes: input.file.size_bytes,
     },
-    storage: input.storage
+    storage: input.storage,
   });
   try {
     return await input.probeBackend.probe({
       mediaFileId: input.file.id,
       path: input.file.path,
-      inputSource
+      inputSource,
     });
   } finally {
     await inputSource.close().catch(() => undefined);
@@ -207,14 +207,14 @@ async function storageForFile(input: {
   if (input.currentStorage && input.currentLibraryId === input.file.library_id) {
     return {
       storage: input.currentStorage,
-      libraryId: input.currentLibraryId
+      libraryId: input.currentLibraryId,
     };
   }
 
   await input.currentStorage?.close().catch(() => undefined);
   return {
     storage: await createLibraryStorage(input.file),
-    libraryId: input.file.library_id
+    libraryId: input.file.library_id,
   };
 }
 
@@ -254,11 +254,11 @@ export async function runMediaProbeRefreshJob(jobId: string, options: MediaProbe
               files_updated: 0,
               files_removed: 0,
               errors_count: 0,
-              checkpoint_value: null
+              checkpoint_value: null,
             }),
         runner_token: runnerToken,
         runner_heartbeat_at: now,
-        updated_at: now
+        updated_at: now,
       })
       .where("id", "=", jobId)
       .where("status", "in", ["queued", "running"])
@@ -279,12 +279,16 @@ export async function runMediaProbeRefreshJob(jobId: string, options: MediaProbe
       errors = 0;
       resumeCheckpoint = null;
       await db.deleteFrom("scan_job_error").where("scan_job_id", "=", jobId).execute();
-      await updateProbeJob(jobId, {
-        files_seen: 0,
-        files_updated: 0,
-        errors_count: 0,
-        checkpoint_value: null
-      }, runnerToken);
+      await updateProbeJob(
+        jobId,
+        {
+          files_seen: 0,
+          files_updated: 0,
+          errors_count: 0,
+          checkpoint_value: null,
+        },
+        runnerToken,
+      );
     }
     waitingForCheckpoint = resumeCheckpoint !== null;
 
@@ -294,13 +298,17 @@ export async function runMediaProbeRefreshJob(jobId: string, options: MediaProbe
 
     for (const file of files) {
       if (await isProbeJobCancellationRequested(jobId)) {
-        await updateProbeJob(jobId, {
-          status: "cancelled",
-          finished_at: nowIso(),
-          files_seen: seen,
-          files_updated: updated,
-          errors_count: errors
-        }, runnerToken);
+        await updateProbeJob(
+          jobId,
+          {
+            status: "cancelled",
+            finished_at: nowIso(),
+            files_seen: seen,
+            files_updated: updated,
+            errors_count: errors,
+          },
+          runnerToken,
+        );
         return;
       }
 
@@ -314,7 +322,7 @@ export async function runMediaProbeRefreshJob(jobId: string, options: MediaProbe
         const storageResult = await storageForFile({
           file,
           currentStorage: storage,
-          currentLibraryId: storageLibraryId
+          currentLibraryId: storageLibraryId,
         });
         storage = storageResult.storage;
         storageLibraryId = storageResult.libraryId;
@@ -322,14 +330,14 @@ export async function runMediaProbeRefreshJob(jobId: string, options: MediaProbe
         const probe = await probeFile({
           file,
           storage,
-          probeBackend
+          probeBackend,
         });
         const now = nowIso();
         await db
           .updateTable("media_file")
           .set({
             ...mediaFileValuesFromProbe({ extension: file.extension }, probe),
-            updated_at: now
+            updated_at: now,
           })
           .where("id", "=", file.id)
           .execute();
@@ -340,33 +348,41 @@ export async function runMediaProbeRefreshJob(jobId: string, options: MediaProbe
         await addProbeJobError(jobId, file.path, error);
       }
 
-      await updateProbeJob(jobId, {
+      await updateProbeJob(
+        jobId,
+        {
+          files_seen: seen,
+          files_updated: updated,
+          errors_count: errors,
+          checkpoint_value: file.id,
+        },
+        runnerToken,
+      );
+    }
+
+    await updateProbeJob(
+      jobId,
+      {
+        status: "completed",
+        finished_at: nowIso(),
         files_seen: seen,
         files_updated: updated,
         errors_count: errors,
-        checkpoint_value: file.id
-      }, runnerToken);
-    }
-
-    await updateProbeJob(jobId, {
-      status: "completed",
-      finished_at: nowIso(),
-      files_seen: seen,
-      files_updated: updated,
-      errors_count: errors
-    }, runnerToken);
+      },
+      runnerToken,
+    );
   } catch (error) {
     await addProbeJobError(jobId, "media probe refresh", error);
     await db
       .updateTable("scan_job")
       .set({
-        status: await isProbeJobCancellationRequested(jobId) ? "cancelled" : "failed",
+        status: (await isProbeJobCancellationRequested(jobId)) ? "cancelled" : "failed",
         finished_at: nowIso(),
         errors_count: sql<number>`errors_count + 1`,
         checkpoint_value: null,
         runner_token: null,
         runner_heartbeat_at: null,
-        updated_at: nowIso()
+        updated_at: nowIso(),
       })
       .where("id", "=", jobId)
       .where("runner_token", "=", runnerToken)

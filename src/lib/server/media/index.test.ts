@@ -15,12 +15,7 @@ import {
   showRows,
   tvRows,
 } from ".";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 
 describe("movie browse parameters", () => {
@@ -153,10 +148,7 @@ describe("showRows", () => {
         id: "file-1",
         library_id: "library-1",
         media_item_id: "episode-1",
-        path: path.join(
-          tempDir,
-          "The Expanse/Season 01/The Expanse - S01E01.mkv",
-        ),
+        path: path.join(tempDir, "The Expanse/Season 01/The Expanse - S01E01.mkv"),
         basename: "The Expanse - S01E01.mkv",
         extension: ".mkv",
         size_bytes: 10,
@@ -348,10 +340,7 @@ describe("showRows", () => {
           id: "file-2",
           library_id: "library-1",
           media_item_id: "episode-2",
-          path: path.join(
-            tempDir,
-            "The Expanse/Season 01/The Expanse - S01E02.mkv",
-          ),
+          path: path.join(tempDir, "The Expanse/Season 01/The Expanse - S01E02.mkv"),
           basename: "The Expanse - S01E02.mkv",
           extension: ".mkv",
           size_bytes: 10,
@@ -367,10 +356,7 @@ describe("showRows", () => {
           id: "file-3",
           library_id: "library-1",
           media_item_id: "episode-3",
-          path: path.join(
-            tempDir,
-            "The Expanse/Season 01/The Expanse - S01E03.mkv",
-          ),
+          path: path.join(tempDir, "The Expanse/Season 01/The Expanse - S01E03.mkv"),
           basename: "The Expanse - S01E03.mkv",
           extension: ".mkv",
           size_bytes: 10,
@@ -384,11 +370,7 @@ describe("showRows", () => {
         },
       ])
       .execute();
-    await db
-      .updateTable("media_item")
-      .set({ popularity: 42, vote_average: 8.5 })
-      .where("id", "=", "show-1")
-      .execute();
+    await db.updateTable("media_item").set({ popularity: 42, vote_average: 8.5 }).where("id", "=", "show-1").execute();
     await db
       .insertInto("watch_progress")
       .values([
@@ -415,9 +397,7 @@ describe("showRows", () => {
 
     const rows = await tvRows("user-1");
 
-    expect(rows.continueWatching.map((episode) => episode.id)).toEqual([
-      "episode-2",
-    ]);
+    expect(rows.continueWatching.map((episode) => episode.id)).toEqual(["episode-2"]);
     expect(rows.continueWatching[0]).toMatchObject({
       showTitle: "The Expanse",
       fileId: "file-2",
@@ -642,19 +622,9 @@ describe("movieRows", () => {
   });
 
   test("filters by watched state and search text", async () => {
-    expect(
-      (await movieRows("user-1", "", "watched")).all.map(
-        (movie) => movie.title,
-      ),
-    ).toEqual(["Alpha"]);
-    expect(
-      (await movieRows("user-1", "", "unwatched")).all.map(
-        (movie) => movie.title,
-      ),
-    ).toEqual(["Bravo"]);
-    expect(
-      (await movieRows("user-1", "rav", "all")).all.map((movie) => movie.title),
-    ).toEqual(["Bravo"]);
+    expect((await movieRows("user-1", "", "watched")).all.map((movie) => movie.title)).toEqual(["Alpha"]);
+    expect((await movieRows("user-1", "", "unwatched")).all.map((movie) => movie.title)).toEqual(["Bravo"]);
+    expect((await movieRows("user-1", "rav", "all")).all.map((movie) => movie.title)).toEqual(["Bravo"]);
   });
 
   test("treats movie search wildcards as literal text", async () => {
@@ -701,41 +671,26 @@ describe("movieRows", () => {
       })
       .execute();
 
-    expect(
-      (await movieRows("user-1", "%", "all")).all.map((movie) => movie.title),
-    ).toEqual(["100% Real"]);
-    expect(
-      (await movieRows("user-1", "_", "all")).all.map((movie) => movie.title),
-    ).toEqual([]);
+    expect((await movieRows("user-1", "%", "all")).all.map((movie) => movie.title)).toEqual(["100% Real"]);
+    expect((await movieRows("user-1", "_", "all")).all.map((movie) => movie.title)).toEqual([]);
   });
 
   test("sorts the main browse list", async () => {
-    await db
-      .updateTable("media_item")
-      .set({ sort_title: "aardvark" })
-      .where("id", "=", "movie-b")
-      .execute();
+    await db.updateTable("media_item").set({ sort_title: "aardvark" }).where("id", "=", "movie-b").execute();
 
-    expect(
-      (await movieRows("user-1", "", "all", "title")).all.map(
-        (movie) => movie.title,
-      ),
-    ).toEqual(["Bravo", "Alpha"]);
-    expect(
-      (await movieRows("user-1", "", "all", "year_desc")).all.map(
-        (movie) => movie.title,
-      ),
-    ).toEqual(["Bravo", "Alpha"]);
-    expect(
-      (await movieRows("user-1", "", "all", "rating")).all.map(
-        (movie) => movie.title,
-      ),
-    ).toEqual(["Bravo", "Alpha"]);
-    expect(
-      (await movieRows("user-1", "", "all", "recent")).all.map(
-        (movie) => movie.title,
-      ),
-    ).toEqual(["Alpha", "Bravo"]);
+    expect((await movieRows("user-1", "", "all", "title")).all.map((movie) => movie.title)).toEqual(["Bravo", "Alpha"]);
+    expect((await movieRows("user-1", "", "all", "year_desc")).all.map((movie) => movie.title)).toEqual([
+      "Bravo",
+      "Alpha",
+    ]);
+    expect((await movieRows("user-1", "", "all", "rating")).all.map((movie) => movie.title)).toEqual([
+      "Bravo",
+      "Alpha",
+    ]);
+    expect((await movieRows("user-1", "", "all", "recent")).all.map((movie) => movie.title)).toEqual([
+      "Alpha",
+      "Bravo",
+    ]);
   });
 
   test("paginates the main browse list", async () => {
@@ -774,12 +729,8 @@ describe("movieRows", () => {
       completed: true,
     });
     expect(rows.continueWatching.map((movie) => movie.id)).toEqual([]);
-    expect(
-      (await movieRows("user-1", "", "watched")).all.map((movie) => movie.id),
-    ).toEqual(["movie-a"]);
-    expect(
-      (await movieRows("user-1", "", "unwatched")).all.map((movie) => movie.id),
-    ).toEqual(["movie-b"]);
+    expect((await movieRows("user-1", "", "watched")).all.map((movie) => movie.id)).toEqual(["movie-a"]);
+    expect((await movieRows("user-1", "", "unwatched")).all.map((movie) => movie.id)).toEqual(["movie-b"]);
   });
 
   test("limits shared libraries to selected users while admins retain access", async () => {
@@ -810,11 +761,7 @@ describe("movieRows", () => {
         },
       ])
       .execute();
-    await db
-      .updateTable("library")
-      .set({ access_mode: "shared" })
-      .where("id", "=", "library-1")
-      .execute();
+    await db.updateTable("library").set({ access_mode: "shared" }).where("id", "=", "library-1").execute();
     await db
       .insertInto("library_user")
       .values({
@@ -824,15 +771,9 @@ describe("movieRows", () => {
       })
       .execute();
 
-    expect((await movieRows("user-1")).all.map((movie) => movie.id)).toEqual([
-      "movie-a",
-      "movie-b",
-    ]);
+    expect((await movieRows("user-1")).all.map((movie) => movie.id)).toEqual(["movie-a", "movie-b"]);
     expect((await movieRows("user-2")).all).toEqual([]);
-    expect((await movieRows("admin-1")).all.map((movie) => movie.id)).toEqual([
-      "movie-a",
-      "movie-b",
-    ]);
+    expect((await movieRows("admin-1")).all.map((movie) => movie.id)).toEqual(["movie-a", "movie-b"]);
     expect(await getMovieDetail("movie-a", "user-2")).toBeNull();
     expect(await getMediaFile("file-a", "user-2")).toBeUndefined();
   });

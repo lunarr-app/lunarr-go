@@ -12,22 +12,14 @@ describe("error page copy", () => {
 
   test("prefers server error messages for client errors", () => {
     expect(getErrorMessage(404, "Movie not found")).toBe("Movie not found");
-    expect(getErrorMessage(403, "Admin access required")).toBe(
-      "Admin access required",
-    );
+    expect(getErrorMessage(403, "Admin access required")).toBe("Admin access required");
     expect(getErrorMessage(401, "Unauthorized")).toBe("Unauthorized");
   });
 
   test("falls back to generic copy when no server message is provided", () => {
-    expect(getErrorMessage(404)).toBe(
-      "That page does not exist or may have moved.",
-    );
-    expect(getErrorMessage(403)).toBe(
-      "Your account does not have access to this page.",
-    );
-    expect(getErrorMessage(500)).toBe(
-      "Lunarr could not finish loading this page.",
-    );
+    expect(getErrorMessage(404)).toBe("That page does not exist or may have moved.");
+    expect(getErrorMessage(403)).toBe("Your account does not have access to this page.");
+    expect(getErrorMessage(500)).toBe("Lunarr could not finish loading this page.");
   });
 
   test("hides retry for missing pages", () => {

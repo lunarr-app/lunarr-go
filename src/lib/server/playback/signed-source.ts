@@ -5,10 +5,7 @@ import {
   type SignedPlaybackRoute,
 } from "$lib/server/playback/signed-token";
 import { hlsPlaylistFileExists } from "$lib/server/transcoding/hls";
-import {
-  getAuthorizedHlsArtifact,
-  isEndedPlaybackArtifactFresh,
-} from "$lib/server/transcoding/sessions";
+import { getAuthorizedHlsArtifact, isEndedPlaybackArtifactFresh } from "$lib/server/transcoding/sessions";
 import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
 
 export class PlaybackSourceRequestError extends Error {
@@ -26,44 +23,29 @@ function absoluteSignedUrl(pathname: string, token: string, origin?: string) {
   return new URL(appendSignedPlaybackToken(pathname, token), origin).toString();
 }
 
-async function assertSignedHlsReady(input: {
-  artifact: Awaited<ReturnType<typeof getAuthorizedHlsArtifact>>;
-}) {
+async function assertSignedHlsReady(input: { artifact: Awaited<ReturnType<typeof getAuthorizedHlsArtifact>> }) {
   const { artifact } = input;
   if (!artifact) {
     throw new PlaybackSourceRequestError("Playback session not found.", 404);
   }
   if (artifact.status === "failed" || artifact.status === "cancelled") {
-    throw new PlaybackSourceRequestError(
-      artifact.errorMessage ?? "Playback stream is not playable.",
-      409,
-    );
+    throw new PlaybackSourceRequestError(artifact.errorMessage ?? "Playback stream is not playable.", 409);
   }
   if (artifact.status !== "running" && artifact.status !== "completed") {
     throw new PlaybackSourceRequestError("Playback stream is not ready yet.", 409);
   }
   if (artifact.status === "completed" && !isEndedPlaybackArtifactFresh(artifact)) {
-    throw new PlaybackSourceRequestError(
-      "Playback stream is no longer active.",
-      410,
-    );
+    throw new PlaybackSourceRequestError("Playback stream is no longer active.", 410);
   }
   if (!artifact.playlistPath) {
     throw new PlaybackSourceRequestError("Playback stream is not ready yet.", 409);
   }
   if (!(await hlsPlaylistFileExists(artifact.playlistPath))) {
-    throw new PlaybackSourceRequestError(
-      "Playback playlist is not available yet.",
-      409,
-    );
+    throw new PlaybackSourceRequestError("Playback playlist is not available yet.", 409);
   }
 }
 
-async function signedPlaybackStreamUrl(input: {
-  playback: PlaybackDecision;
-  userId: string;
-  origin: string;
-}) {
+async function signedPlaybackStreamUrl(input: { playback: PlaybackDecision; userId: string; origin: string }) {
   const { playback } = input;
   let route: SignedPlaybackRoute;
   let streamPath: string;
@@ -74,15 +56,9 @@ async function signedPlaybackStreamUrl(input: {
     streamPath = `/media/files/${encodeURIComponent(playback.file.id)}/stream`;
   } else if (playback.mode === "remux" || playback.mode === "transcode") {
     if (!playback.playbackSessionId) {
-      throw new PlaybackSourceRequestError(
-        "HLS playback requires a session.",
-        400,
-      );
+      throw new PlaybackSourceRequestError("HLS playback requires a session.", 400);
     }
-    const artifact = await getAuthorizedHlsArtifact(
-      playback.playbackSessionId,
-      input.userId,
-    );
+    const artifact = await getAuthorizedHlsArtifact(playback.playbackSessionId, input.userId);
     if (!artifact || artifact.mediaFileId !== playback.file.id) {
       throw new PlaybackSourceRequestError("Playback session not found.", 404);
     }
@@ -103,23 +79,14 @@ async function signedPlaybackStreamUrl(input: {
   return absoluteSignedUrl(streamPath, token, input.origin);
 }
 
-function signedSubtitleSrc(input: {
-  trackId: string;
-  mediaFileId: string;
-  userId: string;
-  origin: string;
-}) {
+function signedSubtitleSrc(input: { trackId: string; mediaFileId: string; userId: string; origin: string }) {
   const token = createSignedPlaybackToken({
     route: "subtitle",
     userId: input.userId,
     mediaFileId: input.mediaFileId,
     subtitleTrackId: input.trackId,
   });
-  return absoluteSignedUrl(
-    `/media/subtitles/${encodeURIComponent(input.trackId)}`,
-    token,
-    input.origin,
-  );
+  return absoluteSignedUrl(`/media/subtitles/${encodeURIComponent(input.trackId)}`, token, input.origin);
 }
 
 export async function withSignedPlaybackSource(input: {

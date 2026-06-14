@@ -3,18 +3,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql, type Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-  type Database,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import { load as showLoad } from "./[id]/+page.server";
-import {
-  actions as seasonActions,
-  load as seasonLoad,
-} from "./[id]/seasons/[seasonId]/+page.server";
+import { actions as seasonActions, load as seasonLoad } from "./[id]/seasons/[seasonId]/+page.server";
 import { load as showsLoad } from "./+page.server";
 
 async function expectRedirect(operation: unknown, location: string) {
@@ -122,10 +113,7 @@ describe("shows page server", () => {
         id: "file-1",
         library_id: "library-1",
         media_item_id: "episode-1",
-        path: path.join(
-          tempDir,
-          "The Expanse/Season 01/The Expanse - S01E01.mkv",
-        ),
+        path: path.join(tempDir, "The Expanse/Season 01/The Expanse - S01E01.mkv"),
         basename: "The Expanse - S01E01.mkv",
         extension: ".mkv",
         size_bytes: 10,
@@ -247,10 +235,7 @@ describe("shows page server", () => {
         id: "file-2",
         library_id: "library-1",
         media_item_id: "episode-2",
-        path: path.join(
-          tempDir,
-          "The Expanse/Season 01/The Expanse - S01E02.mkv",
-        ),
+        path: path.join(tempDir, "The Expanse/Season 01/The Expanse - S01E02.mkv"),
         basename: "The Expanse - S01E02.mkv",
         extension: ".mkv",
         size_bytes: 10,
@@ -331,11 +316,7 @@ describe("shows page server", () => {
     expect(
       await db
         .selectFrom("watch_progress")
-        .select([
-          "media_item_id",
-          "media_file_id",
-          sql<number>`completed`.as("completed"),
-        ])
+        .select(["media_item_id", "media_file_id", sql<number>`completed`.as("completed")])
         .where("media_item_id", "=", "episode-1")
         .executeTakeFirst(),
     ).toEqual({

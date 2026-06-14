@@ -63,17 +63,10 @@ export const MIN_SFTP_OPERATION_TIMEOUT_MS = 5_000;
 export const MAX_SFTP_OPERATION_TIMEOUT_MS = 300_000;
 
 export function normalizeSftpWalkConcurrency(value: unknown) {
-  const numeric =
-    value === null || value === undefined || value === ""
-      ? DEFAULT_SFTP_WALK_CONCURRENCY
-      : Number(value);
-  if (
-    !Number.isInteger(numeric) ||
-    numeric < MIN_SFTP_WALK_CONCURRENCY ||
-    numeric > MAX_SFTP_WALK_CONCURRENCY
-  ) {
+  const numeric = value === null || value === undefined || value === "" ? DEFAULT_SFTP_WALK_CONCURRENCY : Number(value);
+  if (!Number.isInteger(numeric) || numeric < MIN_SFTP_WALK_CONCURRENCY || numeric > MAX_SFTP_WALK_CONCURRENCY) {
     throw new Error(
-      `SFTP walk concurrency must be between ${MIN_SFTP_WALK_CONCURRENCY} and ${MAX_SFTP_WALK_CONCURRENCY}.`
+      `SFTP walk concurrency must be between ${MIN_SFTP_WALK_CONCURRENCY} and ${MAX_SFTP_WALK_CONCURRENCY}.`,
     );
   }
   return numeric;
@@ -81,16 +74,14 @@ export function normalizeSftpWalkConcurrency(value: unknown) {
 
 export function normalizeSftpOperationTimeoutMs(value: unknown) {
   const numeric =
-    value === null || value === undefined || value === ""
-      ? DEFAULT_SFTP_OPERATION_TIMEOUT_MS
-      : Number(value);
+    value === null || value === undefined || value === "" ? DEFAULT_SFTP_OPERATION_TIMEOUT_MS : Number(value);
   if (
     !Number.isInteger(numeric) ||
     numeric < MIN_SFTP_OPERATION_TIMEOUT_MS ||
     numeric > MAX_SFTP_OPERATION_TIMEOUT_MS
   ) {
     throw new Error(
-      `SFTP operation timeout must be between ${MIN_SFTP_OPERATION_TIMEOUT_MS}ms and ${MAX_SFTP_OPERATION_TIMEOUT_MS}ms.`
+      `SFTP operation timeout must be between ${MIN_SFTP_OPERATION_TIMEOUT_MS}ms and ${MAX_SFTP_OPERATION_TIMEOUT_MS}ms.`,
     );
   }
   return numeric;
@@ -102,7 +93,7 @@ function fileInfoFromLocalPath(filePath: string, info: { size: number; mtimeMs: 
     basename: path.basename(filePath),
     extension: path.extname(filePath).toLowerCase(),
     size: info.size,
-    mtimeMs: Math.round(info.mtimeMs)
+    mtimeMs: Math.round(info.mtimeMs),
   };
 }
 
@@ -173,7 +164,7 @@ export function createLocalStorage(): LibraryStorage {
     },
     async close() {
       return;
-    }
+    },
   };
 }
 
@@ -191,7 +182,7 @@ export function parseSftpConfig(configJson: string | null): SftpLibraryConfig {
     root: normalizeRemotePath(parsed.root),
     passwordEncrypted: parsed.passwordEncrypted,
     walkConcurrency: normalizeSftpWalkConcurrency(parsed.walkConcurrency),
-    operationTimeoutMs: normalizeSftpOperationTimeoutMs(parsed.operationTimeoutMs)
+    operationTimeoutMs: normalizeSftpOperationTimeoutMs(parsed.operationTimeoutMs),
   };
 }
 
@@ -221,7 +212,7 @@ function sftpConnect(config: SftpLibraryConfig) {
     port: config.port,
     username: config.username,
     password: decryptSecret(config.passwordEncrypted),
-    readyTimeout: 20_000
+    readyTimeout: 20_000,
   };
 
   return new Promise<{ client: Client; sftp: SFTPWrapper }>((resolve, reject) => {
@@ -271,7 +262,7 @@ function sftpStat(sftp: SFTPWrapper, filePath: string, timeoutMs = DEFAULT_SFTP_
       });
     }),
     timeoutMs,
-    `SFTP stat ${filePath}`
+    `SFTP stat ${filePath}`,
   );
 }
 
@@ -279,7 +270,11 @@ function sftpErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function sftpDirectoryExists(sftp: SFTPWrapper, directory: string, timeoutMs = DEFAULT_SFTP_OPERATION_TIMEOUT_MS) {
+async function sftpDirectoryExists(
+  sftp: SFTPWrapper,
+  directory: string,
+  timeoutMs = DEFAULT_SFTP_OPERATION_TIMEOUT_MS,
+) {
   try {
     const stats = await sftpStat(sftp, directory, timeoutMs);
     return stats.isDirectory();
@@ -297,7 +292,7 @@ function sftpReaddir(sftp: SFTPWrapper, directory: string, timeoutMs = DEFAULT_S
       });
     }),
     timeoutMs,
-    `SFTP list ${directory}`
+    `SFTP list ${directory}`,
   );
 }
 
@@ -307,13 +302,13 @@ function fileInfoFromRemotePath(filePath: string, stats: { size: number; mtime: 
     basename: path.posix.basename(filePath),
     extension: path.posix.extname(filePath).toLowerCase(),
     size: stats.size,
-    mtimeMs: Math.round(stats.mtime * 1000)
+    mtimeMs: Math.round(stats.mtime * 1000),
   };
 }
 
 async function readRemoteDirectory(
   directory: string,
-  readDirectory: (directory: string) => Promise<FileEntryWithStats[]>
+  readDirectory: (directory: string) => Promise<FileEntryWithStats[]>,
 ): Promise<RemoteDirectoryReadResult> {
   try {
     return { directory, entries: await readDirectory(directory) };
@@ -325,7 +320,7 @@ async function readRemoteDirectory(
 export async function* walkSftpFiles(
   root: string,
   readDirectory: (directory: string) => Promise<FileEntryWithStats[]>,
-  concurrency = DEFAULT_SFTP_WALK_CONCURRENCY
+  concurrency = DEFAULT_SFTP_WALK_CONCURRENCY,
 ): AsyncGenerator<StorageWalkEntry> {
   const directoryConcurrency = Math.max(1, Math.floor(concurrency));
   const pendingDirectories = [root];
@@ -346,7 +341,7 @@ export async function* walkSftpFiles(
   fillQueue();
   while (inFlight.size > 0) {
     const [taskId, result] = await Promise.race(
-      [...inFlight].map(([taskId, task]) => task.then((result) => [taskId, result] as const))
+      [...inFlight].map(([taskId, task]) => task.then((result) => [taskId, result] as const)),
     );
     inFlight.delete(taskId);
 
@@ -360,7 +355,8 @@ export async function* walkSftpFiles(
     const files: StorageFileInfo[] = [];
     for (const entry of (result.entries ?? []).sort((left, right) => left.filename.localeCompare(right.filename))) {
       if (entry.filename === "." || entry.filename === "..") continue;
-      const fullPath = result.directory === "/" ? `/${entry.filename}` : path.posix.join(result.directory, entry.filename);
+      const fullPath =
+        result.directory === "/" ? `/${entry.filename}` : path.posix.join(result.directory, entry.filename);
       if (entry.attrs.isDirectory()) {
         directories.push(fullPath);
       } else if (entry.attrs.isFile()) {
@@ -409,7 +405,7 @@ export async function createSftpStorage(configJson: string | null): Promise<Libr
       return walkSftpFiles(
         root,
         (directory) => sftpReaddir(sftp, directory, operationTimeoutMs),
-        config.walkConcurrency
+        config.walkConcurrency,
       );
     },
     async createReadStream(filePath, range, options) {
@@ -428,7 +424,7 @@ export async function createSftpStorage(configJson: string | null): Promise<Libr
     },
     async close() {
       client.end();
-    }
+    },
   };
 }
 
@@ -446,7 +442,7 @@ export async function testSftpConnection(config: SftpLibraryConfig) {
       stats = await sftpStat(sftp, config.root, operationTimeoutMs);
     } catch (error) {
       const withoutLeadingSlash = config.root.startsWith("/") ? config.root.slice(1) : "";
-      if (withoutLeadingSlash && await sftpDirectoryExists(sftp, withoutLeadingSlash, operationTimeoutMs)) {
+      if (withoutLeadingSlash && (await sftpDirectoryExists(sftp, withoutLeadingSlash, operationTimeoutMs))) {
         throw new Error(`SFTP root was not found. Try "${withoutLeadingSlash}" without the leading slash.`);
       }
       throw new Error(`SFTP root was not found: ${sftpErrorMessage(error)}`);

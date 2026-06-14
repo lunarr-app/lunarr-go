@@ -3,12 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import { cleanupJobHistory, getScanJobSummary, listScanErrors } from ".";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
@@ -310,18 +305,14 @@ describe("scan job listings", () => {
       }),
     ).resolves.toEqual({ scanJobs: 1, playbackSessions: 1 });
 
+    expect((await db.selectFrom("scan_job").select("id").orderBy("id").execute()).map((job) => job.id)).toContain(
+      "old-scan-keep-active",
+    );
+    expect((await db.selectFrom("scan_job").select("id").orderBy("id").execute()).map((job) => job.id)).not.toContain(
+      "old-scan-delete",
+    );
     expect(
-      (await db.selectFrom("scan_job").select("id").orderBy("id").execute()).map((job) => job.id),
-    ).toContain("old-scan-keep-active");
-    expect(
-      (await db.selectFrom("scan_job").select("id").orderBy("id").execute()).map((job) => job.id),
-    ).not.toContain("old-scan-delete");
-    expect(
-      await db
-        .selectFrom("scan_job_error")
-        .select("id")
-        .where("scan_job_id", "=", "old-scan-delete")
-        .execute(),
+      await db.selectFrom("scan_job_error").select("id").where("scan_job_id", "=", "old-scan-delete").execute(),
     ).toHaveLength(0);
     expect(
       (await db.selectFrom("playback_session").select("id").orderBy("id").execute()).map((job) => job.id),
@@ -513,11 +504,7 @@ describe("scan job listings", () => {
         .orderBy("id")
         .execute()
     ).map((job) => job.id);
-    expect(remainingPlaybackIds).toEqual([
-      "cancelled-recent-keep",
-      "completed-recent-keep",
-      "failed-recent-keep",
-    ]);
+    expect(remainingPlaybackIds).toEqual(["cancelled-recent-keep", "completed-recent-keep", "failed-recent-keep"]);
   });
 
   test("preserves each library's latest scan row while pruning old scan history", async () => {
@@ -590,9 +577,9 @@ describe("scan job listings", () => {
       }),
     ).resolves.toEqual({ scanJobs: 2, playbackSessions: 0 });
 
-    const remainingScanIds = (
-      await db.selectFrom("scan_job").select("id").orderBy("id").execute()
-    ).map((job) => job.id);
+    const remainingScanIds = (await db.selectFrom("scan_job").select("id").orderBy("id").execute()).map(
+      (job) => job.id,
+    );
     expect(remainingScanIds).toContain("latest-library-scan-keep");
     expect(remainingScanIds).not.toContain("old-library-scan-delete");
     expect(remainingScanIds).not.toContain("old-metadata-delete");

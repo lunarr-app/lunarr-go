@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  decidePlaybackMode,
-  isDirectPlayCompatible,
-  isRemuxCompatible,
-} from "./capabilities";
+import { decidePlaybackMode, isDirectPlayCompatible, isRemuxCompatible } from "./capabilities";
 
 describe("transcode capabilities", () => {
   test("detects conservative browser direct-play compatibility", () => {
@@ -126,9 +122,7 @@ describe("transcode capabilities", () => {
 
     expect(isDirectPlayCompatible(webm)).toBe(false);
     expect(isDirectPlayCompatible(webm, { webm: true, vp9: true })).toBe(false);
-    expect(
-      isDirectPlayCompatible(webm, { webm: true, vp9: true, opus: true }),
-    ).toBe(true);
+    expect(isDirectPlayCompatible(webm, { webm: true, vp9: true, opus: true })).toBe(true);
   });
 
   test("uses target-specific direct play profiles", () => {
@@ -145,32 +139,12 @@ describe("transcode capabilities", () => {
       audioCodec: "aac",
     };
 
-    expect(
-      isDirectPlayCompatible(
-        webm,
-        { webm: true, vp9: true, opus: true },
-        "web",
-      ),
-    ).toBe(true);
-    expect(
-      isDirectPlayCompatible(
-        webm,
-        { webm: true, vp9: true, opus: true },
-        "cast",
-      ),
-    ).toBe(false);
-    expect(
-      isDirectPlayCompatible(
-        webm,
-        { webm: true, vp9: true, opus: true },
-        "airplay",
-      ),
-    ).toBe(false);
+    expect(isDirectPlayCompatible(webm, { webm: true, vp9: true, opus: true }, "web")).toBe(true);
+    expect(isDirectPlayCompatible(webm, { webm: true, vp9: true, opus: true }, "cast")).toBe(false);
+    expect(isDirectPlayCompatible(webm, { webm: true, vp9: true, opus: true }, "airplay")).toBe(false);
     expect(isDirectPlayCompatible(hevcMp4, { hevc: true }, "web")).toBe(true);
     expect(isDirectPlayCompatible(hevcMp4, { hevc: true }, "cast")).toBe(false);
-    expect(isDirectPlayCompatible(hevcMp4, { hevc: true }, "airplay")).toBe(
-      true,
-    );
+    expect(isDirectPlayCompatible(hevcMp4, { hevc: true }, "airplay")).toBe(true);
   });
 
   test("uses target-specific HLS remux profiles", () => {
@@ -181,33 +155,10 @@ describe("transcode capabilities", () => {
       audioCodec: "aac",
     };
 
-    expect(
-      isRemuxCompatible(
-        hevcMkv,
-        { hevc: true, hlsNative: true, hlsFmp4: true },
-        "fmp4",
-        "web",
-      ),
-    ).toBe(true);
-    expect(
-      isRemuxCompatible(
-        hevcMkv,
-        { hevc: true, hlsNative: true, hlsFmp4: true },
-        "fmp4",
-        "cast",
-      ),
-    ).toBe(false);
-    expect(isRemuxCompatible(hevcMkv, { hevc: true }, "fmp4", "airplay")).toBe(
-      true,
-    );
-    expect(
-      isRemuxCompatible(
-        hevcMkv,
-        { hlsNative: true, hlsFmp4: true },
-        "fmp4",
-        "cast",
-      ),
-    ).toBe(false);
+    expect(isRemuxCompatible(hevcMkv, { hevc: true, hlsNative: true, hlsFmp4: true }, "fmp4", "web")).toBe(true);
+    expect(isRemuxCompatible(hevcMkv, { hevc: true, hlsNative: true, hlsFmp4: true }, "fmp4", "cast")).toBe(false);
+    expect(isRemuxCompatible(hevcMkv, { hevc: true }, "fmp4", "airplay")).toBe(true);
+    expect(isRemuxCompatible(hevcMkv, { hlsNative: true, hlsFmp4: true }, "fmp4", "cast")).toBe(false);
   });
 
   test("detects remux compatibility when only the container is unsupported", () => {

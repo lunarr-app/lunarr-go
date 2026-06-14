@@ -10,10 +10,7 @@ import {
   hlsSegmentResponse,
   pruneHlsSegmentsBehind,
 } from "$lib/server/transcoding/hls";
-import {
-  ensureHlsLookaheadForSegment,
-  ensureHlsSegmentForRequest,
-} from "$lib/server/transcoding/manager";
+import { ensureHlsLookaheadForSegment, ensureHlsSegmentForRequest } from "$lib/server/transcoding/manager";
 import {
   getAuthorizedHlsArtifact,
   touchTranscodeSessionHeartbeat,
@@ -29,11 +26,7 @@ import {
 } from "../../../hls-route-state";
 import type { RequestHandler } from "./$types";
 
-function authorizedUserId(input: {
-  localsUserId?: string;
-  sessionId: string;
-  token: string | null;
-}) {
+function authorizedUserId(input: { localsUserId?: string; sessionId: string; token: string | null }) {
   if (input.localsUserId) return { userId: input.localsUserId, signed: false };
   const payload = verifySignedPlaybackToken(input.token, {
     route: "hls",
@@ -59,9 +52,7 @@ function abandonedPlaybackSegmentResponse() {
   });
 }
 
-function staleCancelledPlaybackSegmentResponse(
-  artifact: AuthorizedHlsArtifact,
-) {
+function staleCancelledPlaybackSegmentResponse(artifact: AuthorizedHlsArtifact) {
   if (
     artifact.errorMessage !== "Playback session was cancelled." &&
     artifact.errorMessage !== "Playback session was repositioned."
@@ -79,13 +70,10 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
   });
   if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 
-  const artifact = await currentPlayableHlsArtifact(
-    params.sessionId,
-    auth.userId,
-    { cancelledResponse: staleCancelledPlaybackSegmentResponse },
-  );
-  if (artifact instanceof Response)
-    return withSignedPlaybackHeaders(artifact, auth.signed);
+  const artifact = await currentPlayableHlsArtifact(params.sessionId, auth.userId, {
+    cancelledResponse: staleCancelledPlaybackSegmentResponse,
+  });
+  if (artifact instanceof Response) return withSignedPlaybackHeaders(artifact, auth.signed);
 
   if (hlsSegmentIndex(params.segment) !== null) {
     await touchTranscodeSessionHeartbeat(params.sessionId, auth.userId, {
@@ -94,13 +82,9 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
   }
 
   try {
-    let response = await hlsSegmentResponse(
-      artifact.playlistPath,
-      params.segment,
-      {
-        signal: request?.signal,
-      },
-    );
+    let response = await hlsSegmentResponse(artifact.playlistPath, params.segment, {
+      signal: request?.signal,
+    });
     if (response.status === 404) {
       let generated = false;
       try {
@@ -111,19 +95,13 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
           signal: request?.signal,
         });
       } catch {
-        const failedArtifact = await getAuthorizedHlsArtifact(
-          params.sessionId,
-          auth.userId,
-        );
+        const failedArtifact = await getAuthorizedHlsArtifact(params.sessionId, auth.userId);
         if (failedArtifact?.status === "cancelled") {
           return withSignedPlaybackHeaders(
             staleCancelledPlaybackSegmentResponse(failedArtifact) ??
               json(
                 {
-                  error: playbackRouteError(
-                    failedArtifact.errorMessage ??
-                      "Playback session is not playable.",
-                  ),
+                  error: playbackRouteError(failedArtifact.errorMessage ?? "Playback session is not playable."),
                 },
                 { status: 409 },
               ),
@@ -134,10 +112,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
           return withSignedPlaybackHeaders(
             json(
               {
-                error: playbackRouteError(
-                  failedArtifact.errorMessage ??
-                    "Playback session is not playable.",
-                ),
+                error: playbackRouteError(failedArtifact.errorMessage ?? "Playback session is not playable."),
               },
               { status: 409 },
             ),
@@ -147,18 +122,10 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         throw new Error("Playback segment generation failed.");
       }
       if (generated) {
-        if (request?.signal?.aborted)
-          return withSignedPlaybackHeaders(
-            cancelledSegmentResponse(),
-            auth.signed,
-          );
-        response = await hlsSegmentResponse(
-          artifact.playlistPath,
-          params.segment,
-          {
-            signal: request?.signal,
-          },
-        );
+        if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
+        response = await hlsSegmentResponse(artifact.playlistPath, params.segment, {
+          signal: request?.signal,
+        });
       }
     }
     if (response.status === 404) {
@@ -169,8 +136,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         artifact: "segment",
         options: { cancelledResponse: staleCancelledPlaybackSegmentResponse },
       });
-      if (current instanceof Response)
-        return withSignedPlaybackHeaders(current, auth.signed);
+      if (current instanceof Response) return withSignedPlaybackHeaders(current, auth.signed);
     }
     if (response.ok) {
       const current = await currentUnchangedPlayableHlsArtifact({
@@ -179,25 +145,16 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         playlistPath: artifact.playlistPath,
         artifact: "segment",
       });
-      if (current instanceof Response)
-        return withSignedPlaybackHeaders(current, auth.signed);
-      if (request?.signal?.aborted)
-        return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
+      if (current instanceof Response) return withSignedPlaybackHeaders(current, auth.signed);
+      if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
 
       const segmentIndex = hlsSegmentIndex(params.segment);
       if (segmentIndex !== null) {
-        const touched = await touchTranscodeSessionSegmentRequest(
-          params.sessionId,
-          auth.userId,
-          params.segment,
-          { signal: request?.signal },
-        );
+        const touched = await touchTranscodeSessionSegmentRequest(params.sessionId, auth.userId, params.segment, {
+          signal: request?.signal,
+        });
         if (!touched) {
-          if (request?.signal?.aborted)
-            return withSignedPlaybackHeaders(
-              cancelledSegmentResponse(),
-              auth.signed,
-            );
+          if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
 
           const stale = await hlsFailedActivityResponse({
             sessionId: params.sessionId,
@@ -208,40 +165,24 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
           });
           if (stale) return withSignedPlaybackHeaders(stale, auth.signed);
         }
-        if (request?.signal?.aborted)
-          return withSignedPlaybackHeaders(
-            cancelledSegmentResponse(),
-            auth.signed,
-          );
+        if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
 
         void ensureHlsLookaheadForSegment({
           sessionId: params.sessionId,
           userId: auth.userId,
           segment: params.segment,
         }).catch(() => undefined);
-        void pruneHlsSegmentsBehind(
-          artifact.playlistPath,
-          params.segment,
-        ).catch(() => undefined);
+        void pruneHlsSegmentsBehind(artifact.playlistPath, params.segment).catch(() => undefined);
       }
     }
     return withSignedPlaybackHeaders(response, auth.signed);
   } catch {
-    if (request?.signal?.aborted)
-      return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
-    return withSignedPlaybackHeaders(
-      json({ error: "Playback segment was not found." }, { status: 404 }),
-      auth.signed,
-    );
+    if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
+    return withSignedPlaybackHeaders(json({ error: "Playback segment was not found." }, { status: 404 }), auth.signed);
   }
 };
 
-export const HEAD: RequestHandler = async ({
-  params,
-  locals,
-  request,
-  url,
-}) => {
+export const HEAD: RequestHandler = async ({ params, locals, request, url }) => {
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     sessionId: params.sessionId,
@@ -249,36 +190,21 @@ export const HEAD: RequestHandler = async ({
   });
   if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 
-  const artifact = await currentPlayableHlsArtifact(
-    params.sessionId,
-    auth.userId,
-    { cancelledResponse: staleCancelledPlaybackSegmentResponse },
-  );
-  if (artifact instanceof Response)
-    return withSignedPlaybackHeaders(artifact, auth.signed);
+  const artifact = await currentPlayableHlsArtifact(params.sessionId, auth.userId, {
+    cancelledResponse: staleCancelledPlaybackSegmentResponse,
+  });
+  if (artifact instanceof Response) return withSignedPlaybackHeaders(artifact, auth.signed);
 
   let response: Response;
   try {
-    response = await hlsSegmentHeadResponse(
-      artifact.playlistPath,
-      params.segment,
-      {
-        signal: request?.signal,
-      },
-    );
+    response = await hlsSegmentHeadResponse(artifact.playlistPath, params.segment, {
+      signal: request?.signal,
+    });
   } catch {
-    if (request?.signal?.aborted)
-      return withSignedPlaybackHeaders(
-        cancelledSegmentHeadResponse(),
-        auth.signed,
-      );
-    return withSignedPlaybackHeaders(
-      new Response(null, { status: 404 }),
-      auth.signed,
-    );
+    if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentHeadResponse(), auth.signed);
+    return withSignedPlaybackHeaders(new Response(null, { status: 404 }), auth.signed);
   }
-  if (request?.signal?.aborted)
-    return withSignedPlaybackHeaders(cancelledSegmentHeadResponse(), auth.signed);
+  if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentHeadResponse(), auth.signed);
   if (response.ok) {
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,
@@ -286,16 +212,10 @@ export const HEAD: RequestHandler = async ({
       playlistPath: artifact.playlistPath,
       artifact: "segment",
     });
-    if (current instanceof Response)
-      return withSignedPlaybackHeaders(current, auth.signed);
-    if (request?.signal?.aborted)
-      return withSignedPlaybackHeaders(
-        cancelledSegmentHeadResponse(),
-        auth.signed,
-      );
+    if (current instanceof Response) return withSignedPlaybackHeaders(current, auth.signed);
+    if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentHeadResponse(), auth.signed);
   }
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 
-export const OPTIONS: RequestHandler = async () =>
-  signedPlaybackOptionsResponse();
+export const OPTIONS: RequestHandler = async () => signedPlaybackOptionsResponse();

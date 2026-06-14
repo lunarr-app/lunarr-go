@@ -53,7 +53,11 @@ type TmdbMovieDetails = TmdbSearchResult & {
     origin_country?: string | null;
   }>;
   production_countries?: Array<{ iso_3166_1: string; name: string }>;
-  spoken_languages?: Array<{ iso_639_1: string; english_name?: string; name: string }>;
+  spoken_languages?: Array<{
+    iso_639_1: string;
+    english_name?: string;
+    name: string;
+  }>;
   credits?: {
     cast?: Array<{
       id: number;
@@ -113,14 +117,22 @@ type TmdbTvDetails = TmdbTvSearchResult & {
     origin_country?: string | null;
   }>;
   production_countries?: Array<{ iso_3166_1: string; name: string }>;
-  spoken_languages?: Array<{ iso_639_1: string; english_name?: string; name: string }>;
+  spoken_languages?: Array<{
+    iso_639_1: string;
+    english_name?: string;
+    name: string;
+  }>;
   aggregate_credits?: {
     cast?: Array<{
       id: number;
       credit_id?: string;
       name: string;
       original_name?: string;
-      roles?: Array<{ credit_id?: string; character?: string; episode_count?: number }>;
+      roles?: Array<{
+        credit_id?: string;
+        character?: string;
+        episode_count?: number;
+      }>;
       order?: number;
       profile_path?: string | null;
     }>;
@@ -130,7 +142,11 @@ type TmdbTvDetails = TmdbTvSearchResult & {
       name: string;
       original_name?: string;
       department?: string;
-      jobs?: Array<{ credit_id?: string; job?: string; episode_count?: number }>;
+      jobs?: Array<{
+        credit_id?: string;
+        job?: string;
+        episode_count?: number;
+      }>;
       profile_path?: string | null;
     }>;
   };
@@ -246,7 +262,11 @@ export type MatchedMovieMetadata = {
     originCountry: string | null;
   }>;
   productionCountries?: Array<{ iso31661: string; name: string }>;
-  spokenLanguages?: Array<{ iso6391: string; englishName: string | null; name: string }>;
+  spokenLanguages?: Array<{
+    iso6391: string;
+    englishName: string | null;
+    name: string;
+  }>;
 };
 
 type CommonMediaMetadataRelations = {
@@ -322,7 +342,7 @@ async function credentials(override?: TmdbCredentials) {
   if (override) {
     return {
       token: override.token ?? "",
-      apiKey: override.apiKey ?? ""
+      apiKey: override.apiKey ?? "",
     };
   }
 
@@ -333,7 +353,7 @@ async function credentials(override?: TmdbCredentials) {
 
   return {
     token: token || (apiKey ? "" : PUBLIC_TMDB_ACCESS_TOKEN),
-    apiKey
+    apiKey,
   };
 }
 
@@ -345,7 +365,7 @@ export async function tmdbCredentialsConfigured(override?: TmdbCredentials) {
 async function tmdbFetch<T>(url: URL, override?: TmdbCredentials, fetcher: TmdbFetch = fetch) {
   const { token, apiKey } = await credentials(override);
   const headers: Record<string, string> = {
-    accept: "application/json"
+    accept: "application/json",
   };
 
   if (apiKey) {
@@ -478,7 +498,7 @@ function mapTvShowMetadata(detail: TmdbTvDetails, first: TmdbTvSearchResult): Ma
       ? {
           site: trailer.site,
           key: trailer.key,
-          name: trailer.name
+          name: trailer.name,
         }
       : null,
     genres: (detail.genres ?? [])
@@ -495,7 +515,7 @@ function mapTvShowMetadata(detail: TmdbTvDetails, first: TmdbTvSearchResult): Ma
           originalName: stringOrNull(credit.original_name),
           character: stringOrNull(role?.character),
           order: credit.order ?? 0,
-          profilePath: credit.profile_path ?? null
+          profilePath: credit.profile_path ?? null,
         };
       }),
     crew: crew
@@ -510,7 +530,7 @@ function mapTvShowMetadata(detail: TmdbTvDetails, first: TmdbTvSearchResult): Ma
           department: stringOrNull(credit.department),
           job: stringOrNull(job?.job),
           order: index,
-          profilePath: credit.profile_path ?? null
+          profilePath: credit.profile_path ?? null,
         };
       }),
     videos: (detail.videos?.results ?? [])
@@ -522,18 +542,21 @@ function mapTvShowMetadata(detail: TmdbTvDetails, first: TmdbTvSearchResult): Ma
         key: video.key,
         type: stringOrNull(video.type),
         official: Boolean(video.official),
-        publishedAt: stringOrNull(video.published_at)
+        publishedAt: stringOrNull(video.published_at),
       })),
     keywords: (detail.keywords?.results ?? [])
       .filter((keyword) => keyword.name)
-      .map((keyword) => ({ providerId: String(keyword.id), name: keyword.name })),
+      .map((keyword) => ({
+        providerId: String(keyword.id),
+        name: keyword.name,
+      })),
     productionCompanies: (detail.production_companies ?? [])
       .filter((company) => company.name)
       .map((company) => ({
         providerId: String(company.id),
         name: company.name,
         logoPath: company.logo_path ?? null,
-        originCountry: stringOrNull(company.origin_country)
+        originCountry: stringOrNull(company.origin_country),
       })),
     productionCountries: (detail.production_countries ?? [])
       .filter((country) => country.iso_3166_1 && country.name)
@@ -543,8 +566,8 @@ function mapTvShowMetadata(detail: TmdbTvDetails, first: TmdbTvSearchResult): Ma
       .map((language) => ({
         iso6391: language.iso_639_1,
         englishName: stringOrNull(language.english_name),
-        name: language.name
-      }))
+        name: language.name,
+      })),
   };
 }
 
@@ -557,14 +580,14 @@ function mapTvSeasonMetadata(detail: TmdbTvSeasonDetails, seasonNumber: number):
     overview: detail.overview || null,
     posterPath: detail.poster_path ?? null,
     airDate: detail.air_date ?? null,
-    voteAverage: numberOrNull(detail.vote_average)
+    voteAverage: numberOrNull(detail.vote_average),
   };
 }
 
 function mapTvEpisodeMetadata(
   episode: NonNullable<TmdbTvSeasonDetails["episodes"]>[number] | undefined,
   seasonNumber: number,
-  episodeNumber: number
+  episodeNumber: number,
 ): MatchedTvEpisodeMetadata | null {
   if (!episode) return null;
   return {
@@ -578,14 +601,14 @@ function mapTvEpisodeMetadata(
     airDate: episode.air_date ?? null,
     runtimeSeconds: episode.runtime ? episode.runtime * 60 : null,
     voteAverage: numberOrNull(episode.vote_average),
-    voteCount: numberOrNull(episode.vote_count)
+    voteCount: numberOrNull(episode.vote_count),
   };
 }
 
 export async function matchMovieMetadata(
   title: string,
   year: number | null,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {}
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
 ) {
   const searchUrl = new URL("https://api.themoviedb.org/3/search/movie");
   searchUrl.searchParams.set("query", title);
@@ -610,7 +633,7 @@ export async function matchMovieMetadata(
         providerId: String(detail.belongs_to_collection.id),
         name: detail.belongs_to_collection.name,
         posterPath: detail.belongs_to_collection.poster_path ?? null,
-        backdropPath: detail.belongs_to_collection.backdrop_path ?? null
+        backdropPath: detail.belongs_to_collection.backdrop_path ?? null,
       }
     : null;
   const trailer = preferredTrailer(detail);
@@ -642,7 +665,7 @@ export async function matchMovieMetadata(
       ? {
           site: trailer.site,
           key: trailer.key,
-          name: trailer.name
+          name: trailer.name,
         }
       : null,
     genres: (detail.genres ?? [])
@@ -657,7 +680,7 @@ export async function matchMovieMetadata(
         originalName: stringOrNull(credit.original_name),
         character: stringOrNull(credit.character),
         order: credit.order ?? 0,
-        profilePath: credit.profile_path ?? null
+        profilePath: credit.profile_path ?? null,
       })),
     crew: (detail.credits?.crew ?? [])
       .filter((credit) => credit.name)
@@ -669,7 +692,7 @@ export async function matchMovieMetadata(
         department: stringOrNull(credit.department),
         job: stringOrNull(credit.job),
         order: index,
-        profilePath: credit.profile_path ?? null
+        profilePath: credit.profile_path ?? null,
       })),
     videos: (detail.videos?.results ?? [])
       .filter((video) => video.id && video.name && video.site && video.key)
@@ -680,18 +703,21 @@ export async function matchMovieMetadata(
         key: video.key,
         type: stringOrNull(video.type),
         official: Boolean(video.official),
-        publishedAt: stringOrNull(video.published_at)
+        publishedAt: stringOrNull(video.published_at),
       })),
     keywords: (detail.keywords?.keywords ?? [])
       .filter((keyword) => keyword.name)
-      .map((keyword) => ({ providerId: String(keyword.id), name: keyword.name })),
+      .map((keyword) => ({
+        providerId: String(keyword.id),
+        name: keyword.name,
+      })),
     productionCompanies: (detail.production_companies ?? [])
       .filter((company) => company.name)
       .map((company) => ({
         providerId: String(company.id),
         name: company.name,
         logoPath: company.logo_path ?? null,
-        originCountry: stringOrNull(company.origin_country)
+        originCountry: stringOrNull(company.origin_country),
       })),
     productionCountries: (detail.production_countries ?? [])
       .filter((country) => country.iso_3166_1 && country.name)
@@ -701,8 +727,8 @@ export async function matchMovieMetadata(
       .map((language) => ({
         iso6391: language.iso_639_1,
         englishName: stringOrNull(language.english_name),
-        name: language.name
-      }))
+        name: language.name,
+      })),
   } satisfies MatchedMovieMetadata;
 }
 
@@ -710,7 +736,7 @@ export async function matchTvSeasonMetadata(
   title: string,
   year: number | null,
   seasonNumber: number,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {}
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
 ) {
   const searchUrl = new URL("https://api.themoviedb.org/3/search/tv");
   searchUrl.searchParams.set("query", title);
@@ -736,7 +762,7 @@ export async function matchTvSeasonMetadata(
     episodes: (season.episodes ?? [])
       .filter((episode) => typeof episode.episode_number === "number")
       .map((episode) => mapTvEpisodeMetadata(episode, seasonNumber, episode.episode_number ?? 0))
-      .filter((episode) => episode !== null)
+      .filter((episode) => episode !== null),
   } satisfies MatchedTvSeasonLookup;
 }
 
@@ -745,7 +771,7 @@ export async function testTmdbConnection(options: { credentials?: TmdbCredential
   if (!metadata) {
     return {
       ok: false,
-      message: "TMDb credentials are missing or no test movie was returned."
+      message: "TMDb credentials are missing or no test movie was returned.",
     };
   }
 
@@ -754,6 +780,6 @@ export async function testTmdbConnection(options: { credentials?: TmdbCredential
     message: `TMDb returned ${metadata.title}${metadata.year ? ` (${metadata.year})` : ""}.`,
     title: metadata.title,
     year: metadata.year,
-    posterPath: metadata.posterPath
+    posterPath: metadata.posterPath,
   };
 }

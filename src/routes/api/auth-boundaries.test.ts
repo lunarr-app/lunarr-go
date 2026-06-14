@@ -2,33 +2,16 @@ import { describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { setTranscodingEnabled } from "$lib/server/transcoding/policy";
-import {
-  registerTranscodeHlsArtifact,
-  setTranscodeTouchDelayForTests,
-} from "$lib/server/transcoding/sessions";
+import { registerTranscodeHlsArtifact, setTranscodeTouchDelayForTests } from "$lib/server/transcoding/sessions";
 import { verifySignedPlaybackToken } from "$lib/server/playback/signed-token";
 import { GET as jobsGet } from "./jobs/+server";
-import {
-  GET as playbackGet,
-  POST as playbackPost,
-} from "./playback/[id]/+server";
+import { GET as playbackGet, POST as playbackPost } from "./playback/[id]/+server";
 import { POST as cancelPlaybackSessionPost } from "./playback-sessions/[sessionId]/cancel/+server";
 import { POST as heartbeatPlaybackSessionPost } from "./playback-sessions/[sessionId]/heartbeat/+server";
-import {
-  GET as streamGet,
-  HEAD as streamHead,
-} from "../media/files/[id]/stream/+server";
-import {
-  GET as subtitleGet,
-  HEAD as subtitleHead,
-} from "../media/subtitles/[id]/+server";
+import { GET as streamGet, HEAD as streamHead } from "../media/files/[id]/stream/+server";
+import { GET as subtitleGet, HEAD as subtitleHead } from "../media/subtitles/[id]/+server";
 
 describe("authenticated API route boundaries", () => {
   test("rejects direct unauthenticated playback progress calls", async () => {
@@ -204,9 +187,7 @@ describe("authenticated API route boundaries", () => {
   });
 
   test("cancels an owned active playback session through the API", async () => {
-    const tempDir = await mkdtemp(
-      path.join(tmpdir(), "lunarr-api-playback-session-cancel-"),
-    );
+    const tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-api-playback-session-cancel-"));
 
     try {
       await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
@@ -297,12 +278,9 @@ describe("authenticated API route boundaries", () => {
 
       const heartbeatResponse = await heartbeatPlaybackSessionPost({
         params: { sessionId: "transcode-1" },
-        request: new Request(
-          "http://localhost/api/playback-sessions/transcode-1/heartbeat",
-          {
-            method: "POST",
-          },
-        ),
+        request: new Request("http://localhost/api/playback-sessions/transcode-1/heartbeat", {
+          method: "POST",
+        }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
 
@@ -327,13 +305,10 @@ describe("authenticated API route boundaries", () => {
 
       const cancelledHeartbeatResponse = await heartbeatPlaybackSessionPost({
         params: { sessionId: "transcode-1" },
-        request: new Request(
-          "http://localhost/api/playback-sessions/transcode-1/heartbeat",
-          {
-            method: "POST",
-            signal: abortController.signal,
-          },
-        ),
+        request: new Request("http://localhost/api/playback-sessions/transcode-1/heartbeat", {
+          method: "POST",
+          signal: abortController.signal,
+        }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
 
@@ -361,12 +336,9 @@ describe("authenticated API route boundaries", () => {
 
       const disabledHeartbeatResponse = await heartbeatPlaybackSessionPost({
         params: { sessionId: "transcode-1" },
-        request: new Request(
-          "http://localhost/api/playback-sessions/transcode-1/heartbeat",
-          {
-            method: "POST",
-          },
-        ),
+        request: new Request("http://localhost/api/playback-sessions/transcode-1/heartbeat", {
+          method: "POST",
+        }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
 
@@ -401,21 +373,11 @@ describe("authenticated API route boundaries", () => {
           updated_at: now,
         })
         .execute();
-      const playbackArtifactDir = path.join(
-        tempDir,
-        "playback-sessions",
-        "transcode-2",
-      );
-      const playbackPlaylistPath = path.join(
-        playbackArtifactDir,
-        "master.m3u8",
-      );
+      const playbackArtifactDir = path.join(tempDir, "playback-sessions", "transcode-2");
+      const playbackPlaylistPath = path.join(playbackArtifactDir, "master.m3u8");
       await mkdir(playbackArtifactDir, { recursive: true });
       await writeFile(playbackPlaylistPath, "#EXTM3U\n");
-      await writeFile(
-        path.join(playbackArtifactDir, "segment-00001.ts"),
-        "segment",
-      );
+      await writeFile(path.join(playbackArtifactDir, "segment-00001.ts"), "segment");
       await registerTranscodeHlsArtifact({
         sessionId: "transcode-2",
         mediaFileId: "file-1",
@@ -425,12 +387,9 @@ describe("authenticated API route boundaries", () => {
 
       const response = await cancelPlaybackSessionPost({
         params: { sessionId: "transcode-2" },
-        request: new Request(
-          "http://localhost/api/playback-sessions/transcode-2/cancel",
-          {
-            method: "POST",
-          },
-        ),
+        request: new Request("http://localhost/api/playback-sessions/transcode-2/cancel", {
+          method: "POST",
+        }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
 
@@ -438,12 +397,9 @@ describe("authenticated API route boundaries", () => {
       expect(await response.json()).toEqual({ ok: true, status: "cancelled" });
       const duplicateResponse = await cancelPlaybackSessionPost({
         params: { sessionId: "transcode-2" },
-        request: new Request(
-          "http://localhost/api/playback-sessions/transcode-2/cancel",
-          {
-            method: "POST",
-          },
-        ),
+        request: new Request("http://localhost/api/playback-sessions/transcode-2/cancel", {
+          method: "POST",
+        }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
       expect(duplicateResponse.status).toBe(200);
@@ -481,9 +437,7 @@ describe("authenticated API route boundaries", () => {
   });
 
   test("returns signed playback URLs for direct, HLS, and subtitles", async () => {
-    const tempDir = await mkdtemp(
-      path.join(tmpdir(), "lunarr-api-cast-playback-"),
-    );
+    const tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-api-cast-playback-"));
 
     try {
       await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
@@ -605,13 +559,10 @@ describe("authenticated API route boundaries", () => {
       expect(directStreamUrl.origin).toBe("http://localhost");
       expect(directStreamUrl.pathname).toBe("/media/files/file-1/stream");
       expect(
-        verifySignedPlaybackToken(
-          directStreamUrl.searchParams.get("remoteToken"),
-          {
-            route: "direct",
-            mediaFileId: "file-1",
-          },
-        ),
+        verifySignedPlaybackToken(directStreamUrl.searchParams.get("remoteToken"), {
+          route: "direct",
+          mediaFileId: "file-1",
+        }),
       ).toMatchObject({
         route: "direct",
         userId: "user-1",
@@ -640,20 +591,12 @@ describe("authenticated API route boundaries", () => {
 
       expect(alternateOriginResponse.status).toBe(200);
       const alternateOriginBody = await alternateOriginResponse.json();
-      const alternateOriginStreamUrl = new URL(
-        alternateOriginBody.playback.streamUrl,
-      );
+      const alternateOriginStreamUrl = new URL(alternateOriginBody.playback.streamUrl);
       expect(alternateOriginStreamUrl.origin).toBe("http://iphone.local");
-      expect(alternateOriginStreamUrl.pathname).toBe(
-        "/media/files/file-1/stream",
-      );
-      const alternateOriginSubtitleUrl = new URL(
-        alternateOriginBody.playback.tracks[0].src,
-      );
+      expect(alternateOriginStreamUrl.pathname).toBe("/media/files/file-1/stream");
+      const alternateOriginSubtitleUrl = new URL(alternateOriginBody.playback.tracks[0].src);
       expect(alternateOriginSubtitleUrl.origin).toBe("http://iphone.local");
-      expect(alternateOriginSubtitleUrl.pathname).toBe(
-        "/media/subtitles/subtitle-1",
-      );
+      expect(alternateOriginSubtitleUrl.pathname).toBe("/media/subtitles/subtitle-1");
 
       await db
         .insertInto("playback_session")
@@ -670,15 +613,8 @@ describe("authenticated API route boundaries", () => {
           updated_at: now,
         })
         .execute();
-      const playbackArtifactDir = path.join(
-        tempDir,
-        "playback-sessions",
-        "transcode-1",
-      );
-      const playbackPlaylistPath = path.join(
-        playbackArtifactDir,
-        "master.m3u8",
-      );
+      const playbackArtifactDir = path.join(tempDir, "playback-sessions", "transcode-1");
+      const playbackPlaylistPath = path.join(playbackArtifactDir, "master.m3u8");
       await mkdir(playbackArtifactDir, { recursive: true });
       await writeFile(playbackPlaylistPath, "#EXTM3U\n");
       await registerTranscodeHlsArtifact({
@@ -690,9 +626,7 @@ describe("authenticated API route boundaries", () => {
 
       const hlsResponse = await playbackGet({
         params: { id: "movie-1" },
-        url: new URL(
-          "http://localhost/api/playback/movie-1?file=file-1&transcode=true",
-        ),
+        url: new URL("http://localhost/api/playback/movie-1?file=file-1&transcode=true"),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
 
@@ -704,17 +638,12 @@ describe("authenticated API route boundaries", () => {
         playbackSessionId: "transcode-1",
       });
       const hlsStreamUrl = new URL(hlsBody.playback.streamUrl);
-      expect(hlsStreamUrl.pathname).toBe(
-        "/media/playback-sessions/transcode-1/master.m3u8",
-      );
+      expect(hlsStreamUrl.pathname).toBe("/media/playback-sessions/transcode-1/master.m3u8");
       expect(
-        verifySignedPlaybackToken(
-          hlsStreamUrl.searchParams.get("remoteToken"),
-          {
-            route: "hls",
-            playbackSessionId: "transcode-1",
-          },
-        ),
+        verifySignedPlaybackToken(hlsStreamUrl.searchParams.get("remoteToken"), {
+          route: "hls",
+          playbackSessionId: "transcode-1",
+        }),
       ).toMatchObject({
         route: "hls",
         userId: "user-1",
@@ -809,12 +738,9 @@ describe("authenticated API route boundaries", () => {
         })
         .execute();
 
-      const request = new Request(
-        "http://localhost/media/files/file-1/stream",
-        {
-          headers: { range: "bytes=2-5" },
-        },
-      );
+      const request = new Request("http://localhost/media/files/file-1/stream", {
+        headers: { range: "bytes=2-5" },
+      });
       const response = await streamGet({
         params: { id: "file-1" },
         request,
@@ -869,10 +795,7 @@ describe("authenticated API route boundaries", () => {
       const nowMs = Date.now();
       const now = new Date(nowMs).toISOString();
       const subtitlePath = path.join(tempDir, "Movie.2026.en.vtt");
-      await writeFile(
-        subtitlePath,
-        "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n",
-      );
+      await writeFile(subtitlePath, "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n");
       await db
         .insertInto("library")
         .values({
@@ -949,9 +872,7 @@ describe("authenticated API route boundaries", () => {
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toBe("text/vtt");
       expect(response.headers.get("content-length")).toBe("44");
-      expect(await response.text()).toBe(
-        "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n",
-      );
+      expect(await response.text()).toBe("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n");
 
       const headResponse = await subtitleHead({
         params: { id: "subtitle-1" },

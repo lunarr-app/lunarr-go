@@ -23,8 +23,7 @@ export const actions: Actions = {
     const episodeId = String(form.get("episodeId") ?? "");
     const fileId = String(form.get("fileId") ?? "");
     const completed = String(form.get("completed") ?? "") === "true";
-    if (!episodeId || !fileId)
-      return fail(400, { error: "Episode file is required." });
+    if (!episodeId || !fileId) return fail(400, { error: "Episode file is required." });
 
     try {
       await markWatched({
@@ -35,10 +34,7 @@ export const actions: Actions = {
       });
     } catch (error) {
       return fail(400, {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Could not update watched status.",
+        error: error instanceof Error ? error.message : "Could not update watched status.",
       });
     }
 
@@ -57,10 +53,7 @@ export const actions: Actions = {
       });
     } catch (error) {
       return fail(400, {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Could not update season watched status.",
+        error: error instanceof Error ? error.message : "Could not update season watched status.",
       });
     }
 

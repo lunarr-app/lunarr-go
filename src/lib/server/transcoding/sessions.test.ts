@@ -3,12 +3,7 @@ import { mkdir, mkdtemp, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import {
   cleanupExpiredPlaybackSessionArtifacts,
@@ -189,10 +184,7 @@ describe("transcode sessions", () => {
       userId: "user-1",
     });
     const artifactDir = path.join(tempDir, "playback-sessions", sessionId);
-    const segmentWindowDir = path.join(
-      artifactDir,
-      ".segment-window-42-restart",
-    );
+    const segmentWindowDir = path.join(artifactDir, ".segment-window-42-restart");
     const playlistPath = path.join(artifactDir, "master.m3u8");
     await mkdir(segmentWindowDir, { recursive: true });
     await writeFile(playlistPath, "#EXTM3U\n");
@@ -268,29 +260,14 @@ describe("transcode sessions", () => {
       mediaFileId: "file-1",
       userId: "user-1",
     });
-    const failedArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      failedSessionId,
-    );
-    const completedArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      completedSessionId,
-    );
+    const failedArtifactDir = path.join(tempDir, "playback-sessions", failedSessionId);
+    const completedArtifactDir = path.join(tempDir, "playback-sessions", completedSessionId);
     await mkdir(failedArtifactDir, { recursive: true });
     await mkdir(completedArtifactDir, { recursive: true });
     await writeFile(path.join(failedArtifactDir, "partial.ts"), "partial");
-    await writeFile(
-      path.join(completedArtifactDir, "segment-0001.ts"),
-      "segment",
-    );
+    await writeFile(path.join(completedArtifactDir, "segment-0001.ts"), "segment");
 
-    await updateTranscodeSessionStatus(
-      failedSessionId,
-      "failed",
-      "Backend failed.",
-    );
+    await updateTranscodeSessionStatus(failedSessionId, "failed", "Backend failed.");
     await updateTranscodeSessionStatus(completedSessionId, "completed");
     await registerTranscodeHlsArtifact({
       sessionId: completedSessionId,
@@ -320,9 +297,7 @@ describe("transcode sessions", () => {
       .orderBy("id")
       .execute();
     expect(cleanedJobs).toEqual(
-      [{ id: completedSessionId }, { id: failedSessionId }].sort((a, b) =>
-        a.id.localeCompare(b.id),
-      ),
+      [{ id: completedSessionId }, { id: failedSessionId }].sort((a, b) => a.id.localeCompare(b.id)),
     );
     const artifact = await db
       .selectFrom("playback_hls_artifact")
@@ -345,21 +320,9 @@ describe("transcode sessions", () => {
       mediaFileId: "file-1",
       userId: "user-1",
     });
-    const oldestArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      oldestSessionId,
-    );
-    const middleArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      middleSessionId,
-    );
-    const newestArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      newestSessionId,
-    );
+    const oldestArtifactDir = path.join(tempDir, "playback-sessions", oldestSessionId);
+    const middleArtifactDir = path.join(tempDir, "playback-sessions", middleSessionId);
+    const newestArtifactDir = path.join(tempDir, "playback-sessions", newestSessionId);
     await mkdir(oldestArtifactDir, { recursive: true });
     await mkdir(middleArtifactDir, { recursive: true });
     await mkdir(newestArtifactDir, { recursive: true });
@@ -386,13 +349,7 @@ describe("transcode sessions", () => {
       .where("id", "=", newestSessionId)
       .execute();
 
-    expect(
-      await cleanupExpiredPlaybackSessionArtifacts(
-        1_000_000_000_000,
-        8,
-        1_000_000_000_000,
-      ),
-    ).toEqual({
+    expect(await cleanupExpiredPlaybackSessionArtifacts(1_000_000_000_000, 8, 1_000_000_000_000)).toEqual({
       sessions: 1,
       cleaned: 1,
     });
@@ -407,18 +364,9 @@ describe("transcode sessions", () => {
       userId: "user-1",
     });
     const playbackSessionArtifactRoot = path.join(tempDir, "playback-sessions");
-    const activeArtifactDir = path.join(
-      playbackSessionArtifactRoot,
-      activeSessionId,
-    );
-    const orphanArtifactDir = path.join(
-      playbackSessionArtifactRoot,
-      "orphan-session",
-    );
-    const freshOrphanArtifactDir = path.join(
-      playbackSessionArtifactRoot,
-      "fresh-orphan-session",
-    );
+    const activeArtifactDir = path.join(playbackSessionArtifactRoot, activeSessionId);
+    const orphanArtifactDir = path.join(playbackSessionArtifactRoot, "orphan-session");
+    const freshOrphanArtifactDir = path.join(playbackSessionArtifactRoot, "fresh-orphan-session");
     await mkdir(activeArtifactDir, { recursive: true });
     await mkdir(orphanArtifactDir, { recursive: true });
     await mkdir(freshOrphanArtifactDir, { recursive: true });
@@ -443,20 +391,11 @@ describe("transcode sessions", () => {
 
   test("cleans orphaned playback-session artifact directories under size pressure", async () => {
     const playbackSessionArtifactRoot = path.join(tempDir, "playback-sessions");
-    const orphanArtifactDir = path.join(
-      playbackSessionArtifactRoot,
-      "fresh-large-orphan",
-    );
+    const orphanArtifactDir = path.join(playbackSessionArtifactRoot, "fresh-large-orphan");
     await mkdir(orphanArtifactDir, { recursive: true });
     await writeFile(path.join(orphanArtifactDir, "segment.ts"), "1234567890");
 
-    expect(
-      await cleanupExpiredPlaybackSessionArtifacts(
-        1_000_000_000_000,
-        8,
-        1_000_000_000_000,
-      ),
-    ).toEqual({
+    expect(await cleanupExpiredPlaybackSessionArtifacts(1_000_000_000_000, 8, 1_000_000_000_000)).toEqual({
       sessions: 0,
       cleaned: 1,
     });
@@ -472,26 +411,14 @@ describe("transcode sessions", () => {
       mediaFileId: "file-1",
       userId: "user-1",
     });
-    const failedArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      failedSessionId,
-    );
-    const completedArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      completedSessionId,
-    );
+    const failedArtifactDir = path.join(tempDir, "playback-sessions", failedSessionId);
+    const completedArtifactDir = path.join(tempDir, "playback-sessions", completedSessionId);
     await mkdir(failedArtifactDir, { recursive: true });
     await mkdir(completedArtifactDir, { recursive: true });
     await writeFile(path.join(failedArtifactDir, "partial.ts"), "partial");
     await writeFile(path.join(completedArtifactDir, "segment.ts"), "segment");
 
-    await updateTranscodeSessionStatus(
-      failedSessionId,
-      "failed",
-      "Backend failed.",
-    );
+    await updateTranscodeSessionStatus(failedSessionId, "failed", "Backend failed.");
     await updateTranscodeSessionStatus(completedSessionId, "completed");
     const twoMinutesAgo = new Date(Date.now() - 120_000).toISOString();
     await db
@@ -554,18 +481,10 @@ describe("transcode sessions", () => {
       .where("id", "=", sessionId)
       .execute();
 
-    expect(
-      await listStaleActiveTranscodeSessions("2001-01-01T00:00:00.000Z"),
-    ).toEqual([{ sessionId }]);
-    expect(await touchTranscodeSessionHeartbeat(sessionId, "user-1")).toBe(
-      true,
-    );
-    expect(await touchTranscodeSessionHeartbeat(sessionId, "other-user")).toBe(
-      false,
-    );
-    expect(
-      await listStaleActiveTranscodeSessions("2001-01-01T00:00:00.000Z"),
-    ).toEqual([]);
+    expect(await listStaleActiveTranscodeSessions("2001-01-01T00:00:00.000Z")).toEqual([{ sessionId }]);
+    expect(await touchTranscodeSessionHeartbeat(sessionId, "user-1")).toBe(true);
+    expect(await touchTranscodeSessionHeartbeat(sessionId, "other-user")).toBe(false);
+    expect(await listStaleActiveTranscodeSessions("2001-01-01T00:00:00.000Z")).toEqual([]);
   });
 
   test("does not refresh completed sessions from heartbeat alone", async () => {
@@ -585,9 +504,7 @@ describe("transcode sessions", () => {
       .where("id", "=", sessionId)
       .execute();
 
-    expect(await touchTranscodeSessionHeartbeat(sessionId, "user-1")).toBe(
-      false,
-    );
+    expect(await touchTranscodeSessionHeartbeat(sessionId, "user-1")).toBe(false);
 
     const job = await db
       .selectFrom("playback_session")
@@ -632,38 +549,24 @@ describe("transcode sessions", () => {
       .where("playback_session_id", "=", sessionId)
       .execute();
 
-    expect(
-      await listIdleReadyHlsTranscodeSessions("2001-01-01T00:00:00.000Z"),
-    ).toEqual([{ sessionId }]);
+    expect(await listIdleReadyHlsTranscodeSessions("2001-01-01T00:00:00.000Z")).toEqual([{ sessionId }]);
 
     await db
       .updateTable("playback_session")
       .set({ last_heartbeat_at: "2099-01-01T00:00:00.000Z" })
       .where("id", "=", sessionId)
       .execute();
-    expect(
-      await listIdleReadyHlsTranscodeSessions("2001-01-01T00:00:00.000Z"),
-    ).toEqual([]);
+    expect(await listIdleReadyHlsTranscodeSessions("2001-01-01T00:00:00.000Z")).toEqual([]);
 
     await db
       .updateTable("playback_session")
       .set({ last_heartbeat_at: "2000-01-01T00:00:00.000Z" })
       .where("id", "=", sessionId)
       .execute();
-    expect(
-      await listIdleReadyHlsTranscodeSessions("2001-01-01T00:00:00.000Z"),
-    ).toEqual([{ sessionId }]);
+    expect(await listIdleReadyHlsTranscodeSessions("2001-01-01T00:00:00.000Z")).toEqual([{ sessionId }]);
 
-    expect(
-      await touchTranscodeSessionSegmentRequest(
-        sessionId,
-        "user-1",
-        "segment-00042.ts",
-      ),
-    ).toBe(true);
-    expect(
-      await listIdleReadyHlsTranscodeSessions("2001-01-01T00:00:00.000Z"),
-    ).toEqual([]);
+    expect(await touchTranscodeSessionSegmentRequest(sessionId, "user-1", "segment-00042.ts")).toBe(true);
+    expect(await listIdleReadyHlsTranscodeSessions("2001-01-01T00:00:00.000Z")).toEqual([]);
   });
 
   test("segment requests keep completed temporary playback artifacts fresh", async () => {
@@ -684,30 +587,18 @@ describe("transcode sessions", () => {
       .where("id", "=", sessionId)
       .execute();
 
-    expect(
-      await touchTranscodeSessionSegmentRequest(
-        sessionId,
-        "user-1",
-        "segment-00042.ts",
-      ),
-    ).toBe(true);
+    expect(await touchTranscodeSessionSegmentRequest(sessionId, "user-1", "segment-00042.ts")).toBe(true);
 
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "last_segment_name",
-        "last_segment_index",
-        "last_segment_request_at",
-      ])
+      .select(["last_segment_name", "last_segment_index", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job.last_segment_name).toBe("segment-00042.ts");
     expect(job.last_segment_index).toBe(42);
     expect(job.last_segment_request_at).toBeTruthy();
 
-    expect(
-      await cleanupExpiredPlaybackSessionArtifacts(1, 1024, 1_000_000),
-    ).toEqual({
+    expect(await cleanupExpiredPlaybackSessionArtifacts(1, 1024, 1_000_000)).toEqual({
       sessions: 0,
       cleaned: 0,
     });
@@ -721,21 +612,11 @@ describe("transcode sessions", () => {
     });
     await updateTranscodeSessionStatus(sessionId, "running");
 
-    expect(
-      await touchTranscodeSessionSegmentRequest(
-        sessionId,
-        "user-1",
-        "movie-00042.mp4",
-      ),
-    ).toBe(false);
+    expect(await touchTranscodeSessionSegmentRequest(sessionId, "user-1", "movie-00042.mp4")).toBe(false);
 
     const arbitraryMp4 = await db
       .selectFrom("playback_session")
-      .select([
-        "last_segment_name",
-        "last_segment_index",
-        "last_segment_request_at",
-      ])
+      .select(["last_segment_name", "last_segment_index", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(arbitraryMp4).toEqual({
@@ -744,13 +625,7 @@ describe("transcode sessions", () => {
       last_segment_request_at: null,
     });
 
-    expect(
-      await touchTranscodeSessionSegmentRequest(
-        sessionId,
-        "user-1",
-        "segment-00042.ts",
-      ),
-    ).toBe(true);
+    expect(await touchTranscodeSessionSegmentRequest(sessionId, "user-1", "segment-00042.ts")).toBe(true);
 
     const mediaSegment = await db
       .selectFrom("playback_session")

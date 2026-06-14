@@ -1,12 +1,5 @@
 <script lang="ts">
-  import {
-    FastForward,
-    Maximize,
-    Play,
-    Rewind,
-    Volume2,
-    X,
-  } from "@lucide/svelte";
+  import { FastForward, Maximize, Play, Rewind, Volume2, X } from "@lucide/svelte";
 
   let {
     title = "Starting playback",
@@ -23,11 +16,7 @@
   } = $props();
 </script>
 
-<div
-  class="video-shell custom-player placeholder-shell"
-  aria-live="polite"
-  aria-label={busyLabel}
->
+<div class="video-shell custom-player placeholder-shell" aria-live="polite" aria-label={busyLabel}>
   <div class="player-overlay">
     <span class="overlay-spinner" aria-hidden="true"></span>
     <p>{busyLabel}</p>
@@ -36,12 +25,7 @@
   <div class="player-controls" role="group" aria-label="Playback controls">
     <div class="top-controls">
       {#if onClose}
-        <button
-          class="control-button"
-          type="button"
-          aria-label="Close player"
-          onclick={onClose}
-        >
+        <button class="control-button" type="button" aria-label="Close player" onclick={onClose}>
           <X size={20} aria-hidden="true" />
         </button>
       {:else if backHref}
@@ -61,15 +45,7 @@
     </div>
 
     <div class="bottom-controls" aria-hidden="true">
-      <input
-        class="seek-slider"
-        type="range"
-        min="0"
-        max="1"
-        value="0"
-        tabindex="-1"
-        disabled
-      />
+      <input class="seek-slider" type="range" min="0" max="1" value="0" tabindex="-1" disabled />
       <div class="control-row">
         <div class="primary-controls">
           <button class="control-button primary-play" type="button" disabled>
@@ -89,15 +65,7 @@
           <button class="control-button" type="button" disabled>
             <Volume2 size={20} aria-hidden="true" />
           </button>
-          <input
-            class="volume-slider"
-            type="range"
-            min="0"
-            max="1"
-            value="1"
-            tabindex="-1"
-            disabled
-          />
+          <input class="volume-slider" type="range" min="0" max="1" value="1" tabindex="-1" disabled />
           <button class="control-button" type="button" disabled>
             <Maximize size={20} aria-hidden="true" />
           </button>

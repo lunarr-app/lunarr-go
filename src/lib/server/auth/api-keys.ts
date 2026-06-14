@@ -1,8 +1,4 @@
-import {
-  API_KEY_MAX_EXPIRES_IN_DAYS,
-  API_KEY_MAX_EXPIRES_IN_SECONDS,
-  API_KEY_MAX_NAME_LENGTH,
-} from "./api-key-config";
+import { API_KEY_MAX_EXPIRES_IN_DAYS, API_KEY_MAX_EXPIRES_IN_SECONDS, API_KEY_MAX_NAME_LENGTH } from "./api-key-config";
 
 export type ApiKeySummary = {
   id: string;
@@ -57,19 +53,14 @@ function normalizeExpiresIn(expiresIn: unknown) {
     throw new Error("Expiration must be a positive number of seconds.");
   }
   if (seconds > API_KEY_MAX_EXPIRES_IN_SECONDS) {
-    throw new Error(
-      `Expiration cannot be more than ${API_KEY_MAX_EXPIRES_IN_DAYS} days.`,
-    );
+    throw new Error(`Expiration cannot be more than ${API_KEY_MAX_EXPIRES_IN_DAYS} days.`);
   }
   return seconds;
 }
 
 function isUnauthorizedError(error: unknown) {
   if (!error || typeof error !== "object") return false;
-  if (
-    "status" in error &&
-    (error.status === 401 || error.status === "UNAUTHORIZED")
-  ) {
+  if ("status" in error && (error.status === 401 || error.status === "UNAUTHORIZED")) {
     return true;
   }
   if ("message" in error) {
@@ -89,10 +80,7 @@ export class ApiKeyError extends Error {
 }
 
 function mapAuthError(error: unknown, fallback: string) {
-  const message =
-    error && typeof error === "object" && "message" in error
-      ? String(error.message)
-      : fallback;
+  const message = error && typeof error === "object" && "message" in error ? String(error.message) : fallback;
   const status = isUnauthorizedError(error) ? 401 : 400;
   return new ApiKeyError(message, status);
 }
@@ -110,10 +98,7 @@ async function getAuth() {
 
 function isNotFoundError(error: unknown) {
   if (!error || typeof error !== "object") return false;
-  if (
-    "status" in error &&
-    (error.status === 404 || error.status === "NOT_FOUND")
-  ) {
+  if ("status" in error && (error.status === 404 || error.status === "NOT_FOUND")) {
     return true;
   }
   if ("message" in error) {
@@ -123,11 +108,7 @@ function isNotFoundError(error: unknown) {
   return false;
 }
 
-export async function createApiKey(input: {
-  name?: unknown;
-  expiresIn?: unknown;
-  headers: Headers;
-}) {
+export async function createApiKey(input: { name?: unknown; expiresIn?: unknown; headers: Headers }) {
   const name = normalizeApiKeyName(input.name);
   const expiresIn = normalizeExpiresIn(input.expiresIn);
 
@@ -172,10 +153,7 @@ export function isApiKeyUnauthorized(error: unknown) {
   return isUnauthorizedError(error);
 }
 
-export async function revokeApiKey(input: {
-  headers: Headers;
-  apiKeyId: string;
-}) {
+export async function revokeApiKey(input: { headers: Headers; apiKeyId: string }) {
   try {
     const auth = await getAuth();
     await auth.api.deleteApiKey({

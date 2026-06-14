@@ -37,10 +37,7 @@ async function resolveBrowserExecutable() {
 }
 
 async function compiledSeekModuleDataUrl() {
-  const source = await readFile(
-    path.join(root, "src/lib/playback/seek.ts"),
-    "utf8",
-  );
+  const source = await readFile(path.join(root, "src/lib/playback/seek.ts"), "utf8");
   const compiled = ts.transpileModule(source, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -196,9 +193,7 @@ try {
   }, seekModuleUrl);
 
   assertResult(result);
-  console.log(
-    `Browser HLS seek smoke passed with ${path.basename(executablePath)}.`,
-  );
+  console.log(`Browser HLS seek smoke passed with ${path.basename(executablePath)}.`);
 } finally {
   await browser.close();
 }

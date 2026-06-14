@@ -6,12 +6,7 @@ import path from "node:path";
 import { Readable, Transform } from "node:stream";
 import { spawnSync } from "node:child_process";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
 import {
   isSafeHlsSegmentName,
@@ -45,10 +40,7 @@ import {
   updateTranscodeSessionMode,
   updateTranscodeSessionStatus,
 } from "$lib/server/transcoding/sessions";
-import {
-  setTranscodingEnabled,
-  setUserPreferredAudioLanguage,
-} from "$lib/server/transcoding/policy";
+import { setTranscodingEnabled, setUserPreferredAudioLanguage } from "$lib/server/transcoding/policy";
 import type {
   HlsSegmentWindowGeneration,
   HlsSegmentWindowTranscodeInput,
@@ -56,14 +48,8 @@ import type {
 } from "$lib/server/transcoding/backend";
 import { resolvedFfmpegPath } from "$lib/server/transcoding/ffmpeg-cli";
 import type { LibraryStorage } from "$lib/server/storage";
-import {
-  GET as getPlaylist,
-  HEAD as headPlaylist,
-} from "./[sessionId]/master.m3u8/+server";
-import {
-  GET as getSegment,
-  HEAD as headSegment,
-} from "./[sessionId]/segments/[segment]/+server";
+import { GET as getPlaylist, HEAD as headPlaylist } from "./[sessionId]/master.m3u8/+server";
+import { GET as getSegment, HEAD as headSegment } from "./[sessionId]/segments/[segment]/+server";
 
 function requestedWindowSegment(input: HlsSegmentWindowTranscodeInput) {
   const segment = input.segments[0];
@@ -71,15 +57,9 @@ function requestedWindowSegment(input: HlsSegmentWindowTranscodeInput) {
   return segment;
 }
 
-async function writeRequestedWindowSegment(
-  input: HlsSegmentWindowTranscodeInput,
-  body: string,
-) {
+async function writeRequestedWindowSegment(input: HlsSegmentWindowTranscodeInput, body: string) {
   const segment = requestedWindowSegment(input);
-  await writeFile(
-    path.join(path.dirname(input.playlistPath), segment.segment),
-    body,
-  );
+  await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), body);
 }
 
 function completedWindowGeneration(): HlsSegmentWindowGeneration {
@@ -243,10 +223,7 @@ describe("playback-session HLS routes", () => {
     const artifactDir = path.join(tempDir, "playback-sessions", sessionId);
     await mkdir(artifactDir, { recursive: true });
     playlistPath = path.join(artifactDir, "master.m3u8");
-    await writeFile(
-      playlistPath,
-      "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-0001.ts\n",
-    );
+    await writeFile(playlistPath, "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-0001.ts\n");
     await writeFile(path.join(artifactDir, "segment-0001.ts"), "segment-body");
   });
 
@@ -321,17 +298,10 @@ describe("playback-session HLS routes", () => {
       mediaFileId: "sftp-file",
       userId: "user-1",
     });
-    const sftpArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      sftpSessionId,
-    );
+    const sftpArtifactDir = path.join(tempDir, "playback-sessions", sftpSessionId);
     const sftpPlaylistPath = path.join(sftpArtifactDir, "master.m3u8");
     await mkdir(sftpArtifactDir, { recursive: true });
-    await writeFile(
-      sftpPlaylistPath,
-      "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-00001.ts\n",
-    );
+    await writeFile(sftpPlaylistPath, "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-00001.ts\n");
     await registerTranscodeHlsArtifact({
       sessionId: sftpSessionId,
       mediaFileId: "sftp-file",
@@ -395,34 +365,21 @@ describe("playback-session HLS routes", () => {
   });
 
   test("serves an explicit virtual playlist when duration is known", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 13 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
       path: playlistPath,
       mimeType: "application/vnd.apple.mpegurl",
     });
-    await writeFile(
-      path.join(path.dirname(playlistPath), "segment-00001.ts"),
-      "segment-body",
-    );
+    await writeFile(path.join(path.dirname(playlistPath), "segment-00001.ts"), "segment-body");
     await updateTranscodeSessionStatus(sessionId, "running");
-    await db
-      .updateTable("playback_session")
-      .set({ start_time_seconds: 5 })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ start_time_seconds: 5 }).where("id", "=", sessionId).execute();
 
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(200);
@@ -432,21 +389,12 @@ describe("playback-session HLS routes", () => {
   });
 
   test("serves an explicit virtual fMP4 playlist when the session uses fMP4", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 34 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 34 }).where("id", "=", "file-1").execute();
     await writeFile(
       playlistPath,
-      [
-        "#EXTM3U",
-        "#EXT-X-VERSION:7",
-        '#EXT-X-MAP:URI="init.mp4"',
-        "#EXTINF:16.000,",
-        "segment-00000.m4s",
-        "",
-      ].join("\n"),
+      ["#EXTM3U", "#EXT-X-VERSION:7", '#EXT-X-MAP:URI="init.mp4"', "#EXTINF:16.000,", "segment-00000.m4s", ""].join(
+        "\n",
+      ),
     );
     await registerTranscodeHlsArtifact({
       sessionId,
@@ -459,9 +407,7 @@ describe("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(200);
@@ -496,11 +442,7 @@ describe("playback-session HLS routes", () => {
       "segment-00000.ts",
       "",
     ].join("\n");
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 13 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await writeFile(playlistPath, eventPlaylist);
     await registerTranscodeHlsArtifact({
       sessionId,
@@ -518,16 +460,12 @@ describe("playback-session HLS routes", () => {
     const defaultResponse = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const explicitResponse = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(defaultResponse.status).toBe(200);
@@ -558,15 +496,11 @@ describe("playback-session HLS routes", () => {
     const response = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toContain(
-      "application/vnd.apple.mpegurl",
-    );
+    expect(response.headers.get("content-type")).toContain("application/vnd.apple.mpegurl");
     expect(response.headers.get("content-length")).toBe("70");
     expect(await response.text()).toBe("");
 
@@ -609,9 +543,7 @@ describe("playback-session HLS routes", () => {
     const response = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(409);
@@ -653,9 +585,7 @@ describe("playback-session HLS routes", () => {
       params: { sessionId },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -692,9 +622,7 @@ describe("playback-session HLS routes", () => {
     const response = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(409);
@@ -714,11 +642,7 @@ describe("playback-session HLS routes", () => {
 
   test("does not serve playlist HEAD metadata after the HLS artifact changes mid-read", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
-    const nextPlaylistPath = path.join(
-      tempDir,
-      "next-transcode",
-      "master.m3u8",
-    );
+    const nextPlaylistPath = path.join(tempDir, "next-transcode", "master.m3u8");
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -743,9 +667,7 @@ describe("playback-session HLS routes", () => {
     const response = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(409);
@@ -794,9 +716,7 @@ describe("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(409);
@@ -837,9 +757,7 @@ describe("playback-session HLS routes", () => {
       params: { sessionId },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -880,9 +798,7 @@ describe("playback-session HLS routes", () => {
       params: { sessionId },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -925,9 +841,7 @@ describe("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(409);
@@ -966,9 +880,7 @@ describe("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(409);
@@ -988,11 +900,7 @@ describe("playback-session HLS routes", () => {
 
   test("does not serve a playlist after the HLS artifact changes mid-read", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
-    const nextPlaylistPath = path.join(
-      tempDir,
-      "next-transcode",
-      "master.m3u8",
-    );
+    const nextPlaylistPath = path.join(tempDir, "next-transcode", "master.m3u8");
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1017,9 +925,7 @@ describe("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(409);
@@ -1039,11 +945,7 @@ describe("playback-session HLS routes", () => {
 
   test("does not refresh playlist heartbeat when temporary artifacts are missing", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
-    const missingPlaylistPath = path.join(
-      tempDir,
-      "missing-transcode",
-      "master.m3u8",
-    );
+    const missingPlaylistPath = path.join(tempDir, "missing-transcode", "master.m3u8");
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1060,9 +962,7 @@ describe("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -1079,16 +979,8 @@ describe("playback-session HLS routes", () => {
 
   test("does not refresh virtual playlist heartbeat when temporary artifacts are missing", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
-    const missingPlaylistPath = path.join(
-      tempDir,
-      "missing-virtual",
-      "master.m3u8",
-    );
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 13 })
-      .where("id", "=", "file-1")
-      .execute();
+    const missingPlaylistPath = path.join(tempDir, "missing-virtual", "master.m3u8");
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1105,16 +997,12 @@ describe("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
     const head = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -1133,11 +1021,7 @@ describe("playback-session HLS routes", () => {
   test("does not refresh virtual playlist heartbeat after the request is cancelled during heartbeat refresh", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
     const requestController = new AbortController();
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 13 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1158,9 +1042,7 @@ describe("playback-session HLS routes", () => {
       params: { sessionId },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -1180,11 +1062,7 @@ describe("playback-session HLS routes", () => {
 
   test("serves virtual playlist HEAD metadata without refreshing playback heartbeat", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 13 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1201,15 +1079,11 @@ describe("playback-session HLS routes", () => {
     const response = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toContain(
-      "application/vnd.apple.mpegurl",
-    );
+    expect(response.headers.get("content-type")).toContain("application/vnd.apple.mpegurl");
     expect(response.headers.has("content-length")).toBe(false);
     expect(await response.text()).toBe("");
 
@@ -1229,9 +1103,7 @@ describe("playback-session HLS routes", () => {
     await writeFile(path.join(artifactDir, "segment-0005.ts"), "current");
     await writeFile(path.join(artifactDir, "init.mp4"), "init");
 
-    expect(
-      await pruneHlsSegmentsBehind(playlistPath, "segment-0005.ts", 2),
-    ).toBe(2);
+    expect(await pruneHlsSegmentsBehind(playlistPath, "segment-0005.ts", 2)).toBe(2);
     expect(await exists(path.join(artifactDir, "segment-0001.ts"))).toBe(false);
     expect(await exists(path.join(artifactDir, "segment-0002.ts"))).toBe(false);
     expect(await exists(path.join(artifactDir, "segment-00003.ts"))).toBe(true);
@@ -1304,11 +1176,7 @@ describe("playback-session HLS routes", () => {
 
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "last_segment_name",
-        "last_segment_index",
-        "last_segment_request_at",
-      ])
+      .select(["last_segment_name", "last_segment_index", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -1429,11 +1297,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("does not serve segment HEAD metadata after the HLS artifact changes mid-read", async () => {
-    const nextPlaylistPath = path.join(
-      tempDir,
-      "next-transcode",
-      "master.m3u8",
-    );
+    const nextPlaylistPath = path.join(tempDir, "next-transcode", "master.m3u8");
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1507,16 +1371,12 @@ describe("playback-session HLS routes", () => {
     const playlist = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const playlistHead = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const existingSegment = await getSegment({
       params: { sessionId, segment: "segment-0001.ts" },
@@ -1533,9 +1393,7 @@ describe("playback-session HLS routes", () => {
     const otherUserPlaylist = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-2" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const otherUserSegment = await getSegment({
       params: { sessionId, segment: "segment-0001.ts" },
@@ -1560,13 +1418,7 @@ describe("playback-session HLS routes", () => {
 
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_heartbeat_at",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_heartbeat_at", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -1586,11 +1438,7 @@ describe("playback-session HLS routes", () => {
       path: playlistPath,
       mimeType: "application/vnd.apple.mpegurl",
     });
-    await updateTranscodeSessionStatus(
-      sessionId,
-      "failed",
-      "FFmpeg segment validation failed.",
-    );
+    await updateTranscodeSessionStatus(sessionId, "failed", "FFmpeg segment validation failed.");
     let cancelCount = 0;
     setTranscodeBackendForTests({
       async startCompatibilityHls(): Promise<RunningTranscode> {
@@ -1608,9 +1456,7 @@ describe("playback-session HLS routes", () => {
     const playlist = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const segment = await getSegment({
       params: { sessionId, segment: "segment-0001.ts" },
@@ -1641,9 +1487,7 @@ describe("playback-session HLS routes", () => {
     const playlist = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const segment = await getSegment({
       params: { sessionId, segment: "segment-0001.ts" },
@@ -1667,18 +1511,12 @@ describe("playback-session HLS routes", () => {
       path: playlistPath,
       mimeType: "application/vnd.apple.mpegurl",
     });
-    await updateTranscodeSessionStatus(
-      sessionId,
-      "cancelled",
-      "Playback session was cancelled.",
-    );
+    await updateTranscodeSessionStatus(sessionId, "cancelled", "Playback session was cancelled.");
 
     const playlist = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const segment = await getSegment({
       params: { sessionId, segment: "segment-0001.ts" },
@@ -1877,11 +1715,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("does not serve an already-written segment after the HLS artifact changes mid-read", async () => {
-    const nextPlaylistPath = path.join(
-      tempDir,
-      "next-transcode",
-      "master.m3u8",
-    );
+    const nextPlaylistPath = path.join(tempDir, "next-transcode", "master.m3u8");
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1965,11 +1799,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("coalesces duplicate request-driven generation for missing segments", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1993,8 +1823,7 @@ describe("playback-session HLS routes", () => {
       },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
-        requested.startSeconds =
-          requestedWindowSegment(input).segmentStartSeconds;
+        requested.startSeconds = requestedWindowSegment(input).segmentStartSeconds;
         requested.timeoutMs = input.segmentGenerationTimeoutMs ?? null;
         await generationGate;
         await writeRequestedWindowSegment(input, "generated");
@@ -2025,11 +1854,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("keeps coalesced request-driven generation alive when one waiter disconnects", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -2079,13 +1904,7 @@ describe("playback-session HLS routes", () => {
       params: { sessionId, segment: "segment-00010.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
-    await waitFor(
-      () =>
-        pendingSegmentGenerationWaiterCountForTests(
-          sessionId,
-          "segment-00010.ts",
-        ) === 2,
-    );
+    await waitFor(() => pendingSegmentGenerationWaiterCountForTests(sessionId, "segment-00010.ts") === 2);
 
     firstController.abort();
     const firstResponse = await first;
@@ -2101,11 +1920,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("aborts coalesced request-driven generation when all waiters disconnect", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -2155,13 +1970,7 @@ describe("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
       request: { signal: secondController.signal },
     } as never);
-    await waitFor(
-      () =>
-        pendingSegmentGenerationWaiterCountForTests(
-          sessionId,
-          "segment-00010.ts",
-        ) === 2,
-    );
+    await waitFor(() => pendingSegmentGenerationWaiterCountForTests(sessionId, "segment-00010.ts") === 2);
 
     firstController.abort();
     const firstResponse = await first;
@@ -2179,12 +1988,7 @@ describe("playback-session HLS routes", () => {
     expect(await secondResponse.text()).toBe("Not found.");
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -2196,11 +2000,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("replaces stale request-driven generation when a far segment is requested", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 600 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 600 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -2232,10 +2032,7 @@ describe("playback-session HLS routes", () => {
           });
         }
         for (const windowSegment of input.segments) {
-          await writeFile(
-            path.join(path.dirname(input.playlistPath), windowSegment.segment),
-            windowSegment.segment,
-          );
+          await writeFile(path.join(path.dirname(input.playlistPath), windowSegment.segment), windowSegment.segment);
         }
         return completedWindowGeneration();
       },
@@ -2268,12 +2065,7 @@ describe("playback-session HLS routes", () => {
 
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_index",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_index"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -2285,11 +2077,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("cancels stale background lookahead when a far segment is requested", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 600 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 600 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -2316,10 +2104,7 @@ describe("playback-session HLS routes", () => {
           return { completion: oldLookaheadCompletion };
         }
         for (const windowSegment of input.segments) {
-          await writeFile(
-            path.join(input.artifactDirectory, windowSegment.segment),
-            windowSegment.segment,
-          );
+          await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
         }
         return completedWindowGeneration();
       },
@@ -2352,11 +2137,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("coalesces duplicate far-seek requests while stale request-driven work is being replaced", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 600 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 600 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -2385,11 +2166,9 @@ describe("playback-session HLS routes", () => {
         requestedSegments.push(segment);
         if (segment === "segment-00010.ts") {
           await new Promise<void>((_resolve, reject) => {
-            input.signal?.addEventListener(
-              "abort",
-              () => reject(new Error("stale segment generation replaced")),
-              { once: true },
-            );
+            input.signal?.addEventListener("abort", () => reject(new Error("stale segment generation replaced")), {
+              once: true,
+            });
           });
         }
 
@@ -2420,26 +2199,13 @@ describe("playback-session HLS routes", () => {
       params: { sessionId, segment: "segment-00030.ts" },
       locals: { user: { id: "user-1" } },
     } as never);
-    await waitFor(
-      () =>
-        pendingSegmentGenerationWaiterCountForTests(
-          sessionId,
-          "segment-00030.ts",
-        ) === 1,
-    );
+    await waitFor(() => pendingSegmentGenerationWaiterCountForTests(sessionId, "segment-00030.ts") === 1);
 
     releaseBackendCancel();
-    await waitFor(
-      () =>
-        pendingSegmentGenerationWaiterCountForTests(
-          sessionId,
-          "segment-00030.ts",
-        ) === 2,
-    );
+    await waitFor(() => pendingSegmentGenerationWaiterCountForTests(sessionId, "segment-00030.ts") === 2);
     releaseFarGeneration();
 
-    const [staleResponse, firstFarResponse, secondFarResponse] =
-      await Promise.all([stale, firstFar, secondFar]);
+    const [staleResponse, firstFarResponse, secondFarResponse] = await Promise.all([stale, firstFar, secondFar]);
 
     expect(requestedSegments).toEqual(["segment-00010.ts", "segment-00030.ts"]);
     expect(farGenerationCount).toBe(1);
@@ -2451,11 +2217,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("generates a request-driven segment window", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     const now = new Date().toISOString();
     await db
       .insertInto("media_stream_info")
@@ -2522,10 +2284,7 @@ describe("playback-session HLS routes", () => {
         expectedAudioFlags.push(input.expectAudio);
         audioStreamIndexes.push(input.audioStreamIndex);
         for (const segment of input.segments) {
-          await writeFile(
-            path.join(path.dirname(input.playlistPath), segment.segment),
-            segment.segment,
-          );
+          await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
         }
         return completedWindowGeneration();
       },
@@ -2547,13 +2306,7 @@ describe("playback-session HLS routes", () => {
     expect(second.status).toBe(200);
     expect(generationCount).toBe(1);
     expect(requestedWindows).toEqual([
-      [
-        "segment-00010.ts",
-        "segment-00011.ts",
-        "segment-00012.ts",
-        "segment-00013.ts",
-        "segment-00014.ts",
-      ],
+      ["segment-00010.ts", "segment-00011.ts", "segment-00012.ts", "segment-00013.ts", "segment-00014.ts"],
     ]);
     expect(expectedAudioFlags).toEqual([true]);
     expect(audioStreamIndexes).toEqual([2]);
@@ -2563,11 +2316,7 @@ describe("playback-session HLS routes", () => {
 
   test("generates request-driven fMP4 segments when the experimental format is enabled", async () => {
     process.env.LUNARR_HLS_SEGMENT_FORMAT = "fmp4";
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 64 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 64 }).where("id", "=", "file-1").execute();
     await writeFile(
       playlistPath,
       virtualHlsPlaylist({
@@ -2593,15 +2342,9 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         backendSegmentFormat = input.hlsSegmentFormat;
         requestedWindows.push(input.segments.map((segment) => segment.segment));
-        await writeFile(
-          path.join(path.dirname(input.playlistPath), "init.mp4"),
-          "init",
-        );
+        await writeFile(path.join(path.dirname(input.playlistPath), "init.mp4"), "init");
         for (const segment of input.segments) {
-          await writeFile(
-            path.join(path.dirname(input.playlistPath), segment.segment),
-            segment.segment,
-          );
+          await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
         }
         return completedWindowGeneration();
       },
@@ -2625,17 +2368,11 @@ describe("playback-session HLS routes", () => {
     expect(segment.headers.get("content-type")).toBe("video/iso.segment");
     expect(await segment.text()).toBe("segment-00001.m4s");
     expect(backendSegmentFormat).toBe("fmp4");
-    expect(requestedWindows).toEqual([
-      ["segment-00001.m4s", "segment-00002.m4s", "segment-00003.m4s"],
-    ]);
+    expect(requestedWindows).toEqual([["segment-00001.m4s", "segment-00002.m4s", "segment-00003.m4s"]]);
   });
 
   test("uses remux audio selection for request-driven remux sessions", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await updateTranscodeSessionMode(sessionId, "remux");
     const now = new Date().toISOString();
     await db
@@ -2718,11 +2455,7 @@ describe("playback-session HLS routes", () => {
 
   test("prefers the user's audio language for request-driven transcode generation", async () => {
     await setUserPreferredAudioLanguage("user-1", "jpn");
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     const now = new Date().toISOString();
     await db
       .insertInto("media_stream_info")
@@ -2801,11 +2534,7 @@ describe("playback-session HLS routes", () => {
 
   test("uses remux language preference for request-driven remux sessions", async () => {
     await setUserPreferredAudioLanguage("user-1", "jpn");
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await updateTranscodeSessionMode(sessionId, "remux");
     const now = new Date().toISOString();
     await db
@@ -2907,205 +2636,177 @@ describe("playback-session HLS routes", () => {
 
   const routeSmokeTest = canRunFfmpeg() ? test : test.skip;
 
-  routeSmokeTest(
-    "serves an authenticated later-seek segment generated by real FFmpeg",
-    async () => {
-      const sourcePath = path.join(tempDir, "RouteSmoke.mp4");
-      generateRouteSmokeInput(sourcePath);
-      const sourceDetails = await stat(sourcePath);
-      await db
-        .updateTable("media_file")
-        .set({
-          path: sourcePath,
-          basename: "RouteSmoke.mp4",
-          extension: ".mp4",
-          size_bytes: sourceDetails.size,
-          duration_seconds: 34,
-          video_codec: "hevc",
-          audio_codec: null,
-          container: "mp4",
-        })
-        .where("id", "=", "file-1")
-        .execute();
-      await registerTranscodeHlsArtifact({
-        sessionId,
-        mediaFileId: "file-1",
-        path: playlistPath,
-        mimeType: "application/vnd.apple.mpegurl",
-      });
-      await updateTranscodeSessionStatus(sessionId, "running");
+  routeSmokeTest("serves an authenticated later-seek segment generated by real FFmpeg", async () => {
+    const sourcePath = path.join(tempDir, "RouteSmoke.mp4");
+    generateRouteSmokeInput(sourcePath);
+    const sourceDetails = await stat(sourcePath);
+    await db
+      .updateTable("media_file")
+      .set({
+        path: sourcePath,
+        basename: "RouteSmoke.mp4",
+        extension: ".mp4",
+        size_bytes: sourceDetails.size,
+        duration_seconds: 34,
+        video_codec: "hevc",
+        audio_codec: null,
+        container: "mp4",
+      })
+      .where("id", "=", "file-1")
+      .execute();
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
 
-      const response = await getSegment({
-        params: { sessionId, segment: "segment-00001.ts" },
-        locals: { user: { id: "user-1" } },
-      } as never);
+    const response = await getSegment({
+      params: { sessionId, segment: "segment-00001.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
 
-      expect(response.status).toBe(200);
-      expect(response.headers.get("content-type")).toContain("video/mp2t");
-      const body = Buffer.from(await response.arrayBuffer());
-      expect(body.length).toBeGreaterThan(0);
-      expect(
-        await exists(path.join(path.dirname(playlistPath), "segment-00001.ts")),
-      ).toBe(true);
-      const session = await db
-        .selectFrom("playback_session")
-        .select(["status", "last_segment_name", "last_segment_index"])
-        .where("id", "=", sessionId)
-        .executeTakeFirstOrThrow();
-      expect(session).toMatchObject({
-        status: "running",
-        last_segment_name: "segment-00001.ts",
-        last_segment_index: 1,
-      });
-    },
-  );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("video/mp2t");
+    const body = Buffer.from(await response.arrayBuffer());
+    expect(body.length).toBeGreaterThan(0);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00001.ts"))).toBe(true);
+    const session = await db
+      .selectFrom("playback_session")
+      .select(["status", "last_segment_name", "last_segment_index"])
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session).toMatchObject({
+      status: "running",
+      last_segment_name: "segment-00001.ts",
+      last_segment_index: 1,
+    });
+  });
 
-  routeSmokeTest(
-    "serves an absolute segment for a non-zero HLS playback start through real FFmpeg",
-    async () => {
-      const sourcePath = path.join(tempDir, "RouteSmokeOffset.mp4");
-      generateRouteSmokeInput(sourcePath, {
+  routeSmokeTest("serves an absolute segment for a non-zero HLS playback start through real FFmpeg", async () => {
+    const sourcePath = path.join(tempDir, "RouteSmokeOffset.mp4");
+    generateRouteSmokeInput(sourcePath, {
+      durationSeconds: 120,
+      size: "64x36",
+      rate: 2,
+    });
+    const sourceDetails = await stat(sourcePath);
+    await db
+      .updateTable("media_file")
+      .set({
+        path: sourcePath,
+        basename: "RouteSmokeOffset.mp4",
+        extension: ".mp4",
+        size_bytes: sourceDetails.size,
+        duration_seconds: 120,
+        video_codec: "hevc",
+        audio_codec: null,
+        container: "mp4",
+      })
+      .where("id", "=", "file-1")
+      .execute();
+    await db.updateTable("playback_session").set({ start_time_seconds: 48 }).where("id", "=", sessionId).execute();
+    await writeFile(
+      playlistPath,
+      virtualHlsPlaylist({
         durationSeconds: 120,
-        size: "64x36",
-        rate: 2,
-      });
-      const sourceDetails = await stat(sourcePath);
-      await db
-        .updateTable("media_file")
-        .set({
-          path: sourcePath,
-          basename: "RouteSmokeOffset.mp4",
-          extension: ".mp4",
-          size_bytes: sourceDetails.size,
-          duration_seconds: 120,
-          video_codec: "hevc",
-          audio_codec: null,
-          container: "mp4",
-        })
-        .where("id", "=", "file-1")
-        .execute();
-      await db
-        .updateTable("playback_session")
-        .set({ start_time_seconds: 48 })
-        .where("id", "=", sessionId)
-        .execute();
-      await writeFile(
-        playlistPath,
-        virtualHlsPlaylist({
-          durationSeconds: 120,
-          startTimeSeconds: 48,
-        }),
-      );
-      await registerTranscodeHlsArtifact({
-        sessionId,
-        mediaFileId: "file-1",
-        path: playlistPath,
-        mimeType: "application/vnd.apple.mpegurl",
-      });
-      await updateTranscodeSessionStatus(sessionId, "running");
+        startTimeSeconds: 48,
+      }),
+    );
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
 
-      const response = await getSegment({
-        params: { sessionId, segment: "segment-00003.ts" },
-        locals: { user: { id: "user-1" } },
-      } as never);
+    const response = await getSegment({
+      params: { sessionId, segment: "segment-00003.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
 
-      expect(response.status).toBe(200);
-      expect(response.headers.get("content-type")).toContain("video/mp2t");
-      expect(
-        Buffer.from(await response.arrayBuffer()).length,
-      ).toBeGreaterThan(0);
-      const generatedPlaylist = await readFile(playlistPath, "utf8");
-      expect(generatedPlaylist).toContain("#EXT-X-MEDIA-SEQUENCE:3");
-      expect(generatedPlaylist).toContain("segment-00003.ts");
-      expect(generatedPlaylist).toContain("segment-00007.ts");
-      expect(generatedPlaylist).not.toContain("segment-00002.ts");
-      const session = await db
-        .selectFrom("playback_session")
-        .select([
-          "status",
-          "start_time_seconds",
-          "last_segment_name",
-          "last_segment_index",
-        ])
-        .where("id", "=", sessionId)
-        .executeTakeFirstOrThrow();
-      expect(session).toMatchObject({
-        status: "running",
-        start_time_seconds: 48,
-        last_segment_name: "segment-00003.ts",
-        last_segment_index: 3,
-      });
-    },
-  );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("video/mp2t");
+    expect(Buffer.from(await response.arrayBuffer()).length).toBeGreaterThan(0);
+    const generatedPlaylist = await readFile(playlistPath, "utf8");
+    expect(generatedPlaylist).toContain("#EXT-X-MEDIA-SEQUENCE:3");
+    expect(generatedPlaylist).toContain("segment-00003.ts");
+    expect(generatedPlaylist).toContain("segment-00007.ts");
+    expect(generatedPlaylist).not.toContain("segment-00002.ts");
+    const session = await db
+      .selectFrom("playback_session")
+      .select(["status", "start_time_seconds", "last_segment_name", "last_segment_index"])
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session).toMatchObject({
+      status: "running",
+      start_time_seconds: 48,
+      last_segment_name: "segment-00003.ts",
+      last_segment_index: 3,
+    });
+  });
 
-  routeSmokeTest(
-    "serves an authenticated local far-seek segment generated by real FFmpeg",
-    async () => {
-      const sourcePath = path.join(tempDir, "RouteSmokeLocalChurn.mp4");
-      generateRouteSmokeInput(sourcePath, {
-        durationSeconds: 300,
-        size: "32x18",
-        rate: 1,
-      });
-      const sourceDetails = await stat(sourcePath);
-      await db
-        .updateTable("media_file")
-        .set({
-          path: sourcePath,
-          basename: "RouteSmokeLocalChurn.mp4",
-          extension: ".mp4",
-          size_bytes: sourceDetails.size,
-          duration_seconds: 300,
-          video_codec: "hevc",
-          audio_codec: null,
-          container: "mp4",
-        })
-        .where("id", "=", "file-1")
-        .execute();
-      await registerTranscodeHlsArtifact({
-        sessionId,
-        mediaFileId: "file-1",
-        path: playlistPath,
-        mimeType: "application/vnd.apple.mpegurl",
-      });
-      await updateTranscodeSessionStatus(sessionId, "running");
+  routeSmokeTest("serves an authenticated local far-seek segment generated by real FFmpeg", async () => {
+    const sourcePath = path.join(tempDir, "RouteSmokeLocalChurn.mp4");
+    generateRouteSmokeInput(sourcePath, {
+      durationSeconds: 300,
+      size: "32x18",
+      rate: 1,
+    });
+    const sourceDetails = await stat(sourcePath);
+    await db
+      .updateTable("media_file")
+      .set({
+        path: sourcePath,
+        basename: "RouteSmokeLocalChurn.mp4",
+        extension: ".mp4",
+        size_bytes: sourceDetails.size,
+        duration_seconds: 300,
+        video_codec: "hevc",
+        audio_codec: null,
+        container: "mp4",
+      })
+      .where("id", "=", "file-1")
+      .execute();
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: playlistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
 
-      const firstResponse = await getSegment({
-        params: { sessionId, segment: "segment-00000.ts" },
-        locals: { user: { id: "user-1" } },
-      } as never);
+    const firstResponse = await getSegment({
+      params: { sessionId, segment: "segment-00000.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
 
-      expect(firstResponse.status).toBe(200);
-      expect(firstResponse.headers.get("content-type")).toContain("video/mp2t");
-      expect(
-        Buffer.from(await firstResponse.arrayBuffer()).length,
-      ).toBeGreaterThan(0);
+    expect(firstResponse.status).toBe(200);
+    expect(firstResponse.headers.get("content-type")).toContain("video/mp2t");
+    expect(Buffer.from(await firstResponse.arrayBuffer()).length).toBeGreaterThan(0);
 
-      const farResponse = await getSegment({
-        params: { sessionId, segment: "segment-00016.ts" },
-        locals: { user: { id: "user-1" } },
-      } as never);
+    const farResponse = await getSegment({
+      params: { sessionId, segment: "segment-00016.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
 
-      expect(farResponse.status).toBe(200);
-      expect(farResponse.headers.get("content-type")).toContain("video/mp2t");
-      expect(
-        Buffer.from(await farResponse.arrayBuffer()).length,
-      ).toBeGreaterThan(0);
-      expect(
-        await exists(path.join(path.dirname(playlistPath), "segment-00016.ts")),
-      ).toBe(true);
-      const session = await db
-        .selectFrom("playback_session")
-        .select(["status", "last_segment_name", "last_segment_index"])
-        .where("id", "=", sessionId)
-        .executeTakeFirstOrThrow();
-      expect(session).toMatchObject({
-        status: "running",
-        last_segment_name: "segment-00016.ts",
-        last_segment_index: 16,
-      });
-    },
-  );
+    expect(farResponse.status).toBe(200);
+    expect(farResponse.headers.get("content-type")).toContain("video/mp2t");
+    expect(Buffer.from(await farResponse.arrayBuffer()).length).toBeGreaterThan(0);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00016.ts"))).toBe(true);
+    const session = await db
+      .selectFrom("playback_session")
+      .select(["status", "last_segment_name", "last_segment_index"])
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session).toMatchObject({
+      status: "running",
+      last_segment_name: "segment-00016.ts",
+      last_segment_index: 16,
+    });
+  });
 
   routeSmokeTest(
     "serves an authenticated SFTP later-seek segment generated by real FFmpeg through the input proxy",
@@ -3113,8 +2814,7 @@ describe("playback-session HLS routes", () => {
       const sourcePath = path.join(tempDir, "RouteSmokeRemote.mp4");
       generateRouteSmokeInput(sourcePath);
       const sourceDetails = await stat(sourcePath);
-      const { sftpSessionId, sftpPlaylistPath } =
-        await createRequestDrivenSftpSession();
+      const { sftpSessionId, sftpPlaylistPath } = await createRequestDrivenSftpSession();
       await db
         .updateTable("media_file")
         .set({
@@ -3184,25 +2884,15 @@ describe("playback-session HLS routes", () => {
       } as never);
 
       expect(secondResponse.status).toBe(200);
-      expect(secondResponse.headers.get("content-type")).toContain(
-        "video/mp2t",
-      );
+      expect(secondResponse.headers.get("content-type")).toContain("video/mp2t");
       const secondBody = Buffer.from(await secondResponse.arrayBuffer());
       expect(secondBody.length).toBeGreaterThan(0);
       expect(storageSetupCount).toBe(1);
       expect(reads.length).toBeGreaterThan(0);
       expect(reads.every((read) => read.keepOpen === true)).toBe(true);
       await waitFor(() => storageClosed);
-      expect(
-        await exists(
-          path.join(path.dirname(sftpPlaylistPath), "segment-00001.ts"),
-        ),
-      ).toBe(true);
-      expect(
-        await exists(
-          path.join(path.dirname(sftpPlaylistPath), "segment-00002.ts"),
-        ),
-      ).toBe(true);
+      expect(await exists(path.join(path.dirname(sftpPlaylistPath), "segment-00001.ts"))).toBe(true);
+      expect(await exists(path.join(path.dirname(sftpPlaylistPath), "segment-00002.ts"))).toBe(true);
       const session = await db
         .selectFrom("playback_session")
         .select(["status", "last_segment_name", "last_segment_index"])
@@ -3226,8 +2916,7 @@ describe("playback-session HLS routes", () => {
         rate: 1,
       });
       const sourceDetails = await stat(sourcePath);
-      const { sftpSessionId, sftpPlaylistPath } =
-        await createRequestDrivenSftpSession();
+      const { sftpSessionId, sftpPlaylistPath } = await createRequestDrivenSftpSession();
       await db
         .updateTable("media_file")
         .set({
@@ -3281,9 +2970,7 @@ describe("playback-session HLS routes", () => {
       } as never);
 
       expect(firstResponse.status).toBe(200);
-      expect(
-        Buffer.from(await firstResponse.arrayBuffer()).length,
-      ).toBeGreaterThan(0);
+      expect(Buffer.from(await firstResponse.arrayBuffer()).length).toBeGreaterThan(0);
       expect(storageSetupCount).toBe(1);
 
       const farResponse = await getSegment({
@@ -3292,16 +2979,10 @@ describe("playback-session HLS routes", () => {
       } as never);
 
       expect(farResponse.status).toBe(200);
-      expect(
-        Buffer.from(await farResponse.arrayBuffer()).length,
-      ).toBeGreaterThan(0);
+      expect(Buffer.from(await farResponse.arrayBuffer()).length).toBeGreaterThan(0);
       expect(storageSetupCount).toBeGreaterThanOrEqual(1);
       await waitFor(() => storageCloseCount >= 1);
-      expect(
-        await exists(
-          path.join(path.dirname(sftpPlaylistPath), "segment-00016.ts"),
-        ),
-      ).toBe(true);
+      expect(await exists(path.join(path.dirname(sftpPlaylistPath), "segment-00016.ts"))).toBe(true);
       const session = await db
         .selectFrom("playback_session")
         .select(["status", "last_segment_name", "last_segment_index"])
@@ -3319,11 +3000,7 @@ describe("playback-session HLS routes", () => {
   );
 
   test("starts a 40-minute far seek at the requested segment window", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 3_600 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 3_600 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -3332,9 +3009,7 @@ describe("playback-session HLS routes", () => {
     });
     await updateTranscodeSessionStatus(sessionId, "running");
 
-    const requestedWindows: Array<
-      Array<{ segment: string; startSeconds: number }>
-    > = [];
+    const requestedWindows: Array<Array<{ segment: string; startSeconds: number }>> = [];
     setTranscodeBackendForTests({
       async startCompatibilityHls(): Promise<RunningTranscode> {
         throw new Error("not used");
@@ -3347,10 +3022,7 @@ describe("playback-session HLS routes", () => {
           })),
         );
         for (const segment of input.segments) {
-          await writeFile(
-            path.join(path.dirname(input.playlistPath), segment.segment),
-            segment.segment,
-          );
+          await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
         }
         return completedWindowGeneration();
       },
@@ -3379,17 +3051,13 @@ describe("playback-session HLS routes", () => {
       ],
     ]);
     expect(
-      await stat(
-        path.join(path.dirname(playlistPath), "segment-00599.ts"),
-      ).then(
+      await stat(path.join(path.dirname(playlistPath), "segment-00599.ts")).then(
         () => true,
         () => false,
       ),
     ).toBe(false);
     expect(
-      await stat(
-        path.join(path.dirname(playlistPath), "segment-00000.ts"),
-      ).then(
+      await stat(path.join(path.dirname(playlistPath), "segment-00000.ts")).then(
         () => true,
         () => false,
       ),
@@ -3397,11 +3065,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("serves the requested segment while adjacent requests wait for bounded lookahead", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -3423,17 +3087,11 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
-        await writeFile(
-          path.join(path.dirname(input.playlistPath), requestedSegment.segment),
-          "requested",
-        );
+        await writeFile(path.join(path.dirname(input.playlistPath), requestedSegment.segment), "requested");
         const completion = (async () => {
           await lookaheadGate;
           for (const segment of lookaheadSegments) {
-            await writeFile(
-              path.join(path.dirname(input.playlistPath), segment.segment),
-              segment.segment,
-            );
+            await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
           }
           lookaheadDone = true;
         })();
@@ -3472,11 +3130,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("tops up request-driven lookahead after serving an existing segment", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 512 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 512 }).where("id", "=", "file-1").execute();
     await writeFile(
       playlistPath,
       virtualHlsPlaylist({
@@ -3505,10 +3159,7 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         requestedWindows.push(input.segments.map((segment) => segment.segment));
         for (const segment of input.segments) {
-          await writeFile(
-            path.join(path.dirname(input.playlistPath), segment.segment),
-            segment.segment,
-          );
+          await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
         }
         return completedWindowGeneration();
       },
@@ -3535,17 +3186,11 @@ describe("playback-session HLS routes", () => {
       "segment-00014.ts",
       "segment-00015.ts",
     ]);
-    await waitFor(async () =>
-      exists(path.join(path.dirname(playlistPath), "segment-00014.ts")),
-    );
+    await waitFor(async () => exists(path.join(path.dirname(playlistPath), "segment-00014.ts")));
   });
 
   test("stops waiting for bounded lookahead when the segment request is cancelled", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -3568,17 +3213,11 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
-        await writeFile(
-          path.join(path.dirname(input.playlistPath), requestedSegment.segment),
-          "requested",
-        );
+        await writeFile(path.join(path.dirname(input.playlistPath), requestedSegment.segment), "requested");
         const completion = (async () => {
           await lookaheadGate;
           for (const segment of lookaheadSegments) {
-            await writeFile(
-              path.join(path.dirname(input.playlistPath), segment.segment),
-              segment.segment,
-            );
+            await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
           }
           lookaheadDone = true;
         })();
@@ -3624,11 +3263,7 @@ describe("playback-session HLS routes", () => {
 
   test("retries adjacent generation when bounded lookahead finishes without output", async () => {
     setRequestDrivenLookaheadWaitForTests(5_000);
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -3654,8 +3289,7 @@ describe("playback-session HLS routes", () => {
           generationCount === 1 ? "requested" : "retried",
         );
         return {
-          completion:
-            generationCount === 1 ? lookaheadFailure : Promise.resolve(),
+          completion: generationCount === 1 ? lookaheadFailure : Promise.resolve(),
         };
       },
       async cancel() {
@@ -3681,11 +3315,7 @@ describe("playback-session HLS routes", () => {
     const second = await Promise.race([
       secondPromise,
       new Promise<Response>((_, reject) =>
-        setTimeout(
-          () =>
-            reject(new Error("Timed out waiting for failed lookahead retry.")),
-          250,
-        ),
+        setTimeout(() => reject(new Error("Timed out waiting for failed lookahead retry.")), 250),
       ),
     ]);
 
@@ -3696,11 +3326,7 @@ describe("playback-session HLS routes", () => {
 
   test("does not start duplicate generation when lookahead wait is cancelled", async () => {
     setRequestDrivenLookaheadWaitForTests(5_000);
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -3721,17 +3347,11 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
-        await writeFile(
-          path.join(path.dirname(input.playlistPath), requestedSegment.segment),
-          "requested",
-        );
+        await writeFile(path.join(path.dirname(input.playlistPath), requestedSegment.segment), "requested");
         const completion = (async () => {
           await lookaheadGate;
           for (const segment of lookaheadSegments) {
-            await writeFile(
-              path.join(path.dirname(input.playlistPath), segment.segment),
-              segment.segment,
-            );
+            await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
           }
         })().catch(() => undefined);
         return { completion };
@@ -3758,13 +3378,7 @@ describe("playback-session HLS routes", () => {
     const second = await Promise.race([
       secondPromise,
       new Promise<Response>((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error("Timed out waiting for cancelled lookahead request."),
-            ),
-          250,
-        ),
+        setTimeout(() => reject(new Error("Timed out waiting for cancelled lookahead request.")), 250),
       ),
     ]);
     releaseLookahead();
@@ -3775,11 +3389,7 @@ describe("playback-session HLS routes", () => {
 
   test("does not wait out lookahead when transcoding is disabled and active sessions are cancelled", async () => {
     setRequestDrivenLookaheadWaitForTests(5_000);
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -3800,17 +3410,11 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
-        await writeFile(
-          path.join(path.dirname(input.playlistPath), requestedSegment.segment),
-          "requested",
-        );
+        await writeFile(path.join(path.dirname(input.playlistPath), requestedSegment.segment), "requested");
         const completion = (async () => {
           await lookaheadGate;
           for (const segment of lookaheadSegments) {
-            await writeFile(
-              path.join(path.dirname(input.playlistPath), segment.segment),
-              segment.segment,
-            );
+            await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
           }
         })().catch(() => undefined);
         return { completion };
@@ -3838,13 +3442,7 @@ describe("playback-session HLS routes", () => {
     const second = await Promise.race([
       secondPromise,
       new Promise<Response>((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error("Timed out waiting for disabled lookahead request."),
-            ),
-          250,
-        ),
+        setTimeout(() => reject(new Error("Timed out waiting for disabled lookahead request.")), 250),
       ),
     ]);
     releaseLookahead();
@@ -3858,11 +3456,7 @@ describe("playback-session HLS routes", () => {
 
   test("does not wait out lookahead when policy is disabled before active session cancellation", async () => {
     setRequestDrivenLookaheadWaitForTests(5_000);
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -3883,17 +3477,11 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
-        await writeFile(
-          path.join(path.dirname(input.playlistPath), requestedSegment.segment),
-          "requested",
-        );
+        await writeFile(path.join(path.dirname(input.playlistPath), requestedSegment.segment), "requested");
         const completion = (async () => {
           await lookaheadGate;
           for (const segment of lookaheadSegments) {
-            await writeFile(
-              path.join(path.dirname(input.playlistPath), segment.segment),
-              segment.segment,
-            );
+            await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), segment.segment);
           }
         })().catch(() => undefined);
         return { completion };
@@ -3920,13 +3508,7 @@ describe("playback-session HLS routes", () => {
     const second = await Promise.race([
       secondPromise,
       new Promise<Response>((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error("Timed out waiting for disabled lookahead request."),
-            ),
-          250,
-        ),
+        setTimeout(() => reject(new Error("Timed out waiting for disabled lookahead request.")), 250),
       ),
     ]);
     releaseLookahead();
@@ -3970,11 +3552,7 @@ describe("playback-session HLS routes", () => {
     expect(generationCount).toBe(0);
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "last_segment_name",
-        "last_segment_index",
-        "last_segment_request_at",
-      ])
+      .select(["last_segment_name", "last_segment_index", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -3985,11 +3563,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("serializes request-driven generation per session and skips queued segments that are now present", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -4011,14 +3585,8 @@ describe("playback-session HLS routes", () => {
         generationCount += 1;
         await generationGate;
         const artifactDirectory = path.dirname(input.playlistPath);
-        await writeFile(
-          path.join(artifactDirectory, "segment-00010.ts"),
-          "first",
-        );
-        await writeFile(
-          path.join(artifactDirectory, "segment-00011.ts"),
-          "second",
-        );
+        await writeFile(path.join(artifactDirectory, "segment-00010.ts"), "first");
+        await writeFile(path.join(artifactDirectory, "segment-00011.ts"), "second");
         return completedWindowGeneration();
       },
       async cancel() {
@@ -4047,11 +3615,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("returns terminal session errors for queued request-driven generation", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -4073,10 +3637,7 @@ describe("playback-session HLS routes", () => {
         generationCount += 1;
         await generationGate;
         const artifactDirectory = path.dirname(input.playlistPath);
-        await writeFile(
-          path.join(artifactDirectory, "segment-00010.ts"),
-          "first",
-        );
+        await writeFile(path.join(artifactDirectory, "segment-00010.ts"), "first");
         await db
           .updateTable("playback_session")
           .set({
@@ -4108,9 +3669,7 @@ describe("playback-session HLS routes", () => {
     const responses = await Promise.all([first, second]);
     expect(generationCount).toBe(1);
     expect(responses.map((response) => response.status)).toEqual([204, 204]);
-    expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
-    ).toBe(false);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00011.ts"))).toBe(false);
   });
 
   test("generates request-driven SFTP segments through seekable range reads", async () => {
@@ -4151,17 +3710,10 @@ describe("playback-session HLS routes", () => {
       mediaFileId: "sftp-file",
       userId: "user-1",
     });
-    const sftpArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      sftpSessionId,
-    );
+    const sftpArtifactDir = path.join(tempDir, "playback-sessions", sftpSessionId);
     const sftpPlaylistPath = path.join(sftpArtifactDir, "master.m3u8");
     await mkdir(sftpArtifactDir, { recursive: true });
-    await writeFile(
-      sftpPlaylistPath,
-      "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-00001.ts\n",
-    );
+    await writeFile(sftpPlaylistPath, "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-00001.ts\n");
     await registerTranscodeHlsArtifact({
       sessionId: sftpSessionId,
       mediaFileId: "sftp-file",
@@ -4273,10 +3825,7 @@ describe("playback-session HLS routes", () => {
       async generateHlsSegmentWindow(input) {
         const requestedChunk = await input.inputSource?.read(0, 4);
         await writeFile(
-          path.join(
-            path.dirname(input.playlistPath),
-            input.segments[0].segment,
-          ),
+          path.join(path.dirname(input.playlistPath), input.segments[0].segment),
           requestedChunk?.toString("utf8") ?? "requested",
         );
         backgroundCompletion = (async () => {
@@ -4285,10 +3834,7 @@ describe("playback-session HLS routes", () => {
             const chunk = await input.inputSource?.read(9, 4);
             backgroundRead = chunk?.toString("utf8");
             await writeFile(
-              path.join(
-                path.dirname(input.playlistPath),
-                input.segments[1].segment,
-              ),
+              path.join(path.dirname(input.playlistPath), input.segments[1].segment),
               backgroundRead ?? "lookahead",
             );
           } catch (error) {
@@ -4363,8 +3909,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error:
-        "SFTP range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
+      error: "SFTP range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
     });
     expect(generationCount).toBe(1);
 
@@ -4375,8 +3920,7 @@ describe("playback-session HLS routes", () => {
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
       status: "failed",
-      error_message:
-        "SFTP range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
+      error_message: "SFTP range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
     });
   });
 
@@ -4418,17 +3962,10 @@ describe("playback-session HLS routes", () => {
       mediaFileId: "sftp-file",
       userId: "user-1",
     });
-    const sftpArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      sftpSessionId,
-    );
+    const sftpArtifactDir = path.join(tempDir, "playback-sessions", sftpSessionId);
     const sftpPlaylistPath = path.join(sftpArtifactDir, "master.m3u8");
     await mkdir(sftpArtifactDir, { recursive: true });
-    await writeFile(
-      sftpPlaylistPath,
-      "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-00001.ts\n",
-    );
+    await writeFile(sftpPlaylistPath, "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-00001.ts\n");
     await registerTranscodeHlsArtifact({
       sessionId: sftpSessionId,
       mediaFileId: "sftp-file",
@@ -4477,11 +4014,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("marks request-driven local sessions failed when the source disappears before segment generation", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -4528,11 +4061,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("clears request-driven lookahead state when the local source disappears before generation", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -4549,10 +4078,7 @@ describe("playback-session HLS routes", () => {
       },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
-        await writeRequestedWindowSegment(
-          input,
-          "generated-before-missing-source",
-        );
+        await writeRequestedWindowSegment(input, "generated-before-missing-source");
         return { completion: unresolvedLookahead };
       },
       async cancel() {
@@ -4616,8 +4142,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error:
-        "SFTP input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
+      error: "SFTP input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
     });
     expect(generationCount).toBe(0);
 
@@ -4628,8 +4153,7 @@ describe("playback-session HLS routes", () => {
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
       status: "failed",
-      error_message:
-        "SFTP input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
+      error_message: "SFTP input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
     });
 
     resolveStorage?.({
@@ -4791,12 +4315,7 @@ describe("playback-session HLS routes", () => {
 
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sftpSessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -5077,11 +4596,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("does not generate segments outside a known media duration", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 13 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5166,11 +4681,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("bounds final request-driven segment duration to remaining media duration", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 13 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5249,11 +4760,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("falls back from request-driven remux to full transcode", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 60 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5261,11 +4768,7 @@ describe("playback-session HLS routes", () => {
       mimeType: "application/vnd.apple.mpegurl",
     });
     await updateTranscodeSessionStatus(sessionId, "running");
-    await db
-      .updateTable("playback_session")
-      .set({ mode: "remux" })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ mode: "remux" }).where("id", "=", sessionId).execute();
 
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
@@ -5304,11 +4807,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("preserves cancellation when request-driven remux generation fails", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 60 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5316,11 +4815,7 @@ describe("playback-session HLS routes", () => {
       mimeType: "application/vnd.apple.mpegurl",
     });
     await updateTranscodeSessionStatus(sessionId, "running");
-    await db
-      .updateTable("playback_session")
-      .set({ mode: "remux" })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ mode: "remux" }).where("id", "=", sessionId).execute();
 
     const requestedModes: string[] = [];
     let cancelCount = 0;
@@ -5360,11 +4855,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("preserves disabled policy when request-driven remux generation fails", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 60 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5372,11 +4863,7 @@ describe("playback-session HLS routes", () => {
       mimeType: "application/vnd.apple.mpegurl",
     });
     await updateTranscodeSessionStatus(sessionId, "running");
-    await db
-      .updateTable("playback_session")
-      .set({ mode: "remux" })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ mode: "remux" }).where("id", "=", sessionId).execute();
 
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
@@ -5415,11 +4902,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("does not keep generated artifacts when remux fallback is cancelled", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 60 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5427,11 +4910,7 @@ describe("playback-session HLS routes", () => {
       mimeType: "application/vnd.apple.mpegurl",
     });
     await updateTranscodeSessionStatus(sessionId, "running");
-    await db
-      .updateTable("playback_session")
-      .set({ mode: "remux" })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ mode: "remux" }).where("id", "=", sessionId).execute();
 
     const requestedModes: string[] = [];
     let cancelCount = 0;
@@ -5480,19 +4959,13 @@ describe("playback-session HLS routes", () => {
       mode: "remux",
       error_message: "Playback session was cancelled.",
     });
-    expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00003.ts")),
-    ).toBe(false);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00003.ts"))).toBe(false);
     expect(pendingLookaheadSegmentCountForTests(sessionId)).toBe(0);
     expect(cancelCount).toBe(1);
   });
 
   test("does not keep generated artifacts when policy is disabled during remux fallback", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 60 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5500,11 +4973,7 @@ describe("playback-session HLS routes", () => {
       mimeType: "application/vnd.apple.mpegurl",
     });
     await updateTranscodeSessionStatus(sessionId, "running");
-    await db
-      .updateTable("playback_session")
-      .set({ mode: "remux" })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ mode: "remux" }).where("id", "=", sessionId).execute();
 
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
@@ -5543,17 +5012,11 @@ describe("playback-session HLS routes", () => {
       mode: "remux",
       error_message: "Transcoding is disabled by an administrator.",
     });
-    expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00003.ts")),
-    ).toBe(false);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00003.ts"))).toBe(false);
   });
 
   test("aborts backend startup when request-driven generation is cancelled", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5594,12 +5057,7 @@ describe("playback-session HLS routes", () => {
     await waitFor(() => generationStarted);
 
     expect(await cancelPlaybackSession(sessionId)).toBe("cancelled");
-    expect(
-      pendingSegmentGenerationWaiterCountForTests(
-        sessionId,
-        "segment-00011.ts",
-      ),
-    ).toBe(0);
+    expect(pendingSegmentGenerationWaiterCountForTests(sessionId, "segment-00011.ts")).toBe(0);
     const response = await responsePromise;
 
     expect(response.status).toBe(204);
@@ -5607,11 +5065,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("bulk admin cancellation aborts active request-driven generation and removes artifacts", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5654,24 +5108,11 @@ describe("playback-session HLS routes", () => {
 
     await setTranscodingEnabled(false);
     expect(await cancelActivePlaybackSessions()).toBe(1);
-    expect(
-      pendingSegmentGenerationWaiterCountForTests(
-        sessionId,
-        "segment-00011.ts",
-      ),
-    ).toBe(0);
+    expect(pendingSegmentGenerationWaiterCountForTests(sessionId, "segment-00011.ts")).toBe(0);
     const response = await Promise.race([
       responsePromise,
       new Promise<Response>((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error(
-                "Timed out waiting for admin-cancelled segment request.",
-              ),
-            ),
-          250,
-        ),
+        setTimeout(() => reject(new Error("Timed out waiting for admin-cancelled segment request.")), 250),
       ),
     ]);
 
@@ -5683,12 +5124,7 @@ describe("playback-session HLS routes", () => {
     expect(backendCancelCount).toBeGreaterThanOrEqual(1);
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -5701,11 +5137,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("aborts request-driven generation when the segment request is cancelled", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5757,12 +5189,7 @@ describe("playback-session HLS routes", () => {
     expect(await response.text()).toBe("Not found.");
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -5771,17 +5198,11 @@ describe("playback-session HLS routes", () => {
       last_segment_name: null,
       last_segment_request_at: null,
     });
-    expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
-    ).toBe(false);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00011.ts"))).toBe(false);
   });
 
   test("removes a generated segment when the segment request is cancelled before serving", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5817,12 +5238,7 @@ describe("playback-session HLS routes", () => {
     expect(backendCancelCount).toBe(1);
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -5831,17 +5247,11 @@ describe("playback-session HLS routes", () => {
       last_segment_name: null,
       last_segment_request_at: null,
     });
-    expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
-    ).toBe(false);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00011.ts"))).toBe(false);
   });
 
   test("does not serve a generated segment after the session is cancelled mid-generation", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5887,12 +5297,7 @@ describe("playback-session HLS routes", () => {
     expect(generationCount).toBe(1);
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -5901,18 +5306,12 @@ describe("playback-session HLS routes", () => {
       last_segment_name: null,
       last_segment_request_at: null,
     });
-    expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
-    ).toBe(false);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00011.ts"))).toBe(false);
     expect(cancelCount).toBe(1);
   });
 
   test("does not serve a generated segment after transcoding is disabled mid-generation", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5951,12 +5350,7 @@ describe("playback-session HLS routes", () => {
     expect(generationCount).toBe(1);
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -5965,18 +5359,12 @@ describe("playback-session HLS routes", () => {
       last_segment_name: null,
       last_segment_request_at: null,
     });
-    expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00011.ts")),
-    ).toBe(false);
+    expect(await exists(path.join(path.dirname(playlistPath), "segment-00011.ts"))).toBe(false);
     expect(cancelCount).toBe(1);
   });
 
   test("returns the disabled-transcoding error when the backend throws after transcoding is disabled", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -6012,12 +5400,7 @@ describe("playback-session HLS routes", () => {
     expect(generationCount).toBe(1);
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -6029,11 +5412,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("does not return a missing segment after transcoding is disabled before generation starts", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -6071,12 +5450,7 @@ describe("playback-session HLS routes", () => {
     expect(generationCount).toBe(0);
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "status",
-        "error_message",
-        "last_segment_name",
-        "last_segment_request_at",
-      ])
+      .select(["status", "error_message", "last_segment_name", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -6088,11 +5462,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("fails when remux and fallback segment generation publish no segment", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 60 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -6100,11 +5470,7 @@ describe("playback-session HLS routes", () => {
       mimeType: "application/vnd.apple.mpegurl",
     });
     await updateTranscodeSessionStatus(sessionId, "running");
-    await db
-      .updateTable("playback_session")
-      .set({ mode: "remux" })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ mode: "remux" }).where("id", "=", sessionId).execute();
 
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
@@ -6143,11 +5509,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("returns the failed session error when request-driven generation fails", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -6192,11 +5554,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("fails when request-driven generation publishes no segment", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 240 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -6225,8 +5583,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error:
-        "Request-driven HLS segment generation completed without publishing segment-00011.ts.",
+      error: "Request-driven HLS segment generation completed without publishing segment-00011.ts.",
     });
     expect(generationCount).toBe(1);
     const job = await db
@@ -6236,8 +5593,7 @@ describe("playback-session HLS routes", () => {
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
       status: "failed",
-      error_message:
-        "Request-driven HLS segment generation completed without publishing segment-00011.ts.",
+      error_message: "Request-driven HLS segment generation completed without publishing segment-00011.ts.",
     });
     const artifacts = await db
       .selectFrom("playback_hls_artifact")
@@ -6275,9 +5631,7 @@ describe("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
     } as never);
     expect(playlist.status).toBe(200);
-    expect(playlist.headers.get("content-type")).toContain(
-      "application/vnd.apple.mpegurl",
-    );
+    expect(playlist.headers.get("content-type")).toContain("application/vnd.apple.mpegurl");
     expect(await playlist.text()).toContain("segments/segment-0001.ts");
 
     const segment = await getSegment({
@@ -6291,11 +5645,7 @@ describe("playback-session HLS routes", () => {
 
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "last_segment_name",
-        "last_segment_index",
-        "last_segment_request_at",
-      ])
+      .select(["last_segment_name", "last_segment_index", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job.last_segment_name).toBe("segment-0001.ts");
@@ -6335,12 +5685,7 @@ describe("playback-session HLS routes", () => {
     expect(await init.text()).toBe("init");
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "last_heartbeat_at",
-        "last_segment_name",
-        "last_segment_index",
-        "last_segment_request_at",
-      ])
+      .select(["last_heartbeat_at", "last_segment_name", "last_segment_index", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -6373,9 +5718,7 @@ describe("playback-session HLS routes", () => {
     const playlist = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     const segment = await getSegment({
@@ -6385,9 +5728,7 @@ describe("playback-session HLS routes", () => {
     const playlistHead = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const segmentHead = await headSegment({
       params: { sessionId, segment: "segment-0001.ts" },
@@ -6406,13 +5747,7 @@ describe("playback-session HLS routes", () => {
     expect(segmentHead.status).toBe(410);
     const job = await db
       .selectFrom("playback_session")
-      .select([
-        "updated_at",
-        "last_heartbeat_at",
-        "last_segment_name",
-        "last_segment_index",
-        "last_segment_request_at",
-      ])
+      .select(["updated_at", "last_heartbeat_at", "last_segment_name", "last_segment_index", "last_segment_request_at"])
       .where("id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -6425,11 +5760,7 @@ describe("playback-session HLS routes", () => {
   });
 
   test("does not synthesize virtual playlists for completed temporary artifacts", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 13 })
-      .where("id", "=", "file-1")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -6441,16 +5772,12 @@ describe("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
     const head = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(
-        `http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`,
-      ),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(409);
@@ -6521,10 +5848,7 @@ describe("playback-session HLS routes", () => {
     } as never);
     expect(playlistHeadViaSegment.status).toBe(400);
 
-    await writeFile(
-      path.join(path.dirname(playlistPath), "movie.mp4"),
-      "not an HLS init artifact",
-    );
+    await writeFile(path.join(path.dirname(playlistPath), "movie.mp4"), "not an HLS init artifact");
     const arbitraryMp4 = await getSegment({
       params: { sessionId, segment: "movie.mp4" },
       locals: { user: { id: "user-1" } },

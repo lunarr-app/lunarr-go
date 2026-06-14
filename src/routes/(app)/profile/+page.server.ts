@@ -35,9 +35,7 @@ export const load: PageServerLoad = async ({ locals, request }) => {
 };
 
 function authErrorMessage(error: unknown, fallback: string) {
-  return error && typeof error === "object" && "message" in error
-    ? String(error.message)
-    : fallback;
+  return error && typeof error === "object" && "message" in error ? String(error.message) : fallback;
 }
 
 export const actions: Actions = {
@@ -124,14 +122,8 @@ export const actions: Actions = {
       locals.user.id,
       normalizePlaybackPreference(String(form.get("playbackPreference") ?? "")),
     );
-    await setUserPreferredAudioLanguage(
-      locals.user.id,
-      String(form.get("preferredAudioLanguage") ?? ""),
-    );
-    await setUserPreferredSubtitleLanguage(
-      locals.user.id,
-      String(form.get("preferredSubtitleLanguage") ?? ""),
-    );
+    await setUserPreferredAudioLanguage(locals.user.id, String(form.get("preferredAudioLanguage") ?? ""));
+    await setUserPreferredSubtitleLanguage(locals.user.id, String(form.get("preferredSubtitleLanguage") ?? ""));
 
     throw redirect(303, "/profile");
   },
@@ -149,8 +141,7 @@ export const actions: Actions = {
         apiKeyError: "Expiration must be a positive number of seconds.",
       });
     }
-    const expiresIn =
-      expiresPreset === "custom" ? customExpiresIn : expiresPreset;
+    const expiresIn = expiresPreset === "custom" ? customExpiresIn : expiresPreset;
 
     try {
       const created = await createApiKey({
@@ -160,15 +151,13 @@ export const actions: Actions = {
       });
 
       return {
-        apiKeySuccess:
-          "API key created. Copy it now; it will not be shown again.",
+        apiKeySuccess: "API key created. Copy it now; it will not be shown again.",
         createdApiKey: created.apiKey,
         createdApiKeyToken: created.token,
       };
     } catch (error) {
       return fail(apiKeyHttpStatus(error), {
-        apiKeyError:
-          error instanceof Error ? error.message : "Could not create API key.",
+        apiKeyError: error instanceof Error ? error.message : "Could not create API key.",
       });
     }
   },

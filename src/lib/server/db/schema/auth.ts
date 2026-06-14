@@ -65,16 +65,8 @@ export type ApiKeyTable = {
   refill_interval: number | null;
   refill_amount: number | null;
   last_refill_at: TimestampMs | null;
-  enabled: ColumnType<
-    boolean,
-    boolean | number | undefined,
-    boolean | number | undefined
-  >;
-  rate_limit_enabled: ColumnType<
-    boolean,
-    boolean | number | undefined,
-    boolean | number | undefined
-  >;
+  enabled: ColumnType<boolean, boolean | number | undefined, boolean | number | undefined>;
+  rate_limit_enabled: ColumnType<boolean, boolean | number | undefined, boolean | number | undefined>;
   rate_limit_time_window: number | null;
   rate_limit_max: number | null;
   request_count: ColumnType<number, number | undefined, number | undefined>;

@@ -1,34 +1,11 @@
-import {
-  getBooleanSetting,
-  getSetting,
-  setBooleanSetting,
-  setSetting,
-} from "../settings";
+import { getBooleanSetting, getSetting, setBooleanSetting, setSetting } from "../settings";
 
-export const PLAYBACK_PREFERENCES = [
-  "auto",
-  "prefer_direct",
-  "prefer_transcode",
-] as const;
-export const HARDWARE_ACCELERATION_MODES = [
-  "off",
-  "auto",
-  "videotoolbox",
-  "vaapi",
-  "qsv",
-  "nvenc",
-  "amf",
-] as const;
-export const TRANSCODE_QUALITY_PRESETS = [
-  "auto",
-  "720p",
-  "1080p",
-  "original",
-] as const;
+export const PLAYBACK_PREFERENCES = ["auto", "prefer_direct", "prefer_transcode"] as const;
+export const HARDWARE_ACCELERATION_MODES = ["off", "auto", "videotoolbox", "vaapi", "qsv", "nvenc", "amf"] as const;
+export const TRANSCODE_QUALITY_PRESETS = ["auto", "720p", "1080p", "original"] as const;
 
 export type PlaybackPreference = (typeof PLAYBACK_PREFERENCES)[number];
-export type HardwareAccelerationMode =
-  (typeof HARDWARE_ACCELERATION_MODES)[number];
+export type HardwareAccelerationMode = (typeof HARDWARE_ACCELERATION_MODES)[number];
 export type TranscodeQualityPreset = (typeof TRANSCODE_QUALITY_PRESETS)[number];
 
 export type TranscodeQualityTarget = {
@@ -66,43 +43,30 @@ function userPreferredSubtitleLanguageKey(userId: string) {
   return `user:${userId}:preferred_subtitle_language`;
 }
 
-export function normalizePlaybackPreference(
-  value: string | null | undefined,
-): PlaybackPreference {
-  return PLAYBACK_PREFERENCES.includes(value as PlaybackPreference)
-    ? (value as PlaybackPreference)
-    : "auto";
+export function normalizePlaybackPreference(value: string | null | undefined): PlaybackPreference {
+  return PLAYBACK_PREFERENCES.includes(value as PlaybackPreference) ? (value as PlaybackPreference) : "auto";
 }
 
-export function normalizePreferredAudioLanguage(
-  value: string | null | undefined,
-) {
+export function normalizePreferredAudioLanguage(value: string | null | undefined) {
   const normalized = value?.trim().toLowerCase() ?? "";
   return normalized.length > 0 ? normalized.slice(0, 32) : null;
 }
 
-export const normalizePreferredSubtitleLanguage =
-  normalizePreferredAudioLanguage;
+export const normalizePreferredSubtitleLanguage = normalizePreferredAudioLanguage;
 
-export function normalizeHardwareAccelerationMode(
-  value: string | null | undefined,
-): HardwareAccelerationMode {
+export function normalizeHardwareAccelerationMode(value: string | null | undefined): HardwareAccelerationMode {
   return HARDWARE_ACCELERATION_MODES.includes(value as HardwareAccelerationMode)
     ? (value as HardwareAccelerationMode)
     : "off";
 }
 
-export function normalizeTranscodeQualityPreset(
-  value: string | null | undefined,
-): TranscodeQualityPreset {
+export function normalizeTranscodeQualityPreset(value: string | null | undefined): TranscodeQualityPreset {
   return TRANSCODE_QUALITY_PRESETS.includes(value as TranscodeQualityPreset)
     ? (value as TranscodeQualityPreset)
     : "auto";
 }
 
-export function transcodeQualityTarget(
-  preset: TranscodeQualityPreset,
-): TranscodeQualityTarget {
+export function transcodeQualityTarget(preset: TranscodeQualityPreset): TranscodeQualityTarget {
   switch (preset) {
     case "720p":
       return {
@@ -135,63 +99,34 @@ export function transcodeQualityTarget(
   }
 }
 
-export async function getUserPlaybackPreference(
-  userId: string | null | undefined,
-): Promise<PlaybackPreference> {
+export async function getUserPlaybackPreference(userId: string | null | undefined): Promise<PlaybackPreference> {
   if (!userId) return "auto";
-  return normalizePlaybackPreference(
-    await getSetting(userPlaybackPreferenceKey(userId)),
-  );
+  return normalizePlaybackPreference(await getSetting(userPlaybackPreferenceKey(userId)));
 }
 
-export async function getUserPreferredAudioLanguage(
-  userId: string | null | undefined,
-) {
+export async function getUserPreferredAudioLanguage(userId: string | null | undefined) {
   if (!userId) return null;
-  return normalizePreferredAudioLanguage(
-    await getSetting(userPreferredAudioLanguageKey(userId)),
-  );
+  return normalizePreferredAudioLanguage(await getSetting(userPreferredAudioLanguageKey(userId)));
 }
 
-export async function getUserPreferredSubtitleLanguage(
-  userId: string | null | undefined,
-) {
+export async function getUserPreferredSubtitleLanguage(userId: string | null | undefined) {
   if (!userId) return null;
-  return normalizePreferredSubtitleLanguage(
-    await getSetting(userPreferredSubtitleLanguageKey(userId)),
-  );
+  return normalizePreferredSubtitleLanguage(await getSetting(userPreferredSubtitleLanguageKey(userId)));
 }
 
-export async function setUserPlaybackPreference(
-  userId: string,
-  value: PlaybackPreference,
-) {
+export async function setUserPlaybackPreference(userId: string, value: PlaybackPreference) {
   await setSetting(userPlaybackPreferenceKey(userId), value);
 }
 
-export async function setUserPreferredAudioLanguage(
-  userId: string,
-  value: string | null | undefined,
-) {
-  await setSetting(
-    userPreferredAudioLanguageKey(userId),
-    normalizePreferredAudioLanguage(value) ?? "",
-  );
+export async function setUserPreferredAudioLanguage(userId: string, value: string | null | undefined) {
+  await setSetting(userPreferredAudioLanguageKey(userId), normalizePreferredAudioLanguage(value) ?? "");
 }
 
-export async function setUserPreferredSubtitleLanguage(
-  userId: string,
-  value: string | null | undefined,
-) {
-  await setSetting(
-    userPreferredSubtitleLanguageKey(userId),
-    normalizePreferredSubtitleLanguage(value) ?? "",
-  );
+export async function setUserPreferredSubtitleLanguage(userId: string, value: string | null | undefined) {
+  await setSetting(userPreferredSubtitleLanguageKey(userId), normalizePreferredSubtitleLanguage(value) ?? "");
 }
 
-export async function getTranscodePolicy(
-  userId?: string | null,
-): Promise<TranscodePolicy> {
+export async function getTranscodePolicy(userId?: string | null): Promise<TranscodePolicy> {
   const [
     transcodingEnabled,
     playbackPreference,
@@ -205,13 +140,9 @@ export async function getTranscodePolicy(
     getUserPlaybackPreference(userId),
     getUserPreferredAudioLanguage(userId),
     getUserPreferredSubtitleLanguage(userId),
-    getSetting(HARDWARE_ACCELERATION_KEY).then(
-      normalizeHardwareAccelerationMode,
-    ),
+    getSetting(HARDWARE_ACCELERATION_KEY).then(normalizeHardwareAccelerationMode),
     getBooleanSetting(HARDWARE_ACCELERATION_REQUIRED_KEY, false),
-    getSetting(TRANSCODE_QUALITY_PRESET_KEY).then(
-      normalizeTranscodeQualityPreset,
-    ),
+    getSetting(TRANSCODE_QUALITY_PRESET_KEY).then(normalizeTranscodeQualityPreset),
   ]);
 
   return {
@@ -220,8 +151,7 @@ export async function getTranscodePolicy(
     preferredAudioLanguage,
     preferredSubtitleLanguage,
     hardwareAcceleration,
-    hardwareAccelerationRequired:
-      hardwareAcceleration !== "off" && hardwareAccelerationRequired,
+    hardwareAccelerationRequired: hardwareAcceleration !== "off" && hardwareAccelerationRequired,
     transcodeQualityPreset,
     transcodeQuality: transcodeQualityTarget(transcodeQualityPreset),
   };
@@ -231,9 +161,7 @@ export async function setTranscodingEnabled(value: boolean) {
   await setBooleanSetting(TRANSCODING_ENABLED_KEY, value);
 }
 
-export async function setHardwareAccelerationMode(
-  value: HardwareAccelerationMode,
-) {
+export async function setHardwareAccelerationMode(value: HardwareAccelerationMode) {
   await setSetting(HARDWARE_ACCELERATION_KEY, value);
 }
 

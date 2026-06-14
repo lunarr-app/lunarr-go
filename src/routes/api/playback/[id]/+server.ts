@@ -1,12 +1,5 @@
-import {
-  getPlaybackData,
-  parsePlaybackProgressBody,
-  saveProgress,
-} from "$lib/server/playback";
-import {
-  PlaybackSourceRequestError,
-  withSignedPlaybackSource,
-} from "$lib/server/playback/signed-source";
+import { getPlaybackData, parsePlaybackProgressBody, saveProgress } from "$lib/server/playback";
+import { PlaybackSourceRequestError, withSignedPlaybackSource } from "$lib/server/playback/signed-source";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
@@ -37,10 +30,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
     if (error instanceof PlaybackSourceRequestError) {
       return json({ error: error.message }, { status: error.status });
     }
-    return json(
-      { error: "Could not prepare playback source." },
-      { status: 500 },
-    );
+    return json({ error: "Could not prepare playback source." }, { status: 500 });
   }
 };
 
@@ -66,8 +56,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
   } catch (error) {
     return json(
       {
-        error:
-          error instanceof Error ? error.message : "Could not save progress.",
+        error: error instanceof Error ? error.message : "Could not save progress.",
       },
       { status: 400 },
     );

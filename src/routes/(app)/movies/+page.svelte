@@ -6,8 +6,7 @@
 
   let { data } = $props();
   let searchForm: HTMLFormElement | null = $state(null);
-  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined =
-    $state(undefined);
+  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
 
   const sections = $derived([
     {
@@ -41,9 +40,7 @@
       href: "/movies/popular",
     },
   ]);
-  const hasActiveFilters = $derived(
-    data.query.trim().length > 0 || data.status !== "all",
-  );
+  const hasActiveFilters = $derived(data.query.trim().length > 0 || data.status !== "all");
   const TWO_ROW_MOVIE_RAIL_COUNT = 9;
 
   function allMoviesHref() {
@@ -77,10 +74,7 @@
 
 <svelte:head>
   <title>Movies - Lunarr</title>
-  <meta
-    name="description"
-    content="Browse, search, filter, and resume movies in your Lunarr library."
-  />
+  <meta name="description" content="Browse, search, filter, and resume movies in your Lunarr library." />
 </svelte:head>
 
 <header class="page-header">
@@ -89,29 +83,16 @@
     <p class="muted">Browse scanned local movies and resume playback.</p>
   </div>
   <form method="GET" role="search" bind:this={searchForm}>
-    <SearchField
-      ariaLabel="Search movies"
-      placeholder="Search movies"
-      value={data.query}
-      oninput={submitSearchSoon}
-    />
+    <SearchField ariaLabel="Search movies" placeholder="Search movies" value={data.query} oninput={submitSearchSoon} />
     <select name="status" aria-label="Watch status" onchange={submitSearchNow}>
       <option value="all" selected={data.status === "all"}>All</option>
-      <option value="unwatched" selected={data.status === "unwatched"}
-        >Unwatched</option
-      >
-      <option value="watched" selected={data.status === "watched"}
-        >Watched</option
-      >
+      <option value="unwatched" selected={data.status === "unwatched"}>Unwatched</option>
+      <option value="watched" selected={data.status === "watched"}>Watched</option>
     </select>
     <select name="sort" aria-label="Sort movies" onchange={submitSearchNow}>
       <option value="title" selected={data.sort === "title"}>Title</option>
-      <option value="recent" selected={data.sort === "recent"}
-        >Recently added</option
-      >
-      <option value="year_desc" selected={data.sort === "year_desc"}
-        >Release year</option
-      >
+      <option value="recent" selected={data.sort === "recent"}>Recently added</option>
+      <option value="year_desc" selected={data.sort === "year_desc"}>Release year</option>
       <option value="rating" selected={data.sort === "rating"}>Rating</option>
     </select>
   </form>
@@ -121,18 +102,14 @@
   <section class="empty">
     {#if hasActiveFilters}
       <h2>No matching movies</h2>
-      <p class="muted">
-        Adjust the search or watch-status filter to broaden the results.
-      </p>
+      <p class="muted">Adjust the search or watch-status filter to broaden the results.</p>
       <a class="button secondary" href="/movies">
         <Search size={16} aria-hidden="true" />
         Clear filters
       </a>
     {:else}
       <h2>No movies scanned yet</h2>
-      <p class="muted">
-        Add a movie library and run a scan to populate this page.
-      </p>
+      <p class="muted">Add a movie library and run a scan to populate this page.</p>
       <a class="button" href="/libraries">
         <Library size={16} aria-hidden="true" />
         Add library
@@ -150,10 +127,7 @@
             <ChevronRight size={16} aria-hidden="true" />
           </a>
         </div>
-        <div
-          class="movie-rail"
-          class:two-row={section.movies.length >= TWO_ROW_MOVIE_RAIL_COUNT}
-        >
+        <div class="movie-rail" class:two-row={section.movies.length >= TWO_ROW_MOVIE_RAIL_COUNT}>
           {#each twoRowRailOrder(section.movies, TWO_ROW_MOVIE_RAIL_COUNT) as movie}
             <MovieCard {movie} />
           {/each}
@@ -174,10 +148,7 @@
 
   form {
     display: grid;
-    grid-template-columns: minmax(16rem, 1fr) minmax(7rem, auto) minmax(
-        8rem,
-        auto
-      );
+    grid-template-columns: minmax(16rem, 1fr) minmax(7rem, auto) minmax(8rem, auto);
     gap: 0.5rem;
   }
 

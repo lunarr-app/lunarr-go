@@ -2,77 +2,43 @@
   import { page } from "$app/state";
   import MediaHero from "$lib/components/MediaHero.svelte";
   import { playbackModalHref } from "$lib/playback/links";
-  import {
-    Calendar,
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    CirclePlay,
-    Clock3,
-    RotateCcw,
-    Star,
-  } from "@lucide/svelte";
+  import { Calendar, Check, ChevronLeft, ChevronRight, CirclePlay, Clock3, RotateCcw, Star } from "@lucide/svelte";
 
   let { data, form } = $props();
 
   type Episode = (typeof data.season.episodes)[number];
 
-  const currentSeasonIndex = $derived(
-    data.seasons.findIndex((season) => season.id === data.season.id),
-  );
-  const previousSeason = $derived(
-    currentSeasonIndex > 0 ? data.seasons[currentSeasonIndex - 1] : null,
-  );
+  const currentSeasonIndex = $derived(data.seasons.findIndex((season) => season.id === data.season.id));
+  const previousSeason = $derived(currentSeasonIndex > 0 ? data.seasons[currentSeasonIndex - 1] : null);
   const nextSeason = $derived(
     currentSeasonIndex >= 0 && currentSeasonIndex < data.seasons.length - 1
       ? data.seasons[currentSeasonIndex + 1]
       : null,
   );
-  const watchedCount = $derived(
-    data.season.episodes.filter((episode) => episode.completed).length,
-  );
+  const watchedCount = $derived(data.season.episodes.filter((episode) => episode.completed).length);
   const episodeCount = $derived(data.season.episodes.length);
-  const playableCount = $derived(
-    data.season.episodes.filter((episode) => episode.fileId).length,
-  );
+  const playableCount = $derived(data.season.episodes.filter((episode) => episode.fileId).length);
   const missingCount = $derived(episodeCount - playableCount);
   const playableWatchedCount = $derived(
-    data.season.episodes.filter(
-      (episode) => episode.fileId && episode.completed,
-    ).length,
+    data.season.episodes.filter((episode) => episode.fileId && episode.completed).length,
   );
-  const seasonComplete = $derived(
-    playableCount > 0 && playableWatchedCount === playableCount,
-  );
-  const progressPercent = $derived(
-    episodeCount > 0 ? Math.round((watchedCount / episodeCount) * 100) : 0,
-  );
+  const seasonComplete = $derived(playableCount > 0 && playableWatchedCount === playableCount);
+  const progressPercent = $derived(episodeCount > 0 ? Math.round((watchedCount / episodeCount) * 100) : 0);
   const nextEpisode = $derived(
-    data.season.episodes.find(
-      (episode) =>
-        !episode.completed && episode.progressSeconds > 0 && episode.fileId,
-    ) ??
-      data.season.episodes.find(
-        (episode) => !episode.completed && episode.fileId,
-      ) ??
+    data.season.episodes.find((episode) => !episode.completed && episode.progressSeconds > 0 && episode.fileId) ??
+      data.season.episodes.find((episode) => !episode.completed && episode.fileId) ??
       data.season.episodes.find((episode) => episode.fileId),
   );
-  const episodeLabel = $derived(
-    `${episodeCount} ${episodeCount === 1 ? "episode" : "episodes"}`,
-  );
+  const episodeLabel = $derived(`${episodeCount} ${episodeCount === 1 ? "episode" : "episodes"}`);
   const seasonProgressLabel = $derived.by(() => {
     if (episodeCount === 0) return episodeLabel;
-    if (missingCount > 0)
-      return `${episodeLabel} · ${missingCount} missing · ${watchedCount} watched`;
+    if (missingCount > 0) return `${episodeLabel} · ${missingCount} missing · ${watchedCount} watched`;
     if (watchedCount === episodeCount) return `${episodeLabel} · complete`;
     return `${episodeLabel} · ${watchedCount} watched`;
   });
 
-  function episodeCode(
-    episode: Pick<Episode, "seasonNumber" | "episodeNumber">,
-  ) {
-    if (episode.seasonNumber === null || episode.episodeNumber === null)
-      return "";
+  function episodeCode(episode: Pick<Episode, "seasonNumber" | "episodeNumber">) {
+    if (episode.seasonNumber === null || episode.episodeNumber === null) return "";
     return `S${String(episode.seasonNumber).padStart(2, "0")}E${String(episode.episodeNumber).padStart(2, "0")}`;
   }
 
@@ -80,7 +46,7 @@
     return playbackModalHref({
       currentUrl: page.url,
       mediaItemId: episode.id,
-      mediaFileId: episode.fileId
+      mediaFileId: episode.fileId,
     });
   }
 
@@ -92,25 +58,17 @@
     return seconds ? `${Math.round(seconds / 60)} min` : null;
   }
 
-  function episodeProgressLabel(
-    episode: Pick<Episode, "completed" | "durationSeconds" | "progressSeconds">,
-  ) {
+  function episodeProgressLabel(episode: Pick<Episode, "completed" | "durationSeconds" | "progressSeconds">) {
     if (episode.completed || episode.progressSeconds <= 0) return null;
     if (!episode.durationSeconds) return "In progress";
-    const percent = Math.min(
-      99,
-      Math.max(1, Math.round((episode.progressSeconds / episode.durationSeconds) * 100)),
-    );
+    const percent = Math.min(99, Math.max(1, Math.round((episode.progressSeconds / episode.durationSeconds) * 100)));
     return `${percent}%`;
   }
 </script>
 
 <svelte:head>
   <title>{data.show.title} {data.season.title} - Lunarr</title>
-  <meta
-    name="description"
-    content={`Browse ${data.season.title} episodes for ${data.show.title} in Lunarr.`}
-  />
+  <meta name="description" content={`Browse ${data.season.title} episodes for ${data.show.title} in Lunarr.`} />
 </svelte:head>
 
 <MediaHero
@@ -122,16 +80,10 @@
   bottomMargin="1.6rem"
 >
   {#snippet facts()}
-    {#if data.show.year}<span
-        ><Calendar size={15} aria-hidden="true" />{data.show.year}</span
-      >{/if}
+    {#if data.show.year}<span><Calendar size={15} aria-hidden="true" />{data.show.year}</span>{/if}
     {#if data.show.status}<span>{data.show.status}</span>{/if}
     {#if data.show.voteAverage}
-      <span
-        ><Star size={15} aria-hidden="true" />{data.show.voteAverage.toFixed(
-          1,
-        )}</span
-      >
+      <span><Star size={15} aria-hidden="true" />{data.show.voteAverage.toFixed(1)}</span>
     {/if}
     <span>{seasonProgressLabel}</span>
   {/snippet}
@@ -142,17 +94,12 @@
         <CirclePlay size={19} aria-hidden="true" />
         {nextEpisode.progressSeconds > 0 ? "Resume" : "Play"}
       </a>
-      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}
-        >{episodeCode(nextEpisode) || "Episode"}</a
-      >
+      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}>{episodeCode(nextEpisode) || "Episode"}</a>
     {/if}
   {/snippet}
 
   {#snippet below()}
-    <div
-      class="watch-summary"
-      aria-label={`${watchedCount} of ${episodeCount} episodes watched`}
-    >
+    <div class="watch-summary" aria-label={`${watchedCount} of ${episodeCount} episodes watched`}>
       <div>
         <strong>{watchedCount}/{episodeCount}</strong>
         <span>Watched</span>
@@ -197,11 +144,7 @@
     </div>
     {#if playableCount > 0}
       <form class="season-bulk-action" method="POST" action="?/seasonWatched">
-        <input
-          type="hidden"
-          name="completed"
-          value={seasonComplete ? "false" : "true"}
-        />
+        <input type="hidden" name="completed" value={seasonComplete ? "false" : "true"} />
         <button class="secondary compact">
           {#if seasonComplete}
             <RotateCcw size={15} aria-hidden="true" />
@@ -229,17 +172,9 @@
   <div class="episodes">
     {#each data.season.episodes as episode}
       {@const progressLabel = episodeProgressLabel(episode)}
-      <article
-        class="episode-row"
-        class:watched={episode.completed}
-        class:missing={!episode.fileId}
-      >
+      <article class="episode-row" class:watched={episode.completed} class:missing={!episode.fileId}>
         {#if episode.fileId}
-          <a
-            class="still"
-            href={`/episodes/${episode.id}`}
-            aria-label={episode.title}
-          >
+          <a class="still" href={`/episodes/${episode.id}`} aria-label={episode.title}>
             {#if episode.stillUrl}
               <img src={episode.stillUrl} alt="" loading="lazy" />
             {:else}
@@ -254,10 +189,7 @@
             {/if}
           </a>
         {:else}
-          <div
-            class="still missing-still"
-            aria-label={`${episode.title} is missing a file`}
-          >
+          <div class="still missing-still" aria-label={`${episode.title} is missing a file`}>
             {#if episode.stillUrl}
               <img src={episode.stillUrl} alt="" loading="lazy" />
             {:else}
@@ -310,18 +242,12 @@
           {#if episode.fileId}
             <a class="button compact" href={watchHref(episode)}>
               <CirclePlay size={15} aria-hidden="true" />
-              {episode.progressSeconds > 0 && !episode.completed
-                ? "Resume"
-                : "Play"}
+              {episode.progressSeconds > 0 && !episode.completed ? "Resume" : "Play"}
             </a>
             <form class="episode-action-form" method="POST" action="?/watched">
               <input type="hidden" name="episodeId" value={episode.id} />
               <input type="hidden" name="fileId" value={episode.fileId} />
-              <input
-                type="hidden"
-                name="completed"
-                value={episode.completed ? "false" : "true"}
-              />
+              <input type="hidden" name="completed" value={episode.completed ? "false" : "true"} />
               <button class="secondary compact">
                 {#if episode.completed}
                   <RotateCcw size={15} aria-hidden="true" />

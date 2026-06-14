@@ -9,9 +9,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 
   try {
     const body = await readJsonBody(request);
-    await updateRegistrationSettings(
-      typeof body === "object" && body ? (body as Record<string, unknown>) : {},
-    );
+    await updateRegistrationSettings(typeof body === "object" && body ? (body as Record<string, unknown>) : {});
     return json({ ok: true });
   } catch (error) {
     return jsonError(error, "Could not update registration settings.");

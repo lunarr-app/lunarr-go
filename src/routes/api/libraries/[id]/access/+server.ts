@@ -9,7 +9,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
   try {
     const body = await readJsonBody(request);
-    const input = typeof body === "object" && body ? body as Record<string, unknown> : {};
+    const input = typeof body === "object" && body ? (body as Record<string, unknown>) : {};
     const userIds = Array.isArray(input.userIds) ? input.userIds.map((id) => String(id)) : [];
     await updateLibraryAccess(params.id, String(input.accessMode ?? "all"), userIds);
     return json({ ok: true });

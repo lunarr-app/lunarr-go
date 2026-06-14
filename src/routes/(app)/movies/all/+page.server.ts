@@ -13,6 +13,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     pageInfo: rows.page,
     query,
     status,
-    sort
+    sort,
   };
 };

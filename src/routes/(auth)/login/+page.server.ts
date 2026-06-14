@@ -30,10 +30,7 @@ export const actions: Actions = {
     } catch (error) {
       return fail(400, {
         email,
-        error:
-          error && typeof error === "object" && "message" in error
-            ? String(error.message)
-            : "Could not sign in.",
+        error: error && typeof error === "object" && "message" in error ? String(error.message) : "Could not sign in.",
       });
     }
 

@@ -7,14 +7,11 @@ export const GET: RequestHandler = async ({ locals }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
-  const [movieResults, tvResults] = await Promise.all([
-    movieRows(user.id),
-    tvRows(user.id)
-  ]);
+  const [movieResults, tvResults] = await Promise.all([movieRows(user.id), tvRows(user.id)]);
 
   return json({
     movies: movieResults.continueWatching,
     episodes: tvResults.continueWatching,
-    nextUp: tvResults.nextUp
+    nextUp: tvResults.nextUp,
   });
 };

@@ -4,7 +4,7 @@ import {
   getScanJobSummary,
   listPlaybackSessions,
   listScanErrors,
-  listScanJobs
+  listScanJobs,
 } from "$lib/server/jobs";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
@@ -23,6 +23,6 @@ export const GET: RequestHandler = async ({ locals }) => {
     playbackSessionSummary: await getPlaybackSessionSummary(),
     playbackSessions: await listPlaybackSessions(),
     jobs: await listScanJobs(),
-    errors: await listScanErrors()
+    errors: await listScanErrors(),
   });
 };

@@ -69,14 +69,15 @@ function parseByPattern(fileStem: string, parts: string[], pattern: RegExp): Par
   const directoryParts = parts.slice(0, -1);
   const seasonDirectoryIndex = directoryParts.findLastIndex((part) => seasonFromDirectory(part) !== null);
   const contextTitle = titleFromContext(parts, seasonDirectoryIndex === -1 ? null : seasonDirectoryIndex);
-  const showTitle = seasonDirectoryIndex === -1 ? cleanTitle(prefix) || contextTitle : contextTitle || cleanTitle(prefix);
+  const showTitle =
+    seasonDirectoryIndex === -1 ? cleanTitle(prefix) || contextTitle : contextTitle || cleanTitle(prefix);
   if (!showTitle) return null;
 
   return {
     showTitle,
     seasonNumber,
     episodeNumber,
-    episodeTitle: stripEpisodeTail(suffix) || null
+    episodeTitle: stripEpisodeTail(suffix) || null,
   };
 }
 
@@ -87,7 +88,8 @@ export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpi
 
   const fileStem = removeFileExtension(path.posix.basename(basename));
   const patternMatch =
-    parseByPattern(fileStem, parts, SEASON_EPISODE_PATTERN) ?? parseByPattern(fileStem, parts, SEASON_X_EPISODE_PATTERN);
+    parseByPattern(fileStem, parts, SEASON_EPISODE_PATTERN) ??
+    parseByPattern(fileStem, parts, SEASON_X_EPISODE_PATTERN);
   if (patternMatch) return patternMatch;
 
   const directoryParts = parts.slice(0, -1);
@@ -104,6 +106,6 @@ export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpi
     showTitle,
     seasonNumber,
     episodeNumber,
-    episodeTitle: stripEpisodeTail(leadingEpisode?.groups?.title ?? "") || null
+    episodeTitle: stripEpisodeTail(leadingEpisode?.groups?.title ?? "") || null,
   };
 }

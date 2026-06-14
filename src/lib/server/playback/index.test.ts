@@ -1,22 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 import {
@@ -55,19 +43,14 @@ import type {
   RunningTranscode,
 } from "../transcoding/backend";
 
-async function writeRequestedWindowSegment(
-  input: HlsSegmentWindowTranscodeInput,
-  body = "generated",
-) {
+async function writeRequestedWindowSegment(input: HlsSegmentWindowTranscodeInput, body = "generated") {
   const segment = input.segments[0];
   if (!segment) throw new Error("Expected a requested HLS window segment.");
   await mkdir(input.artifactDirectory, { recursive: true });
   await writeFile(path.join(input.artifactDirectory, segment.segment), body);
 }
 
-async function completedWindowGeneration(
-  input?: HlsSegmentWindowTranscodeInput,
-): Promise<HlsSegmentWindowGeneration> {
+async function completedWindowGeneration(input?: HlsSegmentWindowTranscodeInput): Promise<HlsSegmentWindowGeneration> {
   if (input) await writeRequestedWindowSegment(input);
   return { completion: Promise.resolve() };
 }
@@ -129,12 +112,8 @@ describe("parsePlaybackProgressBody", () => {
   });
 
   test("rejects invalid playback progress JSON", () => {
-    expect(() => parsePlaybackProgressBody(null)).toThrow(
-      "Request body must be a JSON object.",
-    );
-    expect(() => parsePlaybackProgressBody({ mediaFileId: "" })).toThrow(
-      "mediaFileId is required.",
-    );
+    expect(() => parsePlaybackProgressBody(null)).toThrow("Request body must be a JSON object.");
+    expect(() => parsePlaybackProgressBody({ mediaFileId: "" })).toThrow("mediaFileId is required.");
     expect(() =>
       parsePlaybackProgressBody({
         mediaFileId: "file-1",
@@ -487,10 +466,7 @@ describe("getPlaybackDecision", () => {
       reason: "direct_supported",
     });
     expect(decision?.streamUrl).toBe("/media/files/file-b/stream");
-    expect(decision?.tracks.map((track) => track.id)).toEqual([
-      "subtitle-shared",
-      "subtitle-file-b",
-    ]);
+    expect(decision?.tracks.map((track) => track.id)).toEqual(["subtitle-shared", "subtitle-file-b"]);
     expect(decision?.tracks.map((track) => track.src)).toEqual([
       "/media/subtitles/subtitle-shared",
       "/media/subtitles/subtitle-file-b",
@@ -498,11 +474,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("explicit force transcode starts HLS for a direct-play compatible file", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 60 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "file-b").execute();
     let linearStartCount = 0;
     let segmentGenerationCount = 0;
     setTranscodeBackendForTests({
@@ -519,15 +491,9 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      0,
-      {
-        forceTranscode: true,
-      },
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 0, {
+      forceTranscode: true,
+    });
 
     expect(decision).toMatchObject({
       mode: "transcode",
@@ -536,19 +502,13 @@ describe("getPlaybackDecision", () => {
       streamStartSeconds: 0,
     });
     expect(decision?.playbackSessionId).toBeTruthy();
-    expect(decision?.streamUrl).toBe(
-      `/media/playback-sessions/${decision?.playbackSessionId}/master.m3u8`,
-    );
+    expect(decision?.streamUrl).toBe(`/media/playback-sessions/${decision?.playbackSessionId}/master.m3u8`);
     expect(linearStartCount).toBe(0);
     expect(segmentGenerationCount).toBe(1);
   });
 
   test("returns at most one default subtitle track", async () => {
-    await db
-      .updateTable("subtitle_track")
-      .set({ is_default: 1 })
-      .where("id", "=", "subtitle-file-b")
-      .execute();
+    await db.updateTable("subtitle_track").set({ is_default: 1 }).where("id", "=", "subtitle-file-b").execute();
 
     const decision = await getPlaybackDecision("movie-1", "file-b");
 
@@ -629,21 +589,13 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const defaultDecision = await getPlaybackDecision(
-      "movie-1",
-      "hevc-mp4-file",
-      "user-1",
-    );
+    const defaultDecision = await getPlaybackDecision("movie-1", "hevc-mp4-file", "user-1");
     expect(defaultDecision?.mode).toBe("transcode");
     expect(segmentGenerationCount).toBe(1);
 
-    const hevcDecision = await getPlaybackDecision(
-      "movie-1",
-      "hevc-mp4-file",
-      "user-1",
-      0,
-      { clientCapabilities: { hevc: true } },
-    );
+    const hevcDecision = await getPlaybackDecision("movie-1", "hevc-mp4-file", "user-1", 0, {
+      clientCapabilities: { hevc: true },
+    });
 
     expect(hevcDecision?.mode).toBe("direct");
     expect(hevcDecision?.modeDecision).toEqual({
@@ -669,31 +621,19 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const av1Decision = await getPlaybackDecision(
-      "movie-1",
-      "av1-mp4-file",
-      "user-1",
-      0,
-      { clientCapabilities: { av1: true } },
-    );
+    const av1Decision = await getPlaybackDecision("movie-1", "av1-mp4-file", "user-1", 0, {
+      clientCapabilities: { av1: true },
+    });
     expect(av1Decision?.mode).toBe("direct");
     expect(av1Decision?.streamUrl).toBe("/media/files/av1-mp4-file/stream");
 
-    const defaultWebmDecision = await getPlaybackDecision(
-      "movie-1",
-      "webm-file",
-      "user-1",
-    );
+    const defaultWebmDecision = await getPlaybackDecision("movie-1", "webm-file", "user-1");
     expect(defaultWebmDecision?.mode).toBe("transcode");
     expect(segmentGenerationCount).toBe(1);
 
-    const webmDecision = await getPlaybackDecision(
-      "movie-1",
-      "webm-file",
-      "user-1",
-      0,
-      { clientCapabilities: { webm: true, vp9: true, opus: true } },
-    );
+    const webmDecision = await getPlaybackDecision("movie-1", "webm-file", "user-1", 0, {
+      clientCapabilities: { webm: true, vp9: true, opus: true },
+    });
     expect(webmDecision?.mode).toBe("direct");
     expect(webmDecision?.streamUrl).toBe("/media/files/webm-file/stream");
     expect(segmentGenerationCount).toBe(1);
@@ -717,21 +657,14 @@ describe("getPlaybackDecision", () => {
     });
 
     try {
-      const defaultDecision = await getPlaybackDecision(
-        "movie-1",
-        "webm-file",
-        "user-1",
-      );
+      const defaultDecision = await getPlaybackDecision("movie-1", "webm-file", "user-1");
       expect(defaultDecision?.mode).toBe("transcode");
       expect(segmentFormats).toEqual(["mpegts"]);
 
-      const fmp4Decision = await getPlaybackDecision(
-        "movie-1",
-        "webm-file",
-        "user-1",
-        0,
-        { forceStartTime: true, clientCapabilities: { hlsFmp4: true } },
-      );
+      const fmp4Decision = await getPlaybackDecision("movie-1", "webm-file", "user-1", 0, {
+        forceStartTime: true,
+        clientCapabilities: { hlsFmp4: true },
+      });
       expect(fmp4Decision?.mode).toBe("transcode");
       expect(segmentFormats).toEqual(["mpegts", "fmp4"]);
     } finally {
@@ -773,19 +706,13 @@ describe("getPlaybackDecision", () => {
     });
 
     try {
-      const decision = await getPlaybackDecision(
-        "movie-1",
-        "unsupported-file",
-        "user-1",
-        0,
-        {
-          clientCapabilities: {
-            hevc: true,
-            hlsFmp4: true,
-            hlsNative: true,
-          },
+      const decision = await getPlaybackDecision("movie-1", "unsupported-file", "user-1", 0, {
+        clientCapabilities: {
+          hevc: true,
+          hlsFmp4: true,
+          hlsNative: true,
         },
-      );
+      });
 
       expect(decision?.mode).toBe("remux");
       expect(decision?.modeDecision).toEqual({
@@ -812,11 +739,7 @@ describe("getPlaybackDecision", () => {
       },
     });
     await setUserPlaybackPreference("user-1", "prefer_transcode");
-    const preferredTranscode = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-    );
+    const preferredTranscode = await getPlaybackDecision("movie-1", "file-b", "user-1");
     expect(preferredTranscode).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -825,11 +748,7 @@ describe("getPlaybackDecision", () => {
       message: "Request-driven HLS segment generation is not available.",
     });
 
-    const unsupported = await getPlaybackDecision(
-      "movie-1",
-      "unsupported-file",
-      "user-1",
-    );
+    const unsupported = await getPlaybackDecision("movie-1", "unsupported-file", "user-1");
     expect(unsupported).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -839,11 +758,7 @@ describe("getPlaybackDecision", () => {
 
     await setTranscodingEnabled(false);
     await setUserPlaybackPreference("user-1", "auto");
-    const unavailable = await getPlaybackDecision(
-      "movie-1",
-      "unsupported-file",
-      "user-1",
-    );
+    const unavailable = await getPlaybackDecision("movie-1", "unsupported-file", "user-1");
     expect(unavailable).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -889,16 +804,8 @@ describe("getPlaybackDecision", () => {
     if (!sessionId) throw new Error("Expected failed playback session id.");
     const job = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
-      .select([
-        "playback_session.status",
-        "playback_session.error_message",
-        "playback_hls_artifact.path",
-      ])
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
+      .select(["playback_session.status", "playback_session.error_message", "playback_hls_artifact.path"])
       .where("playback_session.id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -925,17 +832,11 @@ describe("getPlaybackDecision", () => {
       streamStartSeconds: 0,
       message: "Transcoding is disabled by an administrator.",
     });
-    expect(
-      await db.selectFrom("playback_session").select("id").execute(),
-    ).toEqual([]);
+    expect(await db.selectFrom("playback_session").select("id").execute()).toEqual([]);
   });
 
   test("does not use linear compatibility HLS for duration-unknown local media by default", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: null })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: null }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
     let linearStartCount = 0;
     setTranscodeBackendForTests({
@@ -970,11 +871,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("starts request-driven HLS playback for local files with known duration", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     let startCalled = false;
@@ -995,12 +892,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
@@ -1008,22 +900,15 @@ describe("getPlaybackDecision", () => {
       message: null,
     });
     expect(startCalled).toBe(false);
-    expect(decision?.streamUrl).toMatch(
-      /^\/media\/playback-sessions\/.+\/master\.m3u8$/,
-    );
+    expect(decision?.streamUrl).toMatch(/^\/media\/playback-sessions\/.+\/master\.m3u8$/);
 
     const sessionId = decision?.playbackSessionId;
-    if (!sessionId)
-      throw new Error("Expected request-driven playback session id.");
+    if (!sessionId) throw new Error("Expected request-driven playback session id.");
     expect(decision?.playbackSessionId).toBe(sessionId);
 
     const job = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
       .select([
         "playback_session.status",
         "playback_session.pipeline",
@@ -1044,11 +929,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("preserves cancellation state when initial request-driven HLS warmup is cancelled", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     let cancelledSessionId: string | null = null;
@@ -1058,12 +939,7 @@ describe("getPlaybackDecision", () => {
       },
       async generateHlsSegmentWindow(input) {
         cancelledSessionId = input.sessionId;
-        expect(
-          await cancelPlaybackSession(
-            input.sessionId,
-            "Cancelled during initial warmup.",
-          ),
-        ).toBe("cancelled");
+        expect(await cancelPlaybackSession(input.sessionId, "Cancelled during initial warmup.")).toBe("cancelled");
         return completedWindowGeneration();
       },
       async cancel() {
@@ -1071,12 +947,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -1113,12 +984,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "remux-file",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "remux-file", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
@@ -1132,8 +998,7 @@ describe("getPlaybackDecision", () => {
     expect(requestedModes).toEqual(["remux", "transcode"]);
 
     const sessionId = decision?.playbackSessionId;
-    if (!sessionId)
-      throw new Error("Expected request-driven playback session id.");
+    if (!sessionId) throw new Error("Expected request-driven playback session id.");
     const job = await db
       .selectFrom("playback_session")
       .select(["status", "mode", "error_message"])
@@ -1147,11 +1012,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("does not reuse ready request-driven HLS sessions across playback decisions", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     setTranscodeBackendForTests({
@@ -1184,9 +1045,7 @@ describe("getPlaybackDecision", () => {
     const firstSessionId = first?.playbackSessionId;
     const secondSessionId = second?.playbackSessionId;
     if (!firstSessionId || !secondSessionId) {
-      throw new Error(
-        "Expected both request-driven playback loads to create sessions.",
-      );
+      throw new Error("Expected both request-driven playback loads to create sessions.");
     }
     expect(secondSessionId).not.toBe(firstSessionId);
     expect(second?.streamUrl).not.toBe(first?.streamUrl);
@@ -1240,12 +1099,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -1261,16 +1115,8 @@ describe("getPlaybackDecision", () => {
     if (!sessionId) throw new Error("Expected failed playback session id.");
     const session = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
-      .select([
-        "playback_session.status",
-        "playback_session.error_message",
-        "playback_hls_artifact.path",
-      ])
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
+      .select(["playback_session.status", "playback_session.error_message", "playback_hls_artifact.path"])
       .where("playback_session.id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(session).toEqual({
@@ -1281,11 +1127,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("does not publish request-driven HLS when segment generation support is missing", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     setTranscodeBackendForTests({
@@ -1297,12 +1139,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -1314,11 +1151,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("does not churn new playback sessions after a recent request-driven HLS failure", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     const failedSessionId = await createTranscodeSession({
@@ -1327,11 +1160,7 @@ describe("getPlaybackDecision", () => {
       mode: "transcode",
       startTimeSeconds: 20,
     });
-    await updateTranscodeSessionStatus(
-      failedSessionId,
-      "failed",
-      "FFmpeg generated an invalid HLS segment.",
-    );
+    await updateTranscodeSessionStatus(failedSessionId, "failed", "FFmpeg generated an invalid HLS segment.");
 
     let segmentGenerationCount = 0;
     setTranscodeBackendForTests({
@@ -1347,12 +1176,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -1373,11 +1197,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("does not fall back to linear HLS when request-driven support is missing for known-duration media", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     let linearStartCount = 0;
@@ -1391,12 +1211,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -1411,11 +1226,7 @@ describe("getPlaybackDecision", () => {
     if (!sessionId) throw new Error("Expected failed playback session id.");
     const session = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
       .select([
         "playback_session.mode",
         "playback_session.status",
@@ -1435,11 +1246,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("does not start HLS work when the requested start is outside known duration", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     let startCount = 0;
@@ -1458,12 +1265,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      120,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 120);
 
     expect(decision).toMatchObject({
       mode: "unavailable",
@@ -1479,16 +1281,8 @@ describe("getPlaybackDecision", () => {
     if (!sessionId) throw new Error("Expected failed playback session id.");
     const job = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
-      .select([
-        "playback_session.status",
-        "playback_session.error_message",
-        "playback_hls_artifact.path",
-      ])
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
+      .select(["playback_session.status", "playback_session.error_message", "playback_hls_artifact.path"])
       .where("playback_session.id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -1499,11 +1293,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("validates request-driven HLS policy before returning a ready playlist", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     const validatedPolicies: Array<{
@@ -1529,12 +1319,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -1553,16 +1338,8 @@ describe("getPlaybackDecision", () => {
     if (!sessionId) throw new Error("Expected failed playback session id.");
     const job = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
-      .select([
-        "playback_session.status",
-        "playback_session.error_message",
-        "playback_hls_artifact.path",
-      ])
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
+      .select(["playback_session.status", "playback_session.error_message", "playback_hls_artifact.path"])
       .where("playback_session.id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -1573,11 +1350,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("does not publish request-driven HLS playback when policy is disabled during recheck", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
     setTranscodePolicyRecheckDelayForTests(async () => {
       await setTranscodingEnabled(false);
@@ -1595,12 +1368,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -1613,16 +1381,8 @@ describe("getPlaybackDecision", () => {
     if (!sessionId) throw new Error("Expected failed playback session id.");
     const job = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
-      .select([
-        "playback_session.status",
-        "playback_session.error_message",
-        "playback_hls_artifact.path",
-      ])
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
+      .select(["playback_session.status", "playback_session.error_message", "playback_hls_artifact.path"])
       .where("playback_session.id", "=", sessionId)
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -1633,11 +1393,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("does not publish request-driven HLS playback when startup is cancelled during policy recheck", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
     let sessionId: string | null = null;
     setTranscodePolicyRecheckDelayForTests(async () => {
@@ -1649,10 +1405,7 @@ describe("getPlaybackDecision", () => {
         .orderBy("created_at", "desc")
         .executeTakeFirstOrThrow();
       sessionId = session.id;
-      const result = await cancelPlaybackSession(
-        session.id,
-        "Cancelled during startup.",
-      );
+      const result = await cancelPlaybackSession(session.id, "Cancelled during startup.");
       expect(result).toBe("cancelled");
     });
 
@@ -1668,12 +1421,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -1685,16 +1433,8 @@ describe("getPlaybackDecision", () => {
 
     const job = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
-      .select([
-        "playback_session.status",
-        "playback_session.error_message",
-        "playback_hls_artifact.path",
-      ])
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
+      .select(["playback_session.status", "playback_session.error_message", "playback_hls_artifact.path"])
       .where("playback_session.id", "=", decision?.playbackSessionId ?? "")
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -1705,11 +1445,7 @@ describe("getPlaybackDecision", () => {
   });
 
   test("does not publish request-driven HLS when startup is cancelled before virtual playlist publish", async () => {
-    await db
-      .updateTable("media_file")
-      .set({ duration_seconds: 120 })
-      .where("id", "=", "file-b")
-      .execute();
+    await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     let sessionId: string | null = null;
@@ -1739,12 +1475,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decisionPromise = getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      20,
-    );
+    const decisionPromise = getPlaybackDecision("movie-1", "file-b", "user-1", 20);
     await waitFor(() => sessionId !== null);
 
     expect(await cancelPlaybackSession(sessionId!)).toBe("cancelled");
@@ -1761,16 +1492,8 @@ describe("getPlaybackDecision", () => {
 
     const job = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
-      .select([
-        "playback_session.status",
-        "playback_session.error_message",
-        "playback_hls_artifact.path",
-      ])
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
+      .select(["playback_session.status", "playback_session.error_message", "playback_hls_artifact.path"])
       .where("playback_session.id", "=", decision?.playbackSessionId ?? "")
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
@@ -1790,10 +1513,7 @@ describe("getPlaybackDecision", () => {
     setTranscodeBackendForTests({
       async startCompatibilityHls(input): Promise<RunningTranscode> {
         await mkdir(input.artifactDirectory, { recursive: true });
-        await writeFile(
-          path.join(input.artifactDirectory, "segment-00001.ts"),
-          "partial",
-        );
+        await writeFile(path.join(input.artifactDirectory, "segment-00001.ts"), "partial");
         return {
           sessionId: input.sessionId,
           playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
@@ -1832,11 +1552,7 @@ describe("getPlaybackDecision", () => {
       error_message: "Playback session was cancelled.",
     });
     expect(
-      await db
-        .selectFrom("playback_hls_artifact")
-        .select("id")
-        .where("playback_session_id", "=", sessionId)
-        .execute(),
+      await db.selectFrom("playback_hls_artifact").select("id").where("playback_session_id", "=", sessionId).execute(),
     ).toHaveLength(0);
   });
 
@@ -1866,34 +1582,21 @@ describe("getPlaybackDecision", () => {
       mediaFileId: "unsupported-file",
       userId: "user-1",
     });
-    const runningDecision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-    );
+    const runningDecision = await getPlaybackDecision("movie-1", "file-b", "user-1");
     const runningSessionId = runningDecision?.playbackSessionId;
-    if (!runningSessionId)
-      throw new Error("Expected running playback session id.");
+    if (!runningSessionId) throw new Error("Expected running playback session id.");
     const completedSessionId = await createTranscodeSession({
       mediaFileId: "file-b",
       userId: "user-1",
     });
     await updateTranscodeSessionStatus(completedSessionId, "completed");
 
-    expect(
-      await cancelActivePlaybackSessions(
-        "Transcoding is disabled by an administrator.",
-      ),
-    ).toBe(2);
+    expect(await cancelActivePlaybackSessions("Transcoding is disabled by an administrator.")).toBe(2);
 
     const jobs = await db
       .selectFrom("playback_session")
       .select(["id", "status", "error_message"])
-      .where("id", "in", [
-        queuedSessionId,
-        runningSessionId,
-        completedSessionId,
-      ])
+      .where("id", "in", [queuedSessionId, runningSessionId, completedSessionId])
       .execute();
     const jobById = new Map(jobs.map((job) => [job.id, job]));
     expect(jobById.get(completedSessionId)).toMatchObject({
@@ -1919,10 +1622,7 @@ describe("getPlaybackDecision", () => {
     setTranscodeBackendForTests({
       async startCompatibilityHls(input): Promise<RunningTranscode> {
         await mkdir(input.artifactDirectory, { recursive: true });
-        await writeFile(
-          path.join(input.artifactDirectory, "segment-00001.ts"),
-          "partial",
-        );
+        await writeFile(path.join(input.artifactDirectory, "segment-00001.ts"), "partial");
         return {
           sessionId: input.sessionId,
           playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
@@ -1943,12 +1643,7 @@ describe("getPlaybackDecision", () => {
     const decision = await getPlaybackDecision("movie-1", "file-b", "user-1");
     const sessionId = decision?.playbackSessionId;
     if (!sessionId) throw new Error("Expected a playback session id.");
-    const artifactDir = path.join(
-      tempDir,
-      "data",
-      "playback-sessions",
-      sessionId,
-    );
+    const artifactDir = path.join(tempDir, "data", "playback-sessions", sessionId);
 
     await db
       .updateTable("playback_session")
@@ -1973,11 +1668,7 @@ describe("getPlaybackDecision", () => {
       error_message: "Playback session expired because playback stopped.",
     });
     expect(
-      await db
-        .selectFrom("playback_hls_artifact")
-        .select("id")
-        .where("playback_session_id", "=", sessionId)
-        .execute(),
+      await db.selectFrom("playback_hls_artifact").select("id").where("playback_session_id", "=", sessionId).execute(),
     ).toHaveLength(0);
     expect(
       await stat(artifactDir).then(
@@ -1993,14 +1684,8 @@ describe("getPlaybackDecision", () => {
     setTranscodeBackendForTests({
       async startCompatibilityHls(input): Promise<RunningTranscode> {
         await mkdir(input.artifactDirectory, { recursive: true });
-        await writeFile(
-          path.join(input.artifactDirectory, "master.m3u8"),
-          "#EXTM3U\n",
-        );
-        await writeFile(
-          path.join(input.artifactDirectory, "segment-00001.ts"),
-          "partial",
-        );
+        await writeFile(path.join(input.artifactDirectory, "master.m3u8"), "#EXTM3U\n");
+        await writeFile(path.join(input.artifactDirectory, "segment-00001.ts"), "partial");
         return {
           sessionId: input.sessionId,
           playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
@@ -2021,12 +1706,7 @@ describe("getPlaybackDecision", () => {
     const decision = await getPlaybackDecision("movie-1", "file-b", "user-1");
     const sessionId = decision?.playbackSessionId;
     if (!sessionId) throw new Error("Expected a playback session id.");
-    const artifactDir = path.join(
-      tempDir,
-      "data",
-      "playback-sessions",
-      sessionId,
-    );
+    const artifactDir = path.join(tempDir, "data", "playback-sessions", sessionId);
 
     await db
       .updateTable("playback_session")
@@ -2062,8 +1742,7 @@ describe("getPlaybackDecision", () => {
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
       status: "cancelled",
-      error_message:
-        "Playback session expired because playback stopped requesting segments.",
+      error_message: "Playback session expired because playback stopped requesting segments.",
     });
     expect(
       await stat(artifactDir).then(
@@ -2078,24 +1757,13 @@ describe("getPlaybackDecision", () => {
       mediaFileId: "file-b",
       userId: "user-1",
     });
-    const artifactDir = path.join(
-      tempDir,
-      "data",
-      "playback-sessions",
-      sessionId,
-    );
+    const artifactDir = path.join(tempDir, "data", "playback-sessions", sessionId);
     const playlistPath = path.join(artifactDir, "master.m3u8");
     await mkdir(artifactDir, { recursive: true });
     await writeFile(playlistPath, "#EXTM3U\n");
     await Promise.all(
       Array.from({ length: 8 }, (_, index) =>
-        writeFile(
-          path.join(
-            artifactDir,
-            `segment-${String(index).padStart(5, "0")}.ts`,
-          ),
-          "segment",
-        ),
+        writeFile(path.join(artifactDir, `segment-${String(index).padStart(5, "0")}.ts`), "segment"),
       ),
     );
     await registerTranscodeHlsArtifact({
@@ -2104,11 +1772,7 @@ describe("getPlaybackDecision", () => {
       path: playlistPath,
     });
     await updateTranscodeSessionStatus(sessionId, "running");
-    await db
-      .updateTable("playback_session")
-      .set({ last_segment_index: 6 })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ last_segment_index: 6 }).where("id", "=", sessionId).execute();
 
     expect(await pruneActiveHlsSegmentArtifacts(2)).toBe(4);
     expect(
@@ -2190,9 +1854,7 @@ describe("getPlaybackDecision", () => {
       modeDecision: { mode: "transcode", reason: "user_preference" },
       message: null,
     });
-    expect(decision?.streamUrl).toMatch(
-      /^\/media\/playback-sessions\/.+\/master\.m3u8$/,
-    );
+    expect(decision?.streamUrl).toMatch(/^\/media\/playback-sessions\/.+\/master\.m3u8$/);
 
     const jobs = await db
       .selectFrom("playback_session")
@@ -2247,21 +1909,14 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      45,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 45);
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
       streamStartSeconds: 0,
       message: null,
     });
-    expect(decision?.streamUrl).toMatch(
-      /^\/media\/playback-sessions\/.+\/master\.m3u8$/,
-    );
+    expect(decision?.streamUrl).toMatch(/^\/media\/playback-sessions\/.+\/master\.m3u8$/);
     expect(decision?.playbackSessionId).not.toBe(sessionId);
   });
 
@@ -2272,11 +1927,7 @@ describe("getPlaybackDecision", () => {
       userId: "user-1",
       startTimeSeconds: 45,
     });
-    const oldArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      oldSessionId,
-    );
+    const oldArtifactDir = path.join(tempDir, "playback-sessions", oldSessionId);
     const oldPlaylistPath = path.join(oldArtifactDir, "master.m3u8");
     await mkdir(oldArtifactDir, { recursive: true });
     await writeFile(oldPlaylistPath, "#EXTM3U\n");
@@ -2307,20 +1958,13 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "file-b",
-      "user-1",
-      0,
-    );
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1", 0);
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
       streamStartSeconds: 0,
     });
-    expect(decision?.streamUrl).toMatch(
-      /^\/media\/playback-sessions\/.+\/master\.m3u8$/,
-    );
+    expect(decision?.streamUrl).toMatch(/^\/media\/playback-sessions\/.+\/master\.m3u8$/);
     expect(decision?.playbackSessionId).not.toBe(oldSessionId);
   });
 
@@ -2373,9 +2017,7 @@ describe("getPlaybackDecision", () => {
       modeDecision: { mode: "transcode", reason: "user_preference" },
       message: null,
     });
-    expect(decision?.streamUrl).toMatch(
-      /^\/media\/playback-sessions\/.+\/master\.m3u8$/,
-    );
+    expect(decision?.streamUrl).toMatch(/^\/media\/playback-sessions\/.+\/master\.m3u8$/);
 
     const jobs = await db
       .selectFrom("playback_session")
@@ -2430,9 +2072,7 @@ describe("getPlaybackDecision", () => {
     setReadableSftpStorageForTests();
     setTranscodeBackendForTests({
       async startCompatibilityHls() {
-        throw new Error(
-          "linear HLS should not start for duration-known SFTP media",
-        );
+        throw new Error("linear HLS should not start for duration-known SFTP media");
       },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
@@ -2443,20 +2083,13 @@ describe("getPlaybackDecision", () => {
     });
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "sftp-request-file",
-      "user-1",
-      24,
-    );
+    const decision = await getPlaybackDecision("movie-1", "sftp-request-file", "user-1", 24);
     const sessionId = decision?.playbackSessionId;
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
       modeDecision: { mode: "transcode", reason: "user_preference" },
-      streamUrl: sessionId
-        ? `/media/playback-sessions/${sessionId}/master.m3u8`
-        : null,
+      streamUrl: sessionId ? `/media/playback-sessions/${sessionId}/master.m3u8` : null,
       streamStartSeconds: 0,
       message: null,
     });
@@ -2519,11 +2152,7 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "sftp-auto-file",
-      "user-1",
-    );
+    const decision = await getPlaybackDecision("movie-1", "sftp-auto-file", "user-1");
     const sessionId = decision?.playbackSessionId;
     expect(decision).toMatchObject({
       mode: "remux",
@@ -2532,9 +2161,7 @@ describe("getPlaybackDecision", () => {
         mode: "remux",
         reason: "container_unsupported",
       },
-      streamUrl: sessionId
-        ? `/media/playback-sessions/${sessionId}/master.m3u8`
-        : null,
+      streamUrl: sessionId ? `/media/playback-sessions/${sessionId}/master.m3u8` : null,
       message: null,
     });
   });
@@ -2595,21 +2222,15 @@ describe("getPlaybackDecision", () => {
       },
     });
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "sftp-auto-hevc-file",
-      "user-1",
-      0,
-      { clientCapabilities: { hevc: true } },
-    );
+    const decision = await getPlaybackDecision("movie-1", "sftp-auto-hevc-file", "user-1", 0, {
+      clientCapabilities: { hevc: true },
+    });
     const sessionId = decision?.playbackSessionId;
     expect(decision).toMatchObject({
       mode: "transcode",
       status: "ready",
       modeDecision: { mode: "transcode", reason: "direct_unsupported" },
-      streamUrl: sessionId
-        ? `/media/playback-sessions/${sessionId}/master.m3u8`
-        : null,
+      streamUrl: sessionId ? `/media/playback-sessions/${sessionId}/master.m3u8` : null,
       message: null,
     });
     expect(generations).toEqual([{ mode: "transcode", format: "mpegts" }]);
@@ -2662,12 +2283,7 @@ describe("getPlaybackDecision", () => {
     });
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "sftp-request-missing-backend-file",
-      "user-1",
-      24,
-    );
+    const decision = await getPlaybackDecision("movie-1", "sftp-request-missing-backend-file", "user-1", 24);
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -2679,15 +2295,10 @@ describe("getPlaybackDecision", () => {
     expect(linearStartCount).toBe(0);
 
     const sessionId = decision?.playbackSessionId;
-    if (!sessionId)
-      throw new Error("Expected failed SFTP playback session id.");
+    if (!sessionId) throw new Error("Expected failed SFTP playback session id.");
     const session = await db
       .selectFrom("playback_session")
-      .leftJoin(
-        "playback_hls_artifact",
-        "playback_hls_artifact.playback_session_id",
-        "playback_session.id",
-      )
+      .leftJoin("playback_hls_artifact", "playback_hls_artifact.playback_session_id", "playback_session.id")
       .select([
         "playback_session.mode",
         "playback_session.status",
@@ -2783,12 +2394,7 @@ describe("getPlaybackDecision", () => {
     });
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "sftp-unseekable-file",
-      "user-1",
-      24,
-    );
+    const decision = await getPlaybackDecision("movie-1", "sftp-unseekable-file", "user-1", 24);
 
     expect(decision).toMatchObject({
       mode: "unavailable",
@@ -2803,8 +2409,7 @@ describe("getPlaybackDecision", () => {
     expect(linearStartCount).toBe(0);
     expect(startedInputs).toEqual([]);
     const sessionId = decision?.playbackSessionId;
-    if (!sessionId)
-      throw new Error("Expected failed SFTP playback session id.");
+    if (!sessionId) throw new Error("Expected failed SFTP playback session id.");
     const session = await db
       .selectFrom("playback_session")
       .select(["status", "pipeline", "error_message"])
@@ -2813,8 +2418,7 @@ describe("getPlaybackDecision", () => {
     expect(session).toEqual({
       status: "failed",
       pipeline: null,
-      error_message:
-        "SFTP media needs probe metadata before HLS playback can start.",
+      error_message: "SFTP media needs probe metadata before HLS playback can start.",
     });
   });
 
@@ -2895,12 +2499,7 @@ describe("getPlaybackDecision", () => {
     });
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "sftp-unknown-format-file",
-      "user-1",
-      24,
-    );
+    const decision = await getPlaybackDecision("movie-1", "sftp-unknown-format-file", "user-1", 24);
 
     expect(decision).toMatchObject({
       mode: "unavailable",
@@ -2915,8 +2514,7 @@ describe("getPlaybackDecision", () => {
     expect(linearStartCount).toBe(0);
     expect(startedInputs).toEqual([]);
     const sessionId = decision?.playbackSessionId;
-    if (!sessionId)
-      throw new Error("Expected failed SFTP playback session id.");
+    if (!sessionId) throw new Error("Expected failed SFTP playback session id.");
     const session = await db
       .selectFrom("playback_session")
       .select(["status", "pipeline", "error_message"])
@@ -2925,8 +2523,7 @@ describe("getPlaybackDecision", () => {
     expect(session).toEqual({
       status: "failed",
       pipeline: null,
-      error_message:
-        "SFTP media needs probe metadata before HLS playback can start.",
+      error_message: "SFTP media needs probe metadata before HLS playback can start.",
     });
   });
 
@@ -3005,11 +2602,7 @@ describe("getPlaybackDecision", () => {
     });
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
-    const decision = await getPlaybackDecision(
-      "movie-1",
-      "sftp-duration-unknown-file",
-      "user-1",
-    );
+    const decision = await getPlaybackDecision("movie-1", "sftp-duration-unknown-file", "user-1");
     expect(decision).toMatchObject({
       mode: "unavailable",
       status: "unavailable",
@@ -3034,8 +2627,7 @@ describe("getPlaybackDecision", () => {
     expect(job).toEqual({
       status: "failed",
       pipeline: null,
-      error_message:
-        "SFTP media needs probe metadata before HLS playback can start.",
+      error_message: "SFTP media needs probe metadata before HLS playback can start.",
     });
     const artifacts = await db
       .selectFrom("playback_hls_artifact")

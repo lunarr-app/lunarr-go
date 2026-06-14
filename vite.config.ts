@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [sveltekit()],
   server: {
     watch: {
-      ignored: ["**/.playwright-cli/**"]
-    }
-  }
+      ignored: ["**/.playwright-cli/**"],
+    },
+  },
 });

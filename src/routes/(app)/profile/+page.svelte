@@ -1,21 +1,8 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
-  import {
-    getStoredTheme,
-    setStoredTheme,
-    type Theme,
-  } from "$lib/theme";
-  import {
-    Clipboard,
-    ExternalLink,
-    KeyRound,
-    Plus,
-    Save,
-    SunMoon,
-    Trash2,
-    UserRound,
-  } from "@lucide/svelte";
+  import { getStoredTheme, setStoredTheme, type Theme } from "$lib/theme";
+  import { Clipboard, ExternalLink, KeyRound, Plus, Save, SunMoon, Trash2, UserRound } from "@lucide/svelte";
 
   let { data, form } = $props();
   let displayName = $state("");
@@ -35,30 +22,21 @@
     return normalized.length > 0 ? normalized.slice(0, 32) : "";
   }
 
-  const nameDirty = $derived(
-    displayName.trim() !== (data.user.name ?? "").trim(),
-  );
+  const nameDirty = $derived(displayName.trim() !== (data.user.name ?? "").trim());
 
-  const passwordDirty = $derived(
-    currentPassword.length > 0 ||
-      newPassword.length > 0 ||
-      confirmPassword.length > 0,
-  );
+  const passwordDirty = $derived(currentPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0);
 
   const playbackDirty = $derived(
     playbackPreference !== data.transcodePolicy.playbackPreference ||
-      normalizeLanguage(preferredAudioLanguage) !==
-        (data.transcodePolicy.preferredAudioLanguage ?? "") ||
-      normalizeLanguage(preferredSubtitleLanguage) !==
-        (data.transcodePolicy.preferredSubtitleLanguage ?? ""),
+      normalizeLanguage(preferredAudioLanguage) !== (data.transcodePolicy.preferredAudioLanguage ?? "") ||
+      normalizeLanguage(preferredSubtitleLanguage) !== (data.transcodePolicy.preferredSubtitleLanguage ?? ""),
   );
 
   $effect(() => {
     displayName = data.user.name ?? "";
     playbackPreference = data.transcodePolicy.playbackPreference;
     preferredAudioLanguage = data.transcodePolicy.preferredAudioLanguage ?? "";
-    preferredSubtitleLanguage =
-      data.transcodePolicy.preferredSubtitleLanguage ?? "";
+    preferredSubtitleLanguage = data.transcodePolicy.preferredSubtitleLanguage ?? "";
   });
 
   $effect(() => {
@@ -97,10 +75,7 @@
 
 <svelte:head>
   <title>Profile - Lunarr</title>
-  <meta
-    name="description"
-    content="Manage your Lunarr profile and playback preferences."
-  />
+  <meta name="description" content="Manage your Lunarr profile and playback preferences." />
 </svelte:head>
 
 <div class="ops-page-header">
@@ -123,26 +98,15 @@
     <div class="ops-panel-body">
       <div class="account-identity">
         <div class="avatar" aria-hidden="true">
-          <span
-            >{(data.user.name || data.user.email || "L")
-              .slice(0, 1)
-              .toUpperCase()}</span
-          >
+          <span>{(data.user.name || data.user.email || "L").slice(0, 1).toUpperCase()}</span>
         </div>
-        <span class="role-badge"
-          >{data.user.role === "admin" ? "Admin" : "User"}</span
-        >
+        <span class="role-badge">{data.user.role === "admin" ? "Admin" : "User"}</span>
       </div>
 
       <form class="account-form" method="POST" action="?/updateAccount">
         <label>
           Name
-          <input
-            name="name"
-            autocomplete="name"
-            bind:value={displayName}
-            required
-          />
+          <input name="name" autocomplete="name" bind:value={displayName} required />
         </label>
 
         {#if data.user.email}
@@ -224,224 +188,207 @@
         <SunMoon size={18} aria-hidden="true" />
       </div>
 
-    <div class="ops-panel-body">
-      <div class="theme-options" role="group" aria-label="Theme">
-        <button
-          class:active={selectedTheme === "dark"}
-          type="button"
-          class="secondary"
-          aria-pressed={selectedTheme === "dark"}
-          onclick={() => chooseTheme("dark")}
-        >
-          Dark
-        </button>
-        <button
-          class:active={selectedTheme === "light"}
-          type="button"
-          class="secondary"
-          aria-pressed={selectedTheme === "light"}
-          onclick={() => chooseTheme("light")}
-        >
-          Light
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <form
-    class="ops-panel"
-    method="POST"
-    action="?/savePlaybackPreference"
-    bind:this={playbackForm}
-  >
-    <div class="ops-panel-header">
-      <div>
-        <h2>Playback</h2>
-        <p class="muted">
-          Default behavior when direct play and temporary HLS are both available.
-        </p>
-      </div>
-    </div>
-
-    <div class="ops-panel-body">
-      <label>
-        Playback preference
-        <select
-          name="playbackPreference"
-          bind:value={playbackPreference}
-          onchange={submitPlaybackPreference}
-        >
-          <option value="auto">Auto</option>
-          <option value="prefer_direct">Prefer direct play</option>
-          <option value="prefer_transcode">Prefer temporary HLS</option>
-        </select>
-      </label>
-
-      <label>
-        Preferred audio language
-        <input
-          name="preferredAudioLanguage"
-          type="text"
-          maxlength="32"
-          placeholder="eng, jpn, en"
-          bind:value={preferredAudioLanguage}
-          onchange={submitPlaybackPreference}
-        />
-      </label>
-
-      <label>
-        Preferred subtitle language
-        <input
-          name="preferredSubtitleLanguage"
-          type="text"
-          maxlength="32"
-          placeholder="eng, jpn, en"
-          bind:value={preferredSubtitleLanguage}
-          onchange={submitPlaybackPreference}
-        />
-      </label>
-
-      <p class="muted detail-copy">
-        Auto uses direct play for browser-compatible files and temporary HLS only
-        when needed. Preferred audio language is used for temporary HLS when probe
-        metadata has a matching audio stream. Preferred subtitle language chooses
-        the default external subtitle track when available.
-      </p>
-
-      {#if !data.transcodePolicy.transcodingEnabled}
-        <p class="muted status-note">
-          Temporary HLS playback is currently disabled by an admin. Compatible files
-          still use direct play.
-        </p>
-      {/if}
-
-      {#if form?.playbackPreferenceError}
-        <p class="error">{form.playbackPreferenceError}</p>
-      {/if}
-
-      <button type="submit" disabled={!playbackDirty}>
-        <Save size={16} aria-hidden="true" />
-        Save playback
-      </button>
-    </div>
-  </form>
-
-  <section class="ops-panel">
-    <div class="ops-panel-header">
-      <div>
-        <h2>API Keys</h2>
-        <p class="muted">Personal tokens for mobile apps and custom clients.</p>
-      </div>
-      <KeyRound size={18} aria-hidden="true" />
-    </div>
-
-    <div class="ops-panel-body api-panel-body">
-      <div class="api-links" aria-label="API documentation">
-        <a class="button secondary" href="/api/openapi.json" target="_blank" rel="noreferrer">
-          JSON
-          <ExternalLink size={14} aria-hidden="true" />
-        </a>
-        <a class="button secondary" href="/api/openapi.yaml" target="_blank" rel="noreferrer">
-          YAML
-          <ExternalLink size={14} aria-hidden="true" />
-        </a>
-        <code>X-API-Key</code>
-      </div>
-
-      {#if form?.createdApiKeyToken}
-        <div class="token-reveal" role="status">
-          <div>
-            <strong>{form.apiKeySuccess ?? "API key created."}</strong>
-            <code>{form.createdApiKeyToken}</code>
-          </div>
+      <div class="ops-panel-body">
+        <div class="theme-options" role="group" aria-label="Theme">
           <button
-            class="secondary"
+            class:active={selectedTheme === "dark"}
             type="button"
-            onclick={() => copyToken(form.createdApiKeyToken)}
+            class="secondary"
+            aria-pressed={selectedTheme === "dark"}
+            onclick={() => chooseTheme("dark")}
           >
-            <Clipboard size={16} aria-hidden="true" />
-            {copiedToken ? "Copied" : "Copy"}
+            Dark
+          </button>
+          <button
+            class:active={selectedTheme === "light"}
+            type="button"
+            class="secondary"
+            aria-pressed={selectedTheme === "light"}
+            onclick={() => chooseTheme("light")}
+          >
+            Light
           </button>
         </div>
-      {/if}
+      </div>
+    </section>
 
-      <form class="api-create-form" method="POST" action="?/createApiKey">
+    <form class="ops-panel" method="POST" action="?/savePlaybackPreference" bind:this={playbackForm}>
+      <div class="ops-panel-header">
+        <div>
+          <h2>Playback</h2>
+          <p class="muted">Default behavior when direct play and temporary HLS are both available.</p>
+        </div>
+      </div>
+
+      <div class="ops-panel-body">
         <label>
-          Name
-          <input name="name" maxlength="80" placeholder="iPhone, scripts, Jellyseerr" />
+          Playback preference
+          <select name="playbackPreference" bind:value={playbackPreference} onchange={submitPlaybackPreference}>
+            <option value="auto">Auto</option>
+            <option value="prefer_direct">Prefer direct play</option>
+            <option value="prefer_transcode">Prefer temporary HLS</option>
+          </select>
         </label>
 
-        <div class="expiry-grid">
-          <label>
-            Expires
-            <select name="expiresPreset" bind:value={apiKeyExpiresPreset}>
-              <option value="">Never</option>
-              <option value="604800">7 days</option>
-              <option value="2592000">30 days</option>
-              <option value="7776000">90 days</option>
-              <option value="31536000">1 year</option>
-              <option value="custom">Custom seconds</option>
-            </select>
-          </label>
+        <label>
+          Preferred audio language
+          <input
+            name="preferredAudioLanguage"
+            type="text"
+            maxlength="32"
+            placeholder="eng, jpn, en"
+            bind:value={preferredAudioLanguage}
+            onchange={submitPlaybackPreference}
+          />
+        </label>
 
-          {#if apiKeyExpiresPreset === "custom"}
-            <label>
-              Seconds
-              <input
-                name="expiresIn"
-                type="number"
-                min="1"
-                max="315360000"
-                step="1"
-                inputmode="numeric"
-                placeholder="2592000"
-              />
-            </label>
-          {/if}
+        <label>
+          Preferred subtitle language
+          <input
+            name="preferredSubtitleLanguage"
+            type="text"
+            maxlength="32"
+            placeholder="eng, jpn, en"
+            bind:value={preferredSubtitleLanguage}
+            onchange={submitPlaybackPreference}
+          />
+        </label>
+
+        <p class="muted detail-copy">
+          Auto uses direct play for browser-compatible files and temporary HLS only when needed. Preferred audio
+          language is used for temporary HLS when probe metadata has a matching audio stream. Preferred subtitle
+          language chooses the default external subtitle track when available.
+        </p>
+
+        {#if !data.transcodePolicy.transcodingEnabled}
+          <p class="muted status-note">
+            Temporary HLS playback is currently disabled by an admin. Compatible files still use direct play.
+          </p>
+        {/if}
+
+        {#if form?.playbackPreferenceError}
+          <p class="error">{form.playbackPreferenceError}</p>
+        {/if}
+
+        <button type="submit" disabled={!playbackDirty}>
+          <Save size={16} aria-hidden="true" />
+          Save playback
+        </button>
+      </div>
+    </form>
+
+    <section class="ops-panel">
+      <div class="ops-panel-header">
+        <div>
+          <h2>API Keys</h2>
+          <p class="muted">Personal tokens for mobile apps and custom clients.</p>
+        </div>
+        <KeyRound size={18} aria-hidden="true" />
+      </div>
+
+      <div class="ops-panel-body api-panel-body">
+        <div class="api-links" aria-label="API documentation">
+          <a class="button secondary" href="/api/openapi.json" target="_blank" rel="noreferrer">
+            JSON
+            <ExternalLink size={14} aria-hidden="true" />
+          </a>
+          <a class="button secondary" href="/api/openapi.yaml" target="_blank" rel="noreferrer">
+            YAML
+            <ExternalLink size={14} aria-hidden="true" />
+          </a>
+          <code>X-API-Key</code>
         </div>
 
-        {#if form?.apiKeyError}
-          <p class="error">{form.apiKeyError}</p>
+        {#if form?.createdApiKeyToken}
+          <div class="token-reveal" role="status">
+            <div>
+              <strong>{form.apiKeySuccess ?? "API key created."}</strong>
+              <code>{form.createdApiKeyToken}</code>
+            </div>
+            <button class="secondary" type="button" onclick={() => copyToken(form.createdApiKeyToken)}>
+              <Clipboard size={16} aria-hidden="true" />
+              {copiedToken ? "Copied" : "Copy"}
+            </button>
+          </div>
         {/if}
 
-        <button>
-          <Plus size={16} aria-hidden="true" />
-          Create key
-        </button>
-      </form>
+        <form class="api-create-form" method="POST" action="?/createApiKey">
+          <label>
+            Name
+            <input name="name" maxlength="80" placeholder="iPhone, scripts, Jellyseerr" />
+          </label>
 
-      <div class="api-key-list">
-        {#if data.apiKeys.length > 0}
-          {#each data.apiKeys as apiKey}
-            <article class="api-key-row">
-              <div>
-                <h3>{apiKey.name}</h3>
-                <p class="muted">
-                  {apiKey.tokenPrefix}...
-                  <span>Created {formatDate(apiKey.createdAt)}</span>
-                  <span>Last used {formatDate(apiKey.lastUsedAt)}</span>
-                  <span>Expires {formatDate(apiKey.expiresAt)}</span>
-                </p>
-              </div>
-              <ConfirmAction
-                action="?/revokeApiKey"
-                fieldName="apiKeyId"
-                fieldValue={apiKey.id}
-                title="Revoke API key?"
-                message={`This immediately disables ${apiKey.name}. Existing clients using it will lose access.`}
-                confirmLabel="Revoke"
-              >
-                <Trash2 size={16} aria-hidden="true" />
-                Revoke
-              </ConfirmAction>
-            </article>
-          {/each}
-        {:else}
-          <p class="muted empty-state">No API keys created.</p>
-        {/if}
+          <div class="expiry-grid">
+            <label>
+              Expires
+              <select name="expiresPreset" bind:value={apiKeyExpiresPreset}>
+                <option value="">Never</option>
+                <option value="604800">7 days</option>
+                <option value="2592000">30 days</option>
+                <option value="7776000">90 days</option>
+                <option value="31536000">1 year</option>
+                <option value="custom">Custom seconds</option>
+              </select>
+            </label>
+
+            {#if apiKeyExpiresPreset === "custom"}
+              <label>
+                Seconds
+                <input
+                  name="expiresIn"
+                  type="number"
+                  min="1"
+                  max="315360000"
+                  step="1"
+                  inputmode="numeric"
+                  placeholder="2592000"
+                />
+              </label>
+            {/if}
+          </div>
+
+          {#if form?.apiKeyError}
+            <p class="error">{form.apiKeyError}</p>
+          {/if}
+
+          <button>
+            <Plus size={16} aria-hidden="true" />
+            Create key
+          </button>
+        </form>
+
+        <div class="api-key-list">
+          {#if data.apiKeys.length > 0}
+            {#each data.apiKeys as apiKey}
+              <article class="api-key-row">
+                <div>
+                  <h3>{apiKey.name}</h3>
+                  <p class="muted">
+                    {apiKey.tokenPrefix}...
+                    <span>Created {formatDate(apiKey.createdAt)}</span>
+                    <span>Last used {formatDate(apiKey.lastUsedAt)}</span>
+                    <span>Expires {formatDate(apiKey.expiresAt)}</span>
+                  </p>
+                </div>
+                <ConfirmAction
+                  action="?/revokeApiKey"
+                  fieldName="apiKeyId"
+                  fieldValue={apiKey.id}
+                  title="Revoke API key?"
+                  message={`This immediately disables ${apiKey.name}. Existing clients using it will lose access.`}
+                  confirmLabel="Revoke"
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  Revoke
+                </ConfirmAction>
+              </article>
+            {/each}
+          {:else}
+            <p class="muted empty-state">No API keys created.</p>
+          {/if}
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
   </div>
 </div>
 

@@ -1,9 +1,5 @@
 import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
-import {
-  createLibrary,
-  listLibrariesWithScanStatus,
-  listLibraryShareUsers,
-} from "$lib/server/libraries";
+import { createLibrary, listLibrariesWithScanStatus, listLibraryShareUsers } from "$lib/server/libraries";
 import { parseCreateLibraryInput } from "$lib/server/libraries/input";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
@@ -29,11 +25,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const body = await readJsonBody(request);
     const library = await createLibrary(
-      parseCreateLibraryInput(
-        typeof body === "object" && body
-          ? (body as Record<string, unknown>)
-          : {},
-      ),
+      parseCreateLibraryInput(typeof body === "object" && body ? (body as Record<string, unknown>) : {}),
     );
     await syncLibraryWatchers();
     await syncScheduledLibraryScans();

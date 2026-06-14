@@ -3,18 +3,9 @@ import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
-import {
-  getBooleanSetting,
-  getSetting,
-  setSetting,
-} from "$lib/server/settings";
+import { getBooleanSetting, getSetting, setSetting } from "$lib/server/settings";
 import { registerTranscodeHlsArtifact } from "$lib/server/transcoding/sessions";
 import {
   DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
@@ -42,22 +33,10 @@ type SettingsLoadResult = {
 };
 
 async function waitForJob(db: Kysely<Database>, jobId: string) {
-  let job = await db
-    .selectFrom("scan_job")
-    .selectAll()
-    .where("id", "=", jobId)
-    .executeTakeFirstOrThrow();
-  for (
-    let index = 0;
-    index < 50 && (job.status === "queued" || job.status === "running");
-    index += 1
-  ) {
+  let job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
+  for (let index = 0; index < 50 && (job.status === "queued" || job.status === "running"); index += 1) {
     await new Promise((resolve) => setTimeout(resolve, 10));
-    job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirstOrThrow();
+    job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
   }
   return job;
 }
@@ -128,10 +107,7 @@ describe("settings page server", () => {
     transcodingForm.set("hardwareAcceleration", "videotoolbox");
     transcodingForm.set("hardwareAccelerationRequired", "on");
     transcodingForm.set("transcodeQualityPreset", "720p");
-    transcodingForm.set(
-      "playbackSessionArtifactMaxBytes",
-      String(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1]),
-    );
+    transcodingForm.set("playbackSessionArtifactMaxBytes", String(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1]));
     const now = new Date().toISOString();
     await db
       .insertInto("user")
@@ -198,15 +174,8 @@ describe("settings page server", () => {
         updated_at: now,
       })
       .execute();
-    const playbackSessionArtifactDir = path.join(
-      tempDir,
-      "playback-sessions",
-      "transcode-1",
-    );
-    const playbackSessionPlaylistPath = path.join(
-      playbackSessionArtifactDir,
-      "master.m3u8",
-    );
+    const playbackSessionArtifactDir = path.join(tempDir, "playback-sessions", "transcode-1");
+    const playbackSessionPlaylistPath = path.join(playbackSessionArtifactDir, "master.m3u8");
     await mkdir(playbackSessionArtifactDir, { recursive: true });
     await writeFile(playbackSessionPlaylistPath, "#EXTM3U\n");
     await db
@@ -269,10 +238,8 @@ describe("settings page server", () => {
         hardwareAccelerationRequired: true,
         transcodeQualityPreset: "720p",
       },
-      playbackSessionArtifactMaxBytes:
-        PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1],
-      playbackSessionArtifactMaxBytesOptions:
-        PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
+      playbackSessionArtifactMaxBytes: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS[1],
+      playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
       status: {
         libraries: 1,
         movies: 1,
@@ -317,8 +284,7 @@ describe("settings page server", () => {
       tmdbConfigured: true,
       tmdbAccessTokenConfigured: false,
       tmdbApiKeyConfigured: false,
-      playbackSessionArtifactMaxBytes:
-        DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
+      playbackSessionArtifactMaxBytes: DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
     });
   });
 
@@ -430,14 +396,9 @@ describe("settings page server", () => {
     } as never);
 
     expect(adminResult).toEqual({
-      metadataMessage:
-        "Started movie metadata refresh. Track progress in Jobs.",
+      metadataMessage: "Started movie metadata refresh. Track progress in Jobs.",
     });
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("library_id", "is", null)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("library_id", "is", null).executeTakeFirstOrThrow();
     expect(await waitForJob(db, job.id)).toMatchObject({
       status: "completed",
       files_seen: 0,
@@ -507,9 +468,7 @@ describe("settings page server", () => {
 
       if (url.includes("/search/movie")) {
         return Response.json({
-          results: [
-            { id: 603, title: "The Matrix", release_date: "1999-03-31" },
-          ],
+          results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }],
         });
       }
 
@@ -532,14 +491,9 @@ describe("settings page server", () => {
     } as never);
 
     expect(result).toEqual({
-      metadataMessage:
-        "Started movie metadata refresh. Track progress in Jobs.",
+      metadataMessage: "Started movie metadata refresh. Track progress in Jobs.",
     });
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("library_id", "is", null)
-      .executeTakeFirstOrThrow();
+    const job = await db.selectFrom("scan_job").selectAll().where("library_id", "is", null).executeTakeFirstOrThrow();
     expect(await waitForJob(db, job.id)).toMatchObject({
       status: "completed",
       files_seen: 1,
@@ -548,11 +502,7 @@ describe("settings page server", () => {
     expect(calls).toHaveLength(2);
     expect(calls[0]).toContain("api_key=saved-api-key");
 
-    const movie = await db
-      .selectFrom("media_item")
-      .selectAll()
-      .where("id", "=", "movie-1")
-      .executeTakeFirstOrThrow();
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
     expect(movie).toMatchObject({
       provider: "tmdb",
       provider_id: "603",
@@ -561,11 +511,7 @@ describe("settings page server", () => {
       runtime_seconds: 8160,
     });
     expect(
-      await db
-        .selectFrom("media_item_genre")
-        .select(["name"])
-        .where("media_item_id", "=", "movie-1")
-        .execute(),
+      await db.selectFrom("media_item_genre").select(["name"]).where("media_item_id", "=", "movie-1").execute(),
     ).toEqual([{ name: "Science Fiction" }]);
   });
 
@@ -581,10 +527,7 @@ describe("settings page server", () => {
       },
     });
 
-    globalThis.fetch = (async (
-      input: URL | RequestInfo,
-      init?: RequestInit,
-    ) => {
+    globalThis.fetch = (async (input: URL | RequestInfo, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({
         authorization: expect.stringMatching(/^Bearer /),
       });
@@ -592,9 +535,7 @@ describe("settings page server", () => {
 
       if (url.includes("/search/movie")) {
         return Response.json({
-          results: [
-            { id: 603, title: "The Matrix", release_date: "1999-03-31" },
-          ],
+          results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }],
         });
       }
 
@@ -624,9 +565,7 @@ describe("settings page server", () => {
 
       if (url.includes("/search/movie")) {
         return Response.json({
-          results: [
-            { id: 603, title: "The Matrix", release_date: "1999-03-31" },
-          ],
+          results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }],
         });
       }
 
@@ -803,10 +742,7 @@ describe("settings page server", () => {
       tvMetadataMessage: "Started TV metadata refresh. Track progress in Jobs.",
     });
 
-    const jobs = await db
-      .selectFrom("scan_job")
-      .select(["id", "job_kind", "library_id"])
-      .execute();
+    const jobs = await db.selectFrom("scan_job").select(["id", "job_kind", "library_id"]).execute();
     expect(jobs).toMatchObject([
       {
         job_kind: "tv_metadata_refresh",
@@ -822,11 +758,7 @@ describe("settings page server", () => {
       files_updated: 1,
     });
 
-    const show = await db
-      .selectFrom("media_item")
-      .selectAll()
-      .where("id", "=", "show-1")
-      .executeTakeFirstOrThrow();
+    const show = await db.selectFrom("media_item").selectAll().where("id", "=", "show-1").executeTakeFirstOrThrow();
     expect(show).toMatchObject({
       provider: "tmdb",
       provider_id: "63639",
@@ -879,29 +811,17 @@ describe("settings page server", () => {
     expect(result).toEqual({
       scanMessage: "Started 2 scans for 2 libraries.",
     });
-    let jobs = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .orderBy("library_id", "asc")
-      .execute();
+    let jobs = await db.selectFrom("scan_job").selectAll().orderBy("library_id", "asc").execute();
     for (
       let index = 0;
-      index < 20 &&
-      jobs.some((job) => job.status === "queued" || job.status === "running");
+      index < 20 && jobs.some((job) => job.status === "queued" || job.status === "running");
       index += 1
     ) {
       await new Promise((resolve) => setTimeout(resolve, 10));
-      jobs = await db
-        .selectFrom("scan_job")
-        .selectAll()
-        .orderBy("library_id", "asc")
-        .execute();
+      jobs = await db.selectFrom("scan_job").selectAll().orderBy("library_id", "asc").execute();
     }
 
-    expect(jobs.map((job) => job.library_id)).toEqual([
-      "library-1",
-      "library-2",
-    ]);
+    expect(jobs.map((job) => job.library_id)).toEqual(["library-1", "library-2"]);
     expect(jobs).toMatchObject([
       { library_id: "library-1", status: "completed", files_seen: 0 },
       { library_id: "library-2", status: "completed", files_seen: 0 },

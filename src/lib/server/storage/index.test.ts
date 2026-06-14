@@ -6,7 +6,7 @@ import {
   normalizeSftpOperationTimeoutMs,
   normalizeSftpWalkConcurrency,
   parseSftpConfig,
-  walkSftpFiles
+  walkSftpFiles,
 } from ".";
 
 function remoteEntry(filename: string, kind: "directory" | "file"): FileEntryWithStats {
@@ -16,8 +16,8 @@ function remoteEntry(filename: string, kind: "directory" | "file"): FileEntryWit
       isDirectory: () => kind === "directory",
       isFile: () => kind === "file",
       size: 1,
-      mtime: 1
-    }
+      mtime: 1,
+    },
   } as unknown as FileEntryWithStats;
 }
 
@@ -29,7 +29,7 @@ describe("walkSftpFiles", () => {
     const entriesByDirectory = new Map<string, FileEntryWithStats[]>([
       ["/", [remoteEntry("a", "directory"), remoteEntry("b", "directory"), remoteEntry("root.mp4", "file")]],
       ["/a", [remoteEntry("a.mp4", "file")]],
-      ["/b", [remoteEntry("b.mp4", "file")]]
+      ["/b", [remoteEntry("b.mp4", "file")]],
     ]);
 
     const readDirectory = async (directory: string) => {
@@ -48,23 +48,26 @@ describe("walkSftpFiles", () => {
 
     expect(maxActiveReads).toBe(2);
     expect(readOrder).toEqual(["/", "/a", "/b"]);
-    expect(walkedEntries.filter((entry) => entry.kind === "file").map((entry) => entry.path).sort()).toEqual([
-      "/a/a.mp4",
-      "/b/b.mp4",
-      "/root.mp4"
-    ]);
+    expect(
+      walkedEntries
+        .filter((entry) => entry.kind === "file")
+        .map((entry) => entry.path)
+        .sort(),
+    ).toEqual(["/a/a.mp4", "/b/b.mp4", "/root.mp4"]);
   });
 });
 
 describe("parseSftpConfig", () => {
   test("uses database defaults when stored tuning fields are missing", () => {
-    const config = parseSftpConfig(JSON.stringify({
-      host: "sftp.example.com",
-      port: 22,
-      username: "mediauser",
-      root: "/media",
-      passwordEncrypted: "encrypted"
-    }));
+    const config = parseSftpConfig(
+      JSON.stringify({
+        host: "sftp.example.com",
+        port: 22,
+        username: "mediauser",
+        root: "/media",
+        passwordEncrypted: "encrypted",
+      }),
+    );
 
     expect(config.walkConcurrency).toBe(DEFAULT_SFTP_WALK_CONCURRENCY);
     expect(config.operationTimeoutMs).toBe(DEFAULT_SFTP_OPERATION_TIMEOUT_MS);

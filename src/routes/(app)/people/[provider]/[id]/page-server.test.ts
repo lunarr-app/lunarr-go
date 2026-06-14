@@ -3,13 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-  type Database,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import { load } from "./+page.server";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
 
@@ -236,13 +230,7 @@ describe("person page server", () => {
           id: "file-3",
           library_id: "library-2",
           media_item_id: "episode-1",
-          path: path.join(
-            tempDir,
-            "TV",
-            "Cast Show",
-            "Season 01",
-            "Cast.Show.S01E01.mp4",
-          ),
+          path: path.join(tempDir, "TV", "Cast Show", "Season 01", "Cast.Show.S01E01.mp4"),
           basename: "Cast.Show.S01E01.mp4",
           extension: ".mp4",
           size_bytes: 10,
@@ -335,9 +323,7 @@ describe("person page server", () => {
       originalName: "Actor Original",
       profileUrl: "https://image.tmdb.org/t/p/w342/actor.jpg",
     });
-    expect(
-      result.movies.map((movie) => [movie.title, movie.character]),
-    ).toEqual([
+    expect(result.movies.map((movie) => [movie.title, movie.character])).toEqual([
       ["Cast Movie", "Lead"],
       ["Another Cast Movie", "Cameo"],
     ]);

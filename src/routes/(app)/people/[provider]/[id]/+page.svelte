@@ -17,7 +17,12 @@
     const last = years[years.length - 1];
     return first === last ? String(first) : `${first}-${last}`;
   });
-  const characters = $derived([...data.movies, ...data.shows].map((title) => title.character).filter(Boolean).slice(0, 6));
+  const characters = $derived(
+    [...data.movies, ...data.shows]
+      .map((title) => title.character)
+      .filter(Boolean)
+      .slice(0, 6),
+  );
 </script>
 
 <svelte:head>

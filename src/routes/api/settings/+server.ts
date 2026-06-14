@@ -30,6 +30,6 @@ export const GET: RequestHandler = async ({ locals }) => {
     playbackSessionArtifactMaxBytes: await getPlaybackSessionArtifactMaxBytes(),
     playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
     version: APP_VERSION,
-    status: await getServerStatus()
+    status: await getServerStatus(),
   });
 };

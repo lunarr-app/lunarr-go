@@ -37,17 +37,13 @@
   } = $props();
 
   let searchForm: HTMLFormElement | null = $state(null);
-  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined =
-    $state(undefined);
+  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
 
   const range = $derived({
-    first:
-      pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1,
+    first: pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1,
     last: Math.min(pageInfo.page * pageInfo.pageSize, pageInfo.total),
   });
-  const summary = $derived(
-    `Showing ${range.first}-${range.last} of ${pageInfo.total}`,
-  );
+  const summary = $derived(`Showing ${range.first}-${range.last} of ${pageInfo.total}`);
 
   function submitSearchNow() {
     if (searchSubmitTimer) {
@@ -79,31 +75,16 @@
   </div>
   {#if showFilters}
     <form method="GET" role="search" bind:this={searchForm}>
-      <SearchField
-        ariaLabel="Search movies"
-        placeholder="Search movies"
-        value={query}
-        oninput={submitSearchSoon}
-      />
-      <select
-        name="status"
-        aria-label="Watch status"
-        onchange={submitSearchNow}
-      >
+      <SearchField ariaLabel="Search movies" placeholder="Search movies" value={query} oninput={submitSearchSoon} />
+      <select name="status" aria-label="Watch status" onchange={submitSearchNow}>
         <option value="all" selected={status === "all"}>All</option>
-        <option value="unwatched" selected={status === "unwatched"}
-          >Unwatched</option
-        >
+        <option value="unwatched" selected={status === "unwatched"}>Unwatched</option>
         <option value="watched" selected={status === "watched"}>Watched</option>
       </select>
       <select name="sort" aria-label="Sort movies" onchange={submitSearchNow}>
         <option value="title" selected={sort === "title"}>Title</option>
-        <option value="recent" selected={sort === "recent"}
-          >Recently added</option
-        >
-        <option value="year_desc" selected={sort === "year_desc"}
-          >Release year</option
-        >
+        <option value="recent" selected={sort === "recent"}>Recently added</option>
+        <option value="year_desc" selected={sort === "year_desc"}>Release year</option>
         <option value="rating" selected={sort === "rating"}>Rating</option>
       </select>
     </form>
@@ -170,10 +151,7 @@
 
   form {
     display: grid;
-    grid-template-columns: minmax(16rem, 1fr) minmax(7rem, auto) minmax(
-        8rem,
-        auto
-      );
+    grid-template-columns: minmax(16rem, 1fr) minmax(7rem, auto) minmax(8rem, auto);
     gap: 0.5rem;
   }
 

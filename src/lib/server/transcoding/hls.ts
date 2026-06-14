@@ -84,8 +84,7 @@ function rawHlsSegmentIndex(segment: string) {
 export function hlsSegmentMimeType(segment: string) {
   const extension = path.extname(segment).toLowerCase();
   if (extension === ".ts") return MPEG_TS_MIME_TYPE;
-  if (extension === ".m4s" || extension === ".mp4" || extension === ".cmfv")
-    return FMP4_SEGMENT_MIME_TYPE;
+  if (extension === ".m4s" || extension === ".mp4" || extension === ".cmfv") return FMP4_SEGMENT_MIME_TYPE;
   return "application/octet-stream";
 }
 
@@ -95,10 +94,7 @@ export function hlsSegmentIndex(segment: string) {
   return rawHlsSegmentIndex(segment);
 }
 
-export function hlsSegmentName(
-  index: number,
-  format: HlsSegmentFormat = "mpegts",
-) {
+export function hlsSegmentName(index: number, format: HlsSegmentFormat = "mpegts") {
   const safeIndex = Number.isSafeInteger(index) && index >= 0 ? index : 0;
   const extension = format === "fmp4" ? "m4s" : "ts";
   return `segment-${String(safeIndex).padStart(5, "0")}.${extension}`;
@@ -148,10 +144,7 @@ async function loadHlsSegmentPayload(
   };
 }
 
-function waitForMaybeDelayedRead(
-  delay: (() => Promise<void> | void) | null,
-  signal?: AbortSignal,
-) {
+function waitForMaybeDelayedRead(delay: (() => Promise<void> | void) | null, signal?: AbortSignal) {
   if (signal?.aborted) {
     return Promise.reject(new Error("HLS read was cancelled."));
   }
@@ -173,27 +166,17 @@ function waitForMaybeDelayedRead(
   });
 }
 
-function removePendingSegmentLoadWaiter(
-  pending: PendingSegmentLoad,
-  waiter: PendingSegmentLoadWaiter,
-) {
+function removePendingSegmentLoadWaiter(pending: PendingSegmentLoad, waiter: PendingSegmentLoadWaiter) {
   if (waiter.signal && waiter.abort) {
     waiter.signal.removeEventListener("abort", waiter.abort);
   }
   pending.waiters.delete(waiter);
-  if (
-    waiter.aborted &&
-    pending.waiters.size === 0 &&
-    !pending.controller.signal.aborted
-  ) {
+  if (waiter.aborted && pending.waiters.size === 0 && !pending.controller.signal.aborted) {
     pending.controller.abort();
   }
 }
 
-function waitForPendingSegmentLoad(
-  pending: PendingSegmentLoad,
-  signal?: AbortSignal,
-) {
+function waitForPendingSegmentLoad(pending: PendingSegmentLoad, signal?: AbortSignal) {
   if (signal?.aborted) return Promise.resolve(null);
 
   const waiter: PendingSegmentLoadWaiter = {
@@ -222,11 +205,7 @@ function waitForPendingSegmentLoad(
   });
 }
 
-async function coalescedHlsSegmentPayload(
-  playlistPath: string,
-  segment: string,
-  signal?: AbortSignal,
-) {
+async function coalescedHlsSegmentPayload(playlistPath: string, segment: string, signal?: AbortSignal) {
   const key = segmentLoadKey(playlistPath, segment);
   const existing = pendingSegmentLoads.get(key);
   if (existing) return waitForPendingSegmentLoad(existing, signal);
@@ -240,8 +219,7 @@ async function coalescedHlsSegmentPayload(
   pendingSegmentLoads.set(key, pending);
   pending.promise
     .finally(() => {
-      if (pendingSegmentLoads.get(key) === pending)
-        pendingSegmentLoads.delete(key);
+      if (pendingSegmentLoads.get(key) === pending) pendingSegmentLoads.delete(key);
     })
     .catch(() => undefined);
   return waitForPendingSegmentLoad(pending, signal);
@@ -259,21 +237,15 @@ export function hlsSegmentReadCountForTests() {
   return segmentReadCountForTests;
 }
 
-export function setHlsSegmentReadDelayForTests(
-  delay: (() => Promise<void> | void) | null,
-) {
+export function setHlsSegmentReadDelayForTests(delay: (() => Promise<void> | void) | null) {
   segmentReadDelayForTests = delay;
 }
 
-export function setHlsPlaylistReadDelayForTests(
-  delay: (() => Promise<void> | void) | null,
-) {
+export function setHlsPlaylistReadDelayForTests(delay: (() => Promise<void> | void) | null) {
   playlistReadDelayForTests = delay;
 }
 
-export function setHlsHeadResponseDelayForTests(
-  delay: (() => Promise<void> | void) | null,
-) {
+export function setHlsHeadResponseDelayForTests(delay: (() => Promise<void> | void) | null) {
   headResponseDelayForTests = delay;
 }
 
@@ -295,19 +267,14 @@ export function rewriteHlsPlaylistUris(
       if (trimmed.startsWith("#")) return line;
 
       const segmentName = hlsPlaylistSegmentName(trimmed, playlistDirectory);
-      if (segmentName)
-        return `${SEGMENT_ROUTE_PREFIX}${segmentName}${segmentQuery}`;
+      if (segmentName) return `${SEGMENT_ROUTE_PREFIX}${segmentName}${segmentQuery}`;
 
       return line;
     })
     .join("\n");
 }
 
-function rewriteHlsTagUri(
-  line: string,
-  playlistDirectory: string,
-  segmentQuery: string,
-) {
+function rewriteHlsTagUri(line: string, playlistDirectory: string, segmentQuery: string) {
   return line.replace(/URI="([^"]+)"/g, (match, uri: string) => {
     const segmentName = hlsPlaylistSegmentName(uri, playlistDirectory);
     if (!segmentName) return match;
@@ -317,9 +284,7 @@ function rewriteHlsTagUri(
 
 function hlsPlaylistSegmentName(uri: string, playlistDirectory: string) {
   if (uri.startsWith(SEGMENT_ROUTE_PREFIX)) {
-    const segmentName = uri
-      .slice(SEGMENT_ROUTE_PREFIX.length)
-      .split(/[?#]/, 1)[0];
+    const segmentName = uri.slice(SEGMENT_ROUTE_PREFIX.length).split(/[?#]/, 1)[0];
     return isSafeHlsSegmentName(segmentName) ? segmentName : null;
   }
 
@@ -339,11 +304,7 @@ function hlsPlaylistSegmentName(uri: string, playlistDirectory: string) {
 
   const resolved = path.resolve(playlistDirectory, uri.split(/[?#]/, 1)[0]);
   const relative = path.relative(playlistDirectory, resolved);
-  if (
-    relative.length === 0 ||
-    relative.startsWith("..") ||
-    path.isAbsolute(relative)
-  ) {
+  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
     return null;
   }
 
@@ -351,10 +312,7 @@ function hlsPlaylistSegmentName(uri: string, playlistDirectory: string) {
   return isSafeHlsSegmentName(segmentName) ? segmentName : null;
 }
 
-export async function hlsPlaylistResponse(
-  playlistPath: string,
-  options: HlsReadOptions = {},
-) {
+export async function hlsPlaylistResponse(playlistPath: string, options: HlsReadOptions = {}) {
   const body = await hlsPlaylistBody(playlistPath, options);
   await waitForMaybeDelayedRead(playlistReadDelayForTests, options.signal);
   return new Response(body, {
@@ -365,10 +323,7 @@ export async function hlsPlaylistResponse(
   });
 }
 
-async function hlsPlaylistBody(
-  playlistPath: string,
-  options: HlsReadOptions = {},
-) {
+async function hlsPlaylistBody(playlistPath: string, options: HlsReadOptions = {}) {
   return rewriteHlsPlaylistUris(
     await readFile(playlistPath, { encoding: "utf8", signal: options.signal }),
     playlistPath,
@@ -376,10 +331,7 @@ async function hlsPlaylistBody(
   );
 }
 
-export async function hlsPlaylistHeadResponse(
-  playlistPath: string,
-  options: HlsReadOptions = {},
-) {
+export async function hlsPlaylistHeadResponse(playlistPath: string, options: HlsReadOptions = {}) {
   let details;
   try {
     details = await stat(playlistPath);
@@ -425,10 +377,7 @@ export function hlsPlaylistType(playlist: string) {
   return null;
 }
 
-export function hlsPlaylistSegmentEntries(
-  playlist: string,
-  playlistPath: string,
-): HlsPlaylistSegmentEntry[] {
+export function hlsPlaylistSegmentEntries(playlist: string, playlistPath: string): HlsPlaylistSegmentEntry[] {
   const playlistDirectory = path.dirname(playlistPath);
   const entries: HlsPlaylistSegmentEntry[] = [];
   let mediaSequence = 0;
@@ -437,9 +386,7 @@ export function hlsPlaylistSegmentEntries(
 
   for (const line of playlist.split("\n")) {
     const trimmed = line.trim();
-    const mediaSequenceMatch = /^#EXT-X-MEDIA-SEQUENCE:(\d+)\s*$/.exec(
-      trimmed,
-    );
+    const mediaSequenceMatch = /^#EXT-X-MEDIA-SEQUENCE:(\d+)\s*$/.exec(trimmed);
     if (mediaSequenceMatch) {
       mediaSequence = Number.parseInt(mediaSequenceMatch[1] ?? "0", 10);
       continue;
@@ -448,8 +395,7 @@ export function hlsPlaylistSegmentEntries(
     const durationMatch = /^#EXTINF:([0-9]+(?:\.[0-9]+)?)/.exec(trimmed);
     if (durationMatch) {
       const duration = Number.parseFloat(durationMatch[1] ?? "");
-      pendingDuration =
-        Number.isFinite(duration) && duration > 0 ? duration : null;
+      pendingDuration = Number.isFinite(duration) && duration > 0 ? duration : null;
       continue;
     }
 
@@ -471,22 +417,12 @@ export function hlsPlaylistSegmentEntries(
   return entries;
 }
 
-export function hlsEventPlaylistContainsSegment(input: {
-  playlist: string;
-  playlistPath: string;
-  segment: string;
-}) {
+export function hlsEventPlaylistContainsSegment(input: { playlist: string; playlistPath: string; segment: string }) {
   if (hlsPlaylistType(input.playlist) !== "EVENT") return false;
-  return hlsPlaylistSegmentEntries(input.playlist, input.playlistPath).some(
-    (entry) => entry.segment === input.segment,
-  );
+  return hlsPlaylistSegmentEntries(input.playlist, input.playlistPath).some((entry) => entry.segment === input.segment);
 }
 
-export async function hlsEventPlaylistHasSegment(
-  playlistPath: string,
-  segment: string,
-  options: HlsReadOptions = {},
-) {
+export async function hlsEventPlaylistHasSegment(playlistPath: string, segment: string, options: HlsReadOptions = {}) {
   try {
     return hlsEventPlaylistContainsSegment({
       playlist: await readFile(playlistPath, {
@@ -501,9 +437,7 @@ export async function hlsEventPlaylistHasSegment(
   }
 }
 
-export function hlsPlaylistBodySegmentFormat(
-  playlist: string,
-): HlsSegmentFormat {
+export function hlsPlaylistBodySegmentFormat(playlist: string): HlsSegmentFormat {
   for (const line of playlist.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -546,10 +480,7 @@ export function virtualHlsPlaylist(input: {
       : DEFAULT_HLS_SEGMENT_SECONDS;
   const durationSeconds = Math.max(0, Number(input.durationSeconds));
   const startTimeSeconds =
-    Number.isFinite(input.startTimeSeconds) &&
-    Number(input.startTimeSeconds) > 0
-      ? Number(input.startTimeSeconds)
-      : 0;
+    Number.isFinite(input.startTimeSeconds) && Number(input.startTimeSeconds) > 0 ? Number(input.startTimeSeconds) : 0;
   const segmentCount = Math.ceil(durationSeconds / segmentSeconds);
   const segmentFormat = input.segmentFormat ?? "mpegts";
   const segmentQuery = input.segmentQuery ?? "";
@@ -568,14 +499,9 @@ export function virtualHlsPlaylist(input: {
   }
 
   for (let index = 0; index < segmentCount; index += 1) {
-    const segmentDuration =
-      index === segmentCount - 1
-        ? durationSeconds - segmentSeconds * index
-        : segmentSeconds;
+    const segmentDuration = index === segmentCount - 1 ? durationSeconds - segmentSeconds * index : segmentSeconds;
     lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
-    lines.push(
-      `${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}${segmentQuery}`,
-    );
+    lines.push(`${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}${segmentQuery}`);
   }
 
   lines.push("#EXT-X-ENDLIST");
@@ -606,20 +532,12 @@ export function virtualHlsPlaylistHeadResponse() {
   });
 }
 
-export async function hlsSegmentResponse(
-  playlistPath: string,
-  segment: string,
-  options: HlsReadOptions = {},
-) {
+export async function hlsSegmentResponse(playlistPath: string, segment: string, options: HlsReadOptions = {}) {
   if (!isSafeHlsSegmentName(segment)) {
     return new Response("Invalid segment.", { status: 400 });
   }
 
-  const payload = await coalescedHlsSegmentPayload(
-    playlistPath,
-    segment,
-    options.signal,
-  );
+  const payload = await coalescedHlsSegmentPayload(playlistPath, segment, options.signal);
   if (!payload) return new Response("Not found.", { status: 404 });
   if (payload.size <= 0) return new Response("Not found.", { status: 404 });
 
@@ -632,11 +550,7 @@ export async function hlsSegmentResponse(
   });
 }
 
-export async function hlsSegmentHeadResponse(
-  playlistPath: string,
-  segment: string,
-  options: HlsReadOptions = {},
-) {
+export async function hlsSegmentHeadResponse(playlistPath: string, segment: string, options: HlsReadOptions = {}) {
   if (!isSafeHlsSegmentName(segment)) {
     return new Response(null, { status: 400 });
   }
@@ -662,10 +576,7 @@ export async function hlsSegmentHeadResponse(
   });
 }
 
-export async function hlsSegmentFileExists(
-  playlistPath: string,
-  segment: string,
-) {
+export async function hlsSegmentFileExists(playlistPath: string, segment: string) {
   if (!isSafeHlsSegmentName(segment)) return false;
   try {
     const details = await stat(path.join(path.dirname(playlistPath), segment));

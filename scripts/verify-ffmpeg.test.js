@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  hardwareModesToVerify,
-  verifyFfmpegPlaybackRequirements,
-} from "./verify-ffmpeg.mjs";
+import { hardwareModesToVerify, verifyFfmpegPlaybackRequirements } from "./verify-ffmpeg.mjs";
 
 const VERSION_OUTPUT = "ffmpeg version test";
 const MUXERS_OUTPUT = " E hls             Apple HTTP Live Streaming";
@@ -67,8 +64,6 @@ describe("FFmpeg playback verifier", () => {
   });
 
   test("rejects unsupported hardware verifier modes", () => {
-    expect(() => hardwareModesToVerify("bad")).toThrow(
-      'Unsupported FFMPEG_VERIFY_HARDWARE mode "bad"',
-    );
+    expect(() => hardwareModesToVerify("bad")).toThrow('Unsupported FFMPEG_VERIFY_HARDWARE mode "bad"');
   });
 });

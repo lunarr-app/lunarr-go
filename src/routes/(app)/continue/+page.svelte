@@ -4,19 +4,14 @@
   import { Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();
-  const hasProgress = $derived(
-    data.movies.length > 0 || data.episodes.length > 0,
-  );
+  const hasProgress = $derived(data.movies.length > 0 || data.episodes.length > 0);
   const movieCountLabel = $derived(`${data.movies.length} ${data.movies.length === 1 ? "movie" : "movies"}`);
   const episodeCountLabel = $derived(`${data.episodes.length} ${data.episodes.length === 1 ? "episode" : "episodes"}`);
 </script>
 
 <svelte:head>
   <title>Continue Watching - Lunarr</title>
-  <meta
-    name="description"
-    content="Resume movies and TV episodes that are still in progress in your Lunarr library."
-  />
+  <meta name="description" content="Resume movies and TV episodes that are still in progress in your Lunarr library." />
 </svelte:head>
 
 <header class="page-header">
@@ -56,9 +51,7 @@
 {:else}
   <section class="empty">
     <h2 class="empty-title">Nothing in progress</h2>
-    <p class="muted">
-      Start a movie or episode and Lunarr will keep it here until it is watched.
-    </p>
+    <p class="muted">Start a movie or episode and Lunarr will keep it here until it is watched.</p>
     <div class="empty-actions">
       <a class="button" href="/movies">
         <Film size={16} aria-hidden="true" />

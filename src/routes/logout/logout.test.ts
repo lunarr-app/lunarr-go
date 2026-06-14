@@ -1,12 +1,4 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  mock,
-  spyOn,
-  test,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { RequestEvent } from "./$types";
 
 const signOut = mock(async (_input: unknown) => ({}));
@@ -69,9 +61,7 @@ describe("logout route", () => {
 
   test("rejects GET logout requests", async () => {
     const { GET } = await logoutRoutePromise;
-    const response = await GET(
-      createEvent(new Request("http://localhost/logout")),
-    );
+    const response = await GET(createEvent(new Request("http://localhost/logout")));
 
     expect(response.status).toBe(405);
   });

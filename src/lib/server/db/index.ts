@@ -1,10 +1,6 @@
 import LibsqlDatabase from "libsql";
 import { Kysely, SqliteDialect, sql } from "kysely";
-import {
-  Migrator,
-  type Migration,
-  type MigrationProvider,
-} from "kysely/migration";
+import { Migrator, type Migration, type MigrationProvider } from "kysely/migration";
 import path from "node:path";
 import { mkdir } from "node:fs/promises";
 import { DATA_DIR, DB_FILE } from "../paths";
@@ -30,10 +26,7 @@ export async function getSqlite() {
   if (sqlite) return sqlite;
 
   const dbFile = databaseFileOverride ?? DB_FILE;
-  await mkdir(
-    databaseFileOverride ? path.dirname(databaseFileOverride) : DATA_DIR,
-    { recursive: true },
-  );
+  await mkdir(databaseFileOverride ? path.dirname(databaseFileOverride) : DATA_DIR, { recursive: true });
   sqlite = new LibsqlDatabase(dbFile);
   sqlite.pragma("foreign_keys = ON");
   sqlite.pragma("journal_mode = WAL");
@@ -56,8 +49,8 @@ class SqlFileMigrationProvider implements MigrationProvider {
   async getMigrations() {
     const migrations: Record<string, Migration> = {};
 
-    for (const [name, source] of Object.entries(MIGRATION_SOURCES).sort(
-      ([left], [right]) => left.localeCompare(right),
+    for (const [name, source] of Object.entries(MIGRATION_SOURCES).sort(([left], [right]) =>
+      left.localeCompare(right),
     )) {
       migrations[name] = {
         up: async (db) => {
@@ -95,9 +88,7 @@ export async function closeDatabaseForTests() {
 export function currentDatabasePaths() {
   const dbFile = databaseFileOverride ?? DB_FILE;
   return {
-    dataDir: databaseFileOverride
-      ? path.dirname(databaseFileOverride)
-      : DATA_DIR,
+    dataDir: databaseFileOverride ? path.dirname(databaseFileOverride) : DATA_DIR,
     dbFile,
   };
 }

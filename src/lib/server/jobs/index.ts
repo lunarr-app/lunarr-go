@@ -22,7 +22,7 @@ function emptyJobSummary() {
     completed: 0,
     failed: 0,
     cancelled: 0,
-    errors: 0
+    errors: 0,
   };
 }
 
@@ -38,15 +38,9 @@ function historyRetentionRows(options: CleanupJobHistoryOptions) {
 function playbackSessionHistoryCutoffs(options: CleanupJobHistoryOptions) {
   const now = (options.now ?? new Date()).getTime();
   return {
-    cancelled: new Date(
-      now - CANCELLED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS,
-    ).toISOString(),
-    completed: new Date(
-      now - COMPLETED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS,
-    ).toISOString(),
-    failed: new Date(
-      now - FAILED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS,
-    ).toISOString(),
+    cancelled: new Date(now - CANCELLED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS).toISOString(),
+    completed: new Date(now - COMPLETED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS).toISOString(),
+    failed: new Date(now - FAILED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS).toISOString(),
   };
 }
 
@@ -58,10 +52,7 @@ function chunkIds(ids: string[]) {
   return chunks;
 }
 
-function applyStatusToSummary<T extends { status: string }>(
-  summary: ReturnType<typeof emptyJobSummary>,
-  job: T
-) {
+function applyStatusToSummary<T extends { status: string }>(summary: ReturnType<typeof emptyJobSummary>, job: T) {
   summary.total += 1;
   if (job.status === "queued" || job.status === "running") summary.active += 1;
   if (job.status === "completed") summary.completed += 1;
@@ -111,7 +102,7 @@ export async function listScanJobs(limit = 50) {
       "scan_job.cancel_requested_at",
       "scan_job.created_at",
       "scan_job.updated_at",
-      "library.name as library_name"
+      "library.name as library_name",
     ])
     .orderBy("scan_job.created_at", "desc")
     .limit(limit)
@@ -144,7 +135,7 @@ export async function listPlaybackSessions(limit = 25) {
       "playback_session.updated_at",
       "media_item.title as media_title",
       "media_file.basename as file_basename",
-      "user.email as user_email"
+      "user.email as user_email",
     ])
     .orderBy("playback_session.created_at", "desc")
     .limit(limit)
@@ -152,7 +143,7 @@ export async function listPlaybackSessions(limit = 25) {
 
   return sessions.map((session) => ({
     ...session,
-    error_message: normalizePlaybackSessionMessage(session.error_message)
+    error_message: normalizePlaybackSessionMessage(session.error_message),
   }));
 }
 
@@ -171,7 +162,7 @@ export async function listScanErrors(limit = 100) {
       "scan_job.status as job_status",
       "scan_job.job_kind",
       "scan_job.library_id",
-      "library.name as library_name"
+      "library.name as library_name",
     ])
     .orderBy("scan_job_error.created_at", "desc")
     .limit(limit)

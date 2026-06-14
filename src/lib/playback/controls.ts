@@ -1,7 +1,4 @@
-import {
-  absolutePlaybackSeconds,
-  streamRelativePlaybackSeconds,
-} from "./seek";
+import { absolutePlaybackSeconds, streamRelativePlaybackSeconds } from "./seek";
 
 export type PlayerControlUiState =
   | "starting"
@@ -13,9 +10,7 @@ export type PlayerControlUiState =
   | "error";
 
 export function formatPlaybackTime(seconds: number | null | undefined) {
-  const totalSeconds = Number.isFinite(seconds)
-    ? Math.max(0, Math.floor(Number(seconds)))
-    : 0;
+  const totalSeconds = Number.isFinite(seconds) ? Math.max(0, Math.floor(Number(seconds))) : 0;
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const remainingSeconds = totalSeconds % 60;
@@ -25,29 +20,19 @@ export function formatPlaybackTime(seconds: number | null | undefined) {
   return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
-export function clampPlaybackSeconds(input: {
-  seconds: number;
-  durationSeconds: number | null;
-}) {
+export function clampPlaybackSeconds(input: { seconds: number; durationSeconds: number | null }) {
   const seconds = Number.isFinite(input.seconds) ? Number(input.seconds) : 0;
   const durationSeconds =
-    Number.isFinite(input.durationSeconds) && Number(input.durationSeconds) > 0
-      ? Number(input.durationSeconds)
-      : null;
+    Number.isFinite(input.durationSeconds) && Number(input.durationSeconds) > 0 ? Number(input.durationSeconds) : null;
   if (durationSeconds === null) return Math.max(0, seconds);
   return Math.min(Math.max(0, seconds), durationSeconds);
 }
 
 function normalizedDurationSeconds(durationSeconds: number | null | undefined) {
-  return Number.isFinite(durationSeconds) && Number(durationSeconds) > 0
-    ? Number(durationSeconds)
-    : null;
+  return Number.isFinite(durationSeconds) && Number(durationSeconds) > 0 ? Number(durationSeconds) : null;
 }
 
-export function playbackTimeRangeText(input: {
-  seconds: number;
-  durationSeconds: number | null;
-}) {
+export function playbackTimeRangeText(input: { seconds: number; durationSeconds: number | null }) {
   const durationSeconds = normalizedDurationSeconds(input.durationSeconds);
   const seconds = clampPlaybackSeconds({
     seconds: input.seconds,
@@ -57,10 +42,7 @@ export function playbackTimeRangeText(input: {
   return `${formatPlaybackTime(seconds)} / ${formatPlaybackTime(durationSeconds)}`;
 }
 
-export function playbackSliderAriaValue(input: {
-  seconds: number;
-  durationSeconds: number | null;
-}) {
+export function playbackSliderAriaValue(input: { seconds: number; durationSeconds: number | null }) {
   const durationSeconds = normalizedDurationSeconds(input.durationSeconds);
   const seconds = clampPlaybackSeconds({
     seconds: input.seconds,
@@ -94,9 +76,7 @@ export function volumeStateForSliderValue(value: number): PlaybackVolumeState {
   };
 }
 
-export function volumeStateForMuteToggle(
-  current: PlaybackVolumeState,
-): PlaybackVolumeState {
+export function volumeStateForMuteToggle(current: PlaybackVolumeState): PlaybackVolumeState {
   const volume = clampVolumeLevel(current.volume);
   if (current.muted || volume === 0) {
     return {
@@ -127,20 +107,14 @@ export function playerKeyboardShortcuts(input: { hasSubtitleTracks: boolean }) {
   return shortcuts.join(" ");
 }
 
-export function mediaTimelineSeconds(input: {
-  relativeSeconds: number;
-  streamStartSeconds?: number | null;
-}) {
+export function mediaTimelineSeconds(input: { relativeSeconds: number; streamStartSeconds?: number | null }) {
   return absolutePlaybackSeconds({
     relativeSeconds: input.relativeSeconds,
     streamStartSeconds: input.streamStartSeconds,
   });
 }
 
-export function elementTimelineSeconds(input: {
-  absoluteSeconds: number;
-  streamStartSeconds?: number | null;
-}) {
+export function elementTimelineSeconds(input: { absoluteSeconds: number; streamStartSeconds?: number | null }) {
   return streamRelativePlaybackSeconds({
     absoluteSeconds: input.absoluteSeconds,
     streamStartSeconds: input.streamStartSeconds,
@@ -188,8 +162,7 @@ export function shouldUseHlsRepositionForSeek(input: {
 }) {
   if (input.mode !== "transcode" && input.mode !== "remux") return false;
   const streamStartSeconds =
-    Number.isFinite(input.streamStartSeconds) &&
-    Number(input.streamStartSeconds) > 0
+    Number.isFinite(input.streamStartSeconds) && Number(input.streamStartSeconds) > 0
       ? Number(input.streamStartSeconds)
       : 0;
   return input.targetSeconds < streamStartSeconds;
@@ -248,9 +221,7 @@ export function castPlaybackSecondsAfterSeek(input: {
   currentPlaybackSeconds: number;
   targetSeconds: number;
 }) {
-  return input.commandSent
-    ? input.targetSeconds
-    : input.currentPlaybackSeconds;
+  return input.commandSent ? input.targetSeconds : input.currentPlaybackSeconds;
 }
 
 export function playbackProgressSnapshot(input: {
@@ -263,8 +234,7 @@ export function playbackProgressSnapshot(input: {
   streamStartSeconds?: number | null;
 }) {
   const fileDurationSeconds =
-    Number.isFinite(input.fileDurationSeconds) &&
-    Number(input.fileDurationSeconds) > 0
+    Number.isFinite(input.fileDurationSeconds) && Number(input.fileDurationSeconds) > 0
       ? Number(input.fileDurationSeconds)
       : null;
   const uiDurationSeconds =
@@ -272,15 +242,13 @@ export function playbackProgressSnapshot(input: {
       ? Number(input.uiDurationSeconds)
       : null;
   const videoDurationSeconds =
-    Number.isFinite(input.videoDurationSeconds) &&
-    Number(input.videoDurationSeconds) > 0
+    Number.isFinite(input.videoDurationSeconds) && Number(input.videoDurationSeconds) > 0
       ? mediaTimelineSeconds({
           relativeSeconds: Number(input.videoDurationSeconds),
           streamStartSeconds: input.streamStartSeconds,
         })
       : null;
-  const durationSeconds =
-    fileDurationSeconds ?? uiDurationSeconds ?? videoDurationSeconds;
+  const durationSeconds = fileDurationSeconds ?? uiDurationSeconds ?? videoDurationSeconds;
   const positionSeconds = input.casting
     ? input.currentPlaybackSeconds
     : mediaTimelineSeconds({
@@ -296,15 +264,9 @@ export function playbackProgressSnapshot(input: {
   };
 }
 
-export function primaryPlaybackButtonState(input: {
-  uiState: PlayerControlUiState;
-}) {
+export function primaryPlaybackButtonState(input: { uiState: PlayerControlUiState }) {
   const action: "play" | "pause" =
-    input.uiState === "playing" ||
-    input.uiState === "buffering" ||
-    input.uiState === "seeking"
-      ? "pause"
-      : "play";
+    input.uiState === "playing" || input.uiState === "buffering" || input.uiState === "seeking" ? "pause" : "play";
   return {
     action,
     label: action === "pause" ? "Pause" : "Play",
@@ -328,10 +290,7 @@ export function shouldAttemptLocalAutoplay(input: {
   casting: boolean;
 }) {
   return (
-    (!input.autoplayAttempted || input.retryAfterReady === true) &&
-    !input.disposed &&
-    input.paused &&
-    !input.casting
+    (!input.autoplayAttempted || input.retryAfterReady === true) && !input.disposed && input.paused && !input.casting
   );
 }
 
@@ -341,12 +300,7 @@ export function shouldApplyLocalWaitingState(input: {
   ended: boolean;
   casting: boolean;
 }) {
-  return (
-    input.uiState !== "autoplayBlocked" &&
-    !input.paused &&
-    !input.ended &&
-    !input.casting
-  );
+  return input.uiState !== "autoplayBlocked" && !input.paused && !input.ended && !input.casting;
 }
 
 export function castPlayerUiState(input: {
@@ -384,22 +338,15 @@ export function castControlLabel(state: CastControlState) {
   }
 }
 
-export function hasAirPlayPicker(input: {
-  showPlaybackTargetPicker: unknown;
-}) {
+export function hasAirPlayPicker(input: { showPlaybackTargetPicker: unknown }) {
   return typeof input.showPlaybackTargetPicker === "function";
 }
 
-export function airPlayAvailableFromEvent(input: {
-  canShowPicker: boolean;
-  availability: string | null | undefined;
-}) {
+export function airPlayAvailableFromEvent(input: { canShowPicker: boolean; availability: string | null | undefined }) {
   return input.canShowPicker && input.availability === "available";
 }
 
-export function airPlayActiveFromVideo(input: {
-  currentPlaybackTargetIsWireless: unknown;
-}) {
+export function airPlayActiveFromVideo(input: { currentPlaybackTargetIsWireless: unknown }) {
   return input.currentPlaybackTargetIsWireless === true;
 }
 
@@ -407,11 +354,7 @@ export function airPlayControlLabel(input: { active: boolean }) {
   return input.active ? "AirPlay connected" : "AirPlay";
 }
 
-export function airPlayControlState(input: {
-  available: boolean;
-  active: boolean;
-  casting: boolean;
-}) {
+export function airPlayControlState(input: { available: boolean; active: boolean; casting: boolean }) {
   const active = input.available && input.active;
   const label = airPlayControlLabel({ active });
   return {
@@ -443,9 +386,7 @@ export function isCastOwnedPlaybackSession(input: {
   sessionId: string | null;
   castOwnedPlaybackSessions: ReadonlySet<string>;
 }) {
-  return Boolean(
-    input.sessionId && input.castOwnedPlaybackSessions.has(input.sessionId),
-  );
+  return Boolean(input.sessionId && input.castOwnedPlaybackSessions.has(input.sessionId));
 }
 
 export function markCastOwnedPlaybackSession(input: {
@@ -471,24 +412,15 @@ export function releaseCastOwnedPlaybackSession(input: {
   input.castOwnedPlaybackSessions.delete(input.sessionId);
   return {
     released: true,
-    activeSessionId:
-      input.activeSessionId === input.sessionId ? null : input.activeSessionId,
+    activeSessionId: input.activeSessionId === input.sessionId ? null : input.activeSessionId,
   };
 }
 
-export function shouldCancelPlaybackSessionForCleanup(input: {
-  castOwned: boolean;
-  includeCastOwned: boolean;
-}) {
+export function shouldCancelPlaybackSessionForCleanup(input: { castOwned: boolean; includeCastOwned: boolean }) {
   return input.includeCastOwned || !input.castOwned;
 }
 
-export type PlayerStatusOverlayState =
-  | "hidden"
-  | "casting"
-  | "error"
-  | "busy"
-  | "action";
+export type PlayerStatusOverlayState = "hidden" | "casting" | "error" | "busy" | "action";
 
 export function playerStatusOverlayState(input: {
   uiState: PlayerControlUiState;
@@ -497,22 +429,13 @@ export function playerStatusOverlayState(input: {
   if (input.casting) return "casting";
   if (input.uiState === "error") return "error";
   if (input.uiState === "autoplayBlocked") return "action";
-  if (
-    input.uiState === "starting" ||
-    input.uiState === "buffering" ||
-    input.uiState === "seeking"
-  ) {
+  if (input.uiState === "starting" || input.uiState === "buffering" || input.uiState === "seeking") {
     return "busy";
   }
   return "hidden";
 }
 
-export type FullscreenAction =
-  | "exit-document"
-  | "exit-video"
-  | "enter-document"
-  | "enter-video"
-  | "unavailable";
+export type FullscreenAction = "exit-document" | "exit-video" | "enter-document" | "enter-video" | "unavailable";
 
 export function fullscreenAction(input: {
   documentFullscreen: boolean;
@@ -596,22 +519,16 @@ export function playerSurfaceClickState(input: {
   };
 }
 
-export type PlayerSurfaceClickAction =
-  | "seek-backward"
-  | "toggle-playback"
-  | "seek-forward";
+export type PlayerSurfaceClickAction = "seek-backward" | "toggle-playback" | "seek-forward";
 
 export function playerSurfaceClickAction(input: {
   clientX: number;
   left: number;
   width: number;
 }): PlayerSurfaceClickAction {
-  const width =
-    Number.isFinite(input.width) && input.width > 0 ? input.width : 0;
+  const width = Number.isFinite(input.width) && input.width > 0 ? input.width : 0;
   if (width === 0) return "toggle-playback";
-  const relativeX = Number.isFinite(input.clientX)
-    ? input.clientX - input.left
-    : width / 2;
+  const relativeX = Number.isFinite(input.clientX) ? input.clientX - input.left : width / 2;
   const zone = Math.min(Math.max(relativeX / width, 0), 1);
   if (zone < 1 / 3) return "seek-backward";
   if (zone > 2 / 3) return "seek-forward";
@@ -631,31 +548,19 @@ export function subtitleTextTrackMode(input: {
   selectedTrackId: string;
   track: PlaybackSubtitleTrack | null | undefined;
 }): TextTrackMode {
-  if (
-    input.selectedTrackId !== "off" &&
-    input.track?.id === input.selectedTrackId
-  ) {
+  if (input.selectedTrackId !== "off" && input.track?.id === input.selectedTrackId) {
     return "showing";
   }
   return "disabled";
 }
 
-export function nextSubtitleMenuOptionIndex(input: {
-  optionCount: number;
-  currentIndex: number;
-  delta: number;
-}) {
-  const optionCount =
-    Number.isFinite(input.optionCount) && input.optionCount > 0
-      ? Math.floor(input.optionCount)
-      : 0;
+export function nextSubtitleMenuOptionIndex(input: { optionCount: number; currentIndex: number; delta: number }) {
+  const optionCount = Number.isFinite(input.optionCount) && input.optionCount > 0 ? Math.floor(input.optionCount) : 0;
   if (optionCount === 0) return -1;
 
   const delta = Number.isFinite(input.delta) ? Math.trunc(input.delta) : 0;
   const currentIndex =
-    Number.isFinite(input.currentIndex) &&
-    input.currentIndex >= 0 &&
-    input.currentIndex < optionCount
+    Number.isFinite(input.currentIndex) && input.currentIndex >= 0 && input.currentIndex < optionCount
       ? Math.trunc(input.currentIndex)
       : -1;
 
@@ -669,27 +574,15 @@ export function shouldHandlePlayerShortcut(target: EventTarget | null) {
   if (typeof Element === "undefined" || !(target instanceof Element)) {
     return true;
   }
-  for (
-    let element: Element | null = target;
-    element;
-    element = element.parentElement
-  ) {
+  for (let element: Element | null = target; element; element = element.parentElement) {
     const editableValue = element.getAttribute("contenteditable")?.toLowerCase();
     if (editableValue === undefined) continue;
     if (editableValue === "false") break;
-    if (
-      editableValue === "" ||
-      editableValue === "true" ||
-      editableValue === "plaintext-only"
-    ) {
+    if (editableValue === "" || editableValue === "true" || editableValue === "plaintext-only") {
       return false;
     }
   }
-  for (
-    let element: Element | null = target;
-    element;
-    element = element.parentElement
-  ) {
+  for (let element: Element | null = target; element; element = element.parentElement) {
     const tagName = element.tagName.toLowerCase();
     if (
       tagName === "a" ||
@@ -704,16 +597,10 @@ export function shouldHandlePlayerShortcut(target: EventTarget | null) {
   return true;
 }
 
-export function shouldCloseSubtitleMenuOnPlayerKeydown(input: {
-  key: string;
-  subtitleMenuOpen: boolean;
-}) {
+export function shouldCloseSubtitleMenuOnPlayerKeydown(input: { key: string; subtitleMenuOpen: boolean }) {
   return input.subtitleMenuOpen && input.key.toLowerCase() === "escape";
 }
 
-export function shouldClosePlaybackModalOnKeydown(input: {
-  key: string;
-  defaultPrevented: boolean;
-}) {
+export function shouldClosePlaybackModalOnKeydown(input: { key: string; defaultPrevented: boolean }) {
   return input.key === "Escape" && !input.defaultPrevented;
 }

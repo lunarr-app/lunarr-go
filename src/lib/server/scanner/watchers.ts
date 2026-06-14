@@ -27,7 +27,9 @@ export function shouldReactToLibraryWatchEvent(filePath: string, stats?: { isFil
 }
 
 export function shouldWatchLibrary(library: { kind: string; source: string; watch_enabled?: number | null }) {
-  return (library.kind === "movie" || library.kind === "tv") && library.source === "local" && library.watch_enabled !== 0;
+  return (
+    (library.kind === "movie" || library.kind === "tv") && library.source === "local" && library.watch_enabled !== 0
+  );
 }
 
 function scheduleScan(libraryId: string) {
@@ -61,16 +63,16 @@ function watchLibrary(library: { id: string; path: string }) {
     binaryInterval: appEnv.LUNARR_WATCH_BINARY_INTERVAL_MS,
     awaitWriteFinish: {
       stabilityThreshold: appEnv.LUNARR_WATCH_WRITE_STABILITY_MS,
-      pollInterval: appEnv.LUNARR_WATCH_INTERVAL_MS
+      pollInterval: appEnv.LUNARR_WATCH_INTERVAL_MS,
     },
-    ignored: (filePath, stats) => !shouldReactToLibraryWatchEvent(filePath, stats)
+    ignored: (filePath, stats) => !shouldReactToLibraryWatchEvent(filePath, stats),
   });
 
   const watched: WatchedLibrary = {
     id: library.id,
     path: library.path,
     watcher,
-    timer: null
+    timer: null,
   };
   watchedLibraries.set(library.id, watched);
 

@@ -12,7 +12,7 @@ export function createPresetMovieListLoad(sort: MovieSort) {
 
     return {
       movies: rows.movies,
-      pageInfo: rows.page
+      pageInfo: rows.page,
     };
   };
 }

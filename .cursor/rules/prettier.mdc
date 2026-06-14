@@ -1,0 +1,15 @@
+---
+description: Format edited files with Prettier before finishing
+alwaysApply: true
+---
+
+# Prettier
+
+This project uses Prettier (`prettier` + `prettier-plugin-svelte`).
+
+After creating or modifying source files in this repo, run Prettier on the paths you changed before finishing:
+
+- `bun run format` for a full pass when many files changed
+- `bunx prettier --write <paths>` when only a few files changed
+
+Do not hand-format style that Prettier owns (quotes, trailing commas, wrapping). Match existing code by running the formatter.

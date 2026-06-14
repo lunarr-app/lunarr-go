@@ -28,7 +28,5 @@
   {#if form?.error}
     <p class="error">{form.error}</p>
   {/if}
-  <button>
-    Create admin
-  </button>
+  <button> Create admin </button>
 </form>

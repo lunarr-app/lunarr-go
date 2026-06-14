@@ -13,16 +13,11 @@ export type MovieLookupOptions = {
 function numericYear(value: string | null | undefined) {
   if (!value) return null;
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 1800 && parsed <= 3000
-    ? parsed
-    : null;
+  return Number.isInteger(parsed) && parsed >= 1800 && parsed <= 3000 ? parsed : null;
 }
 
 function cleanTitle(value: string) {
-  return value
-    .replace(/[._]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return value.replace(/[._]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function parseTitleYearName(value: string): ParsedMovieLookup | null {

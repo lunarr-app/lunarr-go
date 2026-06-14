@@ -7,17 +7,9 @@ import {
   type PlaybackTarget,
 } from "$lib/playback/capabilities";
 import { getDb } from "../db";
-import {
-  getFirstPlayableFile,
-  getPlayableFile,
-  getWatchItemDetail,
-} from "../media";
+import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media";
 import { nowIso } from "../time";
-import {
-  decidePlaybackMode,
-  isHlsRemuxCompatible,
-  type PlaybackModeDecision,
-} from "../transcoding/capabilities";
+import { decidePlaybackMode, isHlsRemuxCompatible, type PlaybackModeDecision } from "../transcoding/capabilities";
 import {
   requestDrivenHlsSegmentFormat,
   resolveHlsPlayback,
@@ -36,8 +28,7 @@ export type SubtitleTrack = {
 };
 
 type PlayableFile = NonNullable<
-  | Awaited<ReturnType<typeof getFirstPlayableFile>>
-  | Awaited<ReturnType<typeof getPlayableFile>>
+  Awaited<ReturnType<typeof getFirstPlayableFile>> | Awaited<ReturnType<typeof getPlayableFile>>
 >;
 
 export type PlaybackDecision = {
@@ -96,14 +87,10 @@ function parseForceTranscode(url: URL) {
   return value === "1" || value === "true" || value === "transcode";
 }
 
-export function parseClientPlaybackCapabilities(
-  url: URL,
-): ClientPlaybackCapabilities {
+export function parseClientPlaybackCapabilities(url: URL): ClientPlaybackCapabilities {
   const capabilities = emptyClientPlaybackCapabilities();
   for (const key of CLIENT_PLAYBACK_CAPABILITY_KEYS) {
-    capabilities[key] = parseClientPlaybackCapabilityValue(
-      url.searchParams.get(key),
-    );
+    capabilities[key] = parseClientPlaybackCapabilityValue(url.searchParams.get(key));
   }
   return capabilities;
 }
@@ -117,31 +104,20 @@ export function parsePlaybackProgressBody(body: unknown): PlaybackProgressBody {
     throw new Error("Request body must be a JSON object.");
   }
 
-  const mediaFileId =
-    typeof body.mediaFileId === "string" ? body.mediaFileId.trim() : "";
+  const mediaFileId = typeof body.mediaFileId === "string" ? body.mediaFileId.trim() : "";
   if (!mediaFileId) {
     throw new Error("mediaFileId is required.");
   }
 
   const positionSeconds =
-    body.positionSeconds === null || body.positionSeconds === undefined
-      ? 0
-      : body.positionSeconds;
-  if (
-    typeof positionSeconds !== "number" ||
-    !Number.isFinite(positionSeconds)
-  ) {
+    body.positionSeconds === null || body.positionSeconds === undefined ? 0 : body.positionSeconds;
+  if (typeof positionSeconds !== "number" || !Number.isFinite(positionSeconds)) {
     throw new Error("Position must be a finite number.");
   }
 
   const durationSeconds =
-    body.durationSeconds === null || body.durationSeconds === undefined
-      ? null
-      : body.durationSeconds;
-  if (
-    durationSeconds !== null &&
-    (typeof durationSeconds !== "number" || !Number.isFinite(durationSeconds))
-  ) {
+    body.durationSeconds === null || body.durationSeconds === undefined ? null : body.durationSeconds;
+  if (durationSeconds !== null && (typeof durationSeconds !== "number" || !Number.isFinite(durationSeconds))) {
     throw new Error("Duration must be a finite number.");
   }
 
@@ -158,8 +134,7 @@ export function normalizePlaybackProgress(input: {
   durationSeconds: number | null;
   completed: boolean;
 }): NormalizedPlaybackProgress {
-  const durationSeconds =
-    input.durationSeconds === null ? null : Math.max(0, input.durationSeconds);
+  const durationSeconds = input.durationSeconds === null ? null : Math.max(0, input.durationSeconds);
   let positionSeconds = Math.max(0, input.positionSeconds);
 
   if (durationSeconds !== null && durationSeconds > 0) {
@@ -170,10 +145,7 @@ export function normalizePlaybackProgress(input: {
     positionSeconds,
     durationSeconds,
     completed:
-      input.completed ||
-      (durationSeconds !== null &&
-        durationSeconds > 0 &&
-        positionSeconds / durationSeconds >= 0.9),
+      input.completed || (durationSeconds !== null && durationSeconds > 0 && positionSeconds / durationSeconds >= 0.9),
   };
 }
 
@@ -219,12 +191,7 @@ export async function getPlaybackDecision(
     policy.playbackPreference === "auto" &&
     modeDecision.mode === "direct"
   ) {
-    modeDecision = isHlsRemuxCompatible(
-      mediaCapabilities,
-      options.clientCapabilities,
-      hlsSegmentFormat,
-      playbackTarget,
-    )
+    modeDecision = isHlsRemuxCompatible(mediaCapabilities, options.clientCapabilities, hlsSegmentFormat, playbackTarget)
       ? { mode: "remux", reason: "container_unsupported" }
       : { mode: "transcode", reason: "direct_unsupported" };
   }
@@ -232,25 +199,15 @@ export async function getPlaybackDecision(
     .selectFrom("subtitle_track")
     .select(["id", "label", "language", "is_default"])
     .where("media_item_id", "=", mediaItemId)
-    .where((eb) =>
-      eb.or([
-        eb("media_file_id", "is", null),
-        eb("media_file_id", "=", file.id),
-      ]),
-    )
+    .where((eb) => eb.or([eb("media_file_id", "is", null), eb("media_file_id", "=", file.id)]))
     .where("source_kind", "=", "external")
     .orderBy("is_default", "desc")
     .orderBy("label", "asc")
     .execute();
 
-  const preferredSubtitleLanguage = normalizedLanguage(
-    policy.preferredSubtitleLanguage,
-  );
+  const preferredSubtitleLanguage = normalizedLanguage(policy.preferredSubtitleLanguage);
   const preferredSubtitleTrackId = preferredSubtitleLanguage
-    ? tracks.find(
-        (track) =>
-          normalizedLanguage(track.language) === preferredSubtitleLanguage,
-      )?.id
+    ? tracks.find((track) => normalizedLanguage(track.language) === preferredSubtitleLanguage)?.id
     : null;
   let defaultAssigned = false;
   const mappedTracks = tracks.map((track) => {
@@ -295,10 +252,7 @@ export async function getPlaybackDecision(
     };
   }
 
-  const hlsMode =
-    options.forceTranscode && policy.transcodingEnabled
-      ? "transcode"
-      : modeDecision.mode;
+  const hlsMode = options.forceTranscode && policy.transcodingEnabled ? "transcode" : modeDecision.mode;
 
   if ((hlsMode === "transcode" || hlsMode === "remux") && userId) {
     const transcode = await resolveHlsPlayback({
@@ -360,52 +314,29 @@ export async function getPlaybackData(input: {
   const detail = await getWatchItemDetail(input.mediaItemId, input.userId);
   if (!detail) return null;
 
-  const requestedMediaFileId =
-    input.url.searchParams.get("file")?.trim() || null;
+  const requestedMediaFileId = input.url.searchParams.get("file")?.trim() || null;
   const explicitStartSeconds = parseRequestedStartSeconds(input.url);
   const latestResumeProgress = [...detail.progress]
-    .filter(
-      (item) =>
-        !Boolean(item.completed) && Number(item.position_seconds ?? 0) > 0,
-    )
-    .sort((left, right) =>
-      String(right.updated_at).localeCompare(String(left.updated_at)),
-    )[0];
-  const mediaFileId =
-    requestedMediaFileId ?? latestResumeProgress?.media_file_id ?? null;
-  const requestedProgress = mediaFileId
-    ? detail.progress.find((item) => item.media_file_id === mediaFileId)
-    : null;
+    .filter((item) => !Boolean(item.completed) && Number(item.position_seconds ?? 0) > 0)
+    .sort((left, right) => String(right.updated_at).localeCompare(String(left.updated_at)))[0];
+  const mediaFileId = requestedMediaFileId ?? latestResumeProgress?.media_file_id ?? null;
+  const requestedProgress = mediaFileId ? detail.progress.find((item) => item.media_file_id === mediaFileId) : null;
   const startSecondsForPlayback =
     explicitStartSeconds ??
-    (requestedProgress && !requestedProgress.completed
-      ? Math.floor(requestedProgress.position_seconds ?? 0)
-      : 0);
-  const playback = await getPlaybackDecision(
-    input.mediaItemId,
-    mediaFileId,
-    input.userId,
-    startSecondsForPlayback,
-    {
-      forceStartTime: explicitStartSeconds !== null,
-      forceTranscode: parseForceTranscode(input.url),
-      clientCapabilities: parseClientPlaybackCapabilities(input.url),
-      playbackTarget: normalizePlaybackTarget(
-        input.url.searchParams.get("target"),
-      ),
-    },
-  );
+    (requestedProgress && !requestedProgress.completed ? Math.floor(requestedProgress.position_seconds ?? 0) : 0);
+  const playback = await getPlaybackDecision(input.mediaItemId, mediaFileId, input.userId, startSecondsForPlayback, {
+    forceStartTime: explicitStartSeconds !== null,
+    forceTranscode: parseForceTranscode(input.url),
+    clientCapabilities: parseClientPlaybackCapabilities(input.url),
+    playbackTarget: normalizePlaybackTarget(input.url.searchParams.get("target")),
+  });
   if (!playback?.file) return null;
-  const progress = detail.progress.find(
-    (item) => item.media_file_id === playback.file.id,
-  );
+  const progress = detail.progress.find((item) => item.media_file_id === playback.file.id);
 
   return {
     item: detail.item,
     playback,
-    startSeconds:
-      explicitStartSeconds ??
-      (progress?.completed ? 0 : Math.floor(progress?.position_seconds ?? 0)),
+    startSeconds: explicitStartSeconds ?? (progress?.completed ? 0 : Math.floor(progress?.position_seconds ?? 0)),
   };
 }
 
@@ -422,10 +353,7 @@ export async function saveProgress(input: {
     throw new Error("Position must be a finite number.");
   }
 
-  if (
-    input.durationSeconds !== null &&
-    !Number.isFinite(input.durationSeconds)
-  ) {
+  if (input.durationSeconds !== null && !Number.isFinite(input.durationSeconds)) {
     throw new Error("Duration must be a finite number.");
   }
 
@@ -471,9 +399,7 @@ export async function saveProgress(input: {
     .where("media_item_id", "=", input.mediaItemId)
     .where("media_file_id", "=", input.mediaFileId)
     .executeTakeFirst();
-  const completed =
-    normalized.completed ||
-    (Boolean(existing?.completed) && input.clearCompleted !== true);
+  const completed = normalized.completed || (Boolean(existing?.completed) && input.clearCompleted !== true);
 
   const values = {
     user_id: input.userId,

@@ -8,11 +8,7 @@ function isoDate(value: Date | number | string | null | undefined) {
 }
 
 /** Creates an API key for a specific user without a session. Test-only helper. */
-export async function createApiKeyForUser(input: {
-  userId: string;
-  name?: string;
-  expiresIn?: number;
-}) {
+export async function createApiKeyForUser(input: { userId: string; name?: string; expiresIn?: number }) {
   const { auth } = await import("../index");
   const created = await auth.api.createApiKey({
     body: {

@@ -2,12 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  inlineContentDisposition,
-  parseRange,
-  streamFileHeadResponse,
-  streamFileResponse,
-} from "./stream";
+import { inlineContentDisposition, parseRange, streamFileHeadResponse, streamFileResponse } from "./stream";
 
 describe("parseRange", () => {
   test("parses explicit byte ranges", () => {
@@ -35,21 +30,13 @@ describe("parseRange", () => {
   });
 
   test("sanitizes inline content disposition filenames", () => {
-    expect(inlineContentDisposition('A "Movie"\r\nBad.mp4')).toBe(
-      'inline; filename="A MovieBad.mp4"',
-    );
+    expect(inlineContentDisposition('A "Movie"\r\nBad.mp4')).toBe('inline; filename="A MovieBad.mp4"');
     expect(inlineContentDisposition("\u0000")).toBe('inline; filename="file"');
   });
 });
 
 describe("streamFileResponse", () => {
-  async function withMediaFile(
-    run: (file: {
-      path: string;
-      basename: string;
-      extension: string;
-    }) => Promise<void>,
-  ) {
+  async function withMediaFile(run: (file: { path: string; basename: string; extension: string }) => Promise<void>) {
     const dir = await mkdtemp(path.join(tmpdir(), "lunarr-stream-"));
     try {
       const file = {
@@ -72,9 +59,7 @@ describe("streamFileResponse", () => {
       expect(response.headers.get("content-type")).toBe("video/mp4");
       expect(response.headers.get("content-length")).toBe("10");
       expect(response.headers.get("accept-ranges")).toBe("bytes");
-      expect(response.headers.get("content-disposition")).toBe(
-        'inline; filename="Movie.mp4"',
-      );
+      expect(response.headers.get("content-disposition")).toBe('inline; filename="Movie.mp4"');
       expect(await response.text()).toBe("0123456789");
     });
   });

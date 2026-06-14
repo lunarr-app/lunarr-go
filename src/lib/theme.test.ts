@@ -1,12 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  THEME_STORAGE_KEY,
-  applyTheme,
-  getStoredTheme,
-  normalizeTheme,
-  setStoredTheme,
-} from "$lib/theme";
+import { THEME_STORAGE_KEY, applyTheme, getStoredTheme, normalizeTheme, setStoredTheme } from "$lib/theme";
 
 function memoryStorage(initial?: string) {
   let value = initial ?? null;
@@ -48,10 +42,7 @@ describe("theme helpers", () => {
   });
 
   test("falls back when browser storage access is blocked", () => {
-    const originalDescriptor = Object.getOwnPropertyDescriptor(
-      globalThis,
-      "localStorage",
-    );
+    const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
 
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,

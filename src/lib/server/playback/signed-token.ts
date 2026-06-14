@@ -16,10 +16,7 @@ export type SignedPlaybackTokenPayload = {
   exp: number;
 };
 
-type SignedPlaybackTokenInput = Omit<
-  SignedPlaybackTokenPayload,
-  "v" | "exp"
-> & {
+type SignedPlaybackTokenInput = Omit<SignedPlaybackTokenPayload, "v" | "exp"> & {
   expiresInSeconds?: number;
 };
 
@@ -39,37 +36,26 @@ function base64UrlDecode(value: string) {
 }
 
 function sign(payload: string) {
-  return createHmac("sha256", appEnv.AUTH_SECRET)
-    .update(payload)
-    .digest("base64url");
+  return createHmac("sha256", appEnv.AUTH_SECRET).update(payload).digest("base64url");
 }
 
 function safeSignatureEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left, "base64url");
   const rightBuffer = Buffer.from(right, "base64url");
-  return (
-    leftBuffer.length === rightBuffer.length &&
-    timingSafeEqual(leftBuffer, rightBuffer)
-  );
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-function isSignedPlaybackTokenPayload(
-  value: unknown,
-): value is SignedPlaybackTokenPayload {
+function isSignedPlaybackTokenPayload(value: unknown): value is SignedPlaybackTokenPayload {
   if (!value || typeof value !== "object") return false;
   const payload = value as Record<string, unknown>;
   return (
     payload.v === 1 &&
-    (payload.route === "direct" ||
-      payload.route === "hls" ||
-      payload.route === "subtitle") &&
+    (payload.route === "direct" || payload.route === "hls" || payload.route === "subtitle") &&
     typeof payload.userId === "string" &&
     typeof payload.mediaFileId === "string" &&
     typeof payload.exp === "number" &&
-    (payload.playbackSessionId === undefined ||
-      typeof payload.playbackSessionId === "string") &&
-    (payload.subtitleTrackId === undefined ||
-      typeof payload.subtitleTrackId === "string")
+    (payload.playbackSessionId === undefined || typeof payload.playbackSessionId === "string") &&
+    (payload.subtitleTrackId === undefined || typeof payload.subtitleTrackId === "string")
   );
 }
 
@@ -81,18 +67,13 @@ export function createSignedPlaybackToken(input: SignedPlaybackTokenInput) {
     mediaFileId: input.mediaFileId,
     playbackSessionId: input.playbackSessionId,
     subtitleTrackId: input.subtitleTrackId,
-    exp:
-      Math.floor(Date.now() / 1000) +
-      (input.expiresInSeconds ?? SIGNED_PLAYBACK_TOKEN_TTL_SECONDS),
+    exp: Math.floor(Date.now() / 1000) + (input.expiresInSeconds ?? SIGNED_PLAYBACK_TOKEN_TTL_SECONDS),
   };
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
   return `${encodedPayload}.${sign(encodedPayload)}`;
 }
 
-export function verifySignedPlaybackToken(
-  token: string | null | undefined,
-  expected: SignedPlaybackTokenExpectation,
-) {
+export function verifySignedPlaybackToken(token: string | null | undefined, expected: SignedPlaybackTokenExpectation) {
   if (!token) return null;
   const [encodedPayload, signature, extra] = token.split(".");
   if (!encodedPayload || !signature || extra !== undefined) return null;
@@ -110,16 +91,10 @@ export function verifySignedPlaybackToken(
   if (expected.mediaFileId && parsed.mediaFileId !== expected.mediaFileId) {
     return null;
   }
-  if (
-    expected.playbackSessionId &&
-    parsed.playbackSessionId !== expected.playbackSessionId
-  ) {
+  if (expected.playbackSessionId && parsed.playbackSessionId !== expected.playbackSessionId) {
     return null;
   }
-  if (
-    expected.subtitleTrackId &&
-    parsed.subtitleTrackId !== expected.subtitleTrackId
-  ) {
+  if (expected.subtitleTrackId && parsed.subtitleTrackId !== expected.subtitleTrackId) {
     return null;
   }
 
@@ -132,16 +107,11 @@ export function appendSignedPlaybackToken(pathname: string, token: string) {
 }
 
 export function absoluteSignedPlaybackUrl(pathname: string, token: string) {
-  return new URL(
-    appendSignedPlaybackToken(pathname, token),
-    appEnv.ORIGIN,
-  ).toString();
+  return new URL(appendSignedPlaybackToken(pathname, token), appEnv.ORIGIN).toString();
 }
 
 export function signedPlaybackSegmentQuery(token: string | null | undefined) {
-  return token
-    ? `?${SIGNED_PLAYBACK_TOKEN_QUERY_PARAM}=${encodeURIComponent(token)}`
-    : "";
+  return token ? `?${SIGNED_PLAYBACK_TOKEN_QUERY_PARAM}=${encodeURIComponent(token)}` : "";
 }
 
 export function signedPlaybackCorsHeaders() {
@@ -149,8 +119,7 @@ export function signedPlaybackCorsHeaders() {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, HEAD, OPTIONS",
     "access-control-allow-headers": "Range, Accept, Origin",
-    "access-control-expose-headers":
-      "Accept-Ranges, Content-Length, Content-Range, Content-Type",
+    "access-control-expose-headers": "Accept-Ranges, Content-Length, Content-Range, Content-Type",
   };
 }
 

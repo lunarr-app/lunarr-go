@@ -2,20 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import { decryptSecret } from "../secrets";
-import {
-  createLibrary,
-  deleteLibrary,
-  listLibraries,
-  listLibrariesWithScanStatus,
-  updateLibrary,
-} from ".";
+import { createLibrary, deleteLibrary, listLibraries, listLibrariesWithScanStatus, updateLibrary } from ".";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 
 let tempDir: string;
@@ -68,8 +57,9 @@ describe("createLibrary", () => {
       watchEnabled: false,
       scanIntervalMinutes: 60,
     });
-    const stored = await getDb()
-      .then((db) => db.selectFrom("library").selectAll().where("id", "=", library.id).executeTakeFirstOrThrow());
+    const stored = await getDb().then((db) =>
+      db.selectFrom("library").selectAll().where("id", "=", library.id).executeTakeFirstOrThrow(),
+    );
 
     expect(stored).toMatchObject({
       watch_enabled: 0,
@@ -118,11 +108,7 @@ describe("createLibrary", () => {
     });
 
     const db = await getDb();
-    const stored = await db
-      .selectFrom("library")
-      .selectAll()
-      .where("id", "=", library.id)
-      .executeTakeFirstOrThrow();
+    const stored = await db.selectFrom("library").selectAll().where("id", "=", library.id).executeTakeFirstOrThrow();
     expect(stored.config_json).not.toContain("secret-password");
     expect(JSON.parse(stored.config_json ?? "{}")).toMatchObject({
       walkConcurrency: 6,
@@ -348,11 +334,7 @@ describe("createLibrary", () => {
       operationTimeoutMs: 75_000,
     });
     const db = await getDb();
-    const updated = await db
-      .selectFrom("library")
-      .selectAll()
-      .where("id", "=", library.id)
-      .executeTakeFirstOrThrow();
+    const updated = await db.selectFrom("library").selectAll().where("id", "=", library.id).executeTakeFirstOrThrow();
     expect(updated).toMatchObject({
       name: "movies",
       source: "sftp",
@@ -403,11 +385,7 @@ describe("createLibrary", () => {
       }),
       "Library has an active scan.",
     );
-    const unchanged = await db
-      .selectFrom("library")
-      .selectAll()
-      .where("id", "=", library.id)
-      .executeTakeFirstOrThrow();
+    const unchanged = await db.selectFrom("library").selectAll().where("id", "=", library.id).executeTakeFirstOrThrow();
     expect(unchanged.name).toBe("Movies");
   });
 
@@ -573,29 +551,14 @@ describe("createLibrary", () => {
 
     await deleteLibrary(library.id);
 
-    expect((await listLibraries()).map((item) => item.id)).toEqual([
-      secondLibrary.id,
-    ]);
-    expect(
-      await db
-        .selectFrom("media_file")
-        .select("id")
-        .where("library_id", "=", library.id)
-        .execute(),
-    ).toHaveLength(0);
-    expect(
-      await db.selectFrom("watch_progress").selectAll().execute(),
-    ).toHaveLength(0);
+    expect((await listLibraries()).map((item) => item.id)).toEqual([secondLibrary.id]);
+    expect(await db.selectFrom("media_file").select("id").where("library_id", "=", library.id).execute()).toHaveLength(
+      0,
+    );
+    expect(await db.selectFrom("watch_progress").selectAll().execute()).toHaveLength(0);
 
-    const movies = await db
-      .selectFrom("media_item")
-      .select(["id"])
-      .orderBy("id", "asc")
-      .execute();
-    expect(movies.map((movie) => movie.id)).toEqual([
-      "metadata-only",
-      "shared-movie",
-    ]);
+    const movies = await db.selectFrom("media_item").select(["id"]).orderBy("id", "asc").execute();
+    expect(movies.map((movie) => movie.id)).toEqual(["metadata-only", "shared-movie"]);
   });
 
   test("rejects deleting a library while it has an active scan", async () => {
@@ -626,12 +589,7 @@ describe("createLibrary", () => {
       })
       .execute();
 
-    await expectRejectsToThrow(
-      deleteLibrary(library.id),
-      "Library has an active scan.",
-    );
-    expect((await listLibraries()).map((item) => item.id)).toEqual([
-      library.id,
-    ]);
+    await expectRejectsToThrow(deleteLibrary(library.id), "Library has an active scan.");
+    expect((await listLibraries()).map((item) => item.id)).toEqual([library.id]);
   });
 });

@@ -17,11 +17,7 @@ export const DELETE: RequestHandler = async ({ params, locals, request }) => {
       return json({ error: "API key not found." }, { status: 404 });
     }
   } catch (error) {
-    return jsonError(
-      error,
-      "Could not revoke API key.",
-      apiKeyHttpStatus(error),
-    );
+    return jsonError(error, "Could not revoke API key.", apiKeyHttpStatus(error));
   }
 
   return json({ ok: true });

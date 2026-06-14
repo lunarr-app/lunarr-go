@@ -33,7 +33,7 @@
     if (!value) return "Not yet";
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
-      timeStyle: "short"
+      timeStyle: "short",
     }).format(new Date(value));
   }
 </script>
@@ -51,17 +51,20 @@
 </header>
 
 {#if !data.tmdbConfigured}
-<section class="notice">
-  <TriangleAlert size={20} aria-hidden="true" />
-  <div>
-    <strong>TMDb is not configured</strong>
-    <p class="muted">Scans will add playable local files, but posters, backdrops, runtime, and overviews need a TMDb token or API key.</p>
-  </div>
-  <a class="button secondary" href="/settings">
-    <Settings size={16} aria-hidden="true" />
-    Settings
-  </a>
-</section>
+  <section class="notice">
+    <TriangleAlert size={20} aria-hidden="true" />
+    <div>
+      <strong>TMDb is not configured</strong>
+      <p class="muted">
+        Scans will add playable local files, but posters, backdrops, runtime, and overviews need a TMDb token or API
+        key.
+      </p>
+    </div>
+    <a class="button secondary" href="/settings">
+      <Settings size={16} aria-hidden="true" />
+      Settings
+    </a>
+  </section>
 {/if}
 
 <section class="content">
@@ -112,13 +115,7 @@
           </label>
           <label>
             Walk concurrency
-            <input
-              name="walkConcurrency"
-              type="number"
-              min="1"
-              max="32"
-              value={formData.walkConcurrency ?? "4"}
-            />
+            <input name="walkConcurrency" type="number" min="1" max="32" value={formData.walkConcurrency ?? "4"} />
           </label>
           <label>
             Timeout ms
@@ -147,12 +144,7 @@
         {#if selectedSource === "local"}
           <input type="hidden" name="watchEnabled" value="0" />
           <label class="check subdued">
-            <input
-              type="checkbox"
-              name="watchEnabled"
-              value="1"
-              checked={(formData.watchEnabled ?? "1") !== "0"}
-            />
+            <input type="checkbox" name="watchEnabled" value="1" checked={(formData.watchEnabled ?? "1") !== "0"} />
             <span>Watch local changes</span>
           </label>
         {/if}
@@ -197,14 +189,21 @@
         <article class="ops-row">
           <div class="library-summary">
             <strong>{library.name}</strong>
-            <span class="muted">{library.kind === "tv" ? "TV shows" : "Movies"} - {library.source} - {library.path}</span>
+            <span class="muted"
+              >{library.kind === "tv" ? "TV shows" : "Movies"} - {library.source}
+              - {library.path}</span
+            >
             <span class="muted">{automationSummary(library)}</span>
             {#if library.latestScanJob}
               <span class:active={library.scanActive} class="scan-status">
-                {library.latestScanJob.status} - seen {library.latestScanJob.files_seen}, added {library.latestScanJob.files_added}, updated {library.latestScanJob.files_updated}, removed {library.latestScanJob.files_removed}, errors {library.latestScanJob.errors_count}
+                {library.latestScanJob.status} - seen {library.latestScanJob.files_seen}, added {library.latestScanJob
+                  .files_added}, updated {library.latestScanJob.files_updated}, removed {library.latestScanJob
+                  .files_removed}, errors {library.latestScanJob.errors_count}
               </span>
               <span class="muted">
-                {library.latestScanJob.finished_at ? `Finished ${formatTime(library.latestScanJob.finished_at)}` : `Started ${formatTime(library.latestScanJob.started_at ?? library.latestScanJob.created_at)}`}
+                {library.latestScanJob.finished_at
+                  ? `Finished ${formatTime(library.latestScanJob.finished_at)}`
+                  : `Started ${formatTime(library.latestScanJob.started_at ?? library.latestScanJob.created_at)}`}
               </span>
             {:else}
               <span class="muted">No scans yet.</span>
@@ -243,142 +242,137 @@
             </ConfirmAction>
           </div>
           {#if editingLibraryId === library.id}
-          <div class="edit-panel">
-            <form method="POST" action="?/edit">
-              <input type="hidden" name="libraryId" value={library.id} />
-              <input type="hidden" name="source" value={library.source} />
-              <label>
-                Name
-                <input name="name" value={library.name} />
-              </label>
-              {#if library.source === "sftp"}
-                <div class="source-grid">
-                  <label>
-                    Host
-                    <input name="host" value={library.sftpConfig?.host ?? ""} placeholder="sftp.example.com" />
-                  </label>
-                  <label>
-                    Port
-                    <input name="port" inputmode="numeric" value={library.sftpConfig?.port ?? 22} placeholder="22" />
-                  </label>
-                  <label class="wide">
-                    Username
-                    <input name="username" value={library.sftpConfig?.username ?? ""} placeholder="mediauser" />
-                  </label>
-                  <label class="wide">
-                    Password
-                    <input name="password" value="" autocomplete="off" placeholder="Leave blank to keep current password" />
-                  </label>
-                  <label>
-                    Walk concurrency
-                    <input
-                      name="walkConcurrency"
-                      type="number"
-                      min="1"
-                      max="32"
-                      value={library.sftpConfig?.walkConcurrency ?? 4}
-                    />
-                  </label>
-                  <label>
-                    Timeout ms
-                    <input
-                      name="operationTimeoutMs"
-                      type="number"
-                      min="5000"
-                      max="300000"
-                      step="1000"
-                      value={library.sftpConfig?.operationTimeoutMs ?? 30000}
-                    />
-                  </label>
-                </div>
+            <div class="edit-panel">
+              <form method="POST" action="?/edit">
+                <input type="hidden" name="libraryId" value={library.id} />
+                <input type="hidden" name="source" value={library.source} />
                 <label>
-                  Root path
-                  <input name="root" value={library.sftpConfig?.root ?? ""} placeholder="media/movies" autocomplete="off" />
+                  Name
+                  <input name="name" value={library.name} />
                 </label>
-              {:else}
-                <label>
-                  Folder path
-                  <input name="path" value={library.path} placeholder="/Volumes/Media/Movies" autocomplete="off" />
-                </label>
-              {/if}
-              <fieldset class="automation-fieldset">
-                <legend>Automation</legend>
-                {#if library.source === "local"}
-                  <input type="hidden" name="watchEnabled" value="0" />
-                  <label class="check subdued">
+                {#if library.source === "sftp"}
+                  <div class="source-grid">
+                    <label>
+                      Host
+                      <input name="host" value={library.sftpConfig?.host ?? ""} placeholder="sftp.example.com" />
+                    </label>
+                    <label>
+                      Port
+                      <input name="port" inputmode="numeric" value={library.sftpConfig?.port ?? 22} placeholder="22" />
+                    </label>
+                    <label class="wide">
+                      Username
+                      <input name="username" value={library.sftpConfig?.username ?? ""} placeholder="mediauser" />
+                    </label>
+                    <label class="wide">
+                      Password
+                      <input
+                        name="password"
+                        value=""
+                        autocomplete="off"
+                        placeholder="Leave blank to keep current password"
+                      />
+                    </label>
+                    <label>
+                      Walk concurrency
+                      <input
+                        name="walkConcurrency"
+                        type="number"
+                        min="1"
+                        max="32"
+                        value={library.sftpConfig?.walkConcurrency ?? 4}
+                      />
+                    </label>
+                    <label>
+                      Timeout ms
+                      <input
+                        name="operationTimeoutMs"
+                        type="number"
+                        min="5000"
+                        max="300000"
+                        step="1000"
+                        value={library.sftpConfig?.operationTimeoutMs ?? 30000}
+                      />
+                    </label>
+                  </div>
+                  <label>
+                    Root path
                     <input
-                      type="checkbox"
-                      name="watchEnabled"
-                      value="1"
-                      checked={library.watch_enabled !== 0}
+                      name="root"
+                      value={library.sftpConfig?.root ?? ""}
+                      placeholder="media/movies"
+                      autocomplete="off"
                     />
-                    <span>Watch local changes</span>
+                  </label>
+                {:else}
+                  <label>
+                    Folder path
+                    <input name="path" value={library.path} placeholder="/Volumes/Media/Movies" autocomplete="off" />
                   </label>
                 {/if}
-                <label>
-                  Scheduled rescan
-                  <select name="scanIntervalMinutes">
-                    <option value="" selected={library.scan_interval_minutes === null}>Off</option>
-                    <option value="15" selected={library.scan_interval_minutes === 15}>Every 15 minutes</option>
-                    <option value="60" selected={library.scan_interval_minutes === 60}>Hourly</option>
-                    <option value="360" selected={library.scan_interval_minutes === 360}>Every 6 hours</option>
-                    <option value="720" selected={library.scan_interval_minutes === 720}>Every 12 hours</option>
-                    <option value="1440" selected={library.scan_interval_minutes === 1440}>Daily</option>
-                  </select>
-                </label>
-              </fieldset>
-              <button class="secondary" disabled={library.scanActive}>
-                <Save size={16} aria-hidden="true" />
-                Save changes
-              </button>
-              {#if library.scanActive}
-                <p class="muted">Finish or cancel the active scan before editing this library.</p>
-              {/if}
-            </form>
-            <form method="POST" action="?/access">
-              <input type="hidden" name="libraryId" value={library.id} />
-              <fieldset>
-                <legend>Sharing</legend>
-                <label class="check subdued">
-                  <input
-                    type="radio"
-                    name="accessMode"
-                    value="all"
-                    checked={library.access_mode !== "shared"}
-                  />
-                  <span>All users</span>
-                </label>
-                <label class="check subdued">
-                  <input
-                    type="radio"
-                    name="accessMode"
-                    value="shared"
-                    checked={library.access_mode === "shared"}
-                  />
-                  <span>Selected users</span>
-                </label>
-                <div class="share-list">
-                  {#each data.users as user}
+                <fieldset class="automation-fieldset">
+                  <legend>Automation</legend>
+                  {#if library.source === "local"}
+                    <input type="hidden" name="watchEnabled" value="0" />
                     <label class="check subdued">
-                      <input
-                        type="checkbox"
-                        name="userIds"
-                        value={user.id}
-                        checked={library.sharedUserIds.includes(user.id)}
-                      />
-                      <span>{user.name} <small>{user.email}</small></span>
+                      <input type="checkbox" name="watchEnabled" value="1" checked={library.watch_enabled !== 0} />
+                      <span>Watch local changes</span>
                     </label>
-                  {:else}
-                    <p class="muted">No regular users yet.</p>
-                  {/each}
-                </div>
-              </fieldset>
-              <button class="secondary">
-                <Save size={16} aria-hidden="true" />
-                Save sharing
-              </button>
-            </form>
-          </div>
+                  {/if}
+                  <label>
+                    Scheduled rescan
+                    <select name="scanIntervalMinutes">
+                      <option value="" selected={library.scan_interval_minutes === null}>Off</option>
+                      <option value="15" selected={library.scan_interval_minutes === 15}>Every 15 minutes</option>
+                      <option value="60" selected={library.scan_interval_minutes === 60}>Hourly</option>
+                      <option value="360" selected={library.scan_interval_minutes === 360}>Every 6 hours</option>
+                      <option value="720" selected={library.scan_interval_minutes === 720}>Every 12 hours</option>
+                      <option value="1440" selected={library.scan_interval_minutes === 1440}>Daily</option>
+                    </select>
+                  </label>
+                </fieldset>
+                <button class="secondary" disabled={library.scanActive}>
+                  <Save size={16} aria-hidden="true" />
+                  Save changes
+                </button>
+                {#if library.scanActive}
+                  <p class="muted">Finish or cancel the active scan before editing this library.</p>
+                {/if}
+              </form>
+              <form method="POST" action="?/access">
+                <input type="hidden" name="libraryId" value={library.id} />
+                <fieldset>
+                  <legend>Sharing</legend>
+                  <label class="check subdued">
+                    <input type="radio" name="accessMode" value="all" checked={library.access_mode !== "shared"} />
+                    <span>All users</span>
+                  </label>
+                  <label class="check subdued">
+                    <input type="radio" name="accessMode" value="shared" checked={library.access_mode === "shared"} />
+                    <span>Selected users</span>
+                  </label>
+                  <div class="share-list">
+                    {#each data.users as user}
+                      <label class="check subdued">
+                        <input
+                          type="checkbox"
+                          name="userIds"
+                          value={user.id}
+                          checked={library.sharedUserIds.includes(user.id)}
+                        />
+                        <span>{user.name} <small>{user.email}</small></span>
+                      </label>
+                    {:else}
+                      <p class="muted">No regular users yet.</p>
+                    {/each}
+                  </div>
+                </fieldset>
+                <button class="secondary">
+                  <Save size={16} aria-hidden="true" />
+                  Save sharing
+                </button>
+              </form>
+            </div>
           {/if}
         </article>
       {:else}

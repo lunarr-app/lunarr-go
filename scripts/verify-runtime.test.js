@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  runRuntimeVerification,
-  runtimeVerificationEnv,
-} from "./verify-runtime.mjs";
+import { runRuntimeVerification, runtimeVerificationEnv } from "./verify-runtime.mjs";
 
 describe("Lunarr runtime verifier", () => {
   test("keeps software-only verification environment unchanged", () => {
@@ -12,13 +9,11 @@ describe("Lunarr runtime verifier", () => {
   });
 
   test("uses explicit runtime hardware mode for encoder verification and smoke", () => {
-    expect(runtimeVerificationEnv({ LUNARR_VERIFY_HARDWARE: "vaapi" })).toEqual(
-      {
-        LUNARR_VERIFY_HARDWARE: "vaapi",
-        FFMPEG_SMOKE_HARDWARE: "vaapi",
-        FFMPEG_VERIFY_HARDWARE: "vaapi",
-      },
-    );
+    expect(runtimeVerificationEnv({ LUNARR_VERIFY_HARDWARE: "vaapi" })).toEqual({
+      LUNARR_VERIFY_HARDWARE: "vaapi",
+      FFMPEG_SMOKE_HARDWARE: "vaapi",
+      FFMPEG_VERIFY_HARDWARE: "vaapi",
+    });
   });
 
   test("keeps explicit FFmpeg hardware verifier mode", () => {

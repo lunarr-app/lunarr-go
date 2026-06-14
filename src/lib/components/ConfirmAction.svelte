@@ -11,7 +11,7 @@
     confirmLabel,
     buttonClass = "secondary danger",
     disabled = false,
-    children
+    children,
   }: {
     action: string;
     fieldName: string;
@@ -55,7 +55,11 @@
 </button>
 
 {#if open}
-  <div class="overlay" role="presentation" onpointerdown={(event) => event.target === event.currentTarget && closeDialog()}>
+  <div
+    class="overlay"
+    role="presentation"
+    onpointerdown={(event) => event.target === event.currentTarget && closeDialog()}
+  >
     <div class="dialog" role="dialog" aria-modal="true" aria-label={title} bind:this={dialog}>
       <div class="icon" aria-hidden="true">
         <TriangleAlert size={22} />

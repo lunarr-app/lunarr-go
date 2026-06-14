@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     playbackSessionSummary: await getPlaybackSessionSummary(),
     jobs: await listScanJobs(),
     playbackSessions: await listPlaybackSessions(),
-    errors: await listScanErrors()
+    errors: await listScanErrors(),
   };
 };
 
@@ -48,5 +48,5 @@ export const actions: Actions = {
     if (result === "inactive") return fail(400, { jobActionError: "Playback session is not active." });
 
     throw redirect(303, "/jobs");
-  }
+  },
 };

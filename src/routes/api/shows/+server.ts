@@ -7,9 +7,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
-  return json(await tvRows(
-    user.id,
-    url.searchParams.get("search") ?? "",
-    normalizeShowSort(url.searchParams.get("sort"))
-  ));
+  return json(
+    await tvRows(user.id, url.searchParams.get("search") ?? "", normalizeShowSort(url.searchParams.get("sort"))),
+  );
 };

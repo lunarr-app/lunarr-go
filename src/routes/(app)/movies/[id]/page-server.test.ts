@@ -3,13 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-  type Database,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import { setSetting } from "$lib/server/settings";
 import { actions, load } from "./+page.server";
 
@@ -229,10 +223,7 @@ describe("movie detail page server", () => {
       "/movies/movie-1",
     );
 
-    const watchedProgress = await db
-      .selectFrom("watch_progress")
-      .selectAll()
-      .executeTakeFirstOrThrow();
+    const watchedProgress = await db.selectFrom("watch_progress").selectAll().executeTakeFirstOrThrow();
     expect(watchedProgress).toMatchObject({
       user_id: "user-1",
       media_item_id: "movie-1",
@@ -255,10 +246,7 @@ describe("movie detail page server", () => {
       "/movies/movie-1",
     );
 
-    const unwatchedProgress = await db
-      .selectFrom("watch_progress")
-      .selectAll()
-      .executeTakeFirstOrThrow();
+    const unwatchedProgress = await db.selectFrom("watch_progress").selectAll().executeTakeFirstOrThrow();
     expect(unwatchedProgress).toMatchObject({
       media_item_id: "movie-1",
       media_file_id: "file-1",
@@ -319,9 +307,7 @@ describe("movie detail page server", () => {
         error: "Media file does not belong to a playable item.",
       },
     });
-    expect(await db.selectFrom("watch_progress").selectAll().execute()).toEqual(
-      [],
-    );
+    expect(await db.selectFrom("watch_progress").selectAll().execute()).toEqual([]);
   });
 
   test("keeps detail metadata refresh admin-only and uses bundled fallback credentials", async () => {
@@ -336,10 +322,7 @@ describe("movie detail page server", () => {
       },
     });
 
-    globalThis.fetch = (async (
-      input: URL | RequestInfo,
-      init?: RequestInit,
-    ) => {
+    globalThis.fetch = (async (input: URL | RequestInfo, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({
         authorization: expect.stringMatching(/^Bearer /),
       });
@@ -373,9 +356,7 @@ describe("movie detail page server", () => {
 
       if (url.includes("/search/movie")) {
         return Response.json({
-          results: [
-            { id: 456, title: "Other Movie", release_date: "2025-03-14" },
-          ],
+          results: [{ id: 456, title: "Other Movie", release_date: "2025-03-14" }],
         });
       }
 
@@ -403,11 +384,7 @@ describe("movie detail page server", () => {
 
     expect(calls).toHaveLength(2);
     expect(calls[0]).toContain("api_key=saved-api-key");
-    const movie = await db
-      .selectFrom("media_item")
-      .selectAll()
-      .where("id", "=", "movie-2")
-      .executeTakeFirstOrThrow();
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-2").executeTakeFirstOrThrow();
     expect(movie).toMatchObject({
       provider: "tmdb",
       provider_id: "456",
@@ -420,11 +397,7 @@ describe("movie detail page server", () => {
       vote_average: 7.2,
     });
     expect(
-      await db
-        .selectFrom("media_item_genre")
-        .select(["name"])
-        .where("media_item_id", "=", "movie-2")
-        .execute(),
+      await db.selectFrom("media_item_genre").select(["name"]).where("media_item_id", "=", "movie-2").execute(),
     ).toEqual([{ name: "Thriller" }]);
   });
 
@@ -458,9 +431,7 @@ describe("movie detail page server", () => {
 
       if (url.includes("/search/movie")) {
         return Response.json({
-          results: [
-            { id: 456, title: "Other Movie", release_date: "2025-03-14" },
-          ],
+          results: [{ id: 456, title: "Other Movie", release_date: "2025-03-14" }],
         });
       }
 
@@ -484,11 +455,7 @@ describe("movie detail page server", () => {
     );
 
     expect(
-      await db
-        .selectFrom("media_item")
-        .select("id")
-        .where("id", "=", "movie-2")
-        .executeTakeFirst(),
+      await db.selectFrom("media_item").select("id").where("id", "=", "movie-2").executeTakeFirst(),
     ).toBeUndefined();
     const movedFile = await db
       .selectFrom("media_file")

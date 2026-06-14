@@ -15,39 +15,20 @@
 <form method="POST">
   <label>
     Name
-    <input
-      name="name"
-      autocomplete="name"
-      value={formData.name ?? ""}
-      required
-    />
+    <input name="name" autocomplete="name" value={formData.name ?? ""} required />
   </label>
   <label>
     Email
-    <input
-      name="email"
-      type="email"
-      autocomplete="email"
-      value={formData.email ?? ""}
-      required
-    />
+    <input name="email" type="email" autocomplete="email" value={formData.email ?? ""} required />
   </label>
   <label>
     Password
-    <input
-      name="password"
-      type="password"
-      autocomplete="new-password"
-      minlength="8"
-      required
-    />
+    <input name="password" type="password" autocomplete="new-password" minlength="8" required />
   </label>
   {#if form?.error}
     <p class="error">{form.error}</p>
   {/if}
-  <button>
-    Create account
-  </button>
+  <button> Create account </button>
 </form>
 
 <div class="auth-link">

@@ -5,15 +5,15 @@ describe("appEnvDefaultsForEnvironment", () => {
   test("provides a local development auth secret outside production start", () => {
     expect(appEnvDefaultsForEnvironment({})).toMatchObject({
       AUTH_SECRET: "lunarr-local-development-secret-value",
-      ORIGIN: "http://127.0.0.1:5173"
+      ORIGIN: "http://127.0.0.1:5173",
     });
   });
 
   test("does not override an explicit auth secret", () => {
     expect(
       appEnvDefaultsForEnvironment({
-        AUTH_SECRET: "configured-secret"
-      })
+        AUTH_SECRET: "configured-secret",
+      }),
     ).toEqual({});
   });
 
@@ -26,10 +26,10 @@ describe("appEnvDefaultsForEnvironment", () => {
     expect(
       appEnvDefaultsForEnvironment({
         NODE_ENV: "production",
-        npm_lifecycle_event: "build"
-      })
+        npm_lifecycle_event: "build",
+      }),
     ).toMatchObject({
-      AUTH_SECRET: "lunarr-local-development-secret-value"
+      AUTH_SECRET: "lunarr-local-development-secret-value",
     });
   });
 });

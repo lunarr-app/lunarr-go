@@ -119,17 +119,11 @@ function isHevcCodec(codec: string | null) {
 }
 
 function isAv1Codec(codec: string | null) {
-  return (
-    codec !== null &&
-    (codec === "av1" || codec === "av01" || codec.startsWith("av01."))
-  );
+  return codec !== null && (codec === "av1" || codec === "av01" || codec.startsWith("av01."));
 }
 
 function isVp9Codec(codec: string | null) {
-  return (
-    codec !== null &&
-    (codec === "vp9" || codec === "vp09" || codec.startsWith("vp09."))
-  );
+  return codec !== null && (codec === "vp9" || codec === "vp09" || codec.startsWith("vp09."));
 }
 
 function isVp8Codec(codec: string | null) {
@@ -149,12 +143,7 @@ function isH264Codec(codec: string | null) {
 }
 
 function isAacCodec(codec: string | null) {
-  return (
-    codec === null ||
-    codec === "aac" ||
-    codec === "mp4a" ||
-    codec.startsWith("mp4a.")
-  );
+  return codec === null || codec === "aac" || codec === "mp4a" || codec.startsWith("mp4a.");
 }
 
 function isKnownAacCodec(codec: string | null) {
@@ -246,12 +235,7 @@ export function isRemuxCompatible(
   target: PlaybackTarget = "web",
 ) {
   if (isDirectPlayCompatible(input, clientCapabilities, target)) return false;
-  return isHlsRemuxCompatible(
-    input,
-    clientCapabilities,
-    hlsSegmentFormat,
-    target,
-  );
+  return isHlsRemuxCompatible(input, clientCapabilities, hlsSegmentFormat, target);
 }
 
 export function isHlsRemuxCompatible(
@@ -262,10 +246,7 @@ export function isHlsRemuxCompatible(
 ) {
   const profile = playbackTargetProfile({ target, clientCapabilities });
   if (hasBaselineHlsRemuxCompatibleCodecs(input)) return true;
-  return (
-    hlsSegmentFormat === "fmp4" &&
-    hasFmp4HevcHlsRemuxCompatibleCodecs(input, profile.clientCapabilities)
-  );
+  return hlsSegmentFormat === "fmp4" && hasFmp4HevcHlsRemuxCompatibleCodecs(input, profile.clientCapabilities);
 }
 
 export function decidePlaybackMode(input: {
@@ -275,23 +256,11 @@ export function decidePlaybackMode(input: {
   hlsSegmentFormat?: HlsSegmentFormat;
   target?: PlaybackTarget;
 }): PlaybackModeDecision {
-  const directCompatible = isDirectPlayCompatible(
-    input.file,
-    input.clientCapabilities,
-    input.target,
-  );
-  const remuxCompatible = isRemuxCompatible(
-    input.file,
-    input.clientCapabilities,
-    input.hlsSegmentFormat,
-    input.target,
-  );
+  const directCompatible = isDirectPlayCompatible(input.file, input.clientCapabilities, input.target);
+  const remuxCompatible = isRemuxCompatible(input.file, input.clientCapabilities, input.hlsSegmentFormat, input.target);
   const preference: PlaybackPreference = input.policy.playbackPreference;
 
-  if (
-    directCompatible &&
-    (preference === "auto" || preference === "prefer_direct")
-  ) {
+  if (directCompatible && (preference === "auto" || preference === "prefer_direct")) {
     return { mode: "direct", reason: "direct_supported" };
   }
 
@@ -307,7 +276,6 @@ export function decidePlaybackMode(input: {
     return { mode: "transcode", reason: "direct_unsupported" };
   }
 
-  if (directCompatible)
-    return { mode: "direct", reason: "transcode_not_needed" };
+  if (directCompatible) return { mode: "direct", reason: "transcode_not_needed" };
   return { mode: "unavailable", reason: "transcoding_disabled" };
 }

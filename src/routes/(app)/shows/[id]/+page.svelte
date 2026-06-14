@@ -10,21 +10,12 @@
   type Season = (typeof data.seasons)[number];
   type Episode = Season["episodes"][number];
 
-  const allEpisodes = $derived(
-    data.seasons.flatMap((season) => season.episodes),
-  );
-  const watchedCount = $derived(
-    allEpisodes.filter((episode) => episode.completed).length,
-  );
+  const allEpisodes = $derived(data.seasons.flatMap((season) => season.episodes));
+  const watchedCount = $derived(allEpisodes.filter((episode) => episode.completed).length);
   const totalEpisodes = $derived(allEpisodes.length);
-  const progressPercent = $derived(
-    totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0,
-  );
+  const progressPercent = $derived(totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0);
   const inProgressEpisode = $derived(
-    allEpisodes.find(
-      (episode) =>
-        !episode.completed && episode.progressSeconds > 0 && episode.fileId,
-    ),
+    allEpisodes.find((episode) => !episode.completed && episode.progressSeconds > 0 && episode.fileId),
   );
   const nextEpisode = $derived(
     inProgressEpisode ??
@@ -32,18 +23,14 @@
       allEpisodes.find((episode) => episode.fileId),
   );
   const seasonCount = $derived(data.seasons.length);
-  const episodeCountLabel = $derived(
-    `${totalEpisodes} ${totalEpisodes === 1 ? "episode" : "episodes"}`,
-  );
-  const seasonCountLabel = $derived(
-    `${seasonCount} ${seasonCount === 1 ? "season" : "seasons"}`,
-  );
+  const episodeCountLabel = $derived(`${totalEpisodes} ${totalEpisodes === 1 ? "episode" : "episodes"}`);
+  const seasonCountLabel = $derived(`${seasonCount} ${seasonCount === 1 ? "season" : "seasons"}`);
 
   function watchHref(episode: Pick<Episode, "id" | "fileId">) {
     return playbackModalHref({
       currentUrl: page.url,
       mediaItemId: episode.id,
-      mediaFileId: episode.fileId
+      mediaFileId: episode.fileId,
     });
   }
 
@@ -66,25 +53,15 @@
     };
   }
 
-  function episodeCode(
-    episode: Pick<Episode, "seasonNumber" | "episodeNumber"> | undefined,
-  ) {
-    if (
-      !episode ||
-      episode.seasonNumber === null ||
-      episode.episodeNumber === null
-    )
-      return "";
+  function episodeCode(episode: Pick<Episode, "seasonNumber" | "episodeNumber"> | undefined) {
+    if (!episode || episode.seasonNumber === null || episode.episodeNumber === null) return "";
     return `S${String(episode.seasonNumber).padStart(2, "0")}E${String(episode.episodeNumber).padStart(2, "0")}`;
   }
 </script>
 
 <svelte:head>
   <title>{data.show.title} - Lunarr</title>
-  <meta
-    name="description"
-    content={`Browse seasons for ${data.show.title} in Lunarr.`}
-  />
+  <meta name="description" content={`Browse seasons for ${data.show.title} in Lunarr.`} />
 </svelte:head>
 
 <MediaHero
@@ -96,16 +73,10 @@
   bottomMargin="2rem"
 >
   {#snippet facts()}
-    {#if data.show.year}<span
-        ><Calendar size={15} aria-hidden="true" />{data.show.year}</span
-      >{/if}
+    {#if data.show.year}<span><Calendar size={15} aria-hidden="true" />{data.show.year}</span>{/if}
     {#if data.show.status}<span>{data.show.status}</span>{/if}
     {#if data.show.voteAverage}
-      <span
-        ><Star size={15} aria-hidden="true" />{data.show.voteAverage.toFixed(
-          1,
-        )}</span
-      >
+      <span><Star size={15} aria-hidden="true" />{data.show.voteAverage.toFixed(1)}</span>
     {/if}
     <span>{seasonCountLabel}</span>
     <span>{episodeCountLabel}</span>
@@ -117,17 +88,12 @@
         <CirclePlay size={19} aria-hidden="true" />
         {nextEpisode.progressSeconds > 0 ? "Resume" : "Play"}
       </a>
-      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}
-        >{episodeCode(nextEpisode) || "Episode"}</a
-      >
+      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}>{episodeCode(nextEpisode) || "Episode"}</a>
     {/if}
   {/snippet}
 
   {#snippet below()}
-    <div
-      class="watch-summary"
-      aria-label={`${watchedCount} of ${totalEpisodes} episodes watched`}
-    >
+    <div class="watch-summary" aria-label={`${watchedCount} of ${totalEpisodes} episodes watched`}>
       <div>
         <strong>{watchedCount}/{totalEpisodes}</strong>
         <span>Watched</span>
@@ -153,19 +119,14 @@
       <a class="season-card" href={seasonHref(season)}>
         <div class="poster">
           {#if season.posterUrl || data.show.posterUrl}
-            <img
-              src={season.posterUrl ?? data.show.posterUrl}
-              alt=""
-              loading="lazy"
-            />
+            <img src={season.posterUrl ?? data.show.posterUrl} alt="" loading="lazy" />
           {:else}
             <span>{season.title}</span>
           {/if}
         </div>
         <div class="season-copy">
           <strong>{season.title}</strong>
-          <span>{stats.total} {stats.total === 1 ? "episode" : "episodes"}</span
-          >
+          <span>{stats.total} {stats.total === 1 ? "episode" : "episodes"}</span>
           {#if stats.missing > 0}
             <span>{stats.playable}/{stats.total} available</span>
           {:else}
@@ -196,11 +157,7 @@
         >
           <div class="profile">
             {#if person.profilePath}
-              <img
-                src={tmdbImageUrl(person.profilePath, "w185")}
-                alt=""
-                loading="lazy"
-              />
+              <img src={tmdbImageUrl(person.profilePath, "w185")} alt="" loading="lazy" />
             {:else}
               <Users size={22} aria-hidden="true" />
             {/if}

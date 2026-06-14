@@ -24,22 +24,13 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
         : {};
 
     if ("playbackPreference" in values) {
-      await setUserPlaybackPreference(
-        user.id,
-        normalizePlaybackPreference(String(values.playbackPreference ?? "")),
-      );
+      await setUserPlaybackPreference(user.id, normalizePlaybackPreference(String(values.playbackPreference ?? "")));
     }
     if ("preferredAudioLanguage" in values) {
-      await setUserPreferredAudioLanguage(
-        user.id,
-        String(values.preferredAudioLanguage ?? ""),
-      );
+      await setUserPreferredAudioLanguage(user.id, String(values.preferredAudioLanguage ?? ""));
     }
     if ("preferredSubtitleLanguage" in values) {
-      await setUserPreferredSubtitleLanguage(
-        user.id,
-        String(values.preferredSubtitleLanguage ?? ""),
-      );
+      await setUserPreferredSubtitleLanguage(user.id, String(values.preferredSubtitleLanguage ?? ""));
     }
     return json({ ok: true });
   } catch (error) {

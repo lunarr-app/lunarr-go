@@ -21,9 +21,7 @@ describe("HLS seek helpers", () => {
   test("builds a same-page start URL for HLS repositioning", () => {
     expect(
       hlsRepositionHref({
-        currentUrl: new URL(
-          "http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player",
-        ),
+        currentUrl: new URL("http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player"),
         mediaFileId: "file-1",
         startSeconds: 125.8,
       }),
@@ -31,22 +29,16 @@ describe("HLS seek helpers", () => {
 
     expect(
       hlsRepositionHref({
-        currentUrl: new URL(
-          "http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player",
-        ),
+        currentUrl: new URL("http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player"),
         mediaFileId: "file-1",
         startSeconds: 125.8,
         forceTranscode: true,
       }),
-    ).toBe(
-      "/movies/movie-1?play=movie-1&file=file-1&foo=bar&start=125&transcode=1#player",
-    );
+    ).toBe("/movies/movie-1?play=movie-1&file=file-1&foo=bar&start=125&transcode=1#player");
 
     expect(
       hlsRepositionHref({
-        currentUrl: new URL(
-          "http://localhost/movies/movie-1?play=movie-1&file=old&start=40&transcode=1#player",
-        ),
+        currentUrl: new URL("http://localhost/movies/movie-1?play=movie-1&file=old&start=40&transcode=1#player"),
         mediaFileId: "file-1",
         startSeconds: 0,
       }),
@@ -56,16 +48,12 @@ describe("HLS seek helpers", () => {
   test("builds a same-page target URL for remote playback", () => {
     expect(
       playbackTargetHref({
-        currentUrl: new URL(
-          "http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player",
-        ),
+        currentUrl: new URL("http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player"),
         mediaFileId: "file-1",
         target: "cast",
         startSeconds: 125.8,
       }),
-    ).toBe(
-      "/movies/movie-1?play=movie-1&file=file-1&foo=bar&target=cast&start=125#player",
-    );
+    ).toBe("/movies/movie-1?play=movie-1&file=file-1&foo=bar&target=cast&start=125#player");
 
     expect(
       playbackTargetHref({
@@ -76,17 +64,13 @@ describe("HLS seek helpers", () => {
         target: "airplay",
         startSeconds: 0,
       }),
-    ).toBe(
-      "/movies/movie-1?play=movie-1&file=file-1&transcode=1&target=airplay#player",
-    );
+    ).toBe("/movies/movie-1?play=movie-1&file=file-1&transcode=1&target=airplay#player");
   });
 
   test("builds a same-page target URL for local web playback", () => {
     expect(
       playbackTargetHref({
-        currentUrl: new URL(
-          "http://localhost/movies/movie-1?play=movie-1&file=old&target=cast&start=40#player",
-        ),
+        currentUrl: new URL("http://localhost/movies/movie-1?play=movie-1&file=old&target=cast&start=40#player"),
         mediaFileId: "file-1",
         target: "web",
         startSeconds: 125.8,
@@ -285,11 +269,9 @@ describe("HLS seek helpers", () => {
     expect(controller.seeking()).toEqual({
       uiState: "seeking",
     });
-    expect(controller.seeked({ relativeSeconds: 11 * 60, paused: false })).toEqual(
-      {
-        uiState: "playing",
-      },
-    );
+    expect(controller.seeked({ relativeSeconds: 11 * 60, paused: false })).toEqual({
+      uiState: "playing",
+    });
 
     expect(controller.lastPlaybackTime()).toBe(11 * 60);
   });

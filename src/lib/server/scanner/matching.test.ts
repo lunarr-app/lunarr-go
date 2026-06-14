@@ -14,7 +14,7 @@ describe("lookupMovieMetadata", () => {
       backdropPath: "/backdrop.jpg",
       releaseDate: "1999-03-31",
       popularity: 100,
-      voteAverage: 8.3
+      voteAverage: 8.3,
     }));
 
     expect(result).toMatchObject({
@@ -22,7 +22,7 @@ describe("lookupMovieMetadata", () => {
       providerId: "603",
       title: "The Matrix",
       year: 1999,
-      posterPath: "/poster.jpg"
+      posterPath: "/poster.jpg",
     });
   });
 
@@ -36,7 +36,7 @@ describe("lookupMovieMetadata", () => {
       },
       async () => {
         throw new Error("TMDb unavailable");
-      }
+      },
     );
 
     expect(result).toBeNull();

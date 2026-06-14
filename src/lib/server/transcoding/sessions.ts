@@ -1,10 +1,6 @@
 import { getDb } from "../db";
 import { hlsSegmentIndex } from "./hls";
-import type {
-  TranscodePipeline,
-  TranscodeSessionStatus,
-  TranscodeMode,
-} from "../db/schema/streaming";
+import type { TranscodePipeline, TranscodeSessionStatus, TranscodeMode } from "../db/schema/streaming";
 import { currentDatabasePaths } from "../db";
 import { nowIso } from "../time";
 import { randomUUID } from "node:crypto";
@@ -98,8 +94,7 @@ type OrphanedPlaybackSessionArtifactDirectory = {
   bytes: number;
 };
 
-const INTERRUPTED_TRANSCODE_MESSAGE =
-  "Playback session was interrupted by a server restart.";
+const INTERRUPTED_TRANSCODE_MESSAGE = "Playback session was interrupted by a server restart.";
 const DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 export const PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS = [
   5 * 1024 * 1024 * 1024,
@@ -108,10 +103,8 @@ export const PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS = [
   50 * 1024 * 1024 * 1024,
   100 * 1024 * 1024 * 1024,
 ] as const;
-export const DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES =
-  20 * 1024 * 1024 * 1024;
-const PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY =
-  "playback_session_artifact_max_bytes";
+export const DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES = 20 * 1024 * 1024 * 1024;
+const PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY = "playback_session_artifact_max_bytes";
 const ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS = 60_000;
 const RECENT_FAILED_PLAYBACK_SESSION_MAX_IDLE_MS = 60_000;
 const ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS = 2;
@@ -121,9 +114,7 @@ type TranscodeTouchOptions = {
   signal?: AbortSignal;
 };
 
-export function setTranscodeTouchDelayForTests(
-  delay: (() => Promise<void> | void) | null,
-) {
+export function setTranscodeTouchDelayForTests(delay: (() => Promise<void> | void) | null) {
   transcodeTouchDelayForTests = delay;
 }
 
@@ -137,39 +128,22 @@ function defaultPlaybackSessionArtifactDirectory(sessionId: string) {
 
 function isPathInside(parent: string, candidate: string) {
   const relative = path.relative(path.resolve(parent), path.resolve(candidate));
-  return (
-    relative.length > 0 &&
-    !relative.startsWith("..") &&
-    !path.isAbsolute(relative)
-  );
+  return relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
 function isPathSameOrInside(parent: string, candidate: string) {
   const relative = path.relative(path.resolve(parent), path.resolve(candidate));
-  return (
-    relative === "" ||
-    (!relative.startsWith("..") && !path.isAbsolute(relative))
-  );
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
-function safePlaybackSessionArtifactDirectories(input: {
-  sessionId: string;
-  playlistPath: string | null;
-}) {
+function safePlaybackSessionArtifactDirectories(input: { sessionId: string; playlistPath: string | null }) {
   const root = playbackSessionArtifactRoot();
-  const directories = new Set([
-    defaultPlaybackSessionArtifactDirectory(input.sessionId),
-  ]);
+  const directories = new Set([defaultPlaybackSessionArtifactDirectory(input.sessionId)]);
   if (input.playlistPath) directories.add(path.dirname(input.playlistPath));
 
-  const safeDirectories = [...directories].filter((directory) =>
-    isPathInside(root, directory),
-  );
+  const safeDirectories = [...directories].filter((directory) => isPathInside(root, directory));
   return safeDirectories.filter(
-    (directory) =>
-      !safeDirectories.some(
-        (other) => other !== directory && isPathSameOrInside(other, directory),
-      ),
+    (directory) => !safeDirectories.some((other) => other !== directory && isPathSameOrInside(other, directory)),
   );
 }
 
@@ -189,29 +163,20 @@ function latestActivityAt(input: {
     .at(-1)!;
 }
 
-function endedPlaybackArtifactActivityAt(input: {
-  lastSegmentRequestAt?: string | null;
-  updatedAt: string;
-}) {
+function endedPlaybackArtifactActivityAt(input: { lastSegmentRequestAt?: string | null; updatedAt: string }) {
   return [input.lastSegmentRequestAt, input.updatedAt]
     .filter((value): value is string => Boolean(value))
     .sort()
     .at(-1)!;
 }
 
-export function isEndedPlaybackArtifactFresh(input: {
-  lastSegmentRequestAt?: string | null;
-  updatedAt: string;
-}) {
-  const endedArtifactCutoff = new Date(
-    Date.now() - ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS,
-  ).toISOString();
+export function isEndedPlaybackArtifactFresh(input: { lastSegmentRequestAt?: string | null; updatedAt: string }) {
+  const endedArtifactCutoff = new Date(Date.now() - ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS).toISOString();
   return endedPlaybackArtifactActivityAt(input) >= endedArtifactCutoff;
 }
 
 export function normalizePlaybackSessionArtifactMaxBytes(value: unknown) {
-  const numeric =
-    typeof value === "number" ? value : Number(String(value ?? ""));
+  const numeric = typeof value === "number" ? value : Number(String(value ?? ""));
   return PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS.includes(
     numeric as (typeof PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS)[number],
   )
@@ -220,16 +185,11 @@ export function normalizePlaybackSessionArtifactMaxBytes(value: unknown) {
 }
 
 export async function getPlaybackSessionArtifactMaxBytes() {
-  return normalizePlaybackSessionArtifactMaxBytes(
-    await getSetting(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY),
-  );
+  return normalizePlaybackSessionArtifactMaxBytes(await getSetting(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY));
 }
 
 export async function setPlaybackSessionArtifactMaxBytes(value: unknown) {
-  await setSetting(
-    PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY,
-    String(normalizePlaybackSessionArtifactMaxBytes(value)),
-  );
+  await setSetting(PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_KEY, String(normalizePlaybackSessionArtifactMaxBytes(value)));
 }
 
 async function directorySizeBytes(directory: string): Promise<number> {
@@ -254,10 +214,7 @@ async function directorySizeBytes(directory: string): Promise<number> {
   return total;
 }
 
-async function removeSafePlaybackSessionArtifactDirectories(input: {
-  sessionId: string;
-  playlistPath: string | null;
-}) {
+async function removeSafePlaybackSessionArtifactDirectories(input: { sessionId: string; playlistPath: string | null }) {
   const directories = safePlaybackSessionArtifactDirectories(input);
   let cleaned = 0;
   for (const directory of directories) {
@@ -294,22 +251,14 @@ async function listOrphanedPlaybackSessionArtifactDirectories(
   return directories;
 }
 
-async function clearPlaybackSessionArtifacts(input: {
-  sessionId: string;
-  playlistPath: string | null;
-}) {
+async function clearPlaybackSessionArtifacts(input: { sessionId: string; playlistPath: string | null }) {
   const cleaned = await removeSafePlaybackSessionArtifactDirectories(input);
   const db = await getDb();
-  await db
-    .deleteFrom("playback_hls_artifact")
-    .where("playback_session_id", "=", input.sessionId)
-    .execute();
+  await db.deleteFrom("playback_hls_artifact").where("playback_session_id", "=", input.sessionId).execute();
   return cleaned;
 }
 
-export async function createTranscodeSession(
-  input: CreateTranscodeSessionInput,
-) {
+export async function createTranscodeSession(input: CreateTranscodeSessionInput) {
   const db = await getDb();
   const now = nowIso();
   const sessionId = randomUUID();
@@ -362,11 +311,7 @@ export async function updateTranscodeSessionStatus(
     values.finished_at = now;
   }
 
-  await db
-    .updateTable("playback_session")
-    .set(values)
-    .where("id", "=", sessionId)
-    .execute();
+  await db.updateTable("playback_session").set(values).where("id", "=", sessionId).execute();
 }
 
 export async function updateActiveTranscodeSessionStatus(
@@ -402,10 +347,7 @@ export async function updateActiveTranscodeSessionStatus(
   return Number(result.numUpdatedRows) > 0;
 }
 
-export async function updateTranscodeSessionMode(
-  sessionId: string,
-  mode: TranscodeMode,
-) {
+export async function updateTranscodeSessionMode(sessionId: string, mode: TranscodeMode) {
   const db = await getDb();
   const result = await db
     .updateTable("playback_session")
@@ -417,10 +359,7 @@ export async function updateTranscodeSessionMode(
   return Number(result.numUpdatedRows) > 0;
 }
 
-export async function updateTranscodeSessionPipeline(
-  sessionId: string,
-  pipeline: TranscodePipeline,
-) {
+export async function updateTranscodeSessionPipeline(sessionId: string, pipeline: TranscodePipeline) {
   const db = await getDb();
   const result = await db
     .updateTable("playback_session")
@@ -432,9 +371,7 @@ export async function updateTranscodeSessionPipeline(
   return Number(result.numUpdatedRows) > 0;
 }
 
-export async function registerTranscodeHlsArtifact(
-  input: RegisterTranscodeHlsArtifactInput,
-) {
+export async function registerTranscodeHlsArtifact(input: RegisterTranscodeHlsArtifactInput) {
   const db = await getDb();
   const now = nowIso();
   const existing = await db
@@ -478,10 +415,7 @@ export async function registerTranscodeHlsArtifact(
 
 export async function deleteTranscodeHlsArtifacts(sessionId: string) {
   const db = await getDb();
-  await db
-    .deleteFrom("playback_hls_artifact")
-    .where("playback_session_id", "=", sessionId)
-    .execute();
+  await db.deleteFrom("playback_hls_artifact").where("playback_session_id", "=", sessionId).execute();
 }
 
 export async function touchTranscodeSessionHeartbeat(
@@ -557,14 +491,10 @@ export async function listStaleActiveTranscodeSessions(
     .limit(limit)
     .execute();
 
-  return rows
-    .filter((row) => latestActivityAt(row) < cutoffIso)
-    .map((row) => ({ sessionId: row.sessionId }));
+  return rows.filter((row) => latestActivityAt(row) < cutoffIso).map((row) => ({ sessionId: row.sessionId }));
 }
 
-export async function listActiveTranscodeSessions(
-  limit = 100,
-): Promise<ActiveTranscodeSession[]> {
+export async function listActiveTranscodeSessions(limit = 100): Promise<ActiveTranscodeSession[]> {
   const db = await getDb();
   const rows = await db
     .selectFrom("playback_session")
@@ -585,11 +515,7 @@ export async function listIdleReadyHlsTranscodeSessions(
   const rows = await db
     .selectFrom("playback_session")
     .innerJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
     .select([
       "playback_session.id as sessionId",
@@ -614,18 +540,12 @@ export async function listIdleReadyHlsTranscodeSessions(
     .map((row) => ({ sessionId: row.sessionId }));
 }
 
-export async function listRunningHlsTranscodeSessions(
-  limit = 50,
-): Promise<RunningHlsTranscodeSession[]> {
+export async function listRunningHlsTranscodeSessions(limit = 50): Promise<RunningHlsTranscodeSession[]> {
   const db = await getDb();
   const rows = await db
     .selectFrom("playback_session")
     .innerJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
     .select([
       "playback_session.id as sessionId",
@@ -640,8 +560,7 @@ export async function listRunningHlsTranscodeSessions(
     .execute();
 
   return rows.filter(
-    (row): row is RunningHlsTranscodeSession =>
-      typeof row.playlistPath === "string" && row.playlistPath.length > 0,
+    (row): row is RunningHlsTranscodeSession => typeof row.playlistPath === "string" && row.playlistPath.length > 0,
   );
 }
 
@@ -654,11 +573,7 @@ export async function getAuthorizedHlsArtifact(
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
     .select([
       "playback_session.id as sessionId",
@@ -711,11 +626,7 @@ export async function findActiveHlsArtifact(
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
     .select([
       "playback_session.id as sessionId",
@@ -742,8 +653,7 @@ export async function findActiveHlsArtifact(
   const row = rows.find(
     (item) =>
       (startTimeSeconds === null ||
-        Math.abs(item.startTimeSeconds - startTimeSeconds) <=
-          ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS) &&
+        Math.abs(item.startTimeSeconds - startTimeSeconds) <= ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS) &&
       (item.status === "queued" || item.status === "running"),
   );
 
@@ -773,18 +683,12 @@ export async function findRecentFailedHlsPlayback(
   startTimeSeconds: number | null = 0,
 ): Promise<ActiveHlsArtifact | null> {
   const db = await getDb();
-  const failedPlaybackCutoff = new Date(
-    Date.now() - RECENT_FAILED_PLAYBACK_SESSION_MAX_IDLE_MS,
-  ).toISOString();
+  const failedPlaybackCutoff = new Date(Date.now() - RECENT_FAILED_PLAYBACK_SESSION_MAX_IDLE_MS).toISOString();
   const rows = await db
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
     .select([
       "playback_session.id as sessionId",
@@ -811,8 +715,7 @@ export async function findRecentFailedHlsPlayback(
   const row = rows.find(
     (item) =>
       startTimeSeconds === null ||
-      Math.abs(item.startTimeSeconds - startTimeSeconds) <=
-        ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS,
+      Math.abs(item.startTimeSeconds - startTimeSeconds) <= ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS,
   );
 
   return row
@@ -845,11 +748,7 @@ export async function listMismatchedActiveHlsArtifacts(
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
     .select([
       "playback_session.id as sessionId",
@@ -874,15 +773,12 @@ export async function listMismatchedActiveHlsArtifacts(
     .orderBy("playback_session.updated_at", "desc")
     .execute();
 
-  const endedArtifactCutoff = new Date(
-    Date.now() - ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS,
-  ).toISOString();
+  const endedArtifactCutoff = new Date(Date.now() - ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS).toISOString();
 
   return rows
     .filter(
       (item) =>
-        Math.abs(item.startTimeSeconds - startTimeSeconds) >
-          ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS &&
+        Math.abs(item.startTimeSeconds - startTimeSeconds) > ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS &&
         (item.status === "queued" ||
           item.status === "running" ||
           endedPlaybackArtifactActivityAt(item) >= endedArtifactCutoff),
@@ -904,19 +800,13 @@ export async function listMismatchedActiveHlsArtifacts(
     }));
 }
 
-export async function getTranscodeSession(
-  sessionId: string,
-): Promise<TranscodeSessionRecord | null> {
+export async function getTranscodeSession(sessionId: string): Promise<TranscodeSessionRecord | null> {
   const db = await getDb();
   const row = await db
     .selectFrom("playback_session")
     .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
     .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
     .select([
       "playback_session.id as sessionId",
@@ -957,16 +847,9 @@ export async function recoverInterruptedTranscodeSessions(
   const activeSessions = await db
     .selectFrom("playback_session")
     .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
-    .select([
-      "playback_session.id as sessionId",
-      "playback_hls_artifact.path as playlistPath",
-    ])
+    .select(["playback_session.id as sessionId", "playback_hls_artifact.path as playlistPath"])
     .where("playback_session.status", "in", ["queued", "running"])
     .execute();
 
@@ -974,11 +857,7 @@ export async function recoverInterruptedTranscodeSessions(
   let cleaned = 0;
 
   for (const session of activeSessions) {
-    await updateTranscodeSessionStatus(
-      session.sessionId,
-      "failed",
-      errorMessage,
-    );
+    await updateTranscodeSessionStatus(session.sessionId, "failed", errorMessage);
     cleaned += await clearPlaybackSessionArtifacts({
       sessionId: session.sessionId,
       playlistPath: session.playlistPath,
@@ -992,29 +871,17 @@ export async function recoverInterruptedTranscodeSessions(
 export async function cleanupExpiredPlaybackSessionArtifacts(
   maxAgeMs = DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_AGE_MS,
   maxBytes = DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
-  endedPlaybackArtifactMaxAgeMs = Math.min(
-    maxAgeMs,
-    ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS,
-  ),
+  endedPlaybackArtifactMaxAgeMs = Math.min(maxAgeMs, ENDED_PLAYBACK_ARTIFACT_MAX_IDLE_MS),
 ): Promise<CleanedPlaybackSessionArtifacts> {
   const db = await getDb();
   const cutoff = new Date(Date.now() - Math.max(0, maxAgeMs)).toISOString();
-  const endedPlaybackArtifactCutoff = new Date(
-    Date.now() - Math.max(0, endedPlaybackArtifactMaxAgeMs),
-  ).toISOString();
-  const knownSessionRows = await db
-    .selectFrom("playback_session")
-    .select("id")
-    .execute();
+  const endedPlaybackArtifactCutoff = new Date(Date.now() - Math.max(0, endedPlaybackArtifactMaxAgeMs)).toISOString();
+  const knownSessionRows = await db.selectFrom("playback_session").select("id").execute();
   const knownSessionIds = new Set(knownSessionRows.map((row) => row.id));
   const sessions = await db
     .selectFrom("playback_session")
     .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef(
-        "playback_hls_artifact.playback_session_id",
-        "=",
-        "playback_session.id",
-      ),
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
     .select([
       "playback_session.id as sessionId",
@@ -1024,27 +891,18 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
       "playback_session.last_heartbeat_at as lastHeartbeatAt",
       "playback_session.last_segment_request_at as lastSegmentRequestAt",
     ])
-    .where("playback_session.status", "in", [
-      "completed",
-      "failed",
-      "cancelled",
-    ])
+    .where("playback_session.status", "in", ["completed", "failed", "cancelled"])
     .orderBy("playback_session.updated_at", "asc")
     .execute();
 
   const cleanedSessionIds = new Set<string>();
   const cleanedOrphanDirectories = new Set<string>();
   let cleaned = 0;
-  const orphanDirectories =
-    await listOrphanedPlaybackSessionArtifactDirectories(knownSessionIds);
+  const orphanDirectories = await listOrphanedPlaybackSessionArtifactDirectories(knownSessionIds);
   const orphanCutoffMs = Date.now() - Math.max(0, maxAgeMs);
   for (const session of sessions.filter((item) => {
-    const sessionCutoff =
-      item.status === "completed" ? endedPlaybackArtifactCutoff : cutoff;
-    const activityAt =
-      item.status === "completed"
-        ? endedPlaybackArtifactActivityAt(item)
-        : latestActivityAt(item);
+    const sessionCutoff = item.status === "completed" ? endedPlaybackArtifactCutoff : cutoff;
+    const activityAt = item.status === "completed" ? endedPlaybackArtifactActivityAt(item) : latestActivityAt(item);
     return activityAt < sessionCutoff;
   })) {
     cleaned += await clearPlaybackSessionArtifacts({
@@ -1053,17 +911,13 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
     });
     cleanedSessionIds.add(session.sessionId);
   }
-  for (const orphan of orphanDirectories.filter(
-    (directory) => directory.mtimeMs < orphanCutoffMs,
-  )) {
+  for (const orphan of orphanDirectories.filter((directory) => directory.mtimeMs < orphanCutoffMs)) {
     await rm(orphan.directory, { recursive: true, force: true });
     cleanedOrphanDirectories.add(orphan.directory);
     cleaned += 1;
   }
 
-  const remaining = sessions.filter(
-    (session) => !cleanedSessionIds.has(session.sessionId),
-  );
+  const remaining = sessions.filter((session) => !cleanedSessionIds.has(session.sessionId));
   const sessionSizes = await Promise.all(
     remaining.map(async (session) => {
       let bytes = 0;
@@ -1079,18 +933,13 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
 
   let totalBytes =
     sessionSizes.reduce((total, session) => total + session.bytes, 0) +
-    remainingOrphanDirectories.reduce(
-      (total, directory) => total + directory.bytes,
-      0,
-    );
+    remainingOrphanDirectories.reduce((total, directory) => total + directory.bytes, 0);
   const byteLimit = Math.max(0, maxBytes);
   const artifactSizes = [
     ...sessionSizes.map((session) => ({
       kind: "session" as const,
       sortMs: Date.parse(
-        session.status === "completed"
-          ? endedPlaybackArtifactActivityAt(session)
-          : latestActivityAt(session),
+        session.status === "completed" ? endedPlaybackArtifactActivityAt(session) : latestActivityAt(session),
       ),
       bytes: session.bytes,
       session,
@@ -1125,8 +974,5 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
 export async function cleanupConfiguredPlaybackSessionArtifacts(
   maxAgeMs = DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_AGE_MS,
 ) {
-  return cleanupExpiredPlaybackSessionArtifacts(
-    maxAgeMs,
-    await getPlaybackSessionArtifactMaxBytes(),
-  );
+  return cleanupExpiredPlaybackSessionArtifacts(maxAgeMs, await getPlaybackSessionArtifactMaxBytes());
 }

@@ -32,7 +32,7 @@ export function parseRange(rangeHeader: string | null, size: number): ByteRange 
     if (!Number.isFinite(suffixLength) || suffixLength <= 0) return null;
     return {
       start: Math.max(size - suffixLength, 0),
-      end: size - 1
+      end: size - 1,
     };
   }
 
@@ -42,7 +42,7 @@ export function parseRange(rangeHeader: string | null, size: number): ByteRange 
 
   return {
     start,
-    end: Math.min(end, size - 1)
+    end: Math.min(end, size - 1),
   };
 }
 
@@ -58,14 +58,18 @@ type PreparedStream = {
   errorBody?: string;
 };
 
-async function prepareStream(file: StreamableMediaFile, rangeHeader: string | null, storage: LibraryStorage): Promise<PreparedStream> {
+async function prepareStream(
+  file: StreamableMediaFile,
+  rangeHeader: string | null,
+  storage: LibraryStorage,
+): Promise<PreparedStream> {
   const info = await storage.statFile(file.path);
   if (!info) {
     return {
       status: 404,
       headers: {},
       range: null,
-      errorBody: "Media file is no longer available"
+      errorBody: "Media file is no longer available",
     };
   }
   const size = info.size;
@@ -77,17 +81,17 @@ async function prepareStream(file: StreamableMediaFile, rangeHeader: string | nu
       status: 416,
       headers: {
         "content-range": `bytes */${size}`,
-        "accept-ranges": "bytes"
+        "accept-ranges": "bytes",
       },
       range: null,
-      errorBody: "Range not satisfiable"
+      errorBody: "Range not satisfiable",
     };
   }
 
   const commonHeaders = {
     "content-type": contentType,
     "accept-ranges": "bytes",
-    "content-disposition": inlineContentDisposition(file.basename)
+    "content-disposition": inlineContentDisposition(file.basename),
   };
 
   if (!range) {
@@ -95,9 +99,9 @@ async function prepareStream(file: StreamableMediaFile, rangeHeader: string | nu
       status: 200,
       headers: {
         ...commonHeaders,
-        "content-length": String(size)
+        "content-length": String(size),
       },
-      range: null
+      range: null,
     };
   }
 
@@ -106,19 +110,23 @@ async function prepareStream(file: StreamableMediaFile, rangeHeader: string | nu
     headers: {
       ...commonHeaders,
       "content-length": String(range.end - range.start + 1),
-      "content-range": `bytes ${range.start}-${range.end}/${size}`
+      "content-range": `bytes ${range.start}-${range.end}/${size}`,
     },
-    range
+    range,
   };
 }
 
-export async function streamFileResponse(file: StreamableMediaFile, rangeHeader: string | null, storage: LibraryStorage = createLocalStorage()) {
+export async function streamFileResponse(
+  file: StreamableMediaFile,
+  rangeHeader: string | null,
+  storage: LibraryStorage = createLocalStorage(),
+) {
   const prepared = await prepareStream(file, rangeHeader, storage);
   if (prepared.errorBody) {
     await storage.close();
     return new Response(prepared.errorBody, {
       status: prepared.status,
-      headers: prepared.headers
+      headers: prepared.headers,
     });
   }
 
@@ -132,31 +140,38 @@ export async function streamFileResponse(file: StreamableMediaFile, rangeHeader:
     }
     return new Response(Readable.toWeb(nodeStream) as unknown as BodyInit, {
       status: prepared.status,
-      headers: prepared.headers
+      headers: prepared.headers,
     });
   }
 
   const range = prepared.range;
   let nodeStream: Readable;
   try {
-    nodeStream = await storage.createReadStream(file.path, { start: range.start, end: range.end });
+    nodeStream = await storage.createReadStream(file.path, {
+      start: range.start,
+      end: range.end,
+    });
   } catch (error) {
     await storage.close();
     throw error;
   }
   return new Response(Readable.toWeb(nodeStream) as unknown as BodyInit, {
     status: prepared.status,
-    headers: prepared.headers
+    headers: prepared.headers,
   });
 }
 
-export async function streamFileHeadResponse(file: StreamableMediaFile, rangeHeader: string | null, storage: LibraryStorage = createLocalStorage()) {
+export async function streamFileHeadResponse(
+  file: StreamableMediaFile,
+  rangeHeader: string | null,
+  storage: LibraryStorage = createLocalStorage(),
+) {
   const prepared = await prepareStream(file, rangeHeader, storage);
   await storage.close();
 
   return new Response(null, {
     status: prepared.status,
-    headers: prepared.headers
+    headers: prepared.headers,
   });
 }
 

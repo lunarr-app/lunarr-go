@@ -1,9 +1,7 @@
 import { sql } from "kysely";
 import { currentDatabasePaths, getDb } from "./db";
 
-async function countRows(
-  table: "library" | "media_item" | "media_file" | "scan_job",
-) {
+async function countRows(table: "library" | "media_item" | "media_file" | "scan_job") {
   const db = await getDb();
   const row = await db
     .selectFrom(table)

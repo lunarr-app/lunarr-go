@@ -3,17 +3,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "../db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
-import {
-  refreshMovieMetadataResult,
-  runMovieMetadataRefreshJob,
-} from "./movies";
+import { refreshMovieMetadataResult, runMovieMetadataRefreshJob } from "./movies";
 import type { MatchedMovieMetadata } from "./tmdb";
 
 let tempDir: string;
@@ -89,10 +81,7 @@ afterEach(async () => {
 describe("refreshMovieMetadata", () => {
   test("refreshes stored movie metadata using the best parsed filename title", async () => {
     const calls: Array<{ title: string; year: number | null }> = [];
-    const matcher = async (
-      title: string,
-      year: number | null,
-    ): Promise<MatchedMovieMetadata | null> => {
+    const matcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
       calls.push({ title, year });
       return {
         provider: "tmdb",
@@ -117,11 +106,7 @@ describe("refreshMovieMetadata", () => {
     ).toBe("matched");
     expect(calls).toEqual([{ title: "The Matrix", year: 1999 }]);
 
-    const movie = await db
-      .selectFrom("media_item")
-      .selectAll()
-      .where("id", "=", "movie-1")
-      .executeTakeFirstOrThrow();
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
     expect(movie).toMatchObject({
       title: "The Matrix",
       sort_title: "matrix",
@@ -131,11 +116,7 @@ describe("refreshMovieMetadata", () => {
       runtime_seconds: 8160,
     });
     expect(
-      await db
-        .selectFrom("media_item_genre")
-        .select(["name"])
-        .where("media_item_id", "=", "movie-1")
-        .execute(),
+      await db.selectFrom("media_item_genre").select(["name"]).where("media_item_id", "=", "movie-1").execute(),
     ).toEqual([{ name: "Action" }]);
   });
 
@@ -150,10 +131,7 @@ describe("refreshMovieMetadata", () => {
       .execute();
 
     const calls: Array<{ title: string; year: number | null }> = [];
-    const matcher = async (
-      title: string,
-      year: number | null,
-    ): Promise<MatchedMovieMetadata | null> => {
+    const matcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
       calls.push({ title, year });
       return {
         provider: "tmdb",
@@ -177,11 +155,7 @@ describe("refreshMovieMetadata", () => {
     ).toBe("matched");
     expect(calls).toEqual([{ title: "Blade Runner", year: 1982 }]);
 
-    const movie = await db
-      .selectFrom("media_item")
-      .selectAll()
-      .where("id", "=", "movie-1")
-      .executeTakeFirstOrThrow();
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
     expect(movie).toMatchObject({
       title: "Blade Runner",
       year: 1982,
@@ -193,11 +167,7 @@ describe("refreshMovieMetadata", () => {
 
   test("refreshes movie metadata from filename when library root contains a year", async () => {
     const libraryRoot = path.join(tempDir, "Movies (2026)");
-    await db
-      .updateTable("library")
-      .set({ path: libraryRoot })
-      .where("id", "=", "library-1")
-      .execute();
+    await db.updateTable("library").set({ path: libraryRoot }).where("id", "=", "library-1").execute();
     await db
       .updateTable("media_file")
       .set({
@@ -208,10 +178,7 @@ describe("refreshMovieMetadata", () => {
       .execute();
 
     const calls: Array<{ title: string; year: number | null }> = [];
-    const matcher = async (
-      title: string,
-      year: number | null,
-    ): Promise<MatchedMovieMetadata | null> => {
+    const matcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
       calls.push({ title, year });
       return {
         provider: "tmdb",
@@ -334,11 +301,7 @@ describe("refreshMovieMetadata", () => {
 
     expect(status).toBe("matched");
     expect(
-      await db
-        .selectFrom("media_item")
-        .select("id")
-        .where("id", "=", "movie-1")
-        .executeTakeFirst(),
+      await db.selectFrom("media_item").select("id").where("id", "=", "movie-1").executeTakeFirst(),
     ).toBeUndefined();
 
     const providerMovie = await db
@@ -438,11 +401,7 @@ describe("refreshMovieMetadata", () => {
       poster_path: "/show.jpg",
     });
 
-    const movie = await db
-      .selectFrom("media_item")
-      .selectAll()
-      .where("id", "=", "movie-1")
-      .executeTakeFirstOrThrow();
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
     expect(movie).toMatchObject({
       kind: "movie",
       title: "The Matrix",
@@ -543,11 +502,7 @@ describe("refreshMovieMetadata", () => {
       runner_token: "other-runner",
     });
     expect(
-      await db
-        .selectFrom("scan_job_error")
-        .selectAll()
-        .where("scan_job_id", "=", "leased-metadata-job")
-        .execute(),
+      await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", "leased-metadata-job").execute(),
     ).toHaveLength(1);
   });
 

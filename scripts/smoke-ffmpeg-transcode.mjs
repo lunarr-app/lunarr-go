@@ -1,22 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  readFileSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  statSync,
-} from "node:fs";
+import { existsSync, readFileSync, mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import {
-  HARDWARE_ENCODERS,
-  hardwareModesToVerify,
-  verifyFfmpegPlaybackRequirements,
-} from "./verify-ffmpeg.mjs";
+import { HARDWARE_ENCODERS, hardwareModesToVerify, verifyFfmpegPlaybackRequirements } from "./verify-ffmpeg.mjs";
 
 export function runFfmpeg(binaryPath, args) {
   const result = spawnSync(binaryPath, args, {
@@ -134,10 +123,7 @@ function hardwareInputArgs(mode, env = process.env) {
     case "videotoolbox":
       return ["-hwaccel", "videotoolbox"];
     case "vaapi":
-      return [
-        "-vaapi_device",
-        env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128",
-      ];
+      return ["-vaapi_device", env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128"];
     case "qsv":
       return ["-hwaccel", "qsv"];
     case "nvenc":
@@ -149,11 +135,7 @@ function hardwareInputArgs(mode, env = process.env) {
   }
 }
 
-export function hardwareRuntimePrerequisiteErrors(
-  mode,
-  env = process.env,
-  existsPath = existsSync,
-) {
+export function hardwareRuntimePrerequisiteErrors(mode, env = process.env, existsPath = existsSync) {
   if (mode !== "vaapi") return [];
 
   const device = env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128";
@@ -172,16 +154,7 @@ function assertHardwareRuntimePrerequisites(mode, env = process.env) {
 
 function hardwareVideoArgs(mode) {
   const encoder = HARDWARE_ENCODERS[mode];
-  const common = [
-    "-b:v",
-    "2M",
-    "-g",
-    "30",
-    "-keyint_min",
-    "30",
-    "-force_key_frames",
-    "expr:gte(t,n_forced*1)",
-  ];
+  const common = ["-b:v", "2M", "-g", "30", "-keyint_min", "30", "-force_key_frames", "expr:gte(t,n_forced*1)"];
 
   switch (mode) {
     case "videotoolbox":
@@ -216,15 +189,8 @@ export function hardwareHlsSmokeArgs(input) {
   ];
 }
 
-export function hardwareSmokeModes(
-  env = process.env,
-  platform = process.platform,
-) {
-  return hardwareModesToVerify(
-    env.FFMPEG_SMOKE_HARDWARE,
-    platform,
-    "FFMPEG_SMOKE_HARDWARE",
-  );
+export function hardwareSmokeModes(env = process.env, platform = process.platform) {
+  return hardwareModesToVerify(env.FFMPEG_SMOKE_HARDWARE, platform, "FFMPEG_SMOKE_HARDWARE");
 }
 
 function assertGeneratedSegment(segmentPath) {
@@ -240,9 +206,7 @@ function assertEventPlaylistContainsSegment(playlistPath, segmentName) {
     throw new Error("FFmpeg did not publish an HLS event playlist.");
   }
   if (!playlist.includes(segmentName)) {
-    throw new Error(
-      `FFmpeg did not publish ${segmentName} in the HLS event playlist.`,
-    );
+    throw new Error(`FFmpeg did not publish ${segmentName} in the HLS event playlist.`);
   }
   if (!/^#EXTINF:[0-9]+(?:\.[0-9]+)?,/m.test(playlist)) {
     throw new Error("FFmpeg event playlist did not include segment timing.");
@@ -266,8 +230,7 @@ export function runSmoke(env = process.env) {
   const requirements = verifyFfmpegPlaybackRequirements({
     env: {
       ...env,
-      FFMPEG_VERIFY_HARDWARE:
-        env.FFMPEG_VERIFY_HARDWARE || env.FFMPEG_SMOKE_HARDWARE || "",
+      FFMPEG_VERIFY_HARDWARE: env.FFMPEG_VERIFY_HARDWARE || env.FFMPEG_SMOKE_HARDWARE || "",
     },
   });
   const directory = mkdtempSync(path.join(tmpdir(), "lunarr-ffmpeg-smoke-"));
@@ -320,10 +283,7 @@ export function runSmoke(env = process.env) {
         );
       }
       assertGeneratedSegment(hardware.firstSegmentPath);
-      assertEventPlaylistContainsSegment(
-        hardware.playlistPath,
-        "segment-00000.ts",
-      );
+      assertEventPlaylistContainsSegment(hardware.playlistPath, "segment-00000.ts");
     }
 
     console.log(requirements.versionLine);
@@ -337,9 +297,6 @@ export function runSmoke(env = process.env) {
   }
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   runSmoke();
 }

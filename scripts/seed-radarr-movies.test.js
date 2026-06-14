@@ -47,7 +47,7 @@ describe("Radarr movie fixture seeder", () => {
         fetcher: async (url) => {
           requests.push(url);
           return new Response(Buffer.from("sample mp4 bytes"));
-        }
+        },
       });
 
       const first = RADARR_MOVIE_FIXTURE[0];
@@ -59,7 +59,10 @@ describe("Radarr movie fixture seeder", () => {
       expect(await readFile(path.join(dir, second.dir, second.file), "utf8")).toBe("sample mp4 bytes");
     } finally {
       await rm(dir, { recursive: true, force: true });
-      await rm(path.resolve(dir, "..", ".sample-video-cache"), { recursive: true, force: true });
+      await rm(path.resolve(dir, "..", ".sample-video-cache"), {
+        recursive: true,
+        force: true,
+      });
     }
   });
 });

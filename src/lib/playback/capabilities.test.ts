@@ -32,11 +32,7 @@ describe("client playback capabilities", () => {
       "application/vnd.apple.mpegurl",
     ]);
 
-    expect(
-      detectClientPlaybackCapabilities((type) =>
-        positiveTypes.has(type) ? "probably" : "",
-      ),
-    ).toEqual({
+    expect(detectClientPlaybackCapabilities((type) => (positiveTypes.has(type) ? "probably" : ""))).toEqual({
       hevc: true,
       av1: true,
       vp9: true,

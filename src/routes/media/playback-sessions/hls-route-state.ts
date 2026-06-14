@@ -1,8 +1,5 @@
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
-import {
-  cancelPlaybackSession,
-  TRANSCODING_DISABLED_MESSAGE,
-} from "$lib/server/transcoding/manager";
+import { cancelPlaybackSession, TRANSCODING_DISABLED_MESSAGE } from "$lib/server/transcoding/manager";
 import {
   getAuthorizedHlsArtifact,
   isEndedPlaybackArtifactFresh,
@@ -35,14 +32,18 @@ export async function currentPlayableHlsArtifact(
     return (
       options.cancelledResponse?.(artifact) ??
       json(
-        { error: playbackRouteError(artifact.errorMessage ?? "Playback session is not playable.") },
+        {
+          error: playbackRouteError(artifact.errorMessage ?? "Playback session is not playable."),
+        },
         { status: 409 },
       )
     );
   }
   if (artifact.status === "failed") {
     return json(
-      { error: playbackRouteError(artifact.errorMessage ?? "Playback session is not playable.") },
+      {
+        error: playbackRouteError(artifact.errorMessage ?? "Playback session is not playable."),
+      },
       { status: 409 },
     );
   }
@@ -57,10 +58,7 @@ export async function currentPlayableHlsArtifact(
     return json({ error: "Playback session is not ready." }, { status: 409 });
   }
   if (artifact.status === "completed" && !isEndedPlaybackArtifactFresh(artifact)) {
-    return json(
-      { error: "Ended playback session is no longer active." },
-      { status: 410 },
-    );
+    return json({ error: "Ended playback session is no longer active." }, { status: 410 });
   }
   if (!artifact.playlistPath) {
     return json({ error: "Playback session is not ready." }, { status: 409 });
@@ -75,10 +73,7 @@ export function hlsArtifactChangedResponse(
   artifact: "playlist" | "segment",
 ) {
   if (current.playlistPath === previousPlaylistPath) return null;
-  return json(
-    { error: `Playback session changed while serving ${artifact}.` },
-    { status: 409 },
-  );
+  return json({ error: `Playback session changed while serving ${artifact}.` }, { status: 409 });
 }
 
 export async function currentUnchangedPlayableHlsArtifact(input: {
@@ -88,16 +83,9 @@ export async function currentUnchangedPlayableHlsArtifact(input: {
   artifact: "playlist" | "segment";
   options?: CurrentPlayableHlsArtifactOptions;
 }): Promise<PlayableHlsArtifact | Response> {
-  const current = await currentPlayableHlsArtifact(
-    input.sessionId,
-    input.userId,
-    input.options,
-  );
+  const current = await currentPlayableHlsArtifact(input.sessionId, input.userId, input.options);
   if (current instanceof Response) return current;
-  return (
-    hlsArtifactChangedResponse(current, input.playlistPath, input.artifact) ??
-    current
-  );
+  return hlsArtifactChangedResponse(current, input.playlistPath, input.artifact) ?? current;
 }
 
 export async function hlsFailedActivityResponse(input: {
@@ -112,8 +100,5 @@ export async function hlsFailedActivityResponse(input: {
   const current = await currentUnchangedPlayableHlsArtifact(input);
   if (current instanceof Response) return current;
   if (input.allowCompleted && current.status === "completed") return null;
-  return json(
-    { error: input.notReadyMessage ?? "Playback session is not ready." },
-    { status: 409 },
-  );
+  return json({ error: input.notReadyMessage ?? "Playback session is not ready." }, { status: 409 });
 }

@@ -9,14 +9,7 @@ describe("media rails", () => {
   });
 
   test("orders two-row rails so visual rows read left to right", () => {
-    expect(twoRowRailOrder([1, 2, 3, 4, 5, 6], 5)).toEqual([
-      1,
-      4,
-      2,
-      5,
-      3,
-      6,
-    ]);
+    expect(twoRowRailOrder([1, 2, 3, 4, 5, 6], 5)).toEqual([1, 4, 2, 5, 3, 6]);
     expect(twoRowRailOrder([1, 2, 3, 4, 5], 5)).toEqual([1, 4, 2, 5, 3]);
   });
 });

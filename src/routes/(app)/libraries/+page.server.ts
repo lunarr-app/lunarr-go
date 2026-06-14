@@ -7,11 +7,7 @@ import {
   updateLibrary,
   updateLibraryAccess,
 } from "$lib/server/libraries";
-import {
-  libraryFormState,
-  parseCreateLibraryInput,
-  parseUpdateLibraryInput,
-} from "$lib/server/libraries/input";
+import { libraryFormState, parseCreateLibraryInput, parseUpdateLibraryInput } from "$lib/server/libraries/input";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
 import { startScan } from "$lib/server/scanner";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
@@ -46,8 +42,7 @@ export const actions: Actions = {
     } catch (error) {
       return fail(400, {
         ...state,
-        addError:
-          error instanceof Error ? error.message : "Could not add library.",
+        addError: error instanceof Error ? error.message : "Could not add library.",
       });
     }
 
@@ -60,15 +55,13 @@ export const actions: Actions = {
       return fail(403, {
         libraryActionError: "Only admins can scan libraries.",
       });
-    if (!libraryId)
-      return fail(400, { libraryActionError: "Library is required." });
+    if (!libraryId) return fail(400, { libraryActionError: "Library is required." });
 
     try {
       await startScan(libraryId);
     } catch (error) {
       return fail(400, {
-        libraryActionError:
-          error instanceof Error ? error.message : "Could not start scan.",
+        libraryActionError: error instanceof Error ? error.message : "Could not start scan.",
       });
     }
 
@@ -81,8 +74,7 @@ export const actions: Actions = {
       return fail(403, {
         libraryActionError: "Only admins can edit libraries.",
       });
-    if (!libraryId)
-      return fail(400, { libraryActionError: "Library is required." });
+    if (!libraryId) return fail(400, { libraryActionError: "Library is required." });
 
     try {
       await updateLibrary(libraryId, parseUpdateLibraryInput(form));
@@ -90,8 +82,7 @@ export const actions: Actions = {
       await syncScheduledLibraryScans();
     } catch (error) {
       return fail(400, {
-        libraryActionError:
-          error instanceof Error ? error.message : "Could not update library.",
+        libraryActionError: error instanceof Error ? error.message : "Could not update library.",
       });
     }
 
@@ -104,8 +95,7 @@ export const actions: Actions = {
       return fail(403, {
         libraryActionError: "Only admins can remove libraries.",
       });
-    if (!libraryId)
-      return fail(400, { libraryActionError: "Library is required." });
+    if (!libraryId) return fail(400, { libraryActionError: "Library is required." });
 
     try {
       await deleteLibrary(libraryId);
@@ -113,8 +103,7 @@ export const actions: Actions = {
       await syncScheduledLibraryScans();
     } catch (error) {
       return fail(400, {
-        libraryActionError:
-          error instanceof Error ? error.message : "Could not remove library.",
+        libraryActionError: error instanceof Error ? error.message : "Could not remove library.",
       });
     }
 
@@ -129,17 +118,13 @@ export const actions: Actions = {
       return fail(403, {
         libraryActionError: "Only admins can share libraries.",
       });
-    if (!libraryId)
-      return fail(400, { libraryActionError: "Library is required." });
+    if (!libraryId) return fail(400, { libraryActionError: "Library is required." });
 
     try {
       await updateLibraryAccess(libraryId, accessMode, userIds);
     } catch (error) {
       return fail(400, {
-        libraryActionError:
-          error instanceof Error
-            ? error.message
-            : "Could not update library sharing.",
+        libraryActionError: error instanceof Error ? error.message : "Could not update library sharing.",
       });
     }
 

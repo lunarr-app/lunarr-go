@@ -9,14 +9,17 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
   try {
     const body = await readJsonBody(request);
-    const fileId = typeof body === "object" && body ? String((body as { mediaFileId?: unknown }).mediaFileId ?? "") : "";
+    const fileId =
+      typeof body === "object" && body ? String((body as { mediaFileId?: unknown }).mediaFileId ?? "") : "";
     if (!fileId) return json({ error: "File is required." }, { status: 400 });
 
     await markWatched({
       userId: user.id,
       mediaItemId: params.id,
       mediaFileId: fileId,
-      completed: booleanFromJson(typeof body === "object" && body ? (body as { completed?: unknown }).completed : undefined)
+      completed: booleanFromJson(
+        typeof body === "object" && body ? (body as { completed?: unknown }).completed : undefined,
+      ),
     });
   } catch (error) {
     return jsonError(error, "Could not update watched status.");

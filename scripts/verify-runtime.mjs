@@ -6,8 +6,7 @@ import { runSmoke } from "./smoke-ffmpeg-transcode.mjs";
 import { runNodeAvProbeVerification } from "./verify-nodeav-probe.mjs";
 
 export function runtimeVerificationEnv(env = process.env) {
-  const hardwareMode =
-    env.FFMPEG_SMOKE_HARDWARE || env.LUNARR_VERIFY_HARDWARE || "";
+  const hardwareMode = env.FFMPEG_SMOKE_HARDWARE || env.LUNARR_VERIFY_HARDWARE || "";
   if (!hardwareMode) return env;
 
   return {
@@ -17,25 +16,18 @@ export function runtimeVerificationEnv(env = process.env) {
   };
 }
 
-export async function runRuntimeVerification(
-  env = process.env,
-  dependencies = {},
-) {
+export async function runRuntimeVerification(env = process.env, dependencies = {}) {
   const effectiveEnv = runtimeVerificationEnv(env);
   const log = dependencies.log ?? console.log;
-  const verifyFfmpeg =
-    dependencies.verifyFfmpeg ?? verifyFfmpegPlaybackRequirements;
+  const verifyFfmpeg = dependencies.verifyFfmpeg ?? verifyFfmpegPlaybackRequirements;
   const smokeFfmpeg = dependencies.smokeFfmpeg ?? runSmoke;
-  const verifyNodeAv =
-    dependencies.verifyNodeAv ?? runNodeAvProbeVerification;
+  const verifyNodeAv = dependencies.verifyNodeAv ?? runNodeAvProbeVerification;
 
   const ffmpeg = verifyFfmpeg({ env: effectiveEnv });
   log(ffmpeg.versionLine);
   log("FFmpeg playback requirements verified.");
   if (ffmpeg.hardwareEncoders.length > 0) {
-    log(
-      `FFmpeg hardware playback encoders verified: ${ffmpeg.hardwareEncoders.join(", ")}.`,
-    );
+    log(`FFmpeg hardware playback encoders verified: ${ffmpeg.hardwareEncoders.join(", ")}.`);
   }
 
   smokeFfmpeg(effectiveEnv);
@@ -43,9 +35,6 @@ export async function runRuntimeVerification(
   log("Lunarr playback runtime verification passed.");
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await runRuntimeVerification();
 }

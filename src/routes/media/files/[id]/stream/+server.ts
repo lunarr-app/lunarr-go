@@ -4,18 +4,11 @@ import {
   verifySignedPlaybackToken,
   withSignedPlaybackHeaders,
 } from "$lib/server/playback/signed-token";
-import {
-  mediaStreamHeadResponse,
-  mediaStreamResponse,
-} from "$lib/server/media/stream";
+import { mediaStreamHeadResponse, mediaStreamResponse } from "$lib/server/media/stream";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
-function authorizedUserId(input: {
-  localsUserId?: string;
-  mediaFileId: string;
-  token: string | null;
-}) {
+function authorizedUserId(input: { localsUserId?: string; mediaFileId: string; token: string | null }) {
   if (input.localsUserId) return { userId: input.localsUserId, signed: false };
   const payload = verifySignedPlaybackToken(input.token, {
     route: "direct",
@@ -34,20 +27,11 @@ export const GET: RequestHandler = async ({ params, request, locals, url }) => {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const response = await mediaStreamResponse(
-    params.id,
-    auth.userId,
-    request.headers.get("range"),
-  );
+  const response = await mediaStreamResponse(params.id, auth.userId, request.headers.get("range"));
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 
-export const HEAD: RequestHandler = async ({
-  params,
-  request,
-  locals,
-  url,
-}) => {
+export const HEAD: RequestHandler = async ({ params, request, locals, url }) => {
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     mediaFileId: params.id,
@@ -57,13 +41,8 @@ export const HEAD: RequestHandler = async ({
     return new Response(null, { status: 401 });
   }
 
-  const response = await mediaStreamHeadResponse(
-    params.id,
-    auth.userId,
-    request.headers.get("range"),
-  );
+  const response = await mediaStreamHeadResponse(params.id, auth.userId, request.headers.get("range"));
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 
-export const OPTIONS: RequestHandler = async () =>
-  signedPlaybackOptionsResponse();
+export const OPTIONS: RequestHandler = async () => signedPlaybackOptionsResponse();

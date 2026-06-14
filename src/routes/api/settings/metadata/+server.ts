@@ -9,9 +9,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 
   try {
     const body = await readJsonBody(request);
-    await updateMetadataSettings(
-      typeof body === "object" && body ? (body as Record<string, unknown>) : {},
-    );
+    await updateMetadataSettings(typeof body === "object" && body ? (body as Record<string, unknown>) : {});
 
     return json({ ok: true });
   } catch (error) {

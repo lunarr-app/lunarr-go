@@ -62,25 +62,13 @@ describe("HLS helpers", () => {
   test("detects fMP4 playlists from init maps and segment names", () => {
     expect(
       hlsPlaylistBodySegmentFormat(
-        [
-          "#EXTM3U",
-          "#EXT-X-VERSION:7",
-          '#EXT-X-MAP:URI="init.mp4"',
-          "#EXTINF:16.000,",
-          "segment-00000.m4s",
-          "",
-        ].join("\n"),
+        ["#EXTM3U", "#EXT-X-VERSION:7", '#EXT-X-MAP:URI="init.mp4"', "#EXTINF:16.000,", "segment-00000.m4s", ""].join(
+          "\n",
+        ),
       ),
     ).toBe("fmp4");
     expect(
-      hlsPlaylistBodySegmentFormat(
-        [
-          "#EXTM3U",
-          "#EXTINF:16.000,",
-          "segments/segment-00000.ts",
-          "",
-        ].join("\n"),
-      ),
+      hlsPlaylistBodySegmentFormat(["#EXTM3U", "#EXTINF:16.000,", "segments/segment-00000.ts", ""].join("\n")),
     ).toBe("mpegts");
   });
 
@@ -98,9 +86,7 @@ describe("HLS helpers", () => {
       "",
     ].join("\n");
 
-    expect(
-      hlsPlaylistSegmentEntries(playlist, "/tmp/lunarr/master.m3u8"),
-    ).toEqual([
+    expect(hlsPlaylistSegmentEntries(playlist, "/tmp/lunarr/master.m3u8")).toEqual([
       {
         segment: "segment-00010.ts",
         segmentIndex: 10,
@@ -187,12 +173,12 @@ describe("HLS helpers", () => {
       ),
     ).toBe(
       [
-          "#EXTM3U",
-          '#EXT-X-MAP:URI="../init.mp4"',
-          '#EXT-X-KEY:METHOD=AES-128,URI="segment-00000.ts"',
-          '#EXT-X-SESSION-DATA:DATA-ID="com.example",URI="metadata.json"',
-          "#EXTINF:16.000,",
-          "segments/segment-00000.ts",
+        "#EXTM3U",
+        '#EXT-X-MAP:URI="../init.mp4"',
+        '#EXT-X-KEY:METHOD=AES-128,URI="segment-00000.ts"',
+        '#EXT-X-SESSION-DATA:DATA-ID="com.example",URI="metadata.json"',
+        "#EXTINF:16.000,",
+        "segments/segment-00000.ts",
         "",
       ].join("\n"),
     );

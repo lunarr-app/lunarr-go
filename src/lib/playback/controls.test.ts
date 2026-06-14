@@ -168,12 +168,8 @@ describe("custom player controls", () => {
   });
 
   test("exposes player keyboard shortcuts based on available controls", () => {
-    expect(playerKeyboardShortcuts({ hasSubtitleTracks: false })).toBe(
-      "Space K ArrowLeft ArrowRight F M",
-    );
-    expect(playerKeyboardShortcuts({ hasSubtitleTracks: true })).toBe(
-      "Space K ArrowLeft ArrowRight F M C",
-    );
+    expect(playerKeyboardShortcuts({ hasSubtitleTracks: false })).toBe("Space K ArrowLeft ArrowRight F M");
+    expect(playerKeyboardShortcuts({ hasSubtitleTracks: true })).toBe("Space K ArrowLeft ArrowRight F M C");
   });
 
   test("repositions HLS only when seeking before the current stream start", () => {
@@ -493,9 +489,7 @@ describe("custom player controls", () => {
   test("guards AirPlay controls behind WebKit picker availability", () => {
     const picker = () => undefined;
     expect(hasAirPlayPicker({ showPlaybackTargetPicker: picker })).toBe(true);
-    expect(hasAirPlayPicker({ showPlaybackTargetPicker: undefined })).toBe(
-      false,
-    );
+    expect(hasAirPlayPicker({ showPlaybackTargetPicker: undefined })).toBe(false);
     expect(
       airPlayAvailableFromEvent({
         canShowPicker: true,
@@ -517,15 +511,9 @@ describe("custom player controls", () => {
   });
 
   test("maps AirPlay wireless target state and labels", () => {
-    expect(
-      airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: true }),
-    ).toBe(true);
-    expect(
-      airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: false }),
-    ).toBe(false);
-    expect(
-      airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: undefined }),
-    ).toBe(false);
+    expect(airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: true })).toBe(true);
+    expect(airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: false })).toBe(false);
+    expect(airPlayActiveFromVideo({ currentPlaybackTargetIsWireless: undefined })).toBe(false);
     expect(airPlayControlLabel({ active: false })).toBe("AirPlay");
     expect(airPlayControlLabel({ active: true })).toBe("AirPlay connected");
   });

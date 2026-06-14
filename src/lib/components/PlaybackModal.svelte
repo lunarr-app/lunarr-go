@@ -4,10 +4,7 @@
   import { page } from "$app/state";
   import MediaPlayer from "$lib/components/MediaPlayer.svelte";
   import PlayerShell from "$lib/components/PlayerShell.svelte";
-  import {
-    appendClientPlaybackCapabilityParams,
-    detectClientPlaybackCapabilities,
-  } from "$lib/playback/capabilities";
+  import { appendClientPlaybackCapabilityParams, detectClientPlaybackCapabilities } from "$lib/playback/capabilities";
   import { shouldClosePlaybackModalOnKeydown } from "$lib/playback/controls";
   import type { PlaybackData } from "$lib/server/playback";
 
@@ -18,19 +15,12 @@
   let modalPanel: HTMLDivElement | null = $state(null);
   let progressInvalidationTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const mediaItemId = $derived(
-    page.url.searchParams.get("play")?.trim() || null,
-  );
+  const mediaItemId = $derived(page.url.searchParams.get("play")?.trim() || null);
   const modalOpen = $derived(Boolean(mediaItemId));
-  const playbackRequestHref = $derived.by(() =>
-    mediaItemId ? playbackApiHref(mediaItemId, page.url) : null,
-  );
+  const playbackRequestHref = $derived.by(() => (mediaItemId ? playbackApiHref(mediaItemId, page.url) : null));
 
   function playbackApiHref(id: string, sourceUrl: URL) {
-    const apiUrl = new URL(
-      `/api/playback/${encodeURIComponent(id)}`,
-      sourceUrl.origin,
-    );
+    const apiUrl = new URL(`/api/playback/${encodeURIComponent(id)}`, sourceUrl.origin);
     for (const key of ["file", "start", "transcode", "target"]) {
       const value = sourceUrl.searchParams.get(key);
       if (value) apiUrl.searchParams.set(key, value);
@@ -49,9 +39,7 @@
 
   function canUseFmp4MediaSource() {
     if (!("MediaSource" in window)) return false;
-    return window.MediaSource.isTypeSupported(
-      'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
-    );
+    return window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
   }
 
   function closeHref(sourceUrl = page.url) {
@@ -120,14 +108,10 @@
       .catch((fetchError) => {
         if (controller.signal.aborted) return;
         playbackData = null;
-        error =
-          fetchError instanceof Error
-            ? fetchError.message
-            : "Playback could not be started.";
+        error = fetchError instanceof Error ? fetchError.message : "Playback could not be started.";
       })
       .finally(() => {
-        if (!controller.signal.aborted && token === reloadToken)
-          loading = false;
+        if (!controller.signal.aborted && token === reloadToken) loading = false;
       });
 
     return () => controller.abort();
@@ -162,8 +146,7 @@
   <div
     class="overlay"
     role="presentation"
-    onpointerdown={(event) =>
-      event.target === event.currentTarget && closeModal()}
+    onpointerdown={(event) => event.target === event.currentTarget && closeModal()}
   >
     <div
       class="modal"
@@ -188,11 +171,7 @@
             <p>{error}</p>
           </section>
         {:else}
-          <PlayerShell
-            title="Starting playback"
-            busyLabel="Starting playback"
-            onClose={closeModal}
-          />
+          <PlayerShell title="Starting playback" busyLabel="Starting playback" onClose={closeModal} />
         {/if}
       </div>
     </div>

@@ -16,35 +16,19 @@ function valueFromAny(input: LibraryInputSource, keys: string[]) {
   return null;
 }
 
-export function stringValue(
-  input: LibraryInputSource,
-  key: string,
-  fallback = "",
-) {
+export function stringValue(input: LibraryInputSource, key: string, fallback = "") {
   return String(valueFrom(input, key) ?? fallback).trim();
 }
 
-export function rawStringValue(
-  input: LibraryInputSource,
-  key: string,
-  fallback = "",
-) {
+export function rawStringValue(input: LibraryInputSource, key: string, fallback = "") {
   return String(valueFrom(input, key) ?? fallback);
 }
 
-export function numberValue(
-  input: LibraryInputSource,
-  key: string,
-  fallback: number,
-) {
+export function numberValue(input: LibraryInputSource, key: string, fallback: number) {
   return Number(valueFrom(input, key) || fallback);
 }
 
-function booleanValue(
-  input: LibraryInputSource,
-  keys: string[],
-  fallback: boolean,
-) {
+function booleanValue(input: LibraryInputSource, keys: string[], fallback: boolean) {
   const value = valueFromAny(input, keys);
   if (value === null || value === undefined || value === "") return fallback;
   if (typeof value === "boolean") return value;
@@ -53,10 +37,7 @@ function booleanValue(
   return normalized === "1" || normalized === "true" || normalized === "on" || normalized === "yes";
 }
 
-function optionalNumberValue(
-  input: LibraryInputSource,
-  keys: string[],
-) {
+function optionalNumberValue(input: LibraryInputSource, keys: string[]) {
   const value = valueFromAny(input, keys);
   if (value === null || value === undefined || value === "") return null;
   return Number(value);
@@ -69,9 +50,7 @@ function automationInput(input: LibraryInputSource) {
   };
 }
 
-export function parseCreateLibraryInput(
-  input: LibraryInputSource,
-): CreateLibraryInput {
+export function parseCreateLibraryInput(input: LibraryInputSource): CreateLibraryInput {
   const source = stringValue(input, "source", "local");
   const kind = stringValue(input, "kind", "movie") === "tv" ? "tv" : "movie";
   const name = stringValue(input, "name");
@@ -102,9 +81,7 @@ export function parseCreateLibraryInput(
   };
 }
 
-export function parseUpdateLibraryInput(
-  input: LibraryInputSource,
-): UpdateLibraryInput {
+export function parseUpdateLibraryInput(input: LibraryInputSource): UpdateLibraryInput {
   const source = stringValue(input, "source", "local");
   const name = stringValue(input, "name");
   const automation = automationInput(input);

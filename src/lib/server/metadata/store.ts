@@ -1,10 +1,23 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../db/schema";
-import type { MatchedMovieMetadata, MatchedTvEpisodeMetadata, MatchedTvSeasonMetadata, MatchedTvShowMetadata } from "./tmdb";
+import type {
+  MatchedMovieMetadata,
+  MatchedTvEpisodeMetadata,
+  MatchedTvSeasonMetadata,
+  MatchedTvShowMetadata,
+} from "./tmdb";
 
 type MediaMetadataRelations = Pick<
   MatchedMovieMetadata,
-  "provider" | "genres" | "cast" | "crew" | "videos" | "keywords" | "productionCompanies" | "productionCountries" | "spokenLanguages"
+  | "provider"
+  | "genres"
+  | "cast"
+  | "crew"
+  | "videos"
+  | "keywords"
+  | "productionCompanies"
+  | "productionCountries"
+  | "spokenLanguages"
 >;
 
 export function movieMetadataValues(metadata: MatchedMovieMetadata, updatedAt: string) {
@@ -37,7 +50,7 @@ export function movieMetadataValues(metadata: MatchedMovieMetadata, updatedAt: s
     provider_id: metadata.providerId,
     popularity: metadata.popularity,
     vote_average: metadata.voteAverage,
-    updated_at: updatedAt
+    updated_at: updatedAt,
   };
 }
 
@@ -67,7 +80,7 @@ export function emptyMovieMetadataValues() {
     provider: null,
     provider_id: null,
     popularity: null,
-    vote_average: null
+    vote_average: null,
   };
 }
 
@@ -101,7 +114,7 @@ export function tvShowMetadataValues(metadata: MatchedTvShowMetadata, updatedAt:
     provider_id: metadata.providerId,
     popularity: metadata.popularity,
     vote_average: metadata.voteAverage,
-    updated_at: updatedAt
+    updated_at: updatedAt,
   };
 }
 
@@ -137,7 +150,7 @@ export function tvSeasonMetadataValues(metadata: MatchedTvSeasonMetadata, update
     provider_id: metadata.providerId,
     popularity: null,
     vote_average: metadata.voteAverage,
-    updated_at: updatedAt
+    updated_at: updatedAt,
   };
 }
 
@@ -173,7 +186,7 @@ export function tvEpisodeMetadataValues(metadata: MatchedTvEpisodeMetadata, upda
     provider_id: metadata.providerId,
     popularity: null,
     vote_average: metadata.voteAverage,
-    updated_at: updatedAt
+    updated_at: updatedAt,
   };
 }
 
@@ -187,11 +200,19 @@ export async function clearMovieMetadataRelations(db: Kysely<Database>, mediaIte
   await db.deleteFrom("media_item_spoken_language").where("media_item_id", "=", mediaItemId).execute();
 }
 
-export async function syncMovieMetadataRelations(db: Kysely<Database>, mediaItemId: string, metadata: MatchedMovieMetadata) {
+export async function syncMovieMetadataRelations(
+  db: Kysely<Database>,
+  mediaItemId: string,
+  metadata: MatchedMovieMetadata,
+) {
   await syncMediaMetadataRelations(db, mediaItemId, metadata);
 }
 
-export async function syncTvShowMetadataRelations(db: Kysely<Database>, mediaItemId: string, metadata: MatchedTvShowMetadata) {
+export async function syncTvShowMetadataRelations(
+  db: Kysely<Database>,
+  mediaItemId: string,
+  metadata: MatchedTvShowMetadata,
+) {
   await syncMediaMetadataRelations(db, mediaItemId, metadata);
 }
 
@@ -216,8 +237,8 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
           provider: metadata.provider,
           provider_id: genre.providerId,
           name: genre.name,
-          position: index
-        }))
+          position: index,
+        })),
       )
       .execute();
   }
@@ -235,7 +256,7 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
       credit_order: credit.order,
       department: null,
       job: null,
-      character_name: credit.character
+      character_name: credit.character,
     })),
     ...crew.map((credit) => ({
       media_item_id: mediaItemId,
@@ -249,8 +270,8 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
       credit_order: credit.order,
       department: credit.department,
       job: credit.job,
-      character_name: null
-    }))
+      character_name: null,
+    })),
   ];
 
   if (credits.length) {
@@ -270,8 +291,8 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
           video_key: video.key,
           video_type: video.type,
           official: video.official ? 1 : 0,
-          published_at: video.publishedAt
-        }))
+          published_at: video.publishedAt,
+        })),
       )
       .execute();
   }
@@ -284,8 +305,8 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
           media_item_id: mediaItemId,
           provider: metadata.provider,
           provider_id: keyword.providerId,
-          name: keyword.name
-        }))
+          name: keyword.name,
+        })),
       )
       .execute();
   }
@@ -300,8 +321,8 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
           provider_id: company.providerId,
           name: company.name,
           logo_path: company.logoPath,
-          origin_country: company.originCountry
-        }))
+          origin_country: company.originCountry,
+        })),
       )
       .execute();
   }
@@ -313,8 +334,8 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
         productionCountries.map((country) => ({
           media_item_id: mediaItemId,
           iso_3166_1: country.iso31661,
-          name: country.name
-        }))
+          name: country.name,
+        })),
       )
       .execute();
   }
@@ -327,8 +348,8 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
           media_item_id: mediaItemId,
           iso_639_1: language.iso6391,
           english_name: language.englishName,
-          name: language.name
-        }))
+          name: language.name,
+        })),
       )
       .execute();
   }

@@ -62,12 +62,8 @@ describe("signed playback tokens", () => {
   });
 
   test("appends tokens without dropping existing query params", () => {
-    expect(appendSignedPlaybackToken("/media/file", "abc")).toBe(
-      "/media/file?remoteToken=abc",
-    );
-    expect(appendSignedPlaybackToken("/media/file?download=0", "abc")).toBe(
-      "/media/file?download=0&remoteToken=abc",
-    );
+    expect(appendSignedPlaybackToken("/media/file", "abc")).toBe("/media/file?remoteToken=abc");
+    expect(appendSignedPlaybackToken("/media/file?download=0", "abc")).toBe("/media/file?download=0&remoteToken=abc");
   });
 
   test("adds receiver headers and disables caching only for signed playback", () => {

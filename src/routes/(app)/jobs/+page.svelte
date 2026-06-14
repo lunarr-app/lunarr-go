@@ -13,7 +13,7 @@
 
   const hasActiveJobs = $derived(
     data.jobs.some((job) => job.status === "queued" || job.status === "running") ||
-      data.playbackSessions.some((job) => job.status === "queued" || job.status === "running")
+      data.playbackSessions.some((job) => job.status === "queued" || job.status === "running"),
   );
   const errorsByJob = $derived.by(() => {
     const grouped = new Map<string, typeof data.errors>();
@@ -28,7 +28,7 @@
     running: "Running",
     completed: "Completed",
     failed: "Failed",
-    cancelled: "Cancelled"
+    cancelled: "Cancelled",
   };
 
   const playbackStatusLabel: Record<PlaybackSession["status"], string> = {
@@ -36,7 +36,7 @@
     running: "Active",
     completed: "Ended",
     failed: "Failed",
-    cancelled: "Cancelled"
+    cancelled: "Cancelled",
   };
 
   function displayStatus(job: Job) {
@@ -51,7 +51,7 @@
     if (!value) return "Not yet";
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
-      timeStyle: "short"
+      timeStyle: "short",
     }).format(new Date(value));
   }
 
@@ -151,11 +151,26 @@
       <h2>Scans</h2>
     </div>
     <dl>
-      <div><dt>Active</dt><dd>{data.summary.active}</dd></div>
-      <div><dt>Completed</dt><dd>{data.summary.completed}</dd></div>
-      <div><dt>Failed</dt><dd>{data.summary.failed}</dd></div>
-      <div><dt>Cancelled</dt><dd>{data.summary.cancelled}</dd></div>
-      <div><dt>Errors</dt><dd>{data.summary.errors}</dd></div>
+      <div>
+        <dt>Active</dt>
+        <dd>{data.summary.active}</dd>
+      </div>
+      <div>
+        <dt>Completed</dt>
+        <dd>{data.summary.completed}</dd>
+      </div>
+      <div>
+        <dt>Failed</dt>
+        <dd>{data.summary.failed}</dd>
+      </div>
+      <div>
+        <dt>Cancelled</dt>
+        <dd>{data.summary.cancelled}</dd>
+      </div>
+      <div>
+        <dt>Errors</dt>
+        <dd>{data.summary.errors}</dd>
+      </div>
     </dl>
   </article>
 
@@ -165,11 +180,26 @@
       <h2>Playback</h2>
     </div>
     <dl>
-      <div><dt>Active</dt><dd>{data.playbackSessionSummary.active}</dd></div>
-      <div><dt>Ended</dt><dd>{data.playbackSessionSummary.completed}</dd></div>
-      <div><dt>Failed</dt><dd>{data.playbackSessionSummary.failed}</dd></div>
-      <div><dt>Cancelled</dt><dd>{data.playbackSessionSummary.cancelled}</dd></div>
-      <div><dt>Errors</dt><dd>{data.playbackSessionSummary.errors}</dd></div>
+      <div>
+        <dt>Active</dt>
+        <dd>{data.playbackSessionSummary.active}</dd>
+      </div>
+      <div>
+        <dt>Ended</dt>
+        <dd>{data.playbackSessionSummary.completed}</dd>
+      </div>
+      <div>
+        <dt>Failed</dt>
+        <dd>{data.playbackSessionSummary.failed}</dd>
+      </div>
+      <div>
+        <dt>Cancelled</dt>
+        <dd>{data.playbackSessionSummary.cancelled}</dd>
+      </div>
+      <div>
+        <dt>Errors</dt>
+        <dd>{data.playbackSessionSummary.errors}</dd>
+      </div>
     </dl>
   </article>
 </section>
@@ -180,7 +210,9 @@
       <div class="ops-panel-header">
         <div>
           <h2>Scan jobs</h2>
-          <p class="muted">Latest {data.jobs.length} scans and metadata refreshes.</p>
+          <p class="muted">
+            Latest {data.jobs.length} scans and metadata refreshes.
+          </p>
         </div>
       </div>
 
@@ -204,10 +236,15 @@
               </div>
               {#if jobErrors.length}
                 <details class="job-errors">
-                  <summary><FileWarning size={15} aria-hidden="true" /> {jobErrors.length} recent {jobErrors.length === 1 ? "error" : "errors"}</summary>
+                  <summary
+                    ><FileWarning size={15} aria-hidden="true" />
+                    {jobErrors.length} recent {jobErrors.length === 1 ? "error" : "errors"}</summary
+                  >
                   <div>
                     {#each jobErrors.slice(0, 3) as item}
-                      <p><strong>{item.path}</strong><span>{item.message}</span></p>
+                      <p>
+                        <strong>{item.path}</strong><span>{item.message}</span>
+                      </p>
                     {/each}
                   </div>
                 </details>
@@ -253,7 +290,9 @@
       <div class="ops-panel-header">
         <div>
           <h2>Playback sessions</h2>
-          <p class="muted">Latest {data.playbackSessions.length} HLS playback sessions.</p>
+          <p class="muted">
+            Latest {data.playbackSessions.length} HLS playback sessions.
+          </p>
         </div>
       </div>
 

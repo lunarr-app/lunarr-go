@@ -12,11 +12,7 @@ type BeaconNavigator = {
 type KeepaliveFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export function activePlaybackSessionId(playback: PlaybackSessionLike) {
-  if (
-    (playback.mode !== "transcode" && playback.mode !== "remux") ||
-    !playback.playbackSessionId
-  )
-    return null;
+  if ((playback.mode !== "transcode" && playback.mode !== "remux") || !playback.playbackSessionId) return null;
   return playback.playbackSessionId;
 }
 
@@ -36,7 +32,7 @@ export function postWithBeaconFallback(input: {
       method: "POST",
       headers: input.headers,
       body,
-      keepalive: true
+      keepalive: true,
     })
     .catch(() => undefined);
   return "fetch";
@@ -57,7 +53,7 @@ export function cancelPlaybackSessionOnce(input: {
     url: `/api/playback-sessions/${encodeURIComponent(sessionId)}/cancel`,
     body: new Blob([], { type: "application/json" }),
     navigatorRef: input.navigatorRef,
-    fetchFn: input.fetchFn
+    fetchFn: input.fetchFn,
   });
 }
 
@@ -81,8 +77,5 @@ export function shouldInvalidateAfterHeartbeat(input: {
 }) {
   if (input.ok) return false;
   if (input.cancelledPlaybackSessions.has(input.sessionId)) return false;
-  return (
-    input.currentPathname === input.requestPathname &&
-    input.currentSearch === input.requestSearch
-  );
+  return input.currentPathname === input.requestPathname && input.currentSearch === input.requestSearch;
 }

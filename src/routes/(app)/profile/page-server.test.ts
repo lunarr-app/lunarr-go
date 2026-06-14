@@ -3,19 +3,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { auth } from "$lib/server/auth";
 import { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
-import {
-  createApiKeyForUser,
-  resetAuthForTests,
-  sessionHeadersFor,
-} from "$lib/server/auth/test/setup";
+import { createApiKeyForUser, resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
 
 const testUser = {
@@ -143,21 +134,9 @@ describe("profile page server", () => {
       "/profile",
     );
 
-    expect(
-      await getTranscodePolicy("user-1").then(
-        (policy) => policy.playbackPreference,
-      ),
-    ).toBe("prefer_transcode");
-    expect(
-      await getTranscodePolicy("user-1").then(
-        (policy) => policy.preferredAudioLanguage,
-      ),
-    ).toBe("jpn");
-    expect(
-      await getTranscodePolicy("user-1").then(
-        (policy) => policy.preferredSubtitleLanguage,
-      ),
-    ).toBe("eng");
+    expect(await getTranscodePolicy("user-1").then((policy) => policy.playbackPreference)).toBe("prefer_transcode");
+    expect(await getTranscodePolicy("user-1").then((policy) => policy.preferredAudioLanguage)).toBe("jpn");
+    expect(await getTranscodePolicy("user-1").then((policy) => policy.preferredSubtitleLanguage)).toBe("eng");
   });
 
   test("normalizes invalid playback preference values", async () => {
@@ -175,11 +154,7 @@ describe("profile page server", () => {
       "/profile",
     );
 
-    expect(
-      await getTranscodePolicy("user-1").then(
-        (policy) => policy.playbackPreference,
-      ),
-    ).toBe("auto");
+    expect(await getTranscodePolicy("user-1").then((policy) => policy.playbackPreference)).toBe("auto");
   });
 
   test("rejects playback preference writes without a user", async () => {
@@ -217,8 +192,7 @@ describe("profile page server", () => {
     } as never);
 
     expect(result).toMatchObject({
-      apiKeySuccess:
-        "API key created. Copy it now; it will not be shown again.",
+      apiKeySuccess: "API key created. Copy it now; it will not be shown again.",
       createdApiKey: {
         name: "Android phone",
         expiresAt: expect.any(String),
@@ -345,11 +319,7 @@ describe("profile page server", () => {
     );
 
     const db = await getDb();
-    const user = await db
-      .selectFrom("user")
-      .select(["name"])
-      .where("id", "=", "user-1")
-      .executeTakeFirstOrThrow();
+    const user = await db.selectFrom("user").select(["name"]).where("id", "=", "user-1").executeTakeFirstOrThrow();
     expect(user.name).toBe("Amina Khan");
   });
 

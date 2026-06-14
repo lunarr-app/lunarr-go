@@ -7,10 +7,14 @@
 
   let {
     children,
-    user
+    user,
   }: {
     children: Snippet;
-    user: { name?: string | null; email?: string | null; role?: string | null } | null;
+    user: {
+      name?: string | null;
+      email?: string | null;
+      role?: string | null;
+    } | null;
   } = $props();
 
   let accountMenuOpen = $state(false);
@@ -21,16 +25,16 @@
   const primaryNav = $derived([
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
-    { href: "/continue", label: "Continue", icon: Clock3 }
+    { href: "/continue", label: "Continue", icon: Clock3 },
   ]);
   const adminNav = $derived(
     user?.role === "admin"
       ? [
           { href: "/libraries", label: "Libraries", icon: Library },
           { href: "/jobs", label: "Jobs", icon: Activity },
-          { href: "/settings", label: "Settings", icon: Settings }
+          { href: "/settings", label: "Settings", icon: Settings },
         ]
-      : []
+      : [],
   );
   const desktopAdminNav = $derived(adminNav.filter((item) => item.href === "/libraries" || item.href === "/jobs"));
   const playbackRequested = $derived(Boolean(page.url.searchParams.get("play")?.trim()));
@@ -135,7 +139,12 @@
             {#if adminNav.length}
               {#each adminNav as item}
                 {@const Icon = item.icon}
-                <a class:mobile-only-admin={item.href === "/libraries" || item.href === "/jobs"} role="menuitem" href={item.href} onclick={closeAccountMenu}>
+                <a
+                  class:mobile-only-admin={item.href === "/libraries" || item.href === "/jobs"}
+                  role="menuitem"
+                  href={item.href}
+                  onclick={closeAccountMenu}
+                >
                   <Icon size={16} aria-hidden="true" />
                   <span>{item.label}</span>
                 </a>

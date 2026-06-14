@@ -1,0 +1,8 @@
+node_modules
+.svelte-kit
+build
+dist
+coverage
+package-lock.json
+bun.lock
+static/images

@@ -20,7 +20,12 @@
   });
 </script>
 
-<a class:has-progress={hasProgress} class="episode" {href} aria-label={`${episode.showTitle}, ${numberLabel}, ${episode.title}`}>
+<a
+  class:has-progress={hasProgress}
+  class="episode"
+  {href}
+  aria-label={`${episode.showTitle}, ${numberLabel}, ${episode.title}`}
+>
   <div class="still">
     {#if episode.stillUrl}
       <img src={episode.stillUrl} alt="" loading="lazy" />

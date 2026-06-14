@@ -21,14 +21,14 @@ export const actions: Actions = {
         userId: locals.user!.id,
         mediaItemId: params.id,
         mediaFileId: fileId,
-        completed
+        completed,
       });
     } catch (error) {
       return fail(400, {
-        error: error instanceof Error ? error.message : "Could not update watched status."
+        error: error instanceof Error ? error.message : "Could not update watched status.",
       });
     }
 
     throw redirect(303, `/episodes/${params.id}`);
-  }
+  },
 };

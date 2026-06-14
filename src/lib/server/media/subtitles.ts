@@ -16,12 +16,13 @@ export async function getExternalMovieSubtitleTrack(id: string, userId: string) 
       "subtitle_track.mime_type",
       "subtitle_track.label",
       "library.source",
-      "library.config_json"
+      "library.config_json",
     ])
     .where("subtitle_track.id", "=", id)
     .where("subtitle_track.source_kind", "=", "external")
     .where("media_item.kind", "in", ["movie", "episode"])
-    .where(sql<boolean>`(
+    .where(
+      sql<boolean>`(
       exists (
         select 1 from user
         where user.id = ${userId}
@@ -33,7 +34,8 @@ export async function getExternalMovieSubtitleTrack(id: string, userId: string) 
         where library_user.library_id = media_file.library_id
           and library_user.user_id = ${userId}
       )
-    )`)
+    )`,
+    )
     .executeTakeFirst();
 }
 
@@ -51,7 +53,7 @@ export async function externalMovieSubtitleResponse(id: string, userId: string, 
   const headers = {
     "content-type": track.mime_type ?? "text/vtt",
     "content-length": String(info.size),
-    "content-disposition": inlineContentDisposition(track.label)
+    "content-disposition": inlineContentDisposition(track.label),
   };
 
   if (!includeBody) {
@@ -67,6 +69,6 @@ export async function externalMovieSubtitleResponse(id: string, userId: string, 
     throw error;
   }
   return new Response(Readable.toWeb(stream) as unknown as BodyInit, {
-    headers
+    headers,
   });
 }

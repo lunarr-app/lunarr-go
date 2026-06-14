@@ -52,15 +52,9 @@ function moduleDataUrl(source) {
 }
 
 async function compiledControlModuleDataUrl() {
-  const seekSource = await readFile(
-    path.join(root, "src/lib/playback/seek.ts"),
-    "utf8",
-  );
+  const seekSource = await readFile(path.join(root, "src/lib/playback/seek.ts"), "utf8");
   const seekModuleUrl = moduleDataUrl(transpileModule(seekSource, "seek.ts"));
-  const controlsSource = await readFile(
-    path.join(root, "src/lib/playback/controls.ts"),
-    "utf8",
-  );
+  const controlsSource = await readFile(path.join(root, "src/lib/playback/controls.ts"), "utf8");
   const controlsModule = transpileModule(controlsSource, "controls.ts").replace(
     /from\s+["']\.\/seek["'];/g,
     `from "${seekModuleUrl}";`,
@@ -76,10 +70,7 @@ async function mediaPlayerStyle() {
 }
 
 async function mediaPlayerSource() {
-  return readFile(
-    path.join(root, "src/lib/components/MediaPlayer.svelte"),
-    "utf8",
-  );
+  return readFile(path.join(root, "src/lib/components/MediaPlayer.svelte"), "utf8");
 }
 
 function assertMediaPlayerSourceContract(source) {
@@ -88,9 +79,7 @@ function assertMediaPlayerSourceContract(source) {
     throw new Error("MediaPlayer.svelte video element was not found.");
   }
   if (/\bcontrols\b/.test(videoTag[1])) {
-    throw new Error(
-      "MediaPlayer.svelte ready video element must not expose native controls.",
-    );
+    throw new Error("MediaPlayer.svelte ready video element must not expose native controls.");
   }
 
   for (const requiredSnippet of [
@@ -108,12 +97,10 @@ function assertMediaPlayerSourceContract(source) {
     '"webkitcurrentplaybacktargetiswirelesschanged"',
     "airPlayTargetPickerAction({",
     "{#if airPlayButton.visible}",
-    "<Airplay size={20} aria-hidden=\"true\" />",
+    '<Airplay size={20} aria-hidden="true" />',
   ]) {
     if (!source.includes(requiredSnippet)) {
-      throw new Error(
-        `MediaPlayer.svelte is missing required custom player markup: ${requiredSnippet}`,
-      );
+      throw new Error(`MediaPlayer.svelte is missing required custom player markup: ${requiredSnippet}`);
     }
   }
 }
@@ -264,10 +251,7 @@ try {
         message: "Expected player shell focus to accept keyboard shortcuts.",
       };
     }
-    if (
-      player.getAttribute("aria-keyshortcuts") !==
-      "Space K ArrowLeft ArrowRight F M C"
-    ) {
+    if (player.getAttribute("aria-keyshortcuts") !== "Space K ArrowLeft ArrowRight F M C") {
       return {
         ok: false,
         message: `Expected player shell to expose keyboard shortcuts, got ${player.getAttribute("aria-keyshortcuts")}.`,
@@ -276,8 +260,7 @@ try {
     if (
       player.getAttribute("role") !== "region" ||
       player.getAttribute("aria-roledescription") !== "video player" ||
-      player.getAttribute("aria-label") !==
-        "Video player for Smoke Test Playback Title"
+      player.getAttribute("aria-label") !== "Video player for Smoke Test Playback Title"
     ) {
       return {
         ok: false,
@@ -295,8 +278,7 @@ try {
     ) {
       return {
         ok: false,
-        message:
-          "Expected video tap target to be a presentational, non-tabbable layer.",
+        message: "Expected video tap target to be a presentational, non-tabbable layer.",
       };
     }
     const surfaceFeedbackStyle = getComputedStyle(surfaceFeedback);
@@ -318,8 +300,7 @@ try {
     if (document.activeElement !== player) {
       return {
         ok: false,
-        message:
-          "Expected tapping the video surface to focus the player shell for keyboard shortcuts.",
+        message: "Expected tapping the video surface to focus the player shell for keyboard shortcuts.",
       };
     }
     if (controls.shouldHandlePlayerShortcut(playButton)) {
@@ -382,8 +363,7 @@ try {
       skipWidth: skipButton.getBoundingClientRect().width,
       playInBottomCluster: primaryControls.contains(playButton),
       oldCenterControlsPresent: document.querySelector(".center-controls") !== null,
-      bottomControlsOffset:
-        playerRect.bottom - bottomControlsRect.bottom,
+      bottomControlsOffset: playerRect.bottom - bottomControlsRect.bottom,
       seekAboveControls: seekSliderRect.bottom <= controlRowRect.top,
     };
     if (
@@ -434,8 +414,7 @@ try {
     ) {
       return {
         ok: false,
-        message:
-          "Expected player Escape to close an open subtitle menu before focused controls suppress shortcuts.",
+        message: "Expected player Escape to close an open subtitle menu before focused controls suppress shortcuts.",
       };
     }
 
@@ -538,44 +517,34 @@ try {
       controlsFocused: false,
       controlsHovered: true,
     });
-    if (
-      !focusedControlsVisible ||
-      focusedAutoHide ||
-      !hoveredControlsVisible ||
-      hoveredAutoHide
-    ) {
+    if (!focusedControlsVisible || focusedAutoHide || !hoveredControlsVisible || hoveredAutoHide) {
       return {
         ok: false,
         message: `Expected focused and hovered controls to stay visible, got ${JSON.stringify({ focusedControlsVisible, focusedAutoHide, hoveredControlsVisible, hoveredAutoHide })}.`,
       };
     }
-    if (
-      controls.nextControlsActivityTick(0) !== 1 ||
-      controls.nextControlsActivityTick(Number.NaN) !== 1
-    ) {
+    if (controls.nextControlsActivityTick(0) !== 1 || controls.nextControlsActivityTick(Number.NaN) !== 1) {
       return {
         ok: false,
         message: "Expected controls activity ticks to advance safely.",
       };
     }
-    const hiddenPlayingPointerMove =
-      controls.shouldShowCustomControls({
-        controlsVisible: false,
-        uiState: "playing",
-        casting: false,
-        subtitleMenuOpen: false,
-        controlsFocused: false,
-        controlsHovered: false,
-      });
-    const visiblePlayingPointerMove =
-      controls.shouldShowCustomControls({
-        controlsVisible: true,
-        uiState: "playing",
-        casting: false,
-        subtitleMenuOpen: false,
-        controlsFocused: false,
-        controlsHovered: false,
-      });
+    const hiddenPlayingPointerMove = controls.shouldShowCustomControls({
+      controlsVisible: false,
+      uiState: "playing",
+      casting: false,
+      subtitleMenuOpen: false,
+      controlsFocused: false,
+      controlsHovered: false,
+    });
+    const visiblePlayingPointerMove = controls.shouldShowCustomControls({
+      controlsVisible: true,
+      uiState: "playing",
+      casting: false,
+      subtitleMenuOpen: false,
+      controlsFocused: false,
+      controlsHovered: false,
+    });
     if (hiddenPlayingPointerMove || !visiblePlayingPointerMove) {
       return {
         ok: false,
@@ -587,10 +556,7 @@ try {
       controlsVisible: true,
       subtitleMenuOpen: true,
     });
-    if (
-      !surfaceClickWithSubtitleMenu.controlsVisible ||
-      surfaceClickWithSubtitleMenu.subtitleMenuOpen
-    ) {
+    if (!surfaceClickWithSubtitleMenu.controlsVisible || surfaceClickWithSubtitleMenu.subtitleMenuOpen) {
       return {
         ok: false,
         message: `Expected surface click to close subtitle menu before hiding controls, got ${JSON.stringify(surfaceClickWithSubtitleMenu)}.`,
@@ -769,11 +735,9 @@ try {
     const standardFullscreenAction = controls.fullscreenAction({
       documentFullscreen: false,
       canExitDocumentFullscreen: typeof document.exitFullscreen === "function",
-      canRequestDocumentFullscreen:
-        typeof player.requestFullscreen === "function",
+      canRequestDocumentFullscreen: typeof player.requestFullscreen === "function",
       canEnterVideoFullscreen:
-        typeof video.webkitEnterFullscreen === "function" ||
-        typeof video.webkitEnterFullScreen === "function",
+        typeof video.webkitEnterFullscreen === "function" || typeof video.webkitEnterFullScreen === "function",
     });
     if (standardFullscreenAction !== "enter-document") {
       return {
@@ -841,9 +805,7 @@ try {
       hoverStyle.backgroundColor !== "rgba(0, 204, 255, 0.14)" ||
       hoverStyle.color !== "rgb(0, 204, 255)"
     ) {
-      throw new Error(
-        `Expected ${selector} hover to use the app primary color, got ${JSON.stringify(hoverStyle)}.`,
-      );
+      throw new Error(`Expected ${selector} hover to use the app primary color, got ${JSON.stringify(hoverStyle)}.`);
     }
   }
 
@@ -889,15 +851,7 @@ try {
     const primaryControls = document.querySelector(".primary-controls");
     const skipButton = document.querySelector(".skip-button");
     const seekSlider = document.querySelector(".seek-slider");
-    if (
-      !player ||
-      !volumeSlider ||
-      !playerTitle ||
-      !playButton ||
-      !primaryControls ||
-      !skipButton ||
-      !seekSlider
-    ) {
+    if (!player || !volumeSlider || !playerTitle || !playButton || !primaryControls || !skipButton || !seekSlider) {
       return {
         ok: false,
         message: "Custom player mobile smoke DOM was not created.",
@@ -936,9 +890,7 @@ try {
   });
 
   assertResult(mobileResult);
-  console.log(
-    `Browser custom player smoke passed with ${path.basename(executablePath)}.`,
-  );
+  console.log(`Browser custom player smoke passed with ${path.basename(executablePath)}.`);
 } finally {
   await browser.close();
 }

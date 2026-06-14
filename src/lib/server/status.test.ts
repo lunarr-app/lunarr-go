@@ -3,12 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from "./db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "./db";
 import type { Database } from "./db/schema";
 import { getServerStatus } from "./status";
 
@@ -172,12 +167,7 @@ describe("getServerStatus", () => {
           id: "file-2",
           library_id: "library-2",
           media_item_id: "episode-1",
-          path: path.join(
-            tempDir,
-            "Playable Show",
-            "Season 01",
-            "Playable.Show.S01E01.mp4",
-          ),
+          path: path.join(tempDir, "Playable Show", "Season 01", "Playable.Show.S01E01.mp4"),
           basename: "Playable.Show.S01E01.mp4",
           extension: ".mp4",
           size_bytes: 10,

@@ -45,29 +45,17 @@ function episodeSortTitle(seasonNumber: number, episodeNumber: number) {
   return `s${seasonNumber.toString().padStart(3, "0")}e${episodeNumber.toString().padStart(4, "0")}`;
 }
 
-async function mergeChildItems(
-  oldParentId: string,
-  newParentId: string,
-  now: string,
-) {
+async function mergeChildItems(oldParentId: string, newParentId: string, now: string) {
   const db = await getDb();
   await db
     .updateTable("media_item")
     .set({ parent_id: newParentId, updated_at: now })
     .where("parent_id", "=", oldParentId)
     .execute();
-  await db
-    .deleteFrom("media_item")
-    .where("id", "=", oldParentId)
-    .where("provider", "is", null)
-    .execute();
+  await db.deleteFrom("media_item").where("id", "=", oldParentId).where("provider", "is", null).execute();
 }
 
-async function moveEpisodeAssociations(
-  oldMediaItemId: string,
-  newMediaItemId: string,
-  now: string,
-) {
+async function moveEpisodeAssociations(oldMediaItemId: string, newMediaItemId: string, now: string) {
   if (oldMediaItemId === newMediaItemId) return;
 
   const db = await getDb();
@@ -87,10 +75,7 @@ async function moveEpisodeAssociations(
       .executeTakeFirst();
 
     if (existingProgress) {
-      if (
-        new Date(progress.updated_at).getTime() >=
-        new Date(existingProgress.updated_at).getTime()
-      ) {
+      if (new Date(progress.updated_at).getTime() >= new Date(existingProgress.updated_at).getTime()) {
         await db
           .updateTable("watch_progress")
           .set({
@@ -132,18 +117,10 @@ async function moveEpisodeAssociations(
     .set({ media_item_id: newMediaItemId, updated_at: now })
     .where("media_item_id", "=", oldMediaItemId)
     .execute();
-  await db
-    .deleteFrom("media_item")
-    .where("id", "=", oldMediaItemId)
-    .where("provider", "is", null)
-    .execute();
+  await db.deleteFrom("media_item").where("id", "=", oldMediaItemId).where("provider", "is", null).execute();
 }
 
-async function upsertShowMetadata(
-  currentShowId: string,
-  metadata: MatchedTvShowMetadata,
-  now: string,
-) {
+async function upsertShowMetadata(currentShowId: string, metadata: MatchedTvShowMetadata, now: string) {
   const db = await getDb();
   const values = {
     ...tvShowMetadataValues(metadata, now),
@@ -163,11 +140,7 @@ async function upsertShowMetadata(
     .executeTakeFirst();
   const targetId = providerExisting?.id ?? currentShowId;
 
-  await db
-    .updateTable("media_item")
-    .set(values)
-    .where("id", "=", targetId)
-    .execute();
+  await db.updateTable("media_item").set(values).where("id", "=", targetId).execute();
   await syncTvShowMetadataRelations(db, targetId, metadata);
   if (providerExisting) await mergeChildItems(currentShowId, targetId, now);
 
@@ -197,21 +170,13 @@ async function upsertSeasonMetadata(
     .executeTakeFirst();
   const targetId = providerExisting?.id ?? currentSeasonId;
 
-  await db
-    .updateTable("media_item")
-    .set(values)
-    .where("id", "=", targetId)
-    .execute();
+  await db.updateTable("media_item").set(values).where("id", "=", targetId).execute();
   if (providerExisting) await mergeChildItems(currentSeasonId, targetId, now);
 
   return targetId;
 }
 
-async function upsertEpisodeMetadata(
-  seasonId: string,
-  metadata: MatchedTvEpisodeMetadata,
-  now: string,
-) {
+async function upsertEpisodeMetadata(seasonId: string, metadata: MatchedTvEpisodeMetadata, now: string) {
   const db = await getDb();
   const values = {
     ...tvEpisodeMetadataValues(metadata, now),
@@ -237,11 +202,7 @@ async function upsertEpisodeMetadata(
     .executeTakeFirst();
 
   if (providerExisting) {
-    await db
-      .updateTable("media_item")
-      .set(values)
-      .where("id", "=", providerExisting.id)
-      .execute();
+    await db.updateTable("media_item").set(values).where("id", "=", providerExisting.id).execute();
     if (localExisting && localExisting.id !== providerExisting.id) {
       await moveEpisodeAssociations(localExisting.id, providerExisting.id, now);
     }
@@ -249,11 +210,7 @@ async function upsertEpisodeMetadata(
   }
 
   if (localExisting) {
-    await db
-      .updateTable("media_item")
-      .set(values)
-      .where("id", "=", localExisting.id)
-      .execute();
+    await db.updateTable("media_item").set(values).where("id", "=", localExisting.id).execute();
     return { id: localExisting.id, created: false };
   }
 
@@ -285,25 +242,15 @@ export async function refreshTvSeasonMetadataResult(
     .where("show.kind", "=", "show")
     .executeTakeFirst();
 
-  if (!season || season.season_number === null)
-    return { status: "missing", addedEpisodes: 0 };
+  if (!season || season.season_number === null) return { status: "missing", addedEpisodes: 0 };
 
   const metadataMatcher = options.metadataMatcher ?? matchTvSeasonMetadata;
-  const metadata = await metadataMatcher(
-    season.show_title,
-    season.show_year,
-    season.season_number,
-  );
+  const metadata = await metadataMatcher(season.show_title, season.show_year, season.season_number);
   if (!metadata) return { status: "unmatched", addedEpisodes: 0 };
 
   const now = nowIso();
   const showId = await upsertShowMetadata(season.show_id, metadata.show, now);
-  const updatedSeasonId = await upsertSeasonMetadata(
-    showId,
-    season.id,
-    metadata.season,
-    now,
-  );
+  const updatedSeasonId = await upsertSeasonMetadata(showId, season.id, metadata.season, now);
   let addedEpisodes = 0;
   for (const episode of metadata.episodes) {
     const result = await upsertEpisodeMetadata(updatedSeasonId, episode, now);
@@ -313,11 +260,7 @@ export async function refreshTvSeasonMetadataResult(
   return { status: "matched", addedEpisodes };
 }
 
-async function addMetadataJobError(
-  jobId: string,
-  item: string,
-  error: unknown,
-) {
+async function addMetadataJobError(jobId: string, item: string, error: unknown) {
   const db = await getDb();
   await db
     .insertInto("scan_job_error")
@@ -355,7 +298,11 @@ async function updateMetadataJob(
     .set({
       ...values,
       ...(terminalStatus
-        ? { checkpoint_value: null, runner_token: null, runner_heartbeat_at: null }
+        ? {
+            checkpoint_value: null,
+            runner_token: null,
+            runner_heartbeat_at: null,
+          }
         : runnerToken
           ? { runner_heartbeat_at: now }
           : {}),
@@ -380,11 +327,7 @@ async function getActiveTvMetadataJobId() {
 
 async function isMetadataJobCancellationRequested(jobId: string) {
   const db = await getDb();
-  const job = await db
-    .selectFrom("scan_job")
-    .select("cancel_requested_at")
-    .where("id", "=", jobId)
-    .executeTakeFirst();
+  const job = await db.selectFrom("scan_job").select("cancel_requested_at").where("id", "=", jobId).executeTakeFirst();
   return Boolean(job?.cancel_requested_at);
 }
 
@@ -428,10 +371,7 @@ async function createTvMetadataRefreshJob() {
   return { id, existing: false };
 }
 
-export async function runTvMetadataRefreshJob(
-  jobId: string,
-  options: RefreshTvMetadataOptions = {},
-) {
+export async function runTvMetadataRefreshJob(jobId: string, options: RefreshTvMetadataOptions = {}) {
   if (runningTvMetadataJobs.has(jobId)) return;
   runningTvMetadataJobs.add(jobId);
 
@@ -445,11 +385,7 @@ export async function runTvMetadataRefreshJob(
   let waitingForCheckpoint = false;
 
   try {
-    const job = await db
-      .selectFrom("scan_job")
-      .selectAll()
-      .where("id", "=", jobId)
-      .executeTakeFirst();
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirst();
     if (!job || (job.status !== "queued" && job.status !== "running")) return;
 
     const startedAt = job.started_at ?? nowIso();
@@ -491,12 +427,7 @@ export async function runTvMetadataRefreshJob(
     const seasons = await db
       .selectFrom("media_item as season")
       .innerJoin("media_item as show", "show.id", "season.parent_id")
-      .select([
-        "season.id",
-        "season.title",
-        "season.season_number",
-        "show.title as show_title",
-      ])
+      .select(["season.id", "season.title", "season.season_number", "show.title as show_title"])
       .where("season.kind", "=", "season")
       .where("show.kind", "=", "show")
       .where("season.season_number", "is not", null)
@@ -511,26 +442,34 @@ export async function runTvMetadataRefreshJob(
       errors = 0;
       resumeCheckpoint = null;
       await db.deleteFrom("scan_job_error").where("scan_job_id", "=", jobId).execute();
-      await updateMetadataJob(jobId, {
-        files_seen: 0,
-        files_added: 0,
-        files_updated: 0,
-        errors_count: 0,
-        checkpoint_value: null,
-      }, runnerToken);
+      await updateMetadataJob(
+        jobId,
+        {
+          files_seen: 0,
+          files_added: 0,
+          files_updated: 0,
+          errors_count: 0,
+          checkpoint_value: null,
+        },
+        runnerToken,
+      );
     }
     waitingForCheckpoint = resumeCheckpoint !== null;
 
     for (const season of seasons) {
       if (await isMetadataJobCancellationRequested(jobId)) {
-        await updateMetadataJob(jobId, {
-          status: "cancelled",
-          finished_at: nowIso(),
-          files_seen: seen,
-          files_added: addedEpisodes,
-          files_updated: matched,
-          errors_count: errors,
-        }, runnerToken);
+        await updateMetadataJob(
+          jobId,
+          {
+            status: "cancelled",
+            finished_at: nowIso(),
+            files_seen: seen,
+            files_added: addedEpisodes,
+            files_updated: matched,
+            errors_count: errors,
+          },
+          runnerToken,
+        );
         return;
       }
 
@@ -548,39 +487,41 @@ export async function runTvMetadataRefreshJob(
         }
       } catch (error) {
         errors += 1;
-        await addMetadataJobError(
-          jobId,
-          `${season.show_title} ${season.title}`,
-          error,
-        );
+        await addMetadataJobError(jobId, `${season.show_title} ${season.title}`, error);
       }
 
-      await updateMetadataJob(jobId, {
+      await updateMetadataJob(
+        jobId,
+        {
+          files_seen: seen,
+          files_added: addedEpisodes,
+          files_updated: matched,
+          errors_count: errors,
+          checkpoint_value: season.id,
+        },
+        runnerToken,
+      );
+    }
+
+    await updateMetadataJob(
+      jobId,
+      {
+        status: "completed",
+        finished_at: nowIso(),
         files_seen: seen,
         files_added: addedEpisodes,
         files_updated: matched,
         errors_count: errors,
-        checkpoint_value: season.id,
-      }, runnerToken);
-    }
-
-    await updateMetadataJob(jobId, {
-      status: "completed",
-      finished_at: nowIso(),
-      files_seen: seen,
-      files_added: addedEpisodes,
-      files_updated: matched,
-      errors_count: errors,
-    }, runnerToken);
+      },
+      runnerToken,
+    );
   } catch (error) {
     errors += 1;
     await addMetadataJobError(jobId, "TV metadata refresh", error);
     await db
       .updateTable("scan_job")
       .set({
-        status: (await isMetadataJobCancellationRequested(jobId))
-          ? "cancelled"
-          : "failed",
+        status: (await isMetadataJobCancellationRequested(jobId)) ? "cancelled" : "failed",
         finished_at: nowIso(),
         errors_count: sql<number>`errors_count + 1`,
         checkpoint_value: null,
@@ -596,9 +537,7 @@ export async function runTvMetadataRefreshJob(
   }
 }
 
-export async function startTvMetadataRefreshJob(
-  options: RefreshTvMetadataOptions = {},
-) {
+export async function startTvMetadataRefreshJob(options: RefreshTvMetadataOptions = {}) {
   const job = await createTvMetadataRefreshJob();
   if (!job.existing) void runTvMetadataRefreshJob(job.id, options);
   return job;

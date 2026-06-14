@@ -1,7 +1,4 @@
-import type {
-  HardwareAccelerationMode,
-  TranscodeQualityTarget,
-} from "./policy";
+import type { HardwareAccelerationMode, TranscodeQualityTarget } from "./policy";
 import type { HlsSegmentFormat } from "./hls";
 import type { TranscodeMode } from "../db/schema/streaming";
 
@@ -85,10 +82,7 @@ export type HlsSegmentWindowGeneration = {
 
 export type HlsSegmentGenerationPolicyInput = Pick<
   HlsTranscodeInput,
-  | "hardwareAcceleration"
-  | "hardwareAccelerationRequired"
-  | "mode"
-  | "transcodeQuality"
+  "hardwareAcceleration" | "hardwareAccelerationRequired" | "mode" | "transcodeQuality"
 >;
 
 export type RunningTranscode = {
@@ -103,12 +97,8 @@ export type ProbeBackend = {
 };
 
 export type TranscodeBackend = {
-  validateHlsSegmentGenerationPolicy?(
-    input: HlsSegmentGenerationPolicyInput,
-  ): Promise<void> | void;
-  generateHlsSegmentWindow?(
-    input: HlsSegmentWindowTranscodeInput,
-  ): Promise<HlsSegmentWindowGeneration>;
+  validateHlsSegmentGenerationPolicy?(input: HlsSegmentGenerationPolicyInput): Promise<void> | void;
+  generateHlsSegmentWindow?(input: HlsSegmentWindowTranscodeInput): Promise<HlsSegmentWindowGeneration>;
   cancel(sessionId: string): Promise<void>;
 };
 

@@ -1,9 +1,6 @@
 import { expect } from "bun:test";
 
-export async function expectRejectsToThrow(
-  promise: unknown,
-  expected?: string | RegExp,
-) {
+export async function expectRejectsToThrow(promise: unknown, expected?: string | RegExp) {
   try {
     await promise;
   } catch (error) {
@@ -17,10 +14,7 @@ export async function expectRejectsToThrow(
   throw new Error("Expected promise to reject.");
 }
 
-export async function expectRejectsToMatchObject(
-  promise: unknown,
-  expected: object,
-) {
+export async function expectRejectsToMatchObject(promise: unknown, expected: object) {
   try {
     await promise;
   } catch (error) {

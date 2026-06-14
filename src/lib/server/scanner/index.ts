@@ -13,9 +13,14 @@ import {
   syncTvShowMetadataRelations,
   tvEpisodeMetadataValues,
   tvSeasonMetadataValues,
-  tvShowMetadataValues
+  tvShowMetadataValues,
 } from "../metadata/store";
-import type { MatchedTvEpisodeMetadata, MatchedTvSeasonLookup, MatchedTvSeasonMetadata, MatchedTvShowMetadata } from "../metadata/tmdb";
+import type {
+  MatchedTvEpisodeMetadata,
+  MatchedTvSeasonLookup,
+  MatchedTvSeasonMetadata,
+  MatchedTvShowMetadata,
+} from "../metadata/tmdb";
 import { runTvMetadataRefreshJob } from "../metadata/tv";
 import { createLibraryStorage, type LibraryStorage, type StorageFileInfo, type StorageWalkEntry } from "../storage";
 import type { MediaProbe, ProbeBackend, SeekableTranscodeInputSource } from "../transcoding/backend";
@@ -24,7 +29,12 @@ import { mediaFileValuesFromProbe, replaceMediaStreamInfo } from "../transcoding
 import { runMediaProbeRefreshJob } from "../transcoding/probe-jobs";
 import { createSeekableInputSourceFromStorage } from "../transcoding/seekable-input";
 import { movieLookupFromPath } from "../metadata/movie-lookup";
-import { lookupMovieMetadata, lookupTvSeasonMetadata, type MovieMetadataMatcher, type TvSeasonMetadataMatcher } from "./matching";
+import {
+  lookupMovieMetadata,
+  lookupTvSeasonMetadata,
+  type MovieMetadataMatcher,
+  type TvSeasonMetadataMatcher,
+} from "./matching";
 import { isSidecarSubtitlePath, isVideoFilePath } from "./media-files";
 import { parseTvEpisodePath, type ParsedTvEpisode } from "./tv-parser";
 
@@ -105,7 +115,7 @@ type LibraryScanHandler = {
     context: ScanContext,
     onMetadataError?: (error: unknown) => Promise<void>,
     metadataMatcher?: MovieMetadataMatcher,
-    tvSeasonMetadataMatcher?: TvSeasonMetadataMatcher
+    tvSeasonMetadataMatcher?: TvSeasonMetadataMatcher,
   ) => Promise<ScanFileResult>;
 };
 
@@ -134,7 +144,7 @@ async function updateJob(
     runner_token: string | null;
     runner_heartbeat_at: string | null;
   }>,
-  runnerToken?: string
+  runnerToken?: string,
 ) {
   const db = await getDb();
   const now = nowIso();
@@ -144,11 +154,15 @@ async function updateJob(
     .set({
       ...values,
       ...(terminalStatus
-        ? { checkpoint_value: null, runner_token: null, runner_heartbeat_at: null }
+        ? {
+            checkpoint_value: null,
+            runner_token: null,
+            runner_heartbeat_at: null,
+          }
         : runnerToken
           ? { runner_heartbeat_at: now }
           : {}),
-      updated_at: now
+      updated_at: now,
     })
     .where("id", "=", id);
 
@@ -161,20 +175,25 @@ async function addJobError(jobId: string, filePath: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   await db
     .insertInto("scan_job_error")
-    .values({ scan_job_id: jobId, path: filePath, message, created_at: nowIso() })
+    .values({
+      scan_job_id: jobId,
+      path: filePath,
+      message,
+      created_at: nowIso(),
+    })
     .execute();
 }
 
 async function probeScannedFile(
   mediaFileId: string,
   info: StorageFileInfo,
-  context: ScanContext
+  context: ScanContext,
 ): Promise<ProbedFileMetadata> {
   const fallbackValues = mediaFileValuesFromProbe({ extension: info.extension }, null);
   if (!context.probeBackend) {
     return {
       probe: null,
-      values: fallbackValues
+      values: fallbackValues,
     };
   }
 
@@ -187,25 +206,25 @@ async function probeScannedFile(
               path: info.path,
               extension: info.extension,
               container: fallbackValues.container,
-              sizeBytes: info.size
+              sizeBytes: info.size,
             },
             storage: context.storage,
-            timeoutMs: context.storage.operationTimeoutMs
+            timeoutMs: context.storage.operationTimeoutMs,
           })
         : undefined;
     const probe = await context.probeBackend.probe({
       mediaFileId,
       path: info.path,
-      inputSource
+      inputSource,
     });
     return {
       probe,
-      values: mediaFileValuesFromProbe({ extension: info.extension }, probe)
+      values: mediaFileValuesFromProbe({ extension: info.extension }, probe),
     };
   } catch {
     return {
       probe: null,
-      values: fallbackValues
+      values: fallbackValues,
     };
   } finally {
     await inputSource?.close().catch(() => undefined);
@@ -217,15 +236,11 @@ function fileValuesFromExisting(existing: ExistingMediaFile) {
     duration_seconds: existing.duration_seconds,
     video_codec: existing.video_codec,
     audio_codec: existing.audio_codec,
-    container: existing.container
+    container: existing.container,
   };
 }
 
-function basicFileMetadataUnchanged(
-  existing: ExistingMediaFile,
-  library: ScannableLibrary,
-  info: StorageFileInfo
-) {
+function basicFileMetadataUnchanged(existing: ExistingMediaFile, library: ScannableLibrary, info: StorageFileInfo) {
   return (
     existing.library_id === library.id &&
     existing.basename === info.basename &&
@@ -236,11 +251,7 @@ function basicFileMetadataUnchanged(
 }
 
 function existingMediaProbeMetadataPresent(existing: ExistingMediaFile) {
-  return (
-    existing.duration_seconds !== null ||
-    existing.video_codec !== null ||
-    existing.audio_codec !== null
-  );
+  return existing.duration_seconds !== null || existing.video_codec !== null || existing.audio_codec !== null;
 }
 
 async function loadExistingLibraryFiles(libraryId: string) {
@@ -261,7 +272,7 @@ async function loadExistingLibraryFiles(libraryId: string) {
       "media_file.video_codec",
       "media_file.audio_codec",
       "media_file.container",
-      "media_item.provider as existing_provider"
+      "media_item.provider as existing_provider",
     ])
     .where("media_file.library_id", "=", libraryId)
     .execute();
@@ -272,7 +283,7 @@ async function findOrCreateMovieItem(
   libraryRoot: string,
   filePath: string,
   onMetadataError?: (error: unknown) => Promise<void>,
-  metadataMatcher?: MovieMetadataMatcher
+  metadataMatcher?: MovieMetadataMatcher,
 ) {
   const db = await getDb();
   const parsed = movieLookupFromPath(filePath, undefined, { libraryRoot });
@@ -317,7 +328,10 @@ async function findOrCreateMovieItem(
     }
 
     const id = createId();
-    await db.insertInto("media_item").values({ id, ...values, created_at: now }).execute();
+    await db
+      .insertInto("media_item")
+      .values({ id, ...values, created_at: now })
+      .execute();
     await syncMovieMetadataRelations(db, id, metadata);
     return id;
   }
@@ -344,7 +358,7 @@ async function findOrCreateMovieItem(
       ...emptyMovieMetadataValues(),
       parent_id: null,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     })
     .execute();
   return id;
@@ -356,10 +370,10 @@ async function scanMovieFile(
   fileInfo: StorageFileInfo | undefined,
   context: ScanContext,
   onMetadataError?: (error: unknown) => Promise<void>,
-  metadataMatcher?: MovieMetadataMatcher
+  metadataMatcher?: MovieMetadataMatcher,
 ) {
   const db = await getDb();
-  const info = fileInfo ?? await context.storage.statFile(filePath);
+  const info = fileInfo ?? (await context.storage.statFile(filePath));
   if (!info) throw new Error("Media file is no longer available.");
   const existing = context.existingFilesByPath.get(filePath);
   const now = nowIso();
@@ -379,7 +393,7 @@ async function scanMovieFile(
     size_bytes: info.size,
     mtime_ms: info.mtimeMs,
     ...probed.values,
-    updated_at: now
+    updated_at: now,
   };
 
   if (existing) {
@@ -398,7 +412,7 @@ async function scanMovieFile(
     const mediaItemId = await findOrCreateMovieItem(library.path, filePath, onMetadataError, metadataMatcher);
     const values = {
       ...fileValues,
-      media_item_id: mediaItemId
+      media_item_id: mediaItemId,
     };
 
     if (fileUnchanged && existing.media_item_id === mediaItemId) {
@@ -408,7 +422,11 @@ async function scanMovieFile(
 
     await db.updateTable("media_file").set(values).where("id", "=", existing.id).execute();
     if (probed.probe) await replaceMediaStreamInfo(existing.id, probed.probe, now);
-    context.existingFilesByPath.set(filePath, { ...existing, ...values, existing_provider: existing.existing_provider });
+    context.existingFilesByPath.set(filePath, {
+      ...existing,
+      ...values,
+      existing_provider: existing.existing_provider,
+    });
     await moveMediaFileAssociations(existing.id, existing.media_item_id, mediaItemId, now);
     await syncSidecarSubtitleTracks(mediaItemId, mediaFileId, filePath, now, context);
     return "updated" as const;
@@ -417,12 +435,19 @@ async function scanMovieFile(
   const mediaItemId = await findOrCreateMovieItem(library.path, filePath, onMetadataError, metadataMatcher);
   const values = {
     ...fileValues,
-    media_item_id: mediaItemId
+    media_item_id: mediaItemId,
   };
 
-  await db.insertInto("media_file").values({ id: mediaFileId, ...values, created_at: now }).execute();
+  await db
+    .insertInto("media_file")
+    .values({ id: mediaFileId, ...values, created_at: now })
+    .execute();
   if (probed.probe) await replaceMediaStreamInfo(mediaFileId, probed.probe, now);
-  context.existingFilesByPath.set(filePath, { id: mediaFileId, ...values, existing_provider: null });
+  context.existingFilesByPath.set(filePath, {
+    id: mediaFileId,
+    ...values,
+    existing_provider: null,
+  });
   await syncSidecarSubtitleTracks(mediaItemId, mediaFileId, filePath, now, context);
   return "added" as const;
 }
@@ -457,25 +482,27 @@ async function findOrCreateShowItem(parsed: ParsedTvEpisode, now: string, metada
 
   const existing = providerExisting ?? localExisting;
 
-  const values = metadata ? {
-    ...tvShowMetadataValues(metadata, now),
-    kind: "show" as const,
-    sort_title: sortTitle(metadata.title),
-    season_number: null,
-    episode_number: null,
-    parent_id: null
-  } : {
-    kind: "show" as const,
-    title: parsed.showTitle,
-    sort_title: sortTitle(parsed.showTitle),
-    year: null,
-    season_number: null,
-    episode_number: null,
-    release_date: null,
-    ...emptyMovieMetadataValues(),
-    parent_id: null,
-    updated_at: now
-  };
+  const values = metadata
+    ? {
+        ...tvShowMetadataValues(metadata, now),
+        kind: "show" as const,
+        sort_title: sortTitle(metadata.title),
+        season_number: null,
+        episode_number: null,
+        parent_id: null,
+      }
+    : {
+        kind: "show" as const,
+        title: parsed.showTitle,
+        sort_title: sortTitle(parsed.showTitle),
+        year: null,
+        season_number: null,
+        episode_number: null,
+        release_date: null,
+        ...emptyMovieMetadataValues(),
+        parent_id: null,
+        updated_at: now,
+      };
 
   if (existing) {
     if (metadata || !existing.provider) {
@@ -486,12 +513,20 @@ async function findOrCreateShowItem(parsed: ParsedTvEpisode, now: string, metada
   }
 
   const id = createId();
-  await db.insertInto("media_item").values({ id, ...values, created_at: now }).execute();
+  await db
+    .insertInto("media_item")
+    .values({ id, ...values, created_at: now })
+    .execute();
   if (metadata) await syncTvShowMetadataRelations(db, id, metadata);
   return id;
 }
 
-async function findOrCreateSeasonItem(showId: string, parsed: ParsedTvEpisode, now: string, metadata?: MatchedTvSeasonMetadata) {
+async function findOrCreateSeasonItem(
+  showId: string,
+  parsed: ParsedTvEpisode,
+  now: string,
+  metadata?: MatchedTvSeasonMetadata,
+) {
   const db = await getDb();
   const providerExisting = metadata
     ? await db
@@ -513,23 +548,25 @@ async function findOrCreateSeasonItem(showId: string, parsed: ParsedTvEpisode, n
   const existing = providerExisting ?? localExisting;
 
   const title = seasonTitle(parsed.seasonNumber);
-  const values = metadata ? {
-    ...tvSeasonMetadataValues(metadata, now),
-    kind: "season" as const,
-    sort_title: metadata.seasonNumber.toString().padStart(4, "0"),
-    parent_id: showId
-  } : {
-    kind: "season" as const,
-    title,
-    sort_title: parsed.seasonNumber.toString().padStart(4, "0"),
-    year: null,
-    season_number: parsed.seasonNumber,
-    episode_number: null,
-    release_date: null,
-    ...emptyMovieMetadataValues(),
-    parent_id: showId,
-    updated_at: now
-  };
+  const values = metadata
+    ? {
+        ...tvSeasonMetadataValues(metadata, now),
+        kind: "season" as const,
+        sort_title: metadata.seasonNumber.toString().padStart(4, "0"),
+        parent_id: showId,
+      }
+    : {
+        kind: "season" as const,
+        title,
+        sort_title: parsed.seasonNumber.toString().padStart(4, "0"),
+        year: null,
+        season_number: parsed.seasonNumber,
+        episode_number: null,
+        release_date: null,
+        ...emptyMovieMetadataValues(),
+        parent_id: showId,
+        updated_at: now,
+      };
 
   if (existing) {
     if (metadata || !existing.provider) {
@@ -539,7 +576,10 @@ async function findOrCreateSeasonItem(showId: string, parsed: ParsedTvEpisode, n
   }
 
   const id = createId();
-  await db.insertInto("media_item").values({ id, ...values, created_at: now }).execute();
+  await db
+    .insertInto("media_item")
+    .values({ id, ...values, created_at: now })
+    .execute();
   return id;
 }
 
@@ -555,13 +595,19 @@ async function lookupCachedTvSeasonMetadata(
   parsed: ParsedTvEpisode,
   cache: Map<string, Promise<MatchedTvSeasonLookup | null>>,
   onMetadataError?: (error: unknown) => Promise<void>,
-  tvSeasonMetadataMatcher?: TvSeasonMetadataMatcher
+  tvSeasonMetadataMatcher?: TvSeasonMetadataMatcher,
 ) {
   const key = tvSeasonMetadataCacheKey(parsed);
   const existing = cache.get(key);
   if (existing) return existing;
 
-  const lookup = lookupTvSeasonMetadata(parsed.showTitle, null, parsed.seasonNumber, onMetadataError, tvSeasonMetadataMatcher);
+  const lookup = lookupTvSeasonMetadata(
+    parsed.showTitle,
+    null,
+    parsed.seasonNumber,
+    onMetadataError,
+    tvSeasonMetadataMatcher,
+  );
   cache.set(key, lookup);
   return lookup;
 }
@@ -589,7 +635,7 @@ async function findOrCreateEpisodeMetadataItem(seasonId: string, metadata: Match
     ...tvEpisodeMetadataValues(metadata, now),
     kind: "episode" as const,
     sort_title: episodeSortTitle(metadata.seasonNumber, metadata.episodeNumber),
-    parent_id: seasonId
+    parent_id: seasonId,
   };
 
   if (existing) {
@@ -598,7 +644,10 @@ async function findOrCreateEpisodeMetadataItem(seasonId: string, metadata: Match
   }
 
   const id = createId();
-  await db.insertInto("media_item").values({ id, ...values, created_at: now }).execute();
+  await db
+    .insertInto("media_item")
+    .values({ id, ...values, created_at: now })
+    .execute();
   return id;
 }
 
@@ -606,7 +655,7 @@ async function syncTvSeasonEpisodeMetadata(
   seasonId: string,
   episodes: MatchedTvEpisodeMetadata[],
   now: string,
-  context: ScanContext
+  context: ScanContext,
 ) {
   if (episodes.length === 0) return;
   const key = `${seasonId}:${episodes.map((episode) => `${episode.provider}:${episode.providerId}`).join(",")}`;
@@ -632,14 +681,19 @@ async function findOrCreateEpisodeItem(
   context: ScanContext,
   preferredExistingMediaItemId?: string,
   onMetadataError?: (error: unknown) => Promise<void>,
-  tvSeasonMetadataMatcher?: TvSeasonMetadataMatcher
+  tvSeasonMetadataMatcher?: TvSeasonMetadataMatcher,
 ) {
   const parsed = parseTvEpisodePath(filePath, root);
   if (!parsed) throw new Error("Could not parse TV episode filename.");
 
   const db = await getDb();
   const now = nowIso();
-  const metadata = await lookupCachedTvSeasonMetadata(parsed, tvSeasonMetadataCache, onMetadataError, tvSeasonMetadataMatcher);
+  const metadata = await lookupCachedTvSeasonMetadata(
+    parsed,
+    tvSeasonMetadataCache,
+    onMetadataError,
+    tvSeasonMetadataMatcher,
+  );
   if (!metadata && preferredExistingMediaItemId) return preferredExistingMediaItemId;
 
   const showId = await findOrCreateShowItem(parsed, now, metadata?.show);
@@ -672,7 +726,7 @@ async function findOrCreateEpisodeItem(
     release_date: null,
     ...emptyMovieMetadataValues(),
     parent_id: seasonId,
-    updated_at: now
+    updated_at: now,
   };
 
   if (localExisting) {
@@ -683,7 +737,10 @@ async function findOrCreateEpisodeItem(
   }
 
   const id = createId();
-  await db.insertInto("media_item").values({ id, ...values, created_at: now }).execute();
+  await db
+    .insertInto("media_item")
+    .values({ id, ...values, created_at: now })
+    .execute();
   return id;
 }
 
@@ -694,10 +751,10 @@ async function scanTvFile(
   context: ScanContext,
   onMetadataError?: (error: unknown) => Promise<void>,
   _metadataMatcher?: MovieMetadataMatcher,
-  tvSeasonMetadataMatcher?: TvSeasonMetadataMatcher
+  tvSeasonMetadataMatcher?: TvSeasonMetadataMatcher,
 ) {
   const db = await getDb();
-  const info = fileInfo ?? await context.storage.statFile(filePath);
+  const info = fileInfo ?? (await context.storage.statFile(filePath));
   if (!info) throw new Error("Media file is no longer available.");
   const existing = context.existingFilesByPath.get(filePath);
   const now = nowIso();
@@ -717,7 +774,7 @@ async function scanTvFile(
     size_bytes: info.size,
     mtime_ms: info.mtimeMs,
     ...probed.values,
-    updated_at: now
+    updated_at: now,
   };
 
   if (existing) {
@@ -735,11 +792,11 @@ async function scanTvFile(
       context,
       existing.existing_provider ? existing.media_item_id : undefined,
       onMetadataError,
-      tvSeasonMetadataMatcher
+      tvSeasonMetadataMatcher,
     );
     const values = {
       ...fileValues,
-      media_item_id: mediaItemId
+      media_item_id: mediaItemId,
     };
 
     if (fileUnchanged && existing.media_item_id === mediaItemId) {
@@ -749,7 +806,11 @@ async function scanTvFile(
 
     await db.updateTable("media_file").set(values).where("id", "=", existing.id).execute();
     if (probed.probe) await replaceMediaStreamInfo(existing.id, probed.probe, now);
-    context.existingFilesByPath.set(filePath, { ...existing, ...values, existing_provider: existing.existing_provider });
+    context.existingFilesByPath.set(filePath, {
+      ...existing,
+      ...values,
+      existing_provider: existing.existing_provider,
+    });
     await moveMediaFileAssociations(existing.id, existing.media_item_id, mediaItemId, now);
     await syncSidecarSubtitleTracks(mediaItemId, mediaFileId, filePath, now, context);
     return "updated" as const;
@@ -762,16 +823,23 @@ async function scanTvFile(
     context,
     undefined,
     onMetadataError,
-    tvSeasonMetadataMatcher
+    tvSeasonMetadataMatcher,
   );
   const values = {
     ...fileValues,
-    media_item_id: mediaItemId
+    media_item_id: mediaItemId,
   };
 
-  await db.insertInto("media_file").values({ id: mediaFileId, ...values, created_at: now }).execute();
+  await db
+    .insertInto("media_file")
+    .values({ id: mediaFileId, ...values, created_at: now })
+    .execute();
   if (probed.probe) await replaceMediaStreamInfo(mediaFileId, probed.probe, now);
-  context.existingFilesByPath.set(filePath, { id: mediaFileId, ...values, existing_provider: null });
+  context.existingFilesByPath.set(filePath, {
+    id: mediaFileId,
+    ...values,
+    existing_provider: null,
+  });
   await syncSidecarSubtitleTracks(mediaItemId, mediaFileId, filePath, now, context);
   return "added" as const;
 }
@@ -804,7 +872,7 @@ async function moveMediaFileAssociations(fileId: string, oldMediaItemId: string,
             position_seconds: progress.position_seconds,
             duration_seconds: progress.duration_seconds,
             completed: progress.completed,
-            updated_at: progress.updated_at
+            updated_at: progress.updated_at,
           })
           .where("user_id", "=", progress.user_id)
           .where("media_item_id", "=", newMediaItemId)
@@ -854,7 +922,12 @@ function sidecarSubtitleMatch(videoPath: string, subtitlePath: string) {
   const subtitle = path.parse(subtitlePath);
   if (!isSidecarSubtitlePath(subtitlePath)) return false;
   if (path.dirname(subtitlePath) !== path.dirname(videoPath)) return false;
-  return subtitle.name === video.name || subtitle.name.startsWith(`${video.name}.`) || subtitle.name.startsWith(`${video.name}-`) || subtitle.name.startsWith(`${video.name}_`);
+  return (
+    subtitle.name === video.name ||
+    subtitle.name.startsWith(`${video.name}.`) ||
+    subtitle.name.startsWith(`${video.name}-`) ||
+    subtitle.name.startsWith(`${video.name}_`)
+  );
 }
 
 function sidecarSubtitleMetadata(videoPath: string, subtitlePath: string, index: number) {
@@ -871,7 +944,7 @@ function sidecarSubtitleMetadata(videoPath: string, subtitlePath: string, index:
   return {
     label,
     language,
-    isDefault: suffix.length === 0 || index === 0
+    isDefault: suffix.length === 0 || index === 0,
   };
 }
 
@@ -893,7 +966,10 @@ function defaultDirectoryFileReader(storage: LibraryStorage) {
 }
 
 function cacheWalkDirectoryEntry(entry: Extract<StorageWalkEntry, { kind: "directory" }>, context: ScanContext) {
-  context.directoryEntryCache.set(entry.path, { ok: true, paths: entry.files.map((file) => file.path) });
+  context.directoryEntryCache.set(entry.path, {
+    ok: true,
+    paths: entry.files.map((file) => file.path),
+  });
   const videoCount = entry.files.filter((file) => isVideoFilePath(file.path)).length;
   if (videoCount > 0) {
     context.directoryVideoCounts.set(entry.path, videoCount);
@@ -924,7 +1000,13 @@ async function findSidecarSubtitleFiles(videoPath: string, context: ScanContext)
     .sort((left, right) => left.localeCompare(right));
 }
 
-async function syncSidecarSubtitleTracks(mediaItemId: string, mediaFileId: string, filePath: string, now: string, context: ScanContext) {
+async function syncSidecarSubtitleTracks(
+  mediaItemId: string,
+  mediaFileId: string,
+  filePath: string,
+  now: string,
+  context: ScanContext,
+) {
   const db = await getDb();
   const subtitlePaths = await findSidecarSubtitleFiles(filePath, context);
   if (!subtitlePaths) return;
@@ -941,7 +1023,7 @@ async function syncSidecarSubtitleTracks(mediaItemId: string, mediaFileId: strin
       path: subtitlePath,
       mime_type: "text/vtt",
       is_default: metadata.isDefault ? 1 : 0,
-      updated_at: now
+      updated_at: now,
     };
     const existing = await db
       .selectFrom("subtitle_track")
@@ -980,12 +1062,12 @@ async function syncSidecarSubtitleTracks(mediaItemId: string, mediaFileId: strin
 const LIBRARY_SCAN_HANDLERS: Partial<Record<LibraryKind, LibraryScanHandler>> = {
   movie: {
     mediaKind: "movie",
-    scanFile: scanMovieFile
+    scanFile: scanMovieFile,
   },
   tv: {
     mediaKind: "episode",
-    scanFile: scanTvFile
-  }
+    scanFile: scanTvFile,
+  },
 };
 
 function getLibraryScanHandler(kind: LibraryKind) {
@@ -1018,9 +1100,9 @@ async function pruneMissingLibraryFiles(library: ScannableLibrary, seenPaths: Se
             eb
               .selectFrom("media_file")
               .select("media_file.id")
-              .whereRef("media_file.media_item_id", "=", "media_item.id")
-          )
-        )
+              .whereRef("media_file.media_item_id", "=", "media_item.id"),
+          ),
+        ),
       )
       .execute();
 
@@ -1040,12 +1122,9 @@ async function deleteOrphanTvContainers() {
     .where((eb) =>
       eb.not(
         eb.exists(
-          eb
-            .selectFrom("media_item as child")
-            .select("child.id")
-            .whereRef("child.parent_id", "=", "media_item.id")
-        )
-      )
+          eb.selectFrom("media_item as child").select("child.id").whereRef("child.parent_id", "=", "media_item.id"),
+        ),
+      ),
     )
     .execute();
 
@@ -1055,12 +1134,9 @@ async function deleteOrphanTvContainers() {
     .where((eb) =>
       eb.not(
         eb.exists(
-          eb
-            .selectFrom("media_item as child")
-            .select("child.id")
-            .whereRef("child.parent_id", "=", "media_item.id")
-        )
-      )
+          eb.selectFrom("media_item as child").select("child.id").whereRef("child.parent_id", "=", "media_item.id"),
+        ),
+      ),
     )
     .execute();
 }
@@ -1089,7 +1165,7 @@ export async function createScanJob(libraryId: string) {
       runner_token: null,
       runner_heartbeat_at: null,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     })
     .execute();
   return id;
@@ -1109,11 +1185,7 @@ async function getActiveScanJobId(libraryId: string) {
 
 async function isScanCancellationRequested(jobId: string) {
   const db = await getDb();
-  const job = await db
-    .selectFrom("scan_job")
-    .select("cancel_requested_at")
-    .where("id", "=", jobId)
-    .executeTakeFirst();
+  const job = await db.selectFrom("scan_job").select("cancel_requested_at").where("id", "=", jobId).executeTakeFirst();
   return Boolean(job?.cancel_requested_at);
 }
 
@@ -1139,11 +1211,11 @@ async function markScanJobRunning(jobId: string, runnerToken: string) {
             files_updated: 0,
             files_removed: 0,
             errors_count: 0,
-            checkpoint_value: null
+            checkpoint_value: null,
           }),
       runner_token: runnerToken,
       runner_heartbeat_at: now,
-      updated_at: now
+      updated_at: now,
     })
     .where("id", "=", jobId)
     .where("status", "in", ["queued", "running"])
@@ -1160,7 +1232,7 @@ async function markScanJobRunning(jobId: string, runnerToken: string) {
     files_updated: isResume ? job.files_updated : 0,
     files_removed: isResume ? job.files_removed : 0,
     errors_count: isResume ? job.errors_count : 0,
-    checkpoint_value: isResume ? job.checkpoint_value : null
+    checkpoint_value: isResume ? job.checkpoint_value : null,
   };
 }
 
@@ -1178,11 +1250,7 @@ async function requestRescanForActiveJob(jobId: string) {
 
 async function activeJobHasRescanRequest(jobId: string) {
   const db = await getDb();
-  const job = await db
-    .selectFrom("scan_job")
-    .select("rescan_requested_at")
-    .where("id", "=", jobId)
-    .executeTakeFirst();
+  const job = await db.selectFrom("scan_job").select("rescan_requested_at").where("id", "=", jobId).executeTakeFirst();
   return Boolean(job?.rescan_requested_at);
 }
 
@@ -1204,11 +1272,7 @@ async function startFollowUpScanIfRequested(jobId: string, libraryId: string, op
 
 export async function cancelScanJob(jobId: string) {
   const db = await getDb();
-  const job = await db
-    .selectFrom("scan_job")
-    .select(["id", "status"])
-    .where("id", "=", jobId)
-    .executeTakeFirst();
+  const job = await db.selectFrom("scan_job").select(["id", "status"]).where("id", "=", jobId).executeTakeFirst();
 
   if (!job) return "missing" as const;
   if (job.status !== "queued" && job.status !== "running") return "inactive" as const;
@@ -1249,7 +1313,7 @@ async function failInterruptedJob(jobId: string, error: Error) {
       checkpoint_value: null,
       runner_token: null,
       runner_heartbeat_at: null,
-      updated_at: nowIso()
+      updated_at: nowIso(),
     })
     .where("id", "=", jobId)
     .where("status", "in", ["queued", "running"])
@@ -1260,7 +1324,11 @@ async function clearActiveJobLeases() {
   const db = await getDb();
   await db
     .updateTable("scan_job")
-    .set({ runner_token: null, runner_heartbeat_at: null, updated_at: nowIso() })
+    .set({
+      runner_token: null,
+      runner_heartbeat_at: null,
+      updated_at: nowIso(),
+    })
     .where("status", "in", ["queued", "running"])
     .execute();
 }
@@ -1354,7 +1422,7 @@ export async function runScanJob(jobId: string, options: ScanOptions = {}) {
     if (!library) throw new Error("Library not found.");
     errorPath = library.path;
     const scanHandler = getLibraryScanHandler(library.kind);
-    storage = options.storage ?? await createLibraryStorage(library);
+    storage = options.storage ?? (await createLibraryStorage(library));
     const context: ScanContext = {
       directoryEntryCache: new Map(),
       directoryVideoCounts: new Map(),
@@ -1363,7 +1431,7 @@ export async function runScanJob(jobId: string, options: ScanOptions = {}) {
       tvSeasonMetadataCache: new Map(),
       tvSeasonEpisodeSyncCache: new Map(),
       probeBackend: options.probeBackend === undefined ? nodeAvBackend : options.probeBackend,
-      storage
+      storage,
     };
     const fileWalker = options.fileWalker ?? storage.walkFiles;
     for await (const entry of fileWalker(storage.root ?? library.path)) {
@@ -1376,12 +1444,16 @@ export async function runScanJob(jobId: string, options: ScanOptions = {}) {
         traversalHadErrors = true;
         errorsCount += 1;
         await addJobError(jobId, entry.path, entry.error);
-        await updateJob(jobId, {
-          files_seen: filesSeen,
-          files_added: filesAdded,
-          files_updated: filesUpdated,
-          errors_count: errorsCount
-        }, runnerToken);
+        await updateJob(
+          jobId,
+          {
+            files_seen: filesSeen,
+            files_added: filesAdded,
+            files_updated: filesUpdated,
+            errors_count: errorsCount,
+          },
+          runnerToken,
+        );
         continue;
       }
 
@@ -1402,10 +1474,18 @@ export async function runScanJob(jobId: string, options: ScanOptions = {}) {
       filesSeen += 1;
       let processedSuccessfully = false;
       try {
-        const result = await scanHandler.scanFile(library, filePath, entry.file, context, async (error) => {
-          await addJobError(jobId, filePath, error);
-          errorsCount += 1;
-        }, options.metadataMatcher, options.tvSeasonMetadataMatcher);
+        const result = await scanHandler.scanFile(
+          library,
+          filePath,
+          entry.file,
+          context,
+          async (error) => {
+            await addJobError(jobId, filePath, error);
+            errorsCount += 1;
+          },
+          options.metadataMatcher,
+          options.tvSeasonMetadataMatcher,
+        );
         seenPaths.add(filePath);
         if (result === "added") filesAdded += 1;
         if (result === "updated") filesUpdated += 1;
@@ -1416,13 +1496,17 @@ export async function runScanJob(jobId: string, options: ScanOptions = {}) {
         await addJobError(jobId, filePath, error);
       }
 
-      await updateJob(jobId, {
-        files_seen: filesSeen,
-        files_added: filesAdded,
-        files_updated: filesUpdated,
-        errors_count: errorsCount,
-        ...(processedSuccessfully ? { checkpoint_value: filePath } : {})
-      }, runnerToken);
+      await updateJob(
+        jobId,
+        {
+          files_seen: filesSeen,
+          files_added: filesAdded,
+          files_updated: filesUpdated,
+          errors_count: errorsCount,
+          ...(processedSuccessfully ? { checkpoint_value: filePath } : {}),
+        },
+        runnerToken,
+      );
       releaseWalkDirectoryFile(filePath, context);
     }
 
@@ -1430,15 +1514,19 @@ export async function runScanJob(jobId: string, options: ScanOptions = {}) {
       throw new Error(`Scan checkpoint was not found: ${resumeCheckpoint}`);
     }
 
-    if (cancelled || await isScanCancellationRequested(jobId)) {
-      await updateJob(jobId, {
-        status: "cancelled",
-        finished_at: nowIso(),
-        files_seen: filesSeen,
-        files_added: filesAdded,
-        files_updated: filesUpdated,
-        errors_count: errorsCount
-      }, runnerToken);
+    if (cancelled || (await isScanCancellationRequested(jobId))) {
+      await updateJob(
+        jobId,
+        {
+          status: "cancelled",
+          finished_at: nowIso(),
+          files_seen: filesSeen,
+          files_added: filesAdded,
+          files_updated: filesUpdated,
+          errors_count: errorsCount,
+        },
+        runnerToken,
+      );
       return;
     }
 
@@ -1446,36 +1534,48 @@ export async function runScanJob(jobId: string, options: ScanOptions = {}) {
       filesRemoved = await pruneMissingLibraryFiles(library, seenPaths, scanHandler.mediaKind);
     }
 
-    await updateJob(jobId, {
-      status: "completed",
-      finished_at: nowIso(),
-      files_seen: filesSeen,
-      files_added: filesAdded,
-      files_updated: filesUpdated,
-      files_removed: filesRemoved,
-      errors_count: errorsCount
-    }, runnerToken);
-    await startFollowUpScanIfRequested(jobId, library.id, options);
-  } catch (error) {
-    if (await isScanCancellationRequested(jobId)) {
-      await updateJob(jobId, {
-        status: "cancelled",
+    await updateJob(
+      jobId,
+      {
+        status: "completed",
         finished_at: nowIso(),
         files_seen: filesSeen,
         files_added: filesAdded,
         files_updated: filesUpdated,
-        errors_count: errorsCount
-      }, runnerToken);
+        files_removed: filesRemoved,
+        errors_count: errorsCount,
+      },
+      runnerToken,
+    );
+    await startFollowUpScanIfRequested(jobId, library.id, options);
+  } catch (error) {
+    if (await isScanCancellationRequested(jobId)) {
+      await updateJob(
+        jobId,
+        {
+          status: "cancelled",
+          finished_at: nowIso(),
+          files_seen: filesSeen,
+          files_added: filesAdded,
+          files_updated: filesUpdated,
+          errors_count: errorsCount,
+        },
+        runnerToken,
+      );
       return;
     }
 
     errorsCount += 1;
     await addJobError(jobId, errorPath, error);
-    await updateJob(jobId, {
-      status: "failed",
-      finished_at: nowIso(),
-      errors_count: errorsCount
-    }, runnerToken);
+    await updateJob(
+      jobId,
+      {
+        status: "failed",
+        finished_at: nowIso(),
+        errors_count: errorsCount,
+      },
+      runnerToken,
+    );
     if (runningLibraryId) await startFollowUpScanIfRequested(jobId, runningLibraryId, options);
   } finally {
     try {
@@ -1492,7 +1592,7 @@ export async function startScan(libraryId: string, options: ScanOptions = {}) {
   if (!library) throw new Error("Library not found.");
 
   const activeJobId = await getActiveScanJobId(libraryId);
-  if (activeJobId && await requestRescanForActiveJob(activeJobId)) return activeJobId;
+  if (activeJobId && (await requestRescanForActiveJob(activeJobId))) return activeJobId;
 
   let jobId: string;
   try {
@@ -1517,7 +1617,7 @@ export async function startAllMovieScans(options: ScanOptions = {}) {
 
   return {
     libraries: libraries.length,
-    jobIds
+    jobIds,
   };
 }
 
@@ -1531,7 +1631,7 @@ export async function startAllTvScans(options: ScanOptions = {}) {
 
   return {
     libraries: libraries.length,
-    jobIds
+    jobIds,
   };
 }
 
@@ -1545,6 +1645,6 @@ export async function startAllLibraryScans(options: ScanOptions = {}) {
 
   return {
     libraries: libraries.length,
-    jobIds
+    jobIds,
   };
 }

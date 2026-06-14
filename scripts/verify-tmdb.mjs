@@ -40,13 +40,13 @@ export function resolveTmdbCredentials({ saved = {}, env = process.env } = {}) {
 
   return {
     token: token || (apiKey ? "" : PUBLIC_TMDB_ACCESS_TOKEN),
-    apiKey
+    apiKey,
   };
 }
 
 function requestInit(credentials) {
   const headers = {
-    accept: "application/json"
+    accept: "application/json",
   };
 
   if (!credentials.apiKey && credentials.token) {
@@ -69,11 +69,7 @@ async function tmdbJson(url, credentials, fetcher) {
   return response.json();
 }
 
-export async function verifyTmdb({
-  cwd = process.cwd(),
-  env = process.env,
-  fetcher = fetch
-} = {}) {
+export async function verifyTmdb({ cwd = process.cwd(), env = process.env, fetcher = fetch } = {}) {
   loadDotenv({ cwd, env });
   const saved = readSavedTmdbCredentials({ cwd, env });
   const credentials = resolveTmdbCredentials({ saved, env });
@@ -81,7 +77,7 @@ export async function verifyTmdb({
   if (!credentials.token && !credentials.apiKey) {
     return {
       ok: false,
-      message: "TMDb credentials are missing. Save credentials in Settings."
+      message: "TMDb credentials are missing. Save credentials in Settings.",
     };
   }
 
@@ -95,7 +91,7 @@ export async function verifyTmdb({
   if (!match) {
     return {
       ok: false,
-      message: "TMDb returned no movie search result for The Matrix (1999)."
+      message: "TMDb returned no movie search result for The Matrix (1999).",
     };
   }
 
@@ -104,7 +100,7 @@ export async function verifyTmdb({
   if (!detail?.poster_path) {
     return {
       ok: false,
-      message: `TMDb returned ${detail?.title ?? "a movie"} but no poster path.`
+      message: `TMDb returned ${detail?.title ?? "a movie"} but no poster path.`,
     };
   }
 
@@ -112,7 +108,7 @@ export async function verifyTmdb({
     ok: true,
     message: `TMDb returned ${detail.title ?? match.title ?? "The Matrix"} with poster ${detail.poster_path}.`,
     title: detail.title ?? match.title ?? null,
-    posterPath: detail.poster_path
+    posterPath: detail.poster_path,
   };
 }
 

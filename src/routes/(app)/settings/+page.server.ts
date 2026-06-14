@@ -23,9 +23,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const savedAccessToken = await getSetting("tmdb_access_token");
   const savedApiKey = await getSetting("tmdb_api_key");
   const fallbackConfigured = Boolean(PUBLIC_TMDB_ACCESS_TOKEN);
-  const tmdbConfigured = Boolean(
-    savedAccessToken || savedApiKey || fallbackConfigured,
-  );
+  const tmdbConfigured = Boolean(savedAccessToken || savedApiKey || fallbackConfigured);
 
   return {
     signupOpen: await getBooleanSetting("signup_open", false),
@@ -77,8 +75,7 @@ export const actions: Actions = {
     throw redirect(303, "/settings");
   },
   refreshMetadata: async ({ locals }) => {
-    if (!isAdmin(locals.user))
-      return fail(403, { metadataError: "Only admins can refresh metadata." });
+    if (!isAdmin(locals.user)) return fail(403, { metadataError: "Only admins can refresh metadata." });
     if (!(await tmdbCredentialsConfigured()))
       return fail(400, {
         metadataError: "TMDb credentials are not configured.",
@@ -96,10 +93,7 @@ export const actions: Actions = {
       };
     } catch (error) {
       return fail(400, {
-        metadataError:
-          error instanceof Error
-            ? error.message
-            : "Could not refresh metadata.",
+        metadataError: error instanceof Error ? error.message : "Could not refresh metadata.",
       });
     }
   },
@@ -125,16 +119,12 @@ export const actions: Actions = {
       };
     } catch (error) {
       return fail(400, {
-        tvMetadataError:
-          error instanceof Error
-            ? error.message
-            : "Could not refresh TV metadata.",
+        tvMetadataError: error instanceof Error ? error.message : "Could not refresh TV metadata.",
       });
     }
   },
   scanAll: async ({ locals }) => {
-    if (!isAdmin(locals.user))
-      return fail(403, { scanError: "Only admins can scan libraries." });
+    if (!isAdmin(locals.user)) return fail(403, { scanError: "Only admins can scan libraries." });
 
     try {
       const result = (await runSettingsAction("scanAll")) as {
@@ -147,14 +137,12 @@ export const actions: Actions = {
       };
     } catch (error) {
       return fail(400, {
-        scanError:
-          error instanceof Error ? error.message : "Could not start scans.",
+        scanError: error instanceof Error ? error.message : "Could not start scans.",
       });
     }
   },
   repairMediaProbes: async ({ locals }) => {
-    if (!isAdmin(locals.user))
-      return fail(403, { probeError: "Only admins can repair media probes." });
+    if (!isAdmin(locals.user)) return fail(403, { probeError: "Only admins can repair media probes." });
 
     try {
       return {
@@ -168,10 +156,7 @@ export const actions: Actions = {
       };
     } catch (error) {
       return fail(400, {
-        probeError:
-          error instanceof Error
-            ? error.message
-            : "Could not start media probe repair.",
+        probeError: error instanceof Error ? error.message : "Could not start media probe repair.",
       });
     }
   },
@@ -194,10 +179,7 @@ export const actions: Actions = {
       };
     } catch (error) {
       return {
-        tmdbTestMessage:
-          error instanceof Error
-            ? error.message
-            : "TMDb connection test failed.",
+        tmdbTestMessage: error instanceof Error ? error.message : "TMDb connection test failed.",
         tmdbTestOk: false,
       };
     }

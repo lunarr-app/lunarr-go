@@ -1,10 +1,4 @@
-import type {
-  MediaProbe,
-  MediaProbeStream,
-  ProbeBackend,
-  ProbeInput,
-  SeekableTranscodeInputSource,
-} from "./backend";
+import type { MediaProbe, MediaProbeStream, ProbeBackend, ProbeInput, SeekableTranscodeInputSource } from "./backend";
 import type * as NodeAvApi from "node-av/api";
 import type * as NodeAvConstants from "node-av/constants";
 import type * as NodeAvLib from "node-av/lib";
@@ -85,11 +79,7 @@ function throwIfNodeAvOperationAborted(signal?: AbortSignal) {
   }
 }
 
-function withAbortSignal<T>(
-  promise: Promise<T>,
-  signal?: AbortSignal,
-  onAbort?: () => void,
-) {
+function withAbortSignal<T>(promise: Promise<T>, signal?: AbortSignal, onAbort?: () => void) {
   if (!signal) return promise;
   throwIfNodeAvOperationAborted(signal);
 
@@ -115,9 +105,7 @@ async function loadNodeAvModules(signal?: AbortSignal) {
     modulesPromise ??
     moduleLoader().catch((error: unknown) => {
       modulesPromise = null;
-      throw new NodeAvBackendError(
-        `NodeAV failed to load: ${errorMessage(error)}`,
-      );
+      throw new NodeAvBackendError(`NodeAV failed to load: ${errorMessage(error)}`);
     });
   modulesPromise = loading;
   return withAbortSignal(loading, signal, () => {
@@ -132,11 +120,7 @@ async function loadNodeAvModules(signal?: AbortSignal) {
   });
 }
 
-function demuxerInput(
-  modules: NodeAvModules,
-  input: ProbeDemuxInput,
-  controller: AbortController,
-) {
+function demuxerInput(modules: NodeAvModules, input: ProbeDemuxInput, controller: AbortController) {
   const inputSource = input.inputSource;
   if (!inputSource) return input.path;
 
@@ -151,21 +135,11 @@ function demuxerInput(
       if (position >= size) return null;
 
       const remaining = size - position;
-      const safeRemaining =
-        remaining > BigInt(Number.MAX_SAFE_INTEGER)
-          ? Number.MAX_SAFE_INTEGER
-          : Number(remaining);
-      const readLength = Math.min(
-        Math.max(0, Math.floor(requestedSize)),
-        safeRemaining,
-      );
+      const safeRemaining = remaining > BigInt(Number.MAX_SAFE_INTEGER) ? Number.MAX_SAFE_INTEGER : Number(remaining);
+      const readLength = Math.min(Math.max(0, Math.floor(requestedSize)), safeRemaining);
       if (readLength <= 0) return null;
 
-      const chunk = await inputSource.read(
-        Number(position),
-        readLength,
-        controller.signal,
-      );
+      const chunk = await inputSource.read(Number(position), readLength, controller.signal);
       if (chunk.length === 0) return null;
       position += BigInt(chunk.length);
       return chunk;
@@ -196,19 +170,12 @@ function demuxerOptions(input: ProbeDemuxInput, controller: AbortController) {
   };
 }
 
-function openDemuxer(
-  modules: NodeAvModules,
-  input: ProbeDemuxInput,
-  controller: AbortController,
-) {
+function openDemuxer(modules: NodeAvModules, input: ProbeDemuxInput, controller: AbortController) {
   const open = modules.api.Demuxer.open as unknown as (
     source: unknown,
     options?: unknown,
   ) => ReturnType<NodeAvModules["api"]["Demuxer"]["open"]>;
-  return open(
-    demuxerInput(modules, input, controller),
-    demuxerOptions(input, controller),
-  );
+  return open(demuxerInput(modules, input, controller), demuxerOptions(input, controller));
 }
 
 function finiteNumber(value: number) {
@@ -223,8 +190,7 @@ function finiteBigInt(value: bigint) {
 
 function streamDurationSeconds(stream: NodeAvStream) {
   if (stream.duration <= 0n || stream.timeBase.den === 0) return null;
-  const seconds =
-    Number(stream.duration) * (stream.timeBase.num / stream.timeBase.den);
+  const seconds = Number(stream.duration) * (stream.timeBase.num / stream.timeBase.den);
   return finiteNumber(seconds);
 }
 
@@ -242,10 +208,7 @@ function streamMetadata(stream: NodeAvStream) {
   return stream.metadata?.getAll() ?? {};
 }
 
-function mapStream(
-  stream: NodeAvStream,
-  modules: NodeAvModules,
-): MediaProbeStream {
+function mapStream(stream: NodeAvStream, modules: NodeAvModules): MediaProbeStream {
   const codec = modules.lib.Codec.findDecoder(stream.codecpar.codecId);
   const metadata = streamMetadata(stream);
   const type = streamType(stream.codecpar.codecType, modules.constants);
@@ -260,8 +223,7 @@ function mapStream(
     width: type === "video" ? finiteNumber(stream.codecpar.width) : null,
     height: type === "video" ? finiteNumber(stream.codecpar.height) : null,
     channels: type === "audio" ? finiteNumber(stream.codecpar.channels) : null,
-    sampleRate:
-      type === "audio" ? finiteNumber(stream.codecpar.sampleRate) : null,
+    sampleRate: type === "audio" ? finiteNumber(stream.codecpar.sampleRate) : null,
     durationSeconds: streamDurationSeconds(stream),
     bitRate: finiteBigInt(stream.codecpar.bitRate),
     raw: {
@@ -272,9 +234,7 @@ function mapStream(
   };
 }
 
-export async function getNodeAvBackendStatus(
-  signal?: AbortSignal,
-): Promise<NodeAvBackendStatus> {
+export async function getNodeAvBackendStatus(signal?: AbortSignal): Promise<NodeAvBackendStatus> {
   try {
     await loadNodeAvModules(signal);
     return { available: true, message: null };
@@ -283,9 +243,7 @@ export async function getNodeAvBackendStatus(
   }
 }
 
-export function setNodeAvModuleLoaderForTests(
-  loader: NodeAvModuleLoader | null,
-) {
+export function setNodeAvModuleLoaderForTests(loader: NodeAvModuleLoader | null) {
   moduleLoader = loader ?? defaultNodeAvModuleLoader;
   modulesPromise = null;
 }
@@ -299,9 +257,7 @@ export const nodeAvBackend: ProbeBackend = {
     input.signal?.addEventListener("abort", cancelFromInputSignal, {
       once: true,
     });
-    let demuxer:
-      | Awaited<ReturnType<NodeAvModules["api"]["Demuxer"]["open"]>>
-      | undefined;
+    let demuxer: Awaited<ReturnType<NodeAvModules["api"]["Demuxer"]["open"]>> | undefined;
 
     try {
       demuxer = await openDemuxer(
@@ -317,9 +273,7 @@ export const nodeAvBackend: ProbeBackend = {
         container: demuxer.formatName === "unknown" ? null : demuxer.formatName,
         durationSeconds: finiteNumber(demuxer.duration),
         bitRate: finiteNumber(demuxer.bitRate),
-        streams: demuxer.streams.map((stream) =>
-          mapStream(stream as NodeAvStream, modules),
-        ),
+        streams: demuxer.streams.map((stream) => mapStream(stream as NodeAvStream, modules)),
       };
     } finally {
       input.signal?.removeEventListener("abort", cancelFromInputSignal);

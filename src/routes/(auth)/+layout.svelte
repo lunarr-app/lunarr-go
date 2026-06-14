@@ -8,13 +8,13 @@
 {#if isErrorPage}
   {@render children()}
 {:else}
-<main class="auth-shell">
-  <section class="auth-card">
-    <img class="brand brand-dark" src="/images/lunarr-logo.svg" alt="Lunarr" />
-    <img class="brand brand-light" src="/images/lunarr-logo-light.svg" alt="Lunarr" />
-    {@render children()}
-  </section>
-</main>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <img class="brand brand-dark" src="/images/lunarr-logo.svg" alt="Lunarr" />
+      <img class="brand brand-light" src="/images/lunarr-logo-light.svg" alt="Lunarr" />
+      {@render children()}
+    </section>
+  </main>
 {/if}
 
 <style>

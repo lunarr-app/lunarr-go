@@ -8,6 +8,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   return {
     rows: await tvRows(locals.user!.id, query, sort),
     query,
-    sort
+    sort,
   };
 };

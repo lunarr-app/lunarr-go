@@ -28,9 +28,7 @@ function routePathForFile(filePath: string) {
 
 async function exportedMethods(filePath: string) {
   const source = await readFile(filePath, "utf8");
-  return HTTP_METHODS.filter((method) =>
-    new RegExp(`export\\s+const\\s+${method}\\b`).test(source),
-  );
+  return HTTP_METHODS.filter((method) => new RegExp(`export\\s+const\\s+${method}\\b`).test(source));
 }
 
 function collectRefs(value: unknown): string[] {
@@ -83,10 +81,7 @@ describe("OpenAPI document", () => {
       const routePath = routePathForFile(file);
       const methods = await exportedMethods(file);
 
-      expect(
-        Object.hasOwn(documentedPaths, routePath),
-        `${routePath} is missing from OpenAPI`,
-      ).toBe(true);
+      expect(Object.hasOwn(documentedPaths, routePath), `${routePath} is missing from OpenAPI`).toBe(true);
       for (const method of methods) {
         expect(
           Object.hasOwn(documentedPaths[routePath] ?? {}, method.toLowerCase()),
@@ -97,7 +92,10 @@ describe("OpenAPI document", () => {
   });
 
   test("does not declare JSON bodies for no-content or HEAD responses", () => {
-    const documentedPaths = openApiDocument.paths as Record<string, Record<string, { responses?: Record<string, { content?: unknown }> }>>;
+    const documentedPaths = openApiDocument.paths as Record<
+      string,
+      Record<string, { responses?: Record<string, { content?: unknown }> }>
+    >;
 
     for (const [routePath, pathItem] of Object.entries(documentedPaths)) {
       for (const [method, operation] of Object.entries(pathItem)) {

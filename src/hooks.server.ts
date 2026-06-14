@@ -63,72 +63,43 @@ function isMediaResourcePath(pathname: string) {
 }
 
 function canResolveUnauthenticatedMediaResource(event: RequestEvent) {
-  return (
-    event.request.method === "OPTIONS" ||
-    event.url.searchParams.has(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM)
-  );
+  return event.request.method === "OPTIONS" || event.url.searchParams.has(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM);
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
   await ensureStartup();
 
-  const session = await auth.api
-    .getSession({ headers: event.request.headers })
-    .catch((error) => {
-      if (event.request.headers.has("x-api-key")) return null;
-      throw error;
-    });
+  const session = await auth.api.getSession({ headers: event.request.headers }).catch((error) => {
+    if (event.request.headers.has("x-api-key")) return null;
+    throw error;
+  });
 
   event.locals.session = session?.session ?? null;
   event.locals.user = session?.user ?? null;
 
   const pathname = event.url.pathname;
   const hasUsers = await hasRegisteredUsers();
-  const canResolveUnauthenticatedMedia =
-    isMediaResourcePath(pathname) &&
-    canResolveUnauthenticatedMediaResource(event);
+  const canResolveUnauthenticatedMedia = isMediaResourcePath(pathname) && canResolveUnauthenticatedMediaResource(event);
 
-  if (
-    !hasUsers &&
-    pathname !== "/setup" &&
-    !isAuthApiPath(pathname) &&
-    !isPublicApiPath(pathname)
-  ) {
+  if (!hasUsers && pathname !== "/setup" && !isAuthApiPath(pathname) && !isPublicApiPath(pathname)) {
     if (pathname.startsWith("/api/") || isMediaResourcePath(pathname))
       return json({ error: "Unauthorized" }, { status: 401 });
     throw redirect(303, "/setup");
   }
 
-  if (
-    event.locals.user &&
-    (pathname === "/login" || pathname === "/signup" || pathname === "/setup")
-  ) {
+  if (event.locals.user && (pathname === "/login" || pathname === "/signup" || pathname === "/setup")) {
     throw redirect(303, "/movies");
   }
 
-  if (
-    pathname.startsWith("/api/") &&
-    !isAuthApiPath(pathname) &&
-    !isPublicApiPath(pathname) &&
-    !event.locals.user
-  ) {
+  if (pathname.startsWith("/api/") && !isAuthApiPath(pathname) && !isPublicApiPath(pathname) && !event.locals.user) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (
-    isMediaResourcePath(pathname) &&
-    !event.locals.user &&
-    !canResolveUnauthenticatedMedia
-  ) {
+  if (isMediaResourcePath(pathname) && !event.locals.user && !canResolveUnauthenticatedMedia) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (
-    hasUsers &&
-    !event.locals.user &&
-    !isPublicPath(pathname) &&
-    !canResolveUnauthenticatedMedia
-  ) {
+  if (hasUsers && !event.locals.user && !isPublicPath(pathname) && !canResolveUnauthenticatedMedia) {
     throw redirect(303, "/login");
   }
 

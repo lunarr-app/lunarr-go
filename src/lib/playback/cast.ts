@@ -8,21 +8,9 @@ export type CastMediaSession = {
   };
   addUpdateListener?: (listener: CastMediaUpdateListener) => void;
   removeUpdateListener?: (listener: CastMediaUpdateListener) => void;
-  play?: (
-    request: null,
-    successCallback: () => void,
-    errorCallback: () => void,
-  ) => void;
-  pause?: (
-    request: null,
-    successCallback: () => void,
-    errorCallback: () => void,
-  ) => void;
-  seek?: (
-    request: CastSeekRequest,
-    successCallback: () => void,
-    errorCallback: () => void,
-  ) => void;
+  play?: (request: null, successCallback: () => void, errorCallback: () => void) => void;
+  pause?: (request: null, successCallback: () => void, errorCallback: () => void) => void;
+  seek?: (request: CastSeekRequest, successCallback: () => void, errorCallback: () => void) => void;
 };
 
 export type CastSession = {
@@ -80,20 +68,11 @@ export type CastSeekRequest = {
 };
 
 export type CastFrameworkContext = {
-  setOptions: (options: {
-    receiverApplicationId: string;
-    autoJoinPolicy: string;
-  }) => void;
+  setOptions: (options: { receiverApplicationId: string; autoJoinPolicy: string }) => void;
   getCurrentSession?: () => CastSession | null;
   requestSession: () => Promise<CastSession | null | undefined>;
-  addEventListener: (
-    eventType: string,
-    listener: (event: { sessionState: string }) => void,
-  ) => void;
-  removeEventListener: (
-    eventType: string,
-    listener: (event: { sessionState: string }) => void,
-  ) => void;
+  addEventListener: (eventType: string, listener: (event: { sessionState: string }) => void) => void;
+  removeEventListener: (eventType: string, listener: (event: { sessionState: string }) => void) => void;
 };
 
 export type CastApi = {
@@ -103,9 +82,7 @@ export type CastApi = {
         getInstance: () => CastFrameworkContext;
       };
       RemotePlayer: new () => CastRemotePlayer;
-      RemotePlayerController: new (
-        player: CastRemotePlayer,
-      ) => CastRemotePlayerController;
+      RemotePlayerController: new (player: CastRemotePlayer) => CastRemotePlayerController;
       RemotePlayerEventType: {
         ANY_CHANGE: string;
       };
@@ -127,10 +104,7 @@ export type CastApi = {
       };
       media: {
         DEFAULT_MEDIA_RECEIVER_APP_ID: string;
-        MediaInfo: new (
-          contentId: string,
-          contentType: string,
-        ) => CastMediaInfo;
+        MediaInfo: new (contentId: string, contentType: string) => CastMediaInfo;
         MovieMediaMetadata: new () => CastMediaMetadata;
         Track: new (trackId: number, trackType: string) => CastTrack;
         TrackType: {
@@ -146,8 +120,6 @@ export type CastApi = {
   };
 };
 
-export function connectedCastSession(
-  session: CastSession | null | undefined,
-): ConnectedCastSession | null {
+export function connectedCastSession(session: CastSession | null | undefined): ConnectedCastSession | null {
   return session?.loadMedia ? (session as ConnectedCastSession) : null;
 }

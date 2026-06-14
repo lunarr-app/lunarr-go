@@ -65,7 +65,7 @@ describe("movies page server", () => {
         email_verified: 0,
         image: null,
         created_at: nowMs,
-        updated_at: nowMs
+        updated_at: nowMs,
       })
       .execute();
     await db
@@ -76,7 +76,7 @@ describe("movies page server", () => {
         kind: "movie",
         path: tempDir,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       })
       .execute();
     await db
@@ -99,7 +99,7 @@ describe("movies page server", () => {
           popularity: 1,
           vote_average: 6,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "movie-bravo",
@@ -118,7 +118,7 @@ describe("movies page server", () => {
           popularity: 5,
           vote_average: 8,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "movie-charlie",
@@ -137,8 +137,8 @@ describe("movies page server", () => {
           popularity: 2,
           vote_average: 7,
           created_at: now,
-          updated_at: now
-        }
+          updated_at: now,
+        },
       ])
       .execute();
     await db
@@ -158,7 +158,7 @@ describe("movies page server", () => {
           audio_codec: null,
           container: "mp4",
           created_at: now,
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "file-bravo",
@@ -174,7 +174,7 @@ describe("movies page server", () => {
           audio_codec: null,
           container: "mp4",
           created_at: new Date(nowMs + 1000).toISOString(),
-          updated_at: now
+          updated_at: now,
         },
         {
           id: "file-charlie",
@@ -190,8 +190,8 @@ describe("movies page server", () => {
           audio_codec: null,
           container: "mp4",
           created_at: new Date(nowMs + 2000).toISOString(),
-          updated_at: now
-        }
+          updated_at: now,
+        },
       ])
       .execute();
     await db
@@ -204,7 +204,7 @@ describe("movies page server", () => {
           position_seconds: 100,
           duration_seconds: 100,
           completed: 1,
-          updated_at: new Date(nowMs).toISOString()
+          updated_at: new Date(nowMs).toISOString(),
         },
         {
           user_id: "user-1",
@@ -213,8 +213,8 @@ describe("movies page server", () => {
           position_seconds: 45,
           duration_seconds: 100,
           completed: 0,
-          updated_at: new Date(nowMs + 1000).toISOString()
-        }
+          updated_at: new Date(nowMs + 1000).toISOString(),
+        },
       ])
       .execute();
   });
@@ -227,14 +227,14 @@ describe("movies page server", () => {
   test("loads browse rows from search, watch-status, and sort query parameters", async () => {
     const result = (await moviesLoad({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/movies?q=rav&status=unwatched&sort=rating")
+      url: new URL("http://localhost/movies?q=rav&status=unwatched&sort=rating"),
     } as never)) as MoviesLoadResult;
 
     expect(result).toMatchObject({
       query: "rav",
       status: "unwatched",
       sort: "rating",
-      page: 1
+      page: 1,
     });
     expect(result.rows.all).toHaveLength(1);
     expect(result.rows.all[0]).toMatchObject({
@@ -242,7 +242,7 @@ describe("movies page server", () => {
       title: "Bravo",
       resumeFileId: "file-bravo",
       progressSeconds: 45,
-      completed: false
+      completed: false,
     });
     expect(result.rows.all[0].path).toBeUndefined();
     expect(result.rows.all[0].sortTitle).toBeUndefined();
@@ -253,7 +253,7 @@ describe("movies page server", () => {
   test("normalizes invalid browse query parameters", async () => {
     const result = (await moviesLoad({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/movies?status=watchedish&sort=unknown")
+      url: new URL("http://localhost/movies?status=watchedish&sort=unknown"),
     } as never)) as MoviesLoadResult;
 
     expect(result.status).toBe("all");
@@ -265,7 +265,7 @@ describe("movies page server", () => {
   test("clamps out-of-range movies pages", async () => {
     const result = (await moviesLoad({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/movies?page=2")
+      url: new URL("http://localhost/movies?page=2"),
     } as never)) as MoviesLoadResult;
 
     expect(result.page).toBe(1);
@@ -276,7 +276,7 @@ describe("movies page server", () => {
 
   test("loads only resumable movies for continue watching", async () => {
     const result = (await continueLoad({
-      locals: { user: { id: "user-1", role: "user" } }
+      locals: { user: { id: "user-1", role: "user" } },
     } as never)) as ContinueLoadResult;
 
     expect(result.movies).toHaveLength(1);
@@ -284,7 +284,7 @@ describe("movies page server", () => {
       id: "movie-bravo",
       resumeFileId: "file-bravo",
       progressSeconds: 45,
-      completed: false
+      completed: false,
     });
     expect(result.episodes).toEqual([]);
   });

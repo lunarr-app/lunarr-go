@@ -3,12 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-} from ".";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from ".";
 import type { Database } from "./schema";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 
@@ -120,12 +115,7 @@ describe("streaming schema", () => {
         id: "artifact-1",
         playback_session_id: "session-1",
         media_file_id: "file-1",
-        path: path.join(
-          tempDir,
-          "playback-sessions",
-          "session-1",
-          "index.m3u8",
-        ),
+        path: path.join(tempDir, "playback-sessions", "session-1", "index.m3u8"),
         mime_type: "application/vnd.apple.mpegurl",
         created_at: now,
         updated_at: now,
@@ -200,25 +190,13 @@ describe("streaming schema", () => {
         .execute(),
     );
 
-    expect(
-      await db.selectFrom("playback_session").selectAll().execute(),
-    ).toHaveLength(1);
-    expect(
-      await db.selectFrom("playback_hls_artifact").selectAll().execute(),
-    ).toHaveLength(1);
-    expect(
-      await db.selectFrom("media_stream_info").selectAll().execute(),
-    ).toHaveLength(2);
+    expect(await db.selectFrom("playback_session").selectAll().execute()).toHaveLength(1);
+    expect(await db.selectFrom("playback_hls_artifact").selectAll().execute()).toHaveLength(1);
+    expect(await db.selectFrom("media_stream_info").selectAll().execute()).toHaveLength(2);
 
     await db.deleteFrom("media_file").where("id", "=", "file-1").execute();
-    expect(
-      await db.selectFrom("playback_session").selectAll().execute(),
-    ).toHaveLength(0);
-    expect(
-      await db.selectFrom("playback_hls_artifact").selectAll().execute(),
-    ).toHaveLength(0);
-    expect(
-      await db.selectFrom("media_stream_info").selectAll().execute(),
-    ).toHaveLength(0);
+    expect(await db.selectFrom("playback_session").selectAll().execute()).toHaveLength(0);
+    expect(await db.selectFrom("playback_hls_artifact").selectAll().execute()).toHaveLength(0);
+    expect(await db.selectFrom("media_stream_info").selectAll().execute()).toHaveLength(0);
   });
 });

@@ -8,11 +8,7 @@ import {
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
-function authorizedUserId(input: {
-  localsUserId?: string;
-  subtitleTrackId: string;
-  token: string | null;
-}) {
+function authorizedUserId(input: { localsUserId?: string; subtitleTrackId: string; token: string | null }) {
   if (input.localsUserId) return { userId: input.localsUserId, signed: false };
   const payload = verifySignedPlaybackToken(input.token, {
     route: "subtitle",
@@ -45,13 +41,8 @@ export const HEAD: RequestHandler = async ({ params, locals, url }) => {
     return new Response(null, { status: 401 });
   }
 
-  const response = await externalMovieSubtitleResponse(
-    params.id,
-    auth.userId,
-    false,
-  );
+  const response = await externalMovieSubtitleResponse(params.id, auth.userId, false);
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 
-export const OPTIONS: RequestHandler = async () =>
-  signedPlaybackOptionsResponse();
+export const OPTIONS: RequestHandler = async () => signedPlaybackOptionsResponse();

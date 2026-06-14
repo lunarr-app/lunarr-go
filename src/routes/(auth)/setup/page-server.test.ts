@@ -1,23 +1,9 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  mock,
-  spyOn,
-  test,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import {
-  closeDatabaseForTests,
-  getDb,
-  migrateDatabase,
-  useDatabaseFileForTests,
-  type Database,
-} from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import type * as SetupPageServer from "./+page.server";
 
 const signUpEmail = mock(async (_input: unknown) => ({}));
@@ -46,10 +32,7 @@ describe("setup page server", () => {
   beforeEach(async () => {
     signUpEmail.mockClear();
     const authModule = await import("$lib/server/auth");
-    signUpEmailSpy = spyOn(
-      authModule.auth.api,
-      "signUpEmail",
-    ).mockImplementation(
+    signUpEmailSpy = spyOn(authModule.auth.api, "signUpEmail").mockImplementation(
       signUpEmail as unknown as typeof authModule.auth.api.signUpEmail,
     );
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-setup-page-"));

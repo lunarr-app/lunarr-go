@@ -9,10 +9,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   try {
     const body = await readJsonBody(request);
-    const action =
-      typeof body === "object" && body
-        ? String((body as { action?: unknown }).action ?? "")
-        : "";
+    const action = typeof body === "object" && body ? String((body as { action?: unknown }).action ?? "") : "";
     const result = await runSettingsAction(action);
     return json(result, { status: action === "testTmdb" ? 200 : 202 });
   } catch (error) {
