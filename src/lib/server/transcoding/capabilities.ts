@@ -1,4 +1,8 @@
-import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
+import {
+  emptyClientPlaybackCapabilities,
+  type ClientPlaybackCapabilities,
+  type PlaybackTarget,
+} from "$lib/playback/capabilities";
 import type { HlsSegmentFormat } from "./hls";
 import type { PlaybackPreference, TranscodePolicy } from "./policy";
 
@@ -9,6 +13,12 @@ export type MediaCapabilityInput = {
   container: string | null;
   videoCodec: string | null;
   audioCodec: string | null;
+};
+
+type PlaybackTargetProfile = {
+  target: PlaybackTarget;
+  clientCapabilities: Partial<ClientPlaybackCapabilities>;
+  allowWebmDirect: boolean;
 };
 
 export type PlaybackModeDecision =
@@ -32,6 +42,47 @@ function normalizeExtension(value: string | null | undefined) {
 
 function normalizeContainer(value: string | null | undefined) {
   return value?.trim().toLowerCase() || null;
+}
+
+function playbackTargetProfile(input: {
+  target?: PlaybackTarget;
+  clientCapabilities?: Partial<ClientPlaybackCapabilities> | null;
+}): PlaybackTargetProfile {
+  const clientCapabilities = {
+    ...emptyClientPlaybackCapabilities(),
+    ...(input.clientCapabilities ?? {}),
+  };
+  const target = input.target ?? "web";
+
+  switch (target) {
+    case "cast":
+      return {
+        target,
+        clientCapabilities: {
+          ...emptyClientPlaybackCapabilities(),
+          hlsNative: true,
+          hlsFmp4: true,
+        },
+        allowWebmDirect: false,
+      };
+    case "airplay":
+      return {
+        target,
+        clientCapabilities: {
+          ...clientCapabilities,
+          hlsNative: true,
+          hlsFmp4: true,
+          webm: false,
+        },
+        allowWebmDirect: false,
+      };
+    case "web":
+      return {
+        target,
+        clientCapabilities,
+        allowWebmDirect: true,
+      };
+  }
 }
 
 function hasBaselineHlsRemuxCompatibleCodecs(input: MediaCapabilityInput) {
@@ -173,15 +224,17 @@ function isWebmContainer(extension: string | null, container: string | null) {
 export function isDirectPlayCompatible(
   input: MediaCapabilityInput,
   clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
+  target: PlaybackTarget = "web",
 ) {
   const extension = normalizeExtension(input.extension);
   const container = normalizeContainer(input.container);
+  const profile = playbackTargetProfile({ target, clientCapabilities });
 
   if (isMp4Container(extension, container)) {
-    return hasClientMp4CompatibleCodecs(input, clientCapabilities);
+    return hasClientMp4CompatibleCodecs(input, profile.clientCapabilities);
   }
-  if (isWebmContainer(extension, container)) {
-    return hasClientWebmCompatibleCodecs(input, clientCapabilities);
+  if (profile.allowWebmDirect && isWebmContainer(extension, container)) {
+    return hasClientWebmCompatibleCodecs(input, profile.clientCapabilities);
   }
   return false;
 }
@@ -190,20 +243,28 @@ export function isRemuxCompatible(
   input: MediaCapabilityInput,
   clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
   hlsSegmentFormat: HlsSegmentFormat = "mpegts",
+  target: PlaybackTarget = "web",
 ) {
-  if (isDirectPlayCompatible(input, clientCapabilities)) return false;
-  return isHlsRemuxCompatible(input, clientCapabilities, hlsSegmentFormat);
+  if (isDirectPlayCompatible(input, clientCapabilities, target)) return false;
+  return isHlsRemuxCompatible(
+    input,
+    clientCapabilities,
+    hlsSegmentFormat,
+    target,
+  );
 }
 
 export function isHlsRemuxCompatible(
   input: MediaCapabilityInput,
   clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
   hlsSegmentFormat: HlsSegmentFormat = "mpegts",
+  target: PlaybackTarget = "web",
 ) {
+  const profile = playbackTargetProfile({ target, clientCapabilities });
   if (hasBaselineHlsRemuxCompatibleCodecs(input)) return true;
   return (
     hlsSegmentFormat === "fmp4" &&
-    hasFmp4HevcHlsRemuxCompatibleCodecs(input, clientCapabilities)
+    hasFmp4HevcHlsRemuxCompatibleCodecs(input, profile.clientCapabilities)
   );
 }
 
@@ -212,15 +273,18 @@ export function decidePlaybackMode(input: {
   policy: Pick<TranscodePolicy, "transcodingEnabled" | "playbackPreference">;
   clientCapabilities?: Partial<ClientPlaybackCapabilities> | null;
   hlsSegmentFormat?: HlsSegmentFormat;
+  target?: PlaybackTarget;
 }): PlaybackModeDecision {
   const directCompatible = isDirectPlayCompatible(
     input.file,
     input.clientCapabilities,
+    input.target,
   );
   const remuxCompatible = isRemuxCompatible(
     input.file,
     input.clientCapabilities,
     input.hlsSegmentFormat,
+    input.target,
   );
   const preference: PlaybackPreference = input.policy.playbackPreference;
 

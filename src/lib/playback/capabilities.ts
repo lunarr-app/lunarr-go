@@ -10,6 +10,9 @@ export type ClientPlaybackCapabilities = {
   hlsNative: boolean;
 };
 
+export const PLAYBACK_TARGETS = ["web", "cast", "airplay"] as const;
+export type PlaybackTarget = (typeof PLAYBACK_TARGETS)[number];
+
 export const CLIENT_PLAYBACK_CAPABILITY_KEYS = [
   "hevc",
   "av1",
@@ -34,6 +37,14 @@ export function emptyClientPlaybackCapabilities(): ClientPlaybackCapabilities {
     hlsFmp4: false,
     hlsNative: false,
   };
+}
+
+export function normalizePlaybackTarget(
+  value: string | null | undefined,
+): PlaybackTarget {
+  return PLAYBACK_TARGETS.includes(value as PlaybackTarget)
+    ? (value as PlaybackTarget)
+    : "web";
 }
 
 export function parseClientPlaybackCapabilityValue(value: string | null) {

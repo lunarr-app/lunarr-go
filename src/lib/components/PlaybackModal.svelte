@@ -31,7 +31,7 @@
       `/api/playback/${encodeURIComponent(id)}`,
       sourceUrl.origin,
     );
-    for (const key of ["file", "start", "transcode"]) {
+    for (const key of ["file", "start", "transcode", "target"]) {
       const value = sourceUrl.searchParams.get(key);
       if (value) apiUrl.searchParams.set(key, value);
     }
@@ -56,7 +56,7 @@
 
   function closeHref(sourceUrl = page.url) {
     const url = new URL(sourceUrl);
-    for (const key of ["play", "file", "start", "transcode"]) {
+    for (const key of ["play", "file", "start", "transcode", "target"]) {
       url.searchParams.delete(key);
     }
     return `${url.pathname}${url.search}${url.hash}`;

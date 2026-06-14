@@ -131,6 +131,85 @@ describe("transcode capabilities", () => {
     ).toBe(true);
   });
 
+  test("uses target-specific direct play profiles", () => {
+    const webm = {
+      extension: ".webm",
+      container: "matroska,webm",
+      videoCodec: "vp9",
+      audioCodec: "opus",
+    };
+    const hevcMp4 = {
+      extension: ".mp4",
+      container: "mp4",
+      videoCodec: "hevc",
+      audioCodec: "aac",
+    };
+
+    expect(
+      isDirectPlayCompatible(
+        webm,
+        { webm: true, vp9: true, opus: true },
+        "web",
+      ),
+    ).toBe(true);
+    expect(
+      isDirectPlayCompatible(
+        webm,
+        { webm: true, vp9: true, opus: true },
+        "cast",
+      ),
+    ).toBe(false);
+    expect(
+      isDirectPlayCompatible(
+        webm,
+        { webm: true, vp9: true, opus: true },
+        "airplay",
+      ),
+    ).toBe(false);
+    expect(isDirectPlayCompatible(hevcMp4, { hevc: true }, "web")).toBe(true);
+    expect(isDirectPlayCompatible(hevcMp4, { hevc: true }, "cast")).toBe(false);
+    expect(isDirectPlayCompatible(hevcMp4, { hevc: true }, "airplay")).toBe(
+      true,
+    );
+  });
+
+  test("uses target-specific HLS remux profiles", () => {
+    const hevcMkv = {
+      extension: ".mkv",
+      container: "matroska",
+      videoCodec: "hevc",
+      audioCodec: "aac",
+    };
+
+    expect(
+      isRemuxCompatible(
+        hevcMkv,
+        { hevc: true, hlsNative: true, hlsFmp4: true },
+        "fmp4",
+        "web",
+      ),
+    ).toBe(true);
+    expect(
+      isRemuxCompatible(
+        hevcMkv,
+        { hevc: true, hlsNative: true, hlsFmp4: true },
+        "fmp4",
+        "cast",
+      ),
+    ).toBe(false);
+    expect(isRemuxCompatible(hevcMkv, { hevc: true }, "fmp4", "airplay")).toBe(
+      true,
+    );
+    expect(
+      isRemuxCompatible(
+        hevcMkv,
+        { hlsNative: true, hlsFmp4: true },
+        "fmp4",
+        "cast",
+      ),
+    ).toBe(false);
+  });
+
   test("detects remux compatibility when only the container is unsupported", () => {
     expect(
       isRemuxCompatible({
@@ -288,6 +367,7 @@ describe("transcode capabilities", () => {
       decidePlaybackMode({
         file: directFile,
         policy: { transcodingEnabled: true, playbackPreference: "auto" },
+        target: "cast",
       }),
     ).toEqual({
       mode: "direct",

@@ -1,8 +1,10 @@
 import {
   CLIENT_PLAYBACK_CAPABILITY_KEYS,
   emptyClientPlaybackCapabilities,
+  normalizePlaybackTarget,
   parseClientPlaybackCapabilityValue,
   type ClientPlaybackCapabilities,
+  type PlaybackTarget,
 } from "$lib/playback/capabilities";
 import { getDb } from "../db";
 import {
@@ -41,6 +43,7 @@ type PlayableFile = NonNullable<
 export type PlaybackDecision = {
   mode: "direct" | "remux" | "transcode" | "unavailable";
   status: "ready" | "preparing" | "unavailable";
+  target: PlaybackTarget;
   modeDecision: PlaybackModeDecision;
   file: Omit<PlayableFile, "media_item_id">;
   playbackSessionId: string | null;
@@ -183,6 +186,7 @@ export async function getPlaybackDecision(
     forceStartTime?: boolean;
     forceTranscode?: boolean;
     clientCapabilities?: Partial<ClientPlaybackCapabilities> | null;
+    playbackTarget?: PlaybackTarget;
   } = {},
 ): Promise<PlaybackDecision | null> {
   const db = await getDb();
@@ -201,11 +205,13 @@ export async function getPlaybackDecision(
   const hlsSegmentFormat = requestDrivenHlsSegmentFormat({
     clientCapabilities: options.clientCapabilities,
   });
+  const playbackTarget = options.playbackTarget ?? "web";
   let modeDecision = decidePlaybackMode({
     file: mediaCapabilities,
     policy,
     clientCapabilities: options.clientCapabilities,
     hlsSegmentFormat,
+    target: playbackTarget,
   });
   if (
     file.source === "sftp" &&
@@ -217,6 +223,7 @@ export async function getPlaybackDecision(
       mediaCapabilities,
       options.clientCapabilities,
       hlsSegmentFormat,
+      playbackTarget,
     )
       ? { mode: "remux", reason: "container_unsupported" }
       : { mode: "transcode", reason: "direct_unsupported" };
@@ -277,6 +284,7 @@ export async function getPlaybackDecision(
     return {
       mode: "unavailable",
       status: "unavailable",
+      target: playbackTarget,
       modeDecision,
       file: safeFile,
       playbackSessionId: null,
@@ -304,6 +312,7 @@ export async function getPlaybackDecision(
     return {
       mode: transcode.status === "unavailable" ? "unavailable" : transcode.mode,
       status: transcode.status,
+      target: playbackTarget,
       modeDecision,
       file: safeFile,
       playbackSessionId: transcode.sessionId,
@@ -318,6 +327,7 @@ export async function getPlaybackDecision(
     return {
       mode: "unavailable",
       status: "unavailable",
+      target: playbackTarget,
       modeDecision,
       file: safeFile,
       playbackSessionId: null,
@@ -331,6 +341,7 @@ export async function getPlaybackDecision(
   return {
     mode: "direct",
     status: "ready",
+    target: playbackTarget,
     modeDecision,
     file: safeFile,
     playbackSessionId: null,
@@ -379,6 +390,9 @@ export async function getPlaybackData(input: {
       forceStartTime: explicitStartSeconds !== null,
       forceTranscode: parseForceTranscode(input.url),
       clientCapabilities: parseClientPlaybackCapabilities(input.url),
+      playbackTarget: normalizePlaybackTarget(
+        input.url.searchParams.get("target"),
+      ),
     },
   );
   if (!playback?.file) return null;
