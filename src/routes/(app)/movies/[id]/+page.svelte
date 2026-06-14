@@ -93,16 +93,27 @@
     return progressByFile.get(fileId);
   }
 
-  function progressLabel(fileId: string) {
-    const progress = fileProgress(fileId);
+  function progressLabel(
+    progress:
+      | {
+          position_seconds: number;
+          duration_seconds: number | null;
+          completed: boolean | number;
+        }
+      | undefined
+  ) {
     if (!progress) return "Unwatched";
     if (Boolean(progress.completed)) return "Watched";
 
     const position = Math.max(0, Math.floor(Number(progress.position_seconds ?? 0)));
     const duration = progress.duration_seconds === null ? null : Math.max(0, Math.floor(Number(progress.duration_seconds)));
     if (position <= 0) return "Unwatched";
-    if (!duration) return `Resume at ${formatDuration(position)}`;
-    return `Resume at ${formatDuration(position)} of ${formatDuration(duration)}`;
+    if (!duration) return formatClockDuration(position);
+    return `${formatClockDuration(position)} / ${formatClockDuration(duration)} · ${progressPercent(position, duration)}%`;
+  }
+
+  function progressPercent(position: number, duration: number) {
+    return Math.min(99, Math.max(1, Math.round((position / duration) * 100)));
   }
 
   function formatDuration(totalSeconds: number) {
@@ -112,6 +123,17 @@
     if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
     if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
     return `${seconds}s`;
+  }
+
+  function formatClockDuration(totalSeconds: number) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, "0")}`;
+    }
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
   }
 
   function formatFileSize(bytes: number | string | null | undefined) {
@@ -161,7 +183,7 @@
         <CirclePlay size={19} aria-hidden="true" />
         {primaryActionLabel}
       </a>
-      <form method="POST" action="?/watched">
+      <form class="inline-action" method="POST" action="?/watched">
         <input type="hidden" name="fileId" value={primaryFile.id} />
         <button class="secondary" name="completed" value={hasCompletedProgress ? "false" : "true"}>
           {#if hasCompletedProgress}
@@ -193,93 +215,95 @@
 </MediaHero>
 
 <div class="details">
-  <section class="files-section" aria-labelledby="files-heading">
-    <div class="section-heading">
-      <div>
-        <h2 id="files-heading">Files</h2>
-        <p class="muted">{fileCountLabel} available for playback.</p>
-      </div>
-    </div>
-    {#if form?.error}
-      <p class="error">{form.error}</p>
-    {/if}
-    <div class="files">
-      {#each data.files as file}
-        <article class:featured={primaryFile?.id === file.id}>
-          <div class="file-copy">
-            <div class="file-title">
-              <strong>{file.basename}</strong>
-              {#if primaryFile?.id === file.id}
-                <span>Selected</span>
-              {/if}
-            </div>
-            <div class="file-meta">
-              <span><HardDrive size={14} aria-hidden="true" />{formatFileSize(file.size_bytes)}</span>
-              {#if fileDetails(file)}
-                <span><Tags size={14} aria-hidden="true" />{fileDetails(file)}</span>
-              {/if}
-            </div>
-            <span class:watched={Boolean(fileProgress(file.id)?.completed)} class="status">{progressLabel(file.id)}</span>
-          </div>
-          <div class="file-actions">
-            <a
-              class="button secondary"
-              href={playbackModalHref({
-                currentUrl: page.url,
-                mediaItemId: data.movie.id,
-                mediaFileId: file.id
-              })}
-            >
-              <CirclePlay size={16} aria-hidden="true" />
-              Play
-            </a>
-            <form method="POST" action="?/watched">
-              <input type="hidden" name="fileId" value={file.id} />
-              {#if Boolean(fileProgress(file.id)?.completed)}
-                <button class="secondary compact" name="completed" value="false">
-                  <RotateCcw size={14} aria-hidden="true" />
-                  Unwatch
-                </button>
-              {:else}
-                <button class="secondary compact" name="completed" value="true">
-                  <Check size={14} aria-hidden="true" />
-                  Watched
-                </button>
-              {/if}
-            </form>
-          </div>
-        </article>
-      {/each}
-    </div>
-  </section>
-
-  {#if data.cast.length}
-    <section class="cast-section" aria-labelledby="cast-heading">
-      <div class="section-heading">
-        <div>
-          <h2 id="cast-heading">Cast</h2>
-          <p class="muted">Top billed people from TMDb.</p>
+  <div class="detail-main">
+    <section class="files-section" aria-label="Files">
+      {#if form?.error}
+        <p class="error">{form.error}</p>
+      {/if}
+      <div class="files">
+        <div class="files-header" aria-hidden="true">
+          <span>File</span>
+          <span>Status</span>
+          <span>Actions</span>
         </div>
-      </div>
-      <div class="cast-rail">
-        {#each data.cast as person}
-          <a class="person" href={`/people/${encodeURIComponent(person.provider)}/${encodeURIComponent(person.providerId)}`}>
-            <div class="profile">
-              {#if person.profilePath}
-                <img src={tmdbImageUrl(person.profilePath, "w185")} alt="" loading="lazy" />
-              {:else}
-                <Users size={22} aria-hidden="true" />
-              {/if}
+        {#each data.files as file}
+          {@const progress = fileProgress(file.id)}
+          <article class="file-row" class:featured={primaryFile?.id === file.id}>
+            <div class="file-copy">
+              <div class="file-title">
+                <strong>{file.basename}</strong>
+                {#if primaryFile?.id === file.id}
+                  <span>Selected</span>
+                {/if}
+              </div>
+              <div class="file-meta">
+                <span><HardDrive size={14} aria-hidden="true" />{formatFileSize(file.size_bytes)}</span>
+                {#if fileDetails(file)}
+                  <span><Tags size={14} aria-hidden="true" />{fileDetails(file)}</span>
+                {/if}
+              </div>
             </div>
-            <strong>{person.name}</strong>
-            {#if person.character}
-              <span>{person.character}</span>
-            {/if}
-          </a>
+            <span class="status" class:watched={Boolean(progress?.completed)}>{progressLabel(progress)}</span>
+            <div class="file-actions">
+              <a
+                class="button secondary"
+                href={playbackModalHref({
+                  currentUrl: page.url,
+                  mediaItemId: data.movie.id,
+                  mediaFileId: file.id
+                })}
+              >
+                <CirclePlay size={16} aria-hidden="true" />
+                Play
+              </a>
+              <form class="inline-action" method="POST" action="?/watched">
+                <input type="hidden" name="fileId" value={file.id} />
+                {#if Boolean(progress?.completed)}
+                  <button class="secondary compact" name="completed" value="false">
+                    <RotateCcw size={14} aria-hidden="true" />
+                    Unwatch
+                  </button>
+                {:else}
+                  <button class="secondary compact" name="completed" value="true">
+                    <Check size={14} aria-hidden="true" />
+                    Watched
+                  </button>
+                {/if}
+              </form>
+            </div>
+          </article>
         {/each}
       </div>
     </section>
-  {/if}
+
+    {#if data.cast.length}
+      <section class="cast-section" aria-labelledby="cast-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="cast-heading">Cast</h2>
+            <p class="muted">Top billed people from TMDb.</p>
+          </div>
+        </div>
+        <div class="cast-rail">
+          {#each data.cast as person}
+            <a class="person" href={`/people/${encodeURIComponent(person.provider)}/${encodeURIComponent(person.providerId)}`}>
+              <div class="profile">
+                {#if person.profilePath}
+                  <img src={tmdbImageUrl(person.profilePath, "w185")} alt="" loading="lazy" />
+                {:else}
+                  <Users size={22} aria-hidden="true" />
+                {/if}
+              </div>
+              <strong>{person.name}</strong>
+              {#if person.character}
+                <span>{person.character}</span>
+              {/if}
+            </a>
+          {/each}
+        </div>
+      </section>
+    {/if}
+  </div>
 
   <aside class="metadata" aria-labelledby="metadata-heading">
     <div class="section-heading">
@@ -349,7 +373,7 @@
       </section>
     {/if}
     {#if data.canManageMetadata}
-      <form method="POST" action="?/refreshMetadata">
+      <form class="inline-action" method="POST" action="?/refreshMetadata">
         <button class="secondary" disabled={!data.tmdbConfigured}>
           <RefreshCw size={16} aria-hidden="true" />
           Refresh metadata
@@ -399,6 +423,12 @@
     align-items: start;
   }
 
+  .detail-main {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+  }
+
   .section-heading {
     display: flex;
     align-items: end;
@@ -414,7 +444,19 @@
 
   .files {
     display: grid;
+    gap: 0;
+  }
+
+  .files-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr) minmax(12rem, max-content);
     gap: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-dim);
+    padding: 0.35rem 0 0.45rem;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
   }
 
   .files-section,
@@ -422,16 +464,16 @@
     min-width: 0;
   }
 
-  article {
+  .file-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr) minmax(12rem, max-content);
     gap: 0.75rem;
     align-items: center;
-    border-top: 1px solid var(--color-border);
-    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.65rem 0;
   }
 
-  article.featured {
+  .file-row.featured {
     border-color: var(--color-accent-border);
   }
 
@@ -478,8 +520,10 @@
 
   .status {
     color: var(--color-accent);
-    font-size: 0.86rem;
+    font-size: 0.82rem;
     font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
   }
 
   .status.watched {
@@ -487,7 +531,7 @@
   }
 
   .file-actions,
-  form {
+  .inline-action {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -501,10 +545,6 @@
     min-height: 2rem;
     padding: 0 0.65rem;
     font-size: 0.86rem;
-  }
-
-  .cast-section {
-    grid-column: 1 / 2;
   }
 
   .cast-rail {
@@ -669,8 +709,16 @@
       grid-template-columns: 1fr;
     }
 
-    article {
+    .file-row {
       grid-template-columns: 1fr;
+    }
+
+    .files-header {
+      display: none;
+    }
+
+    .status {
+      grid-column: 1 / -1;
     }
 
     .file-actions {
@@ -683,10 +731,6 @@
       border-left: 0;
       border-top: 1px solid var(--color-border-strong);
       padding: 1rem 0 0;
-    }
-
-    .cast-section {
-      grid-column: auto;
     }
   }
 
