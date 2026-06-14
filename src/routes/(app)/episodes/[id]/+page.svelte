@@ -18,6 +18,35 @@
       mediaFileId: fileId
     });
   }
+
+  function formatDuration(totalSeconds: number) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+    if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+    return `${seconds}s`;
+  }
+
+  function formatFileSize(bytes: number | string | null | undefined) {
+    const value = Number(bytes ?? 0);
+    if (!Number.isFinite(value) || value <= 0) return "Unknown size";
+    const gib = value / 1024 / 1024 / 1024;
+    if (gib >= 1) return `${gib.toFixed(2)} GB`;
+    return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function fileDetails(file: (typeof data.files)[number]) {
+    return [
+      file.container?.toUpperCase() ?? file.extension.replace(/^\./, "").toUpperCase(),
+      file.duration_seconds ? formatDuration(file.duration_seconds) : null,
+      file.video_codec?.toUpperCase() ?? null,
+      file.audio_codec?.toUpperCase() ?? null,
+      formatFileSize(file.size_bytes)
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
 </script>
 
 <svelte:head>
@@ -51,7 +80,7 @@
           <Play size={16} aria-hidden="true" />
           Play
         </a>
-        <form method="POST" action="?/watched">
+        <form class="inline-action" method="POST" action="?/watched">
           <input type="hidden" name="fileId" value={primaryFile.id} />
           <input type="hidden" name="completed" value={completed ? "false" : "true"} />
           <button class="secondary">
@@ -73,13 +102,13 @@
   <p class="error">{form.error}</p>
 {/if}
 
-<section class="files">
-  <h2>Files</h2>
+<section class="files" aria-labelledby="files-heading">
+  <h2 id="files-heading">Files</h2>
   <div class="file-list">
     {#each data.files as file}
-      <a href={playHref(file.id)}>
+      <a class="file-row" href={playHref(file.id)}>
         <span>{file.basename}</span>
-        <small>{file.container ?? file.extension.replace(".", "").toUpperCase()} - {Math.round(file.size_bytes / 1024 / 1024)} MB</small>
+        <small>{fileDetails(file)}</small>
       </a>
     {/each}
   </div>
@@ -185,40 +214,40 @@
     gap: 0.45rem;
   }
 
-  .actions form {
+  .inline-action {
     margin: 0;
   }
 
   .files {
     display: grid;
-    gap: 0.8rem;
+    gap: 0.45rem;
     max-width: 52rem;
   }
 
-  h2 {
+  .files h2 {
     margin: 0;
+    font-size: 1rem;
   }
 
   .file-list {
     display: grid;
   }
 
-  .file-list a {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
+  .file-row {
+    display: grid;
+    gap: 0.18rem;
     border-bottom: 1px solid var(--color-border);
-    padding: 0.7rem 0;
+    padding: 0.65rem 0;
   }
 
-  .file-list span {
+  .file-row span {
     min-width: 0;
     overflow-wrap: anywhere;
   }
 
-  small {
-    flex-shrink: 0;
+  .file-row small {
     color: var(--color-muted);
+    font-size: 0.84rem;
   }
 
   @media (max-width: 760px) {
@@ -226,10 +255,6 @@
       grid-template-columns: 1fr;
       min-height: 18rem;
       padding-top: 4rem;
-    }
-
-    .file-list a {
-      display: grid;
     }
   }
 </style>
