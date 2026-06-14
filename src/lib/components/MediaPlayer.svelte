@@ -2,7 +2,9 @@
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
   import PlayerShell from "$lib/components/PlayerShell.svelte";
-  import type { RemotePlaybackTarget } from "$lib/playback/capabilities";
+  import type {
+    PlaybackTarget,
+  } from "$lib/playback/capabilities";
   import {
     Airplay,
     Captions,
@@ -64,7 +66,7 @@
     absolutePlaybackSeconds,
     createHlsSeekEventController,
     hlsRepositionHref,
-    remotePlaybackTargetHref,
+    playbackTargetHref,
     shouldReloadHlsPlaybackDataOnError,
     shouldRecoverHlsPlaybackError,
     streamRelativePlaybackSeconds,
@@ -342,7 +344,7 @@
   }
 
   function showAirPlayTargetPicker() {
-    if (switchToRemotePlaybackTarget("airplay")) return;
+    if (switchPlaybackTarget("airplay")) return;
 
     const player = airPlayVideoElement();
     const picker = player?.webkitShowPlaybackTargetPicker;
@@ -768,6 +770,7 @@
   async function playFromOverlay() {
     if (!video) return;
     showControls();
+    if (switchToWebPlaybackTarget()) return;
     playerUiState = "starting";
     try {
       await video.play();
@@ -1034,7 +1037,7 @@
     onReposition(href);
   }
 
-  function currentRemotePlaybackSeconds() {
+  function currentPlaybackTargetSeconds() {
     const payload = progressPayload(data, false);
     if (payload) return payload.positionSeconds;
     const displayedSeconds = displayedPlaybackSeconds();
@@ -1042,18 +1045,23 @@
     return Number.isFinite(data.startSeconds) ? data.startSeconds : 0;
   }
 
-  function switchToRemotePlaybackTarget(target: RemotePlaybackTarget) {
+  function switchPlaybackTarget(target: PlaybackTarget) {
     if (data.playback.target === target) return false;
-    const href = remotePlaybackTargetHref({
+    const href = playbackTargetHref({
       currentUrl: new URL(window.location.href),
       mediaFileId: data.playback.file.id,
       target,
-      startSeconds: currentRemotePlaybackSeconds(),
+      startSeconds: currentPlaybackTargetSeconds(),
     });
     flushProgress(data);
     cancelPlaybackSession(data.playback);
     onReposition(href);
     return true;
+  }
+
+  function switchToWebPlaybackTarget() {
+    if (isCasting() || airPlayActive) return false;
+    return switchPlaybackTarget("web");
   }
 
   function seekToPlaybackSeconds(targetSeconds: number) {
@@ -1215,7 +1223,7 @@
 
   async function castPlayback() {
     if (castLaunchState === "connecting") return;
-    if (switchToRemotePlaybackTarget("cast")) return;
+    if (switchPlaybackTarget("cast")) return;
     const previousUiState = playerUiState;
     castLaunchState = "connecting";
     try {

@@ -1,4 +1,4 @@
-import type { RemotePlaybackTarget } from "./capabilities";
+import type { PlaybackTarget } from "./capabilities";
 
 export function isHlsPlaybackMode(mode: string) {
   return mode === "transcode" || mode === "remux";
@@ -51,15 +51,19 @@ export function hlsRepositionHref(input: {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-export function remotePlaybackTargetHref(input: {
+export function playbackTargetHref(input: {
   currentUrl: URL;
   mediaFileId: string;
-  target: RemotePlaybackTarget;
+  target: PlaybackTarget;
   startSeconds: number;
 }) {
   const url = new URL(input.currentUrl);
   url.searchParams.set("file", input.mediaFileId);
-  url.searchParams.set("target", input.target);
+  if (input.target === "web") {
+    url.searchParams.delete("target");
+  } else {
+    url.searchParams.set("target", input.target);
+  }
   const startSeconds = Math.max(0, Math.floor(input.startSeconds));
   if (startSeconds > 0) {
     url.searchParams.set("start", String(startSeconds));

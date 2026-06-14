@@ -5,7 +5,7 @@ import {
   hlsRepositionHref,
   initialPlayerTimelineSeconds,
   isHlsPlaybackMode,
-  remotePlaybackTargetHref,
+  playbackTargetHref,
   shouldReloadHlsPlaybackDataOnError,
   shouldRecoverHlsPlaybackError,
   streamRelativePlaybackSeconds,
@@ -55,7 +55,7 @@ describe("HLS seek helpers", () => {
 
   test("builds a same-page target URL for remote playback", () => {
     expect(
-      remotePlaybackTargetHref({
+      playbackTargetHref({
         currentUrl: new URL(
           "http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player",
         ),
@@ -68,7 +68,7 @@ describe("HLS seek helpers", () => {
     );
 
     expect(
-      remotePlaybackTargetHref({
+      playbackTargetHref({
         currentUrl: new URL(
           "http://localhost/movies/movie-1?play=movie-1&file=old&start=40&transcode=1&target=cast#player",
         ),
@@ -79,6 +79,30 @@ describe("HLS seek helpers", () => {
     ).toBe(
       "/movies/movie-1?play=movie-1&file=file-1&transcode=1&target=airplay#player",
     );
+  });
+
+  test("builds a same-page target URL for local web playback", () => {
+    expect(
+      playbackTargetHref({
+        currentUrl: new URL(
+          "http://localhost/movies/movie-1?play=movie-1&file=old&target=cast&start=40#player",
+        ),
+        mediaFileId: "file-1",
+        target: "web",
+        startSeconds: 125.8,
+      }),
+    ).toBe("/movies/movie-1?play=movie-1&file=file-1&start=125#player");
+
+    expect(
+      playbackTargetHref({
+        currentUrl: new URL(
+          "http://localhost/movies/movie-1?play=movie-1&file=old&target=airplay&start=40&transcode=1#player",
+        ),
+        mediaFileId: "file-1",
+        target: "web",
+        startSeconds: 0,
+      }),
+    ).toBe("/movies/movie-1?play=movie-1&file=file-1&transcode=1#player");
   });
 
   test("recovers HLS playback errors only after playback has started", () => {
