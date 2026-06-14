@@ -2,6 +2,7 @@
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
   import PlayerShell from "$lib/components/PlayerShell.svelte";
+  import type { RemotePlaybackTarget } from "$lib/playback/capabilities";
   import {
     Airplay,
     Captions,
@@ -63,6 +64,7 @@
     absolutePlaybackSeconds,
     createHlsSeekEventController,
     hlsRepositionHref,
+    remotePlaybackTargetHref,
     shouldReloadHlsPlaybackDataOnError,
     shouldRecoverHlsPlaybackError,
     streamRelativePlaybackSeconds,
@@ -340,6 +342,8 @@
   }
 
   function showAirPlayTargetPicker() {
+    if (switchToRemotePlaybackTarget("airplay")) return;
+
     const player = airPlayVideoElement();
     const picker = player?.webkitShowPlaybackTargetPicker;
     if (
@@ -1030,6 +1034,28 @@
     onReposition(href);
   }
 
+  function currentRemotePlaybackSeconds() {
+    const payload = progressPayload(data, false);
+    if (payload) return payload.positionSeconds;
+    const displayedSeconds = displayedPlaybackSeconds();
+    if (Number.isFinite(displayedSeconds)) return displayedSeconds;
+    return Number.isFinite(data.startSeconds) ? data.startSeconds : 0;
+  }
+
+  function switchToRemotePlaybackTarget(target: RemotePlaybackTarget) {
+    if (data.playback.target === target) return false;
+    const href = remotePlaybackTargetHref({
+      currentUrl: new URL(window.location.href),
+      mediaFileId: data.playback.file.id,
+      target,
+      startSeconds: currentRemotePlaybackSeconds(),
+    });
+    flushProgress(data);
+    cancelPlaybackSession(data.playback);
+    onReposition(href);
+    return true;
+  }
+
   function seekToPlaybackSeconds(targetSeconds: number) {
     seekPreviewSeconds = null;
     if (castLaunchState === "connecting") return;
@@ -1189,6 +1215,7 @@
 
   async function castPlayback() {
     if (castLaunchState === "connecting") return;
+    if (switchToRemotePlaybackTarget("cast")) return;
     const previousUiState = playerUiState;
     castLaunchState = "connecting";
     try {

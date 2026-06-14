@@ -1,3 +1,5 @@
+import type { RemotePlaybackTarget } from "./capabilities";
+
 export function isHlsPlaybackMode(mode: string) {
   return mode === "transcode" || mode === "remux";
 }
@@ -45,6 +47,24 @@ export function hlsRepositionHref(input: {
   }
   if (input.forceTranscode) {
     url.searchParams.set("transcode", "1");
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function remotePlaybackTargetHref(input: {
+  currentUrl: URL;
+  mediaFileId: string;
+  target: RemotePlaybackTarget;
+  startSeconds: number;
+}) {
+  const url = new URL(input.currentUrl);
+  url.searchParams.set("file", input.mediaFileId);
+  url.searchParams.set("target", input.target);
+  const startSeconds = Math.max(0, Math.floor(input.startSeconds));
+  if (startSeconds > 0) {
+    url.searchParams.set("start", String(startSeconds));
+  } else {
+    url.searchParams.delete("start");
   }
   return `${url.pathname}${url.search}${url.hash}`;
 }

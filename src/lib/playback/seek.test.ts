@@ -5,6 +5,7 @@ import {
   hlsRepositionHref,
   initialPlayerTimelineSeconds,
   isHlsPlaybackMode,
+  remotePlaybackTargetHref,
   shouldReloadHlsPlaybackDataOnError,
   shouldRecoverHlsPlaybackError,
   streamRelativePlaybackSeconds,
@@ -50,6 +51,34 @@ describe("HLS seek helpers", () => {
         startSeconds: 0,
       }),
     ).toBe("/movies/movie-1?play=movie-1&file=file-1&transcode=1#player");
+  });
+
+  test("builds a same-page target URL for remote playback", () => {
+    expect(
+      remotePlaybackTargetHref({
+        currentUrl: new URL(
+          "http://localhost/movies/movie-1?play=movie-1&file=old&foo=bar#player",
+        ),
+        mediaFileId: "file-1",
+        target: "cast",
+        startSeconds: 125.8,
+      }),
+    ).toBe(
+      "/movies/movie-1?play=movie-1&file=file-1&foo=bar&target=cast&start=125#player",
+    );
+
+    expect(
+      remotePlaybackTargetHref({
+        currentUrl: new URL(
+          "http://localhost/movies/movie-1?play=movie-1&file=old&start=40&transcode=1&target=cast#player",
+        ),
+        mediaFileId: "file-1",
+        target: "airplay",
+        startSeconds: 0,
+      }),
+    ).toBe(
+      "/movies/movie-1?play=movie-1&file=file-1&transcode=1&target=airplay#player",
+    );
   });
 
   test("recovers HLS playback errors only after playback has started", () => {

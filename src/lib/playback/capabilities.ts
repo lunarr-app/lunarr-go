@@ -12,6 +12,10 @@ export type ClientPlaybackCapabilities = {
 
 export const PLAYBACK_TARGETS = ["web", "cast", "airplay"] as const;
 export type PlaybackTarget = (typeof PLAYBACK_TARGETS)[number];
+export type RemotePlaybackTarget = Extract<
+  PlaybackTarget,
+  "cast" | "airplay"
+>;
 
 export const CLIENT_PLAYBACK_CAPABILITY_KEYS = [
   "hevc",
