@@ -23,7 +23,10 @@ const okResponse = {
   },
 };
 
-const acceptedResponse = (schema: Record<string, unknown>, description = "Operation accepted.") => jsonResponse(schema, description);
+const acceptedResponse = (
+  schema: Record<string, unknown>,
+  description = "Operation accepted.",
+) => jsonResponse(schema, description);
 const textResponse = (description: string, contentType: string) => ({
   description,
   content: {
@@ -32,7 +35,10 @@ const textResponse = (description: string, contentType: string) => ({
     },
   },
 });
-const binaryResponse = (description: string, contentType = "application/octet-stream") => ({
+const binaryResponse = (
+  description: string,
+  contentType = "application/octet-stream",
+) => ({
   description,
   content: {
     [contentType]: {
@@ -55,7 +61,10 @@ const headErrors = {
   "409": { description: "Conflict." },
 };
 
-const jsonResponse = (schema: Record<string, unknown>, description = "Successful response.") => ({
+const jsonResponse = (
+  schema: Record<string, unknown>,
+  description = "Successful response.",
+) => ({
   description,
   content: {
     "application/json": {
@@ -70,7 +79,10 @@ const objectSchema = (description: string) => ({
   additionalProperties: true,
 });
 
-const pathIdParameter = (name = "id", description = "Resource identifier.") => ({
+const pathIdParameter = (
+  name = "id",
+  description = "Resource identifier.",
+) => ({
   name,
   in: "path",
   required: true,
@@ -127,7 +139,9 @@ export const openApiDocument = {
         summary: "List personal API keys for the signed-in user.",
         operationId: "listApiKeys",
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/ApiKeyListResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ApiKeyListResponse",
+          }),
           "401": errorResponse,
         },
       },
@@ -137,7 +151,10 @@ export const openApiDocument = {
         operationId: "createApiKey",
         requestBody: { $ref: "#/components/requestBodies/CreateApiKeyRequest" },
         responses: {
-          "201": jsonResponse({ $ref: "#/components/schemas/CreateApiKeyResponse" }, "API key created."),
+          "201": jsonResponse(
+            { $ref: "#/components/schemas/CreateApiKeyResponse" },
+            "API key created.",
+          ),
           "400": errorResponse,
           "401": errorResponse,
         },
@@ -161,7 +178,9 @@ export const openApiDocument = {
         tags: ["Account"],
         summary: "Update playback preference and language preferences.",
         operationId: "updatePlaybackPreference",
-        requestBody: { $ref: "#/components/requestBodies/PlaybackPreferenceRequest" },
+        requestBody: {
+          $ref: "#/components/requestBodies/PlaybackPreferenceRequest",
+        },
         responses: {
           "200": okResponse,
           "400": errorResponse,
@@ -175,7 +194,9 @@ export const openApiDocument = {
         summary: "List resumable movies and episodes.",
         operationId: "getContinueWatching",
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/ContinueWatchingResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ContinueWatchingResponse",
+          }),
           "401": errorResponse,
         },
       },
@@ -197,7 +218,10 @@ export const openApiDocument = {
             name: "sort",
             in: "query",
             required: false,
-            schema: { type: "string", enum: ["title", "recent", "year_desc", "rating", "release_date"] },
+            schema: {
+              type: "string",
+              enum: ["title", "recent", "year_desc", "rating", "release_date"],
+            },
           },
           {
             name: "page",
@@ -207,7 +231,9 @@ export const openApiDocument = {
           },
         ],
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/MovieRowsResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MovieRowsResponse",
+          }),
           "401": errorResponse,
         },
       },
@@ -244,7 +270,9 @@ export const openApiDocument = {
         operationId: "refreshMovieMetadata",
         parameters: [pathIdParameter()],
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/MetadataRefreshResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MetadataRefreshResponse",
+          }),
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -263,11 +291,16 @@ export const openApiDocument = {
             name: "sort",
             in: "query",
             required: false,
-            schema: { type: "string", enum: ["title", "recent", "latest", "popular"] },
+            schema: {
+              type: "string",
+              enum: ["title", "recent", "latest", "popular"],
+            },
           },
         ],
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/ShowRowsResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ShowRowsResponse",
+          }),
           "401": errorResponse,
         },
       },
@@ -282,7 +315,9 @@ export const openApiDocument = {
           pathIdParameter("id", "Provider person identifier."),
         ],
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/PersonDetailResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/PersonDetailResponse",
+          }),
           "401": errorResponse,
           "404": errorResponse,
         },
@@ -321,7 +356,9 @@ export const openApiDocument = {
         summary: "List configured libraries and library sharing users.",
         operationId: "getLibraries",
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/LibrariesResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/LibrariesResponse",
+          }),
           "401": errorResponse,
           "403": errorResponse,
         },
@@ -332,7 +369,10 @@ export const openApiDocument = {
         operationId: "createLibrary",
         requestBody: { $ref: "#/components/requestBodies/LibraryInput" },
         responses: {
-          "201": jsonResponse({ $ref: "#/components/schemas/LibraryResponse" }, "Library created."),
+          "201": jsonResponse(
+            { $ref: "#/components/schemas/LibraryResponse" },
+            "Library created.",
+          ),
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -384,7 +424,9 @@ export const openApiDocument = {
         summary: "Update library sharing access.",
         operationId: "updateLibraryAccess",
         parameters: [pathIdParameter()],
-        requestBody: { $ref: "#/components/requestBodies/LibraryAccessRequest" },
+        requestBody: {
+          $ref: "#/components/requestBodies/LibraryAccessRequest",
+        },
         responses: {
           "200": okResponse,
           "400": errorResponse,
@@ -400,7 +442,10 @@ export const openApiDocument = {
         operationId: "startLibraryScan",
         parameters: [pathIdParameter()],
         responses: {
-          "202": acceptedResponse({ $ref: "#/components/schemas/ScanStartResponse" }, "Scan started or already active."),
+          "202": acceptedResponse(
+            { $ref: "#/components/schemas/ScanStartResponse" },
+            "Scan started or already active.",
+          ),
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -428,7 +473,9 @@ export const openApiDocument = {
           pathIdParameter("id", "Show identifier."),
           pathIdParameter("seasonId", "Season identifier."),
         ],
-        requestBody: { $ref: "#/components/requestBodies/SeasonWatchedRequest" },
+        requestBody: {
+          $ref: "#/components/requestBodies/SeasonWatchedRequest",
+        },
         responses: {
           "200": okResponse,
           ...commonErrors,
@@ -468,8 +515,18 @@ export const openApiDocument = {
         parameters: [
           pathIdParameter(),
           { name: "file", in: "query", required: false, schema: stringSchema },
-          { name: "target", in: "query", required: false, schema: { type: "string", enum: ["web", "cast", "airplay"] } },
-          { name: "transcode", in: "query", required: false, schema: { type: "boolean" } },
+          {
+            name: "target",
+            in: "query",
+            required: false,
+            schema: { type: "string", enum: ["web", "cast", "airplay"] },
+          },
+          {
+            name: "transcode",
+            in: "query",
+            required: false,
+            schema: { type: "boolean" },
+          },
         ],
         responses: {
           "200": jsonResponse(objectSchema("Signed playback payload.")),
@@ -483,7 +540,9 @@ export const openApiDocument = {
         summary: "Save playback progress.",
         operationId: "savePlaybackProgress",
         parameters: [pathIdParameter()],
-        requestBody: { $ref: "#/components/requestBodies/PlaybackProgressRequest" },
+        requestBody: {
+          $ref: "#/components/requestBodies/PlaybackProgressRequest",
+        },
         responses: {
           "200": okResponse,
           "400": errorResponse,
@@ -496,7 +555,9 @@ export const openApiDocument = {
         tags: ["Playback"],
         summary: "Keep a transcoding playback session alive.",
         operationId: "heartbeatPlaybackSession",
-        parameters: [pathIdParameter("sessionId", "Playback session identifier.")],
+        parameters: [
+          pathIdParameter("sessionId", "Playback session identifier."),
+        ],
         responses: {
           "204": { description: "Playback session heartbeat accepted." },
           "401": errorResponse,
@@ -509,9 +570,13 @@ export const openApiDocument = {
         tags: ["Playback"],
         summary: "Cancel a playback session owned by the caller.",
         operationId: "cancelPlaybackSession",
-        parameters: [pathIdParameter("sessionId", "Playback session identifier.")],
+        parameters: [
+          pathIdParameter("sessionId", "Playback session identifier."),
+        ],
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/PlaybackSessionCancelResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/PlaybackSessionCancelResponse",
+          }),
           ...commonErrors,
         },
       },
@@ -521,7 +586,9 @@ export const openApiDocument = {
         tags: ["Admin"],
         summary: "Cancel any active playback session as an admin.",
         operationId: "adminCancelPlaybackSession",
-        parameters: [pathIdParameter("sessionId", "Playback session identifier.")],
+        parameters: [
+          pathIdParameter("sessionId", "Playback session identifier."),
+        ],
         responses: {
           "200": okResponse,
           "400": errorResponse,
@@ -537,7 +604,9 @@ export const openApiDocument = {
         summary: "Get server settings and status.",
         operationId: "getSettings",
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/SettingsResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/SettingsResponse",
+          }),
           "401": errorResponse,
           "403": errorResponse,
         },
@@ -548,7 +617,9 @@ export const openApiDocument = {
         tags: ["Admin"],
         summary: "Update registration settings.",
         operationId: "updateRegistrationSettings",
-        requestBody: { $ref: "#/components/requestBodies/RegistrationSettingsRequest" },
+        requestBody: {
+          $ref: "#/components/requestBodies/RegistrationSettingsRequest",
+        },
         responses: {
           "200": okResponse,
           "400": errorResponse,
@@ -562,7 +633,9 @@ export const openApiDocument = {
         tags: ["Admin"],
         summary: "Update metadata provider settings.",
         operationId: "updateMetadataSettings",
-        requestBody: { $ref: "#/components/requestBodies/MetadataSettingsRequest" },
+        requestBody: {
+          $ref: "#/components/requestBodies/MetadataSettingsRequest",
+        },
         responses: {
           "200": okResponse,
           "400": errorResponse,
@@ -576,7 +649,9 @@ export const openApiDocument = {
         tags: ["Admin"],
         summary: "Update transcoding settings.",
         operationId: "updateTranscodingSettings",
-        requestBody: { $ref: "#/components/requestBodies/TranscodingSettingsRequest" },
+        requestBody: {
+          $ref: "#/components/requestBodies/TranscodingSettingsRequest",
+        },
         responses: {
           "200": okResponse,
           "400": errorResponse,
@@ -590,10 +665,16 @@ export const openApiDocument = {
         tags: ["Admin"],
         summary: "Run a settings maintenance action.",
         operationId: "runSettingsAction",
-        requestBody: { $ref: "#/components/requestBodies/SettingsActionRequest" },
+        requestBody: {
+          $ref: "#/components/requestBodies/SettingsActionRequest",
+        },
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/SettingsActionResponse" }),
-          "202": acceptedResponse({ $ref: "#/components/schemas/SettingsActionResponse" }),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/SettingsActionResponse",
+          }),
+          "202": acceptedResponse({
+            $ref: "#/components/schemas/SettingsActionResponse",
+          }),
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -660,7 +741,9 @@ export const openApiDocument = {
         tags: ["Media"],
         summary: "Get an HLS playlist for a playback session.",
         operationId: "getPlaybackSessionPlaylist",
-        parameters: [pathIdParameter("sessionId", "Playback session identifier.")],
+        parameters: [
+          pathIdParameter("sessionId", "Playback session identifier."),
+        ],
         responses: {
           "200": textResponse("HLS playlist.", "application/vnd.apple.mpegurl"),
           "401": errorResponse,
@@ -672,7 +755,9 @@ export const openApiDocument = {
         tags: ["Media"],
         summary: "Get HLS playlist headers.",
         operationId: "headPlaybackSessionPlaylist",
-        parameters: [pathIdParameter("sessionId", "Playback session identifier.")],
+        parameters: [
+          pathIdParameter("sessionId", "Playback session identifier."),
+        ],
         responses: {
           "200": { description: "HLS playlist headers." },
           "401": headErrors["401"],
@@ -684,7 +769,9 @@ export const openApiDocument = {
         tags: ["Media"],
         summary: "CORS preflight for HLS playlists.",
         operationId: "optionsPlaybackSessionPlaylist",
-        parameters: [pathIdParameter("sessionId", "Playback session identifier.")],
+        parameters: [
+          pathIdParameter("sessionId", "Playback session identifier."),
+        ],
         responses: {
           "204": optionsResponse,
         },
@@ -842,7 +929,9 @@ export const openApiDocument = {
         required: true,
         content: {
           "application/json": {
-            schema: { $ref: "#/components/schemas/RegistrationSettingsRequest" },
+            schema: {
+              $ref: "#/components/schemas/RegistrationSettingsRequest",
+            },
           },
         },
       },
@@ -894,7 +983,15 @@ export const openApiDocument = {
       },
       ApiKeySummary: {
         type: "object",
-        required: ["id", "name", "tokenPrefix", "lastUsedAt", "expiresAt", "createdAt", "updatedAt"],
+        required: [
+          "id",
+          "name",
+          "tokenPrefix",
+          "lastUsedAt",
+          "expiresAt",
+          "createdAt",
+          "updatedAt",
+        ],
         properties: {
           id: stringSchema,
           name: stringSchema,
@@ -909,7 +1006,10 @@ export const openApiDocument = {
         type: "object",
         required: ["apiKeys"],
         properties: {
-          apiKeys: { type: "array", items: { $ref: "#/components/schemas/ApiKeySummary" } },
+          apiKeys: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ApiKeySummary" },
+          },
         },
       },
       CreateApiKeyRequest: {
@@ -930,7 +1030,10 @@ export const openApiDocument = {
       PlaybackPreferenceRequest: {
         type: "object",
         properties: {
-          playbackPreference: { type: "string", enum: ["auto", "prefer_direct", "prefer_transcode"] },
+          playbackPreference: {
+            type: "string",
+            enum: ["auto", "prefer_direct", "prefer_transcode"],
+          },
           preferredAudioLanguage: nullableStringSchema,
           preferredSubtitleLanguage: nullableStringSchema,
         },
@@ -940,12 +1043,25 @@ export const openApiDocument = {
         required: ["user", "transcodePolicy"],
         properties: {
           user: { $ref: "#/components/schemas/User" },
-          transcodePolicy: objectSchema("Effective transcoding policy for the caller."),
+          transcodePolicy: objectSchema(
+            "Effective transcoding policy for the caller.",
+          ),
         },
       },
       MovieSummary: {
         type: "object",
-        required: ["id", "title", "year", "posterUrl", "releaseDate", "fileCount", "resumeFileId", "progressSeconds", "durationSeconds", "completed"],
+        required: [
+          "id",
+          "title",
+          "year",
+          "posterUrl",
+          "releaseDate",
+          "fileCount",
+          "resumeFileId",
+          "progressSeconds",
+          "durationSeconds",
+          "completed",
+        ],
         properties: {
           id: stringSchema,
           title: stringSchema,
@@ -963,7 +1079,21 @@ export const openApiDocument = {
       },
       EpisodeSummary: {
         type: "object",
-        required: ["id", "title", "showId", "showTitle", "seasonId", "seasonTitle", "seasonNumber", "episodeNumber", "fileCount", "fileId", "progressSeconds", "durationSeconds", "completed"],
+        required: [
+          "id",
+          "title",
+          "showId",
+          "showTitle",
+          "seasonId",
+          "seasonTitle",
+          "seasonNumber",
+          "episodeNumber",
+          "fileCount",
+          "fileId",
+          "progressSeconds",
+          "durationSeconds",
+          "completed",
+        ],
         properties: {
           id: stringSchema,
           title: stringSchema,
@@ -986,7 +1116,17 @@ export const openApiDocument = {
       },
       ShowSummary: {
         type: "object",
-        required: ["id", "title", "year", "posterUrl", "backdropUrl", "releaseDate", "status", "episodeCount", "seasonCount"],
+        required: [
+          "id",
+          "title",
+          "year",
+          "posterUrl",
+          "backdropUrl",
+          "releaseDate",
+          "status",
+          "episodeCount",
+          "seasonCount",
+        ],
         properties: {
           id: stringSchema,
           title: stringSchema,
@@ -1009,45 +1149,129 @@ export const openApiDocument = {
         required: ["person", "movies", "shows"],
         properties: {
           person: objectSchema("Person metadata."),
-          movies: { type: "array", items: { $ref: "#/components/schemas/MovieSummary" } },
-          shows: { type: "array", items: { $ref: "#/components/schemas/ShowSummary" } },
+          movies: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          shows: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
         },
       },
       MovieRowsResponse: {
         type: "object",
-        required: ["continueWatching", "all", "recent", "latest", "popular"],
+        required: [
+          "continueWatching",
+          "all",
+          "allPage",
+          "recent",
+          "latest",
+          "popular",
+        ],
         properties: {
-          continueWatching: { type: "array", items: { $ref: "#/components/schemas/MovieSummary" } },
-          all: { type: "array", items: { $ref: "#/components/schemas/MovieSummary" } },
-          recent: { type: "array", items: { $ref: "#/components/schemas/MovieSummary" } },
-          latest: { type: "array", items: { $ref: "#/components/schemas/MovieSummary" } },
-          popular: { type: "array", items: { $ref: "#/components/schemas/MovieSummary" } },
-          pagination: objectSchema("Movie pagination metadata."),
+          continueWatching: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          all: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          allPage: { $ref: "#/components/schemas/PageMetadata" },
+          recent: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          latest: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          popular: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+        },
+      },
+      PageMetadata: {
+        type: "object",
+        required: [
+          "page",
+          "pageSize",
+          "total",
+          "totalPages",
+          "hasPrevious",
+          "hasNext",
+        ],
+        properties: {
+          page: { type: "integer", minimum: 1 },
+          pageSize: { type: "integer", minimum: 1 },
+          total: { type: "integer", minimum: 0 },
+          totalPages: { type: "integer", minimum: 0 },
+          hasPrevious: { type: "boolean" },
+          hasNext: { type: "boolean" },
         },
       },
       ContinueWatchingResponse: {
         type: "object",
         required: ["movies", "episodes", "nextUp"],
         properties: {
-          movies: { type: "array", items: { $ref: "#/components/schemas/MovieSummary" } },
-          episodes: { type: "array", items: { $ref: "#/components/schemas/EpisodeSummary" } },
-          nextUp: { type: "array", items: { $ref: "#/components/schemas/EpisodeSummary" } },
+          movies: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          episodes: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EpisodeSummary" },
+          },
+          nextUp: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EpisodeSummary" },
+          },
         },
       },
       ShowRowsResponse: {
         type: "object",
-        required: ["continueWatching", "nextUp", "recentlyAiredShows", "popularShows", "allShows"],
+        required: [
+          "continueWatching",
+          "nextUp",
+          "recentlyAiredShows",
+          "popularShows",
+          "allShows",
+        ],
         properties: {
-          continueWatching: { type: "array", items: { $ref: "#/components/schemas/EpisodeSummary" } },
-          nextUp: { type: "array", items: { $ref: "#/components/schemas/EpisodeSummary" } },
-          recentlyAiredShows: { type: "array", items: { $ref: "#/components/schemas/ShowSummary" } },
-          popularShows: { type: "array", items: { $ref: "#/components/schemas/ShowSummary" } },
-          allShows: { type: "array", items: { $ref: "#/components/schemas/ShowSummary" } },
+          continueWatching: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EpisodeSummary" },
+          },
+          nextUp: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EpisodeSummary" },
+          },
+          recentlyAiredShows: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          popularShows: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          allShows: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
         },
       },
       JobSummary: {
         type: "object",
-        required: ["total", "active", "completed", "failed", "cancelled", "errors"],
+        required: [
+          "total",
+          "active",
+          "completed",
+          "failed",
+          "cancelled",
+          "errors",
+        ],
         properties: {
           total: { type: "integer", minimum: 0 },
           active: { type: "integer", minimum: 0 },
@@ -1059,11 +1283,20 @@ export const openApiDocument = {
       },
       JobsResponse: {
         type: "object",
-        required: ["summary", "playbackSessionSummary", "playbackSessions", "jobs", "errors"],
+        required: [
+          "summary",
+          "playbackSessionSummary",
+          "playbackSessions",
+          "jobs",
+          "errors",
+        ],
         properties: {
           summary: { $ref: "#/components/schemas/JobSummary" },
           playbackSessionSummary: { $ref: "#/components/schemas/JobSummary" },
-          playbackSessions: { type: "array", items: objectSchema("Playback session job row.") },
+          playbackSessions: {
+            type: "array",
+            items: objectSchema("Playback session job row."),
+          },
           jobs: { type: "array", items: objectSchema("Scan job row.") },
           errors: { type: "array", items: objectSchema("Scan error row.") },
         },
@@ -1090,8 +1323,14 @@ export const openApiDocument = {
         type: "object",
         required: ["libraries", "users", "tmdbConfigured"],
         properties: {
-          libraries: { type: "array", items: { $ref: "#/components/schemas/Library" } },
-          users: { type: "array", items: { $ref: "#/components/schemas/LibraryUser" } },
+          libraries: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Library" },
+          },
+          users: {
+            type: "array",
+            items: { $ref: "#/components/schemas/LibraryUser" },
+          },
           tmdbConfigured: { type: "boolean" },
         },
       },
@@ -1142,7 +1381,10 @@ export const openApiDocument = {
           tmdbApiKeySaved: { type: "boolean" },
           transcodePolicy: objectSchema("Effective transcoding policy."),
           playbackSessionArtifactMaxBytes: { type: "integer", minimum: 0 },
-          playbackSessionArtifactMaxBytesOptions: { type: "array", items: { type: "integer", minimum: 0 } },
+          playbackSessionArtifactMaxBytesOptions: {
+            type: "array",
+            items: { type: "integer", minimum: 0 },
+          },
           version: stringSchema,
           status: objectSchema("Server status summary."),
         },
@@ -1179,7 +1421,13 @@ export const openApiDocument = {
         properties: {
           action: {
             type: "string",
-            enum: ["scanAll", "refreshMovieMetadata", "refreshTvMetadata", "repairMediaProbes", "testTmdb"],
+            enum: [
+              "scanAll",
+              "refreshMovieMetadata",
+              "refreshTvMetadata",
+              "repairMediaProbes",
+              "testTmdb",
+            ],
           },
         },
       },
@@ -1201,7 +1449,12 @@ export const openApiDocument = {
       },
       PlaybackProgressRequest: {
         type: "object",
-        required: ["mediaFileId", "positionSeconds", "durationSeconds", "completed"],
+        required: [
+          "mediaFileId",
+          "positionSeconds",
+          "durationSeconds",
+          "completed",
+        ],
         properties: {
           mediaFileId: stringSchema,
           positionSeconds: { type: "number", minimum: 0 },
@@ -1224,7 +1477,8 @@ export const openApiDocument = {
 function scalarYaml(value: unknown) {
   if (value === null) return "null";
   if (typeof value === "string") return JSON.stringify(value);
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   return null;
 }
 
@@ -1251,7 +1505,8 @@ function yamlLines(value: unknown, indent = 0): string[] {
     if (entries.length === 0) return [`${prefix}{}`];
     return entries.flatMap(([key, item]) => {
       const itemScalar = scalarYaml(item);
-      if (itemScalar !== null) return [`${prefix}${yamlKey(key)}: ${itemScalar}`];
+      if (itemScalar !== null)
+        return [`${prefix}${yamlKey(key)}: ${itemScalar}`];
       return [`${prefix}${yamlKey(key)}:`, ...yamlLines(item, indent + 2)];
     });
   }
