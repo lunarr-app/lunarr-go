@@ -4,7 +4,7 @@ import type {
   AppSettingTable,
   SessionTable,
   UserTable,
-  VerificationTable
+  VerificationTable,
 } from "./schema/auth";
 import type { LibraryTable, LibraryUserTable } from "./schema/library";
 import type {
@@ -17,11 +17,15 @@ import type {
   MediaItemSpokenLanguageTable,
   MediaItemTable,
   MediaItemVideoTable,
-  SubtitleTrackTable
+  SubtitleTrackTable,
 } from "./schema/media";
 import type { WatchProgressTable } from "./schema/playback";
 import type { ScanJobErrorTable, ScanJobTable } from "./schema/scanner";
-import type { MediaStreamInfoTable, PlaybackSessionTable, PlaybackHlsArtifactTable } from "./schema/streaming";
+import type {
+  MediaStreamInfoTable,
+  PlaybackSessionTable,
+  PlaybackHlsArtifactTable,
+} from "./schema/streaming";
 
 export type * from "./schema/auth";
 export type * from "./schema/common";

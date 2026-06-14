@@ -3,9 +3,21 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "../db";
+import {
+  closeDatabaseForTests,
+  getDb,
+  migrateDatabase,
+  useDatabaseFileForTests,
+  type Database,
+} from "../db";
 import { setBooleanSetting } from "../settings";
-import { hasRegisteredUsers, isAdmin, requireAdmin, roleForNewUser, signupAllowed } from "./users";
+import {
+  hasRegisteredUsers,
+  isAdmin,
+  requireAdmin,
+  roleForNewUser,
+  signupAllowed,
+} from "./users";
 
 let tempDir: string;
 let db: Kysely<Database>;
@@ -39,7 +51,7 @@ describe("signup policy", () => {
         email_verified: 0,
         image: null,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       })
       .execute();
 
@@ -69,7 +81,7 @@ describe("admin policy", () => {
       } catch (error) {
         expect(error).toMatchObject({
           status: 403,
-          body: { message: "Admin access required" }
+          body: { message: "Admin access required" },
         });
       }
     }

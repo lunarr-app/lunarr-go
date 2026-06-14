@@ -24,7 +24,9 @@ export function isAdmin(user: { role?: string | null } | null | undefined) {
   return user?.role === "admin";
 }
 
-export function requireAdmin(user: { role?: string | null } | null | undefined) {
+export function requireAdmin(
+  user: { role?: string | null } | null | undefined,
+) {
   if (!isAdmin(user)) {
     throw error(403, "Admin access required");
   }

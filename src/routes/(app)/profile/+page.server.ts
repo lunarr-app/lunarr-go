@@ -4,6 +4,7 @@ import {
   isApiKeyUnauthorized,
   listApiKeys,
   revokeApiKey as revokePersonalApiKey,
+  apiKeyHttpStatus,
 } from "$lib/server/auth/api-keys";
 import {
   getTranscodePolicy,
@@ -165,7 +166,7 @@ export const actions: Actions = {
         createdApiKeyToken: created.token,
       };
     } catch (error) {
-      return fail(400, {
+      return fail(apiKeyHttpStatus(error), {
         apiKeyError:
           error instanceof Error ? error.message : "Could not create API key.",
       });
