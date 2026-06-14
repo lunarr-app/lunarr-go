@@ -115,6 +115,7 @@
 
   type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
   const POINTER_CONTROLS_REFRESH_INTERVAL_MS = 250;
+  const PLAYBACK_SESSION_HEARTBEAT_INTERVAL_MS = 30000;
 
   let {
     data,
@@ -998,6 +999,7 @@
     if (!video) return;
     showControls();
     if (castLaunchState === "connecting") return;
+    heartbeatPlaybackSession(data.playback);
     if (isCasting()) {
       const command = playbackButtonState.action;
       playerUiState = castUiStateAfterCommand({
@@ -1031,6 +1033,7 @@
   function seekToPlaybackSeconds(targetSeconds: number) {
     seekPreviewSeconds = null;
     if (castLaunchState === "connecting") return;
+    heartbeatPlaybackSession(data.playback);
     const action = playbackSeekAction({
       casting: isCasting(),
       mode: data.playback.mode,
@@ -1847,7 +1850,7 @@
     heartbeatPlaybackSession(playback);
     const interval = window.setInterval(
       () => heartbeatPlaybackSession(playback),
-      10000,
+      PLAYBACK_SESSION_HEARTBEAT_INTERVAL_MS,
     );
     const cancelCapturedPlaybackSession = () => cancelPlaybackSession(playback);
     window.addEventListener("pagehide", cancelCapturedPlaybackSession);
