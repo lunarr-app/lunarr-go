@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>%sveltekit.status% - Lunarr</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: #080c11;
+        color: #f7f9fb;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(
+            circle at 20% 15%,
+            rgba(0, 168, 214, 0.14),
+            transparent 28rem
+          ),
+          linear-gradient(135deg, #080c11 0%, #101820 62%, #120d10 100%);
+        padding: 1rem;
+      }
+
+      main {
+        width: min(100%, 28rem);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(14, 22, 29, 0.84);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+        padding: clamp(1rem, 3vw, 1.35rem);
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      .status {
+        width: fit-content;
+        border: 1px solid rgba(0, 168, 214, 0.32);
+        border-radius: 6px;
+        background: rgba(0, 168, 214, 0.14);
+        color: #00ccff;
+        padding: 0.25rem 0.55rem;
+        font-size: 0.82rem;
+        font-weight: 850;
+      }
+
+      h1,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(1.35rem, 4vw, 1.65rem);
+        line-height: 1.15;
+      }
+
+      p {
+        color: #b7c3cc;
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.45rem;
+        width: fit-content;
+        margin-top: 0.15rem;
+        border-radius: 6px;
+        background: #00a8d6;
+        color: #061017;
+        padding: 0 0.95rem;
+        font-weight: 750;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="status">%sveltekit.status%</div>
+      <h1>Something went wrong</h1>
+      <p>Lunarr could not finish this request.</p>
+      <a href="/movies">Open Lunarr</a>
+    </main>
+  </body>
+</html>

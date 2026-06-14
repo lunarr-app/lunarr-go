@@ -1,7 +1,13 @@
 <script lang="ts">
+  import { page } from "$app/state";
+
   let { children } = $props();
+  const isErrorPage = $derived(Boolean(page.error));
 </script>
 
+{#if isErrorPage}
+  {@render children()}
+{:else}
 <main class="auth-shell">
   <section class="auth-card">
     <img class="brand brand-dark" src="/images/lunarr-logo.svg" alt="Lunarr" />
@@ -9,6 +15,7 @@
     {@render children()}
   </section>
 </main>
+{/if}
 
 <style>
   .auth-shell {
