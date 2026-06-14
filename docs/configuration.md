@@ -52,9 +52,37 @@ bun run start
 
 Database migrations run automatically on startup.
 
+## Playback Runtime
+
+`FFMPEG_PATH`
+
+Optional path to the FFmpeg executable used for HLS playback, runtime verification, and smoke tests. Lunarr resolves FFmpeg in this order:
+
+1. `FFMPEG_PATH`
+2. `ffmpeg` on `PATH`
+3. the bundled NodeAV FFmpeg path as a fallback
+
+Set this when the FFmpeg binary you want Lunarr to use is not the first `ffmpeg` on `PATH`:
+
+```sh
+export FFMPEG_PATH=/usr/local/bin/ffmpeg
+```
+
+`FFMPEG_VAAPI_DEVICE`
+
+Optional VAAPI render device path for Linux hardware acceleration checks and VAAPI playback arguments. Defaults to `/dev/dri/renderD128`.
+
+```sh
+export FFMPEG_VAAPI_DEVICE=/dev/dri/renderD128
+```
+
+For runtime verification, hardware smoke modes can be selected with `LUNARR_VERIFY_HARDWARE` or `FFMPEG_SMOKE_HARDWARE`. See [Transcoding Runtime](transcoding-runtime.md) for the full playback runtime notes.
+
 ## Docker
 
 Use the published image with persistent app data:
+
+The published Docker image includes system FFmpeg from the runtime distribution package repositories. The image build verifies baseline FFmpeg playback requirements before publishing, so normal Docker users do not need to install FFmpeg separately inside the container.
 
 ```sh
 docker run -d \
@@ -90,6 +118,8 @@ docker compose up -d
 Before starting, replace `AUTH_SECRET`, set `ORIGIN` to the URL users will open, and change `/mnt/media:/media:ro` to your host media path.
 
 Build and run a local image:
+
+Local Docker builds also install and verify FFmpeg in the runtime stage.
 
 ```sh
 docker build --build-arg LUNARR_APP_VERSION=local -t lunarr:local .

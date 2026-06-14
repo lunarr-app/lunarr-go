@@ -7,6 +7,7 @@ Lunarr is a self-hosted web media server for local and SFTP movie and TV librari
 ## Quick Start With Docker
 
 Run Lunarr with persistent app data. The `/mnt/media:/media:ro` mount is optional for local media libraries; replace `/mnt/media` with your host media path or remove that line if you only use SFTP.
+The published Docker image includes system FFmpeg for HLS playback and verifies the baseline FFmpeg requirements during image build.
 
 ```sh
 docker run -d \
@@ -65,6 +66,7 @@ Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Side
 - [Playback And Maintenance](docs/playback.md): direct play, HLS, transcode cache, cleanup, and job history retention.
 - [API](docs/api.md): authenticated JSON APIs and API-key usage.
 - [Transcoding Runtime](docs/transcoding-runtime.md): FFmpeg playback and NodeAV probing implementation notes.
+- [Contributing](CONTRIBUTING.md): local setup, checks, coding guidelines, and PR expectations.
 
 ## Verification
 

@@ -34,7 +34,7 @@ If Cast or AirPlay controls are missing, first check browser support, HTTPS/orig
 
 ## FFmpeg Verification
 
-The runtime image verifies the baseline FFmpeg playback requirements and NodeAV probing during Docker build. Operators can also run:
+The Docker runtime image includes system FFmpeg and verifies the baseline FFmpeg playback requirements and NodeAV probing during image build. Operators can also run:
 
 ```sh
 bun run verify:ffmpeg
