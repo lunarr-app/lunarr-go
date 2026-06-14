@@ -721,9 +721,7 @@
   }
 
   function clearCastPlaybackState() {
-    const sessionId = castOwnedPlaybackSessionId;
-    releaseCastOwnedSession(sessionId);
-    if (sessionId) cancelPlaybackSessionById(sessionId);
+    releaseCastOwnedSession(castOwnedPlaybackSessionId);
     detachCastMediaUpdateListener();
     castMedia = null;
     syncCastRemotePlayerState();
@@ -852,16 +850,6 @@
     cancelPlaybackSessionOnce({
       playback,
       cancelledPlaybackSessions,
-      navigatorRef: navigator,
-      fetchFn: fetch,
-    });
-  }
-
-  function cancelPlaybackSessionById(sessionId: string) {
-    if (cancelledPlaybackSessions.has(sessionId)) return;
-    cancelledPlaybackSessions.add(sessionId);
-    postWithBeaconFallback({
-      url: `/api/playback-sessions/${encodeURIComponent(sessionId)}/cancel`,
       navigatorRef: navigator,
       fetchFn: fetch,
     });

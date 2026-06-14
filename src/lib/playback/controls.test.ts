@@ -648,7 +648,7 @@ describe("custom player controls", () => {
     ).toBe("seeking");
   });
 
-  test("tracks Cast-owned playback sessions for pagehide and explicit stop cleanup", () => {
+  test("tracks Cast-owned playback sessions for handoff and cleanup", () => {
     const castOwnedPlaybackSessions = new Set<string>();
 
     expect(
