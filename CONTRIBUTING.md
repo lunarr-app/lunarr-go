@@ -89,6 +89,20 @@ bun run verify:tmdb
 
 ## Commit Hygiene
 
+- Fork the repository and create a new branch for each contribution. Do not commit PR changes directly to your fork's primary branch, such as `main` or `master`.
+
+```sh
+git switch main
+git pull --ff-only
+git switch -c fix/playback-session-heartbeat
+```
+
+- Use a short branch name that describes the scope, such as `fix/cast-retarget-session`, `ui/movie-detail-files`, or `docs/contributing-workflow`. Push only that feature branch when opening a pull request:
+
+```sh
+git push -u origin fix/playback-session-heartbeat
+```
+
 - Do not put every change into one large commit when the work is broad.
 - Split large changes into scoped commits that reviewers can understand independently, such as schema changes, server behavior, UI, tests, and docs.
 - Keep each commit buildable and focused on one coherent purpose.
