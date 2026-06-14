@@ -72,14 +72,12 @@ function canResolveUnauthenticatedMediaResource(event: RequestEvent) {
 export const handle: Handle = async ({ event, resolve }) => {
   await ensureStartup();
 
-  let session = null;
-  try {
-    session = await auth.api.getSession({
-      headers: event.request.headers,
+  const session = await auth.api
+    .getSession({ headers: event.request.headers })
+    .catch((error) => {
+      if (event.request.headers.has("x-api-key")) return null;
+      throw error;
     });
-  } catch (error) {
-    if (!event.request.headers.has("x-api-key")) throw error;
-  }
 
   event.locals.session = session?.session ?? null;
   event.locals.user = session?.user ?? null;
@@ -87,9 +85,15 @@ export const handle: Handle = async ({ event, resolve }) => {
   const pathname = event.url.pathname;
   const hasUsers = await hasRegisteredUsers();
   const canResolveUnauthenticatedMedia =
-    isMediaResourcePath(pathname) && canResolveUnauthenticatedMediaResource(event);
+    isMediaResourcePath(pathname) &&
+    canResolveUnauthenticatedMediaResource(event);
 
-  if (!hasUsers && pathname !== "/setup" && !isAuthApiPath(pathname) && !isPublicApiPath(pathname)) {
+  if (
+    !hasUsers &&
+    pathname !== "/setup" &&
+    !isAuthApiPath(pathname) &&
+    !isPublicApiPath(pathname)
+  ) {
     if (pathname.startsWith("/api/") || isMediaResourcePath(pathname))
       return json({ error: "Unauthorized" }, { status: 401 });
     throw redirect(303, "/setup");
