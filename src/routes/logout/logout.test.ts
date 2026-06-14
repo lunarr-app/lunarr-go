@@ -1,15 +1,16 @@
-import { describe, expect, mock, test } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from "bun:test";
 import type { RequestEvent } from "./$types";
 
 const signOut = mock(async (_input: unknown) => ({}));
-
-mock.module("$lib/server/auth", () => ({
-  auth: {
-    api: {
-      signOut,
-    },
-  },
-}));
+let signOutSpy: ReturnType<typeof spyOn>;
 
 const logoutRoutePromise = import("./+server");
 
@@ -45,8 +46,19 @@ async function expectRedirect(operation: unknown, location: string) {
 }
 
 describe("logout route", () => {
-  test("signs out with POST and redirects to login", async () => {
+  beforeEach(async () => {
     signOut.mockClear();
+    const authModule = await import("$lib/server/auth");
+    signOutSpy = spyOn(authModule.auth.api, "signOut").mockImplementation(
+      signOut as unknown as typeof authModule.auth.api.signOut,
+    );
+  });
+
+  afterEach(() => {
+    signOutSpy.mockRestore();
+  });
+
+  test("signs out with POST and redirects to login", async () => {
     const { POST } = await logoutRoutePromise;
     const request = new Request("http://localhost/logout", { method: "POST" });
 

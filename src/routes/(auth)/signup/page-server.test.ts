@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -14,14 +22,7 @@ import { setBooleanSetting } from "$lib/server/settings";
 import type * as SignupPageServer from "./+page.server";
 
 const signUpEmail = mock(async (_input: unknown) => ({}));
-
-mock.module("$lib/server/auth", () => ({
-  auth: {
-    api: {
-      signUpEmail,
-    },
-  },
-}));
+let signUpEmailSpy: ReturnType<typeof spyOn>;
 
 const signupRoutePromise = import("./+page.server");
 
@@ -45,6 +46,13 @@ describe("signup page server", () => {
 
   beforeEach(async () => {
     signUpEmail.mockClear();
+    const authModule = await import("$lib/server/auth");
+    signUpEmailSpy = spyOn(
+      authModule.auth.api,
+      "signUpEmail",
+    ).mockImplementation(
+      signUpEmail as unknown as typeof authModule.auth.api.signUpEmail,
+    );
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-signup-page-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();
@@ -56,6 +64,7 @@ describe("signup page server", () => {
   });
 
   afterEach(async () => {
+    signUpEmailSpy.mockRestore();
     await closeDatabaseForTests();
     await rm(tempDir, { recursive: true, force: true });
   });

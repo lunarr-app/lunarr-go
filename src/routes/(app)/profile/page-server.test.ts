@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import "$lib/server/auth/test/setup-mocks";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -8,19 +9,14 @@ import {
   migrateDatabase,
   useDatabaseFileForTests,
 } from "$lib/server/db";
+import { auth } from "$lib/server/auth";
 import { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
-import { createApiKeyForUser } from "$lib/server/auth/test/create-api-key-for-user";
-import { sessionHeadersFor } from "$lib/server/auth/test/session-headers";
-import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
-import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
-import { resetAuthForTests } from "$lib/server/auth/test/reset-auth-for-tests";
+import {
+  createApiKeyForUser,
+  resetAuthForTests,
+  sessionHeadersFor,
+} from "$lib/server/auth/test/setup";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
-
-mock.module("$app/environment", () => ({
-  building: false,
-}));
-
-mock.module("$app/server", () => mockAppServerForAuthTests());
 
 const testUser = {
   id: "user-1",
@@ -430,7 +426,6 @@ describe("profile page server", () => {
       "/profile",
     );
 
-    const { auth } = await loadAuthModule();
     await expect(
       auth.api.signInEmail({
         body: {

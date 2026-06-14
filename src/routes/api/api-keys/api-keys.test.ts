@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import "$lib/server/auth/test/setup-mocks";
+import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -8,16 +9,11 @@ import {
   migrateDatabase,
   useDatabaseFileForTests,
 } from "$lib/server/db";
-import { sessionHeadersFor } from "$lib/server/auth/test/session-headers";
-import { createApiKeyForUser } from "$lib/server/auth/test/create-api-key-for-user";
-import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
-import { resetAuthForTests } from "$lib/server/auth/test/reset-auth-for-tests";
-
-mock.module("$app/environment", () => ({
-  building: false,
-}));
-
-mock.module("$app/server", () => mockAppServerForAuthTests());
+import {
+  createApiKeyForUser,
+  resetAuthForTests,
+  sessionHeadersFor,
+} from "$lib/server/auth/test/setup";
 
 describe("API key routes", () => {
   let tempDir: string | undefined;

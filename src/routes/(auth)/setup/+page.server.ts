@@ -10,7 +10,11 @@ export const load: PageServerLoad = async () => {
 export const actions: Actions = {
   default: async ({ request }) => {
     if (await hasRegisteredUsers()) {
-      return fail(403, { name: "", email: "", error: "Setup is already complete." });
+      return fail(403, {
+        name: "",
+        email: "",
+        error: "Setup is already complete.",
+      });
     }
 
     const form = await request.formData();
@@ -19,22 +23,29 @@ export const actions: Actions = {
     const password = String(form.get("password") ?? "").trim();
 
     if (!name || !email || !password) {
-      return fail(400, { name, email, error: "Name, email, and password are required." });
+      return fail(400, {
+        name,
+        email,
+        error: "Name, email, and password are required.",
+      });
     }
 
     try {
       await auth.api.signUpEmail({
         body: { name, email, password },
-        headers: request.headers
+        headers: request.headers,
       });
     } catch (error) {
       return fail(400, {
         name,
         email,
-        error: error && typeof error === "object" && "message" in error ? String(error.message) : "Could not create account."
+        error:
+          error && typeof error === "object" && "message" in error
+            ? String(error.message)
+            : "Could not create account.",
       });
     }
 
     throw redirect(303, "/movies");
-  }
+  },
 };

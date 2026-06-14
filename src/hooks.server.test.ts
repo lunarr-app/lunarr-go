@@ -1,3 +1,4 @@
+import "$lib/server/auth/test/setup-mocks";
 import { beforeAll, afterAll, describe, expect, mock, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -12,15 +13,10 @@ import {
 } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
-import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
-import { createApiKeyForUser } from "$lib/server/auth/test/create-api-key-for-user";
-import { resetAuthForTests } from "$lib/server/auth/test/reset-auth-for-tests";
-
-mock.module("$app/environment", () => ({
-  building: false,
-}));
-
-mock.module("$app/server", () => mockAppServerForAuthTests());
+import {
+  createApiKeyForUser,
+  resetAuthForTests,
+} from "$lib/server/auth/test/setup";
 
 type TestEvent = {
   request: Request;
