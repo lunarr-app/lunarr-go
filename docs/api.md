@@ -2,6 +2,15 @@
 
 Lunarr uses the same authorization model for the web app and JSON API. A request is authenticated by either a Better Auth browser session cookie or a personal API key backed by the Better Auth API Key plugin.
 
+Machine-readable API docs are available from a running Lunarr server:
+
+```http
+GET /api/openapi.json
+GET /api/openapi.yaml
+```
+
+Use `openapi.json` as the source for generated clients, including the planned React Native app. The recommended mobile repo name is `lunarr-mobile`; generate its API client from the backend OpenAPI document instead of hand-maintaining request and response types.
+
 Mobile and custom clients should send API keys with Better Auth's default API-key header:
 
 ```http

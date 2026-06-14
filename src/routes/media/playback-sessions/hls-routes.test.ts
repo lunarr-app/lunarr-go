@@ -274,10 +274,10 @@ describe("playback-session HLS routes", () => {
     }
   }
 
-  async function waitFor(predicate: () => boolean, timeoutMs = 1_000) {
+  async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 1_000) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-      if (predicate()) return;
+      if (await predicate()) return;
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
     throw new Error("Timed out waiting for test condition.");
@@ -3535,9 +3535,9 @@ describe("playback-session HLS routes", () => {
       "segment-00014.ts",
       "segment-00015.ts",
     ]);
-    expect(
-      await exists(path.join(path.dirname(playlistPath), "segment-00014.ts")),
-    ).toBe(true);
+    await waitFor(async () =>
+      exists(path.join(path.dirname(playlistPath), "segment-00014.ts")),
+    );
   });
 
   test("stops waiting for bounded lookahead when the segment request is cancelled", async () => {

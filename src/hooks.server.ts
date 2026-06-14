@@ -40,11 +40,16 @@ function isAuthApiPath(pathname: string) {
   return pathname === "/api/auth" || pathname.startsWith("/api/auth/");
 }
 
+function isPublicApiPath(pathname: string) {
+  return pathname === "/api/openapi.json" || pathname === "/api/openapi.yaml";
+}
+
 function isPublicPath(pathname: string) {
   return (
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/setup" ||
+    isPublicApiPath(pathname) ||
     isAuthApiPath(pathname)
   );
 }
@@ -84,7 +89,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const canResolveUnauthenticatedMedia =
     isMediaResourcePath(pathname) && canResolveUnauthenticatedMediaResource(event);
 
-  if (!hasUsers && pathname !== "/setup" && !isAuthApiPath(pathname)) {
+  if (!hasUsers && pathname !== "/setup" && !isAuthApiPath(pathname) && !isPublicApiPath(pathname)) {
     if (pathname.startsWith("/api/") || isMediaResourcePath(pathname))
       return json({ error: "Unauthorized" }, { status: 401 });
     throw redirect(303, "/setup");
@@ -100,6 +105,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   if (
     pathname.startsWith("/api/") &&
     !isAuthApiPath(pathname) &&
+    !isPublicApiPath(pathname) &&
     !event.locals.user
   ) {
     return json({ error: "Unauthorized" }, { status: 401 });

@@ -113,6 +113,16 @@ describe("server hook route boundaries", () => {
     expect(await response.json()).toEqual({ error: "Unauthorized" });
   });
 
+  test("lets OpenAPI docs resolve before setup", async () => {
+    const response = await handle({
+      event: eventFor("/api/openapi.json") as never,
+      resolve: async () => new Response("resolved"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("resolved");
+  });
+
   test("redirects protected app pages to login after setup exists", async () => {
     const now = Date.now();
     await db
@@ -202,6 +212,16 @@ describe("server hook route boundaries", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  test("lets OpenAPI docs resolve without a session", async () => {
+    const response = await handle({
+      event: eventFor("/api/openapi.yaml") as never,
+      resolve: async () => new Response("resolved"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("resolved");
   });
 
   test("accepts an API key header for protected API requests", async () => {
