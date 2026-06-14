@@ -12,16 +12,14 @@ import {
 } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
+import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
+import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
 
 mock.module("$app/environment", () => ({
   building: false,
 }));
 
-mock.module("$app/server", () => ({
-  getRequestEvent: () => {
-    throw new Error("No request event is available in this direct hook test.");
-  },
-}));
+mock.module("$app/server", () => mockAppServerForAuthTests());
 
 type TestEvent = {
   request: Request;
@@ -38,6 +36,8 @@ describe("server hook route boundaries", () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-hooks-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();
+    const { resetAuthForTests } = await loadAuthModule();
+    await resetAuthForTests();
     db = await getDb();
 
     handle = (await import("./hooks.server")).handle;
@@ -252,6 +252,45 @@ describe("server hook route boundaries", () => {
       .executeTakeFirstOrThrow();
     expect(key.last_request).toBeTruthy();
     expect(Number.isNaN(Date.parse(String(key.last_request)))).toBe(false);
+  });
+
+  test("keeps expiring api keys after repeated session lookup", async () => {
+    const { createApiKey } = await import("$lib/server/auth/api-keys");
+    const before = Date.now();
+    const { token, apiKey } = await createApiKey({
+      userId: "admin-1",
+      name: "Expiring mobile",
+      expiresIn: 7200,
+    });
+
+    const row = await db
+      .selectFrom("apikey")
+      .select(["expires_at"])
+      .where("id", "=", apiKey.id)
+      .executeTakeFirstOrThrow();
+    const expiresAt = Date.parse(String(row.expires_at));
+    expect(Number.isFinite(expiresAt)).toBe(true);
+    expect(expiresAt).toBeGreaterThanOrEqual(before + 7200 * 1000);
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await handle({
+        event: eventFor("/api/jobs", {
+          headers: {
+            "x-api-key": token,
+          },
+        }) as never,
+        resolve: async () => new Response("resolved"),
+      });
+      expect(response.status).toBe(200);
+    }
+
+    expect(
+      await db
+        .selectFrom("apikey")
+        .select(["id"])
+        .where("id", "=", apiKey.id)
+        .executeTakeFirst(),
+    ).toBeTruthy();
   });
 
   test("rejects an invalid API key for protected media resources", async () => {

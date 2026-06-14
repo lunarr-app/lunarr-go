@@ -14,12 +14,12 @@ import {
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, request }) => {
   if (!locals.user) throw error(401, "Unauthorized");
 
   return {
     user: locals.user,
-    apiKeys: await listApiKeys(locals.user.id),
+    apiKeys: await listApiKeys(request.headers),
     transcodePolicy: await getTranscodePolicy(locals.user.id),
   };
 };
@@ -139,7 +139,7 @@ export const actions: Actions = {
 
     try {
       const created = await createApiKey({
-        userId: locals.user.id,
+        headers: request.headers,
         name: String(form.get("name") ?? ""),
         expiresIn,
       });
@@ -169,7 +169,10 @@ export const actions: Actions = {
       return fail(400, { apiKeyError: "API key is required." });
     }
 
-    if (!(await revokePersonalApiKey(locals.user.id, apiKeyId))) {
+    if (!(await revokePersonalApiKey({
+      headers: request.headers,
+      apiKeyId,
+    }))) {
       return fail(404, { apiKeyError: "API key not found." });
     }
 

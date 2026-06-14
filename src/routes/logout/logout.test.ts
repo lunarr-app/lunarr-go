@@ -1,17 +1,24 @@
 import { describe, expect, mock, test } from "bun:test";
+import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
+import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
 import type { RequestEvent } from "./$types";
+
+mock.module("$app/environment", () => ({
+  building: false,
+}));
+
+mock.module("$app/server", () => mockAppServerForAuthTests());
 
 const signOut = mock(async (_input: unknown) => ({}));
 
-mock.module("$lib/server/auth", () => ({
-  auth: {
-    api: {
-      signOut,
-    },
-  },
-}));
-
-const logoutRoutePromise = import("./+server");
+const logoutRoutePromise = (async () => {
+  const { auth } = await loadAuthModule();
+  auth.api = {
+    ...auth.api,
+    signOut: signOut as unknown as typeof auth.api.signOut,
+  };
+  return import("./+server");
+})();
 
 function createEvent(request: Request): RequestEvent {
   return {
@@ -57,7 +64,9 @@ describe("logout route", () => {
 
   test("rejects GET logout requests", async () => {
     const { GET } = await logoutRoutePromise;
-    const response = await GET(createEvent(new Request("http://localhost/logout")));
+    const response = await GET(
+      createEvent(new Request("http://localhost/logout")),
+    );
 
     expect(response.status).toBe(405);
   });

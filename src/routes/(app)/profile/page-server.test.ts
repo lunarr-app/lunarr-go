@@ -9,22 +9,23 @@ import {
   useDatabaseFileForTests,
 } from "$lib/server/db";
 import { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
+import { sessionHeadersFor } from "$lib/server/auth/test/session-headers";
+import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
+import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
-import type * as ProfilePageServer from "./+page.server";
 
-const updateUser = mock(async (_input: unknown) => ({}));
-const changePassword = mock(async (_input: unknown) => ({}));
-
-mock.module("$lib/server/auth", () => ({
-  auth: {
-    api: {
-      updateUser,
-      changePassword,
-    },
-  },
+mock.module("$app/environment", () => ({
+  building: false,
 }));
 
-const profileRoutePromise = import("./+page.server");
+mock.module("$app/server", () => mockAppServerForAuthTests());
+
+const testUser = {
+  id: "user-1",
+  name: "Amina",
+  email: "amina@example.com",
+  role: "user" as const,
+};
 
 async function expectRedirect(operation: unknown, location: string) {
   try {
@@ -40,12 +41,13 @@ async function expectRedirect(operation: unknown, location: string) {
 
 describe("profile page server", () => {
   let tempDir: string;
-  let load: typeof ProfilePageServer.load;
-  let actions: typeof ProfilePageServer.actions;
+  let load: (
+    event: Parameters<(typeof import("./+page.server"))["load"]>[0],
+  ) => ReturnType<(typeof import("./+page.server"))["load"]>;
+  let actions: (typeof import("./+page.server"))["actions"];
+  let sessionHeaders: Headers;
 
   beforeEach(async () => {
-    updateUser.mockClear();
-    changePassword.mockClear();
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-profile-page-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();
@@ -54,18 +56,21 @@ describe("profile page server", () => {
     await db
       .insertInto("user")
       .values({
-        id: "user-1",
-        name: "Amina",
-        email: "amina@example.com",
-        role: "user",
+        id: testUser.id,
+        name: testUser.name,
+        email: testUser.email,
+        role: testUser.role,
         email_verified: 0,
         image: null,
         created_at: now,
         updated_at: now,
       })
       .execute();
+    const { resetAuthForTests } = await loadAuthModule();
+    await resetAuthForTests();
+    sessionHeaders = await sessionHeadersFor(testUser);
 
-    const profileRoute = await profileRoutePromise;
+    const profileRoute = await import("./+page.server");
     load = profileRoute.load;
     actions = profileRoute.actions;
   });
@@ -77,14 +82,10 @@ describe("profile page server", () => {
 
   test("loads the signed-in user's playback preference", async () => {
     const data = await load({
-      locals: {
-        user: {
-          id: "user-1",
-          name: "Amina",
-          email: "amina@example.com",
-          role: "user",
-        },
-      },
+      locals: { user: testUser },
+      request: new Request("http://localhost/profile", {
+        headers: sessionHeaders,
+      }),
     } as never);
 
     expect(data).toMatchObject({
@@ -112,14 +113,10 @@ describe("profile page server", () => {
     });
 
     const data = await load({
-      locals: {
-        user: {
-          id: "user-1",
-          name: "Amina",
-          email: "amina@example.com",
-          role: "user",
-        },
-      },
+      locals: { user: testUser },
+      request: new Request("http://localhost/profile", {
+        headers: sessionHeaders,
+      }),
     } as never);
 
     expect(data).toMatchObject({
@@ -217,6 +214,7 @@ describe("profile page server", () => {
       request: new Request("http://localhost/profile", {
         method: "POST",
         body: form,
+        headers: sessionHeaders,
       }),
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
@@ -231,7 +229,7 @@ describe("profile page server", () => {
       createdApiKeyToken: expect.stringMatching(/^lunarr_/),
     });
 
-    expect(await listApiKeys("user-1")).toHaveLength(1);
+    expect(await listApiKeys(sessionHeaders)).toHaveLength(1);
   });
 
   test("creates an API key with custom expiration seconds", async () => {
@@ -244,6 +242,7 @@ describe("profile page server", () => {
       request: new Request("http://localhost/profile", {
         method: "POST",
         body: form,
+        headers: sessionHeaders,
       }),
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
@@ -266,6 +265,7 @@ describe("profile page server", () => {
       request: new Request("http://localhost/profile", {
         method: "POST",
         body: form,
+        headers: sessionHeaders,
       }),
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
@@ -291,13 +291,14 @@ describe("profile page server", () => {
         request: new Request("http://localhost/profile", {
           method: "POST",
           body: form,
+          headers: sessionHeaders,
         }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never),
       "/profile",
     );
 
-    expect(await listApiKeys("user-1")).toEqual([]);
+    expect(await listApiKeys(sessionHeaders)).toEqual([]);
   });
 
   test("updates account name through auth", async () => {
@@ -309,7 +310,7 @@ describe("profile page server", () => {
         request: new Request("http://localhost/profile", {
           method: "POST",
           body: form,
-          headers: { "user-agent": "profile-test" },
+          headers: sessionHeaders,
         }),
         locals: {
           user: {
@@ -323,10 +324,13 @@ describe("profile page server", () => {
       "/profile",
     );
 
-    expect(updateUser).toHaveBeenCalledTimes(1);
-    expect(updateUser.mock.calls[0]?.[0]).toMatchObject({
-      body: { name: "Amina Khan" },
-    });
+    const db = await getDb();
+    const user = await db
+      .selectFrom("user")
+      .select(["name"])
+      .where("id", "=", "user-1")
+      .executeTakeFirstOrThrow();
+    expect(user.name).toBe("Amina Khan");
   });
 
   test("rejects empty account names", async () => {
@@ -355,7 +359,6 @@ describe("profile page server", () => {
         accountError: "Name is required.",
       },
     });
-    expect(updateUser).not.toHaveBeenCalled();
   });
 
   test("rejects account updates without a user", async () => {
@@ -380,7 +383,7 @@ describe("profile page server", () => {
 
   test("changes password through auth", async () => {
     const form = new FormData();
-    form.set("currentPassword", "old-password");
+    form.set("currentPassword", "password123");
     form.set("newPassword", "new-password");
     form.set("confirmPassword", "new-password");
 
@@ -389,7 +392,7 @@ describe("profile page server", () => {
         request: new Request("http://localhost/profile", {
           method: "POST",
           body: form,
-          headers: { "user-agent": "profile-test" },
+          headers: sessionHeaders,
         }),
         locals: {
           user: {
@@ -403,13 +406,15 @@ describe("profile page server", () => {
       "/profile",
     );
 
-    expect(changePassword).toHaveBeenCalledTimes(1);
-    expect(changePassword.mock.calls[0]?.[0]).toMatchObject({
-      body: {
-        currentPassword: "old-password",
-        newPassword: "new-password",
-      },
-    });
+    const { auth } = await loadAuthModule();
+    await expect(
+      auth.api.signInEmail({
+        body: {
+          email: "amina@example.com",
+          password: "new-password",
+        },
+      }),
+    ).resolves.toBeDefined();
   });
 
   test("rejects mismatched new passwords", async () => {
@@ -439,7 +444,6 @@ describe("profile page server", () => {
         passwordError: "New passwords do not match.",
       },
     });
-    expect(changePassword).not.toHaveBeenCalled();
   });
 
   test("rejects short new passwords", async () => {
@@ -469,7 +473,6 @@ describe("profile page server", () => {
         passwordError: "New password must be at least 8 characters.",
       },
     });
-    expect(changePassword).not.toHaveBeenCalled();
   });
 
   test("rejects password changes without a user", async () => {

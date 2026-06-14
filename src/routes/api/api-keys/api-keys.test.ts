@@ -8,15 +8,19 @@ import {
   migrateDatabase,
   useDatabaseFileForTests,
 } from "$lib/server/db";
+import { sessionHeadersFor } from "$lib/server/auth/test/session-headers";
+import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
+import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
 
-mock.module("$app/server", () => ({
-  getRequestEvent: () => {
-    throw new Error("No request event is available in this direct route test.");
-  },
+mock.module("$app/environment", () => ({
+  building: false,
 }));
+
+mock.module("$app/server", () => mockAppServerForAuthTests());
 
 describe("API key routes", () => {
   let tempDir: string | undefined;
+  let sessionHeaders: Headers;
 
   afterEach(async () => {
     await closeDatabaseForTests();
@@ -30,23 +34,33 @@ describe("API key routes", () => {
     await migrateDatabase();
     const db = await getDb();
     const now = Date.now();
+    const user = {
+      id: "user-1",
+      name: "User",
+      email: "user@example.com",
+      role: "user" as const,
+    };
     await db
       .insertInto("user")
       .values({
-        id: "user-1",
-        name: "User",
-        email: "user@example.com",
-        role: "user",
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
         email_verified: 0,
         image: null,
         created_at: now,
         updated_at: now,
       })
       .execute();
+    const { resetAuthForTests } = await loadAuthModule();
+    await resetAuthForTests();
+    sessionHeaders = await sessionHeadersFor(user);
+    return user;
   }
 
   test("creates, lists, and revokes personal API keys", async () => {
-    await setupUser();
+    const user = await setupUser();
     const { GET, POST } = await import("./+server");
     const { DELETE } = await import("./[id]/+server");
 
@@ -54,9 +68,12 @@ describe("API key routes", () => {
       request: new Request("http://localhost/api/api-keys", {
         method: "POST",
         body: JSON.stringify({ name: "iPhone", expiresIn: 60 }),
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          cookie: sessionHeaders.get("cookie") ?? "",
+        },
       }),
-      locals: { user: { id: "user-1", role: "user" } },
+      locals: { user },
     } as never);
 
     expect(created.status).toBe(201);
@@ -69,7 +86,10 @@ describe("API key routes", () => {
     });
 
     const listed = await GET({
-      locals: { user: { id: "user-1", role: "user" } },
+      request: new Request("http://localhost/api/api-keys", {
+        headers: sessionHeaders,
+      }),
+      locals: { user },
     } as never);
     expect(await listed.json()).toEqual({
       apiKeys: [
@@ -81,13 +101,22 @@ describe("API key routes", () => {
     });
 
     const deleted = await DELETE({
+      request: new Request(
+        `http://localhost/api/api-keys/${createdBody.apiKey.id}`,
+        {
+          headers: sessionHeaders,
+        },
+      ),
       params: { id: createdBody.apiKey.id },
-      locals: { user: { id: "user-1", role: "user" } },
+      locals: { user },
     } as never);
     expect(deleted.status).toBe(200);
 
     const afterDelete = await GET({
-      locals: { user: { id: "user-1", role: "user" } },
+      request: new Request("http://localhost/api/api-keys", {
+        headers: sessionHeaders,
+      }),
+      locals: { user },
     } as never);
     expect(await afterDelete.json()).toEqual({ apiKeys: [] });
   });

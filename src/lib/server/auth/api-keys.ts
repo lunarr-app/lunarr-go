@@ -1,16 +1,8 @@
-import { randomBytes } from "node:crypto";
-import { defaultKeyHasher } from "@better-auth/api-key";
-import { getDb } from "../db";
-import { createId } from "../id";
 import {
-  API_KEY_DISPLAY_PREFIX_LENGTH,
   API_KEY_MAX_EXPIRES_IN_DAYS,
   API_KEY_MAX_EXPIRES_IN_SECONDS,
   API_KEY_MAX_NAME_LENGTH,
-  API_KEY_PREFIX,
 } from "./api-key-config";
-
-const TOKEN_RANDOM_BYTES = 48;
 
 export type ApiKeySummary = {
   id: string;
@@ -22,11 +14,15 @@ export type ApiKeySummary = {
   updatedAt: string;
 };
 
-function normalizeApiKeyName(name: unknown) {
-  const value = typeof name === "string" ? name.trim() : "";
-  if (!value) return "Mobile app";
-  return value.slice(0, API_KEY_MAX_NAME_LENGTH);
-}
+type BetterAuthApiKeyRecord = {
+  id: string;
+  name: string | null;
+  start: string | null;
+  lastRequest?: Date | string | null;
+  expiresAt?: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+};
 
 function isoDate(value: Date | number | string | null | undefined) {
   if (value == null) return null;
@@ -35,8 +31,26 @@ function isoDate(value: Date | number | string | null | undefined) {
   return Number.isFinite(time) ? date.toISOString() : null;
 }
 
+function toApiKeySummary(row: BetterAuthApiKeyRecord): ApiKeySummary {
+  return {
+    id: row.id,
+    name: row.name ?? "Mobile app",
+    tokenPrefix: row.start ?? "",
+    lastUsedAt: isoDate(row.lastRequest ?? null),
+    expiresAt: isoDate(row.expiresAt ?? null),
+    createdAt: isoDate(row.createdAt) ?? new Date(0).toISOString(),
+    updatedAt: isoDate(row.updatedAt) ?? new Date(0).toISOString(),
+  };
+}
+
+function normalizeApiKeyName(name: unknown) {
+  const value = typeof name === "string" ? name.trim() : "";
+  if (!value) return "Mobile app";
+  return value.slice(0, API_KEY_MAX_NAME_LENGTH);
+}
+
 function normalizeExpiresIn(expiresIn: unknown) {
-  if (expiresIn == null || expiresIn === "") return null;
+  if (expiresIn == null || expiresIn === "") return undefined;
   const seconds = typeof expiresIn === "number" ? expiresIn : Number(expiresIn);
 
   if (!Number.isFinite(seconds) || !Number.isInteger(seconds) || seconds < 1) {
@@ -50,102 +64,101 @@ function normalizeExpiresIn(expiresIn: unknown) {
   return seconds;
 }
 
-function tokenDisplayPrefix(token: string) {
-  return token.slice(0, API_KEY_DISPLAY_PREFIX_LENGTH);
+function mapAuthError(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    return new Error(String(error.message));
+  }
+  return new Error(fallback);
 }
 
-function publicApiKey(row: {
-  id: string;
-  name: string | null;
-  start: string | null;
-  last_request: Date | number | string | null;
-  expires_at: Date | number | string | null;
-  created_at: Date | number | string;
-  updated_at: Date | number | string;
-}): ApiKeySummary {
-  return {
-    id: row.id,
-    name: row.name ?? "Mobile app",
-    tokenPrefix: row.start ?? "",
-    lastUsedAt: isoDate(row.last_request),
-    expiresAt: isoDate(row.expires_at),
-    createdAt: isoDate(row.created_at) ?? new Date(0).toISOString(),
-    updatedAt: isoDate(row.updated_at) ?? new Date(0).toISOString(),
-  };
+async function getAuth() {
+  const { auth } = await import("./index");
+  return auth;
+}
+
+function isNotFoundError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  if (
+    "status" in error &&
+    (error.status === 404 || error.status === "NOT_FOUND")
+  ) {
+    return true;
+  }
+  if ("message" in error) {
+    const message = String(error.message).toLowerCase();
+    return message.includes("not found") || message.includes("key_not_found");
+  }
+  return false;
 }
 
 export async function createApiKey(input: {
-  userId: string;
   name?: unknown;
   expiresIn?: unknown;
+  headers?: Headers;
+  userId?: string;
 }) {
-  const db = await getDb();
-  const token = `${API_KEY_PREFIX}${randomBytes(TOKEN_RANDOM_BYTES).toString("base64url")}`;
-  const now = Date.now();
+  const name = normalizeApiKeyName(input.name);
   const expiresIn = normalizeExpiresIn(input.expiresIn);
-  const expiresAt = expiresIn
-    ? new Date(now + expiresIn * 1000).toISOString()
-    : null;
-  const row = {
-    id: createId(),
-    config_id: "default",
-    name: normalizeApiKeyName(input.name),
-    start: tokenDisplayPrefix(token),
-    prefix: API_KEY_PREFIX,
-    key: await defaultKeyHasher(token),
-    reference_id: input.userId,
-    refill_interval: null,
-    refill_amount: null,
-    last_refill_at: null,
-    enabled: 1,
-    rate_limit_enabled: 0,
-    rate_limit_time_window: null,
-    rate_limit_max: null,
-    request_count: 0,
-    remaining: null,
-    last_request: null,
-    expires_at: expiresAt,
-    created_at: now,
-    updated_at: now,
-    permissions: null,
-    metadata: null,
-  };
 
-  await db.insertInto("apikey").values(row).execute();
+  if (!input.headers && !input.userId) {
+    throw new Error("Sign in to create API keys.");
+  }
 
-  return {
-    token,
-    apiKey: publicApiKey(row),
-  };
+  try {
+    const auth = await getAuth();
+    const created = await auth.api.createApiKey({
+      body: input.headers
+        ? {
+            name,
+            ...(expiresIn != null ? { expiresIn } : {}),
+          }
+        : {
+            name,
+            userId: input.userId!,
+            ...(expiresIn != null ? { expiresIn } : {}),
+          },
+      ...(input.headers ? { headers: input.headers } : {}),
+    });
+
+    return {
+      token: created.key,
+      apiKey: toApiKeySummary(created),
+    };
+  } catch (error) {
+    throw mapAuthError(error, "Could not create API key.");
+  }
 }
 
-export async function listApiKeys(userId: string) {
-  const db = await getDb();
-  const rows = await db
-    .selectFrom("apikey")
-    .select([
-      "id",
-      "name",
-      "start",
-      "last_request",
-      "expires_at",
-      "created_at",
-      "updated_at",
-    ])
-    .where("reference_id", "=", userId)
-    .orderBy("created_at", "desc")
-    .execute();
+export async function listApiKeys(headers: Headers) {
+  try {
+    const auth = await getAuth();
+    const result = await auth.api.listApiKeys({
+      query: {
+        sortBy: "createdAt",
+        sortDirection: "desc",
+      },
+      headers,
+    });
 
-  return rows.map(publicApiKey);
+    return result.apiKeys.map((apiKey) => toApiKeySummary(apiKey));
+  } catch (error) {
+    throw mapAuthError(error, "Could not list API keys.");
+  }
 }
 
-export async function revokeApiKey(userId: string, apiKeyId: string) {
-  const db = await getDb();
-  const result = await db
-    .deleteFrom("apikey")
-    .where("id", "=", apiKeyId)
-    .where("reference_id", "=", userId)
-    .executeTakeFirst();
-
-  return Number(result.numDeletedRows ?? 0) > 0;
+export async function revokeApiKey(input: {
+  headers: Headers;
+  apiKeyId: string;
+}) {
+  try {
+    const auth = await getAuth();
+    await auth.api.deleteApiKey({
+      body: { keyId: input.apiKeyId },
+      headers: input.headers,
+    });
+    return true;
+  } catch (error) {
+    if (isNotFoundError(error)) return false;
+    throw mapAuthError(error, "Could not revoke API key.");
+  }
 }
