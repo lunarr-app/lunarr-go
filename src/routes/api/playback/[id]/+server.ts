@@ -1,4 +1,12 @@
-import { getPlaybackData, parsePlaybackProgressBody, saveProgress } from "$lib/server/playback";
+import {
+  getPlaybackData,
+  parsePlaybackProgressBody,
+  saveProgress,
+} from "$lib/server/playback";
+import {
+  PlaybackSourceRequestError,
+  withSignedPlaybackSource,
+} from "$lib/server/playback/remote";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
@@ -10,14 +18,30 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
   const playback = await getPlaybackData({
     mediaItemId: params.id,
     userId: locals.user.id,
-    url
+    url,
   });
 
   if (!playback) {
     return json({ error: "Playable item not found." }, { status: 404 });
   }
 
-  return json(playback);
+  try {
+    return json(
+      await withSignedPlaybackSource({
+        data: playback,
+        userId: locals.user.id,
+        origin: url.origin,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof PlaybackSourceRequestError) {
+      return json({ error: error.message }, { status: error.status });
+    }
+    return json(
+      { error: "Could not prepare playback source." },
+      { status: 500 },
+    );
+  }
 };
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
@@ -37,12 +61,15 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     await saveProgress({
       userId: locals.user.id,
       mediaItemId: params.id,
-      ...body
+      ...body,
     });
   } catch (error) {
     return json(
-      { error: error instanceof Error ? error.message : "Could not save progress." },
-      { status: 400 }
+      {
+        error:
+          error instanceof Error ? error.message : "Could not save progress.",
+      },
+      { status: 400 },
     );
   }
 

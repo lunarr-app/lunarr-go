@@ -94,21 +94,6 @@
     | "autoplayBlocked"
     | "error";
 
-  type RemotePlaybackResponse = {
-    streamUrl: string;
-    contentType: string;
-    title: string | null;
-    durationSeconds: number | null;
-    playbackSessionId: string | null;
-    tracks: {
-      id: string;
-      label: string;
-      language: string;
-      default: boolean;
-      src: string;
-    }[];
-  };
-
   type SafariVideoElement = HTMLVideoElement & {
     webkitDisplayingFullscreen?: boolean;
     webkitEnterFullScreen?: () => void;
@@ -188,8 +173,6 @@
   );
   let airPlayAvailable = $state(false);
   let airPlayActive = $state(false);
-  let airPlayPreparedKey: string | null = null;
-  let airPlayPreparedPlayback: RemotePlaybackResponse | null = null;
   let remotePlaybackNotice = $state<string | null>(null);
   let remotePlaybackNoticeTimeout: number | null = null;
   let castOwnedPlaybackSessionId = $state<string | null>(null);
@@ -207,8 +190,6 @@
   const cancelledPlaybackSessions = new Set<string>();
   const castOwnedPlaybackSessions = new Set<string>();
   let castFrameworkPromise: Promise<CastApi> | null = null;
-  let airPlayPreparePromise: Promise<RemotePlaybackResponse | null> | null =
-    null;
   const playerStatusState = $derived(
     playerStatusOverlayState({
       uiState: playerUiState,
@@ -261,20 +242,6 @@
       remotePlaybackNoticeTimeout = null;
     }, 5000);
     showControls();
-  }
-
-  async function remotePlaybackErrorMessage(
-    response: Response,
-    fallback: string,
-  ) {
-    try {
-      const body = (await response.json()) as { error?: unknown };
-      return typeof body.error === "string" && body.error.length > 0
-        ? body.error
-        : fallback;
-    } catch {
-      return fallback;
-    }
   }
 
   function isCasting() {
@@ -354,108 +321,17 @@
     });
   }
 
-  function airPlayPreparationKey() {
-    const playback = data.playback;
-    return [
-      playback.mode,
-      playback.playbackSessionId ?? playback.streamUrl ?? "",
-      playback.file.id,
-      playback.streamStartSeconds ?? 0,
-      playback.tracks.map((track) => track.id).join(","),
-    ].join(":");
-  }
-
-  async function prepareAirPlayPlayback() {
-    if (data.playback.status !== "ready" || !data.playback.streamUrl)
-      return null;
-
-    const key = airPlayPreparationKey();
-    if (airPlayPreparedKey === key && airPlayPreparedPlayback) {
-      return airPlayPreparedPlayback;
-    }
-    if (airPlayPreparePromise) return airPlayPreparePromise;
-
-    airPlayPreparePromise = (async () => {
-      const response = await fetch("/api/playback/airplay", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(remotePlaybackRequestBody()),
-      });
-      if (!response.ok) {
-        throw new Error(
-          await remotePlaybackErrorMessage(
-            response,
-            "Could not prepare AirPlay playback.",
-          ),
-        );
-      }
-
-      const prepared = (await response.json()) as RemotePlaybackResponse;
-      airPlayPreparedKey = key;
-      airPlayPreparedPlayback = prepared;
-      return prepared;
-    })();
-
-    try {
-      return await airPlayPreparePromise;
-    } finally {
-      airPlayPreparePromise = null;
-    }
-  }
-
-  function applyPreparedAirPlayPlayback(prepared: RemotePlaybackResponse) {
+  function ensureAirPlayPlaybackSource() {
     const player = video;
-    if (!player) return;
+    const streamUrl = data.playback.streamUrl;
+    if (!player || data.playback.status !== "ready" || !streamUrl) return false;
 
     clearRemotePlaybackNotice();
-    const wasPaused = player.paused;
-    const targetSeconds = currentPlaybackSeconds;
-    applyAirPlayTrackSources(prepared);
-
-    if (
-      player.currentSrc !== prepared.streamUrl &&
-      player.src !== prepared.streamUrl
-    ) {
-      player.src = prepared.streamUrl;
-      void restorePlaybackPositionAfterSourceSwap(player, targetSeconds).then(
-        async () => {
-          if (!wasPaused) await player.play().catch(() => undefined);
-        },
-      );
-    }
-  }
-
-  function applyAirPlayTrackSources(prepared: RemotePlaybackResponse) {
-    if (!video || prepared.tracks.length === 0) return;
-    const srcById = new Map(
-      prepared.tracks.map((track) => [track.id, track.src] as const),
-    );
-    for (const trackElement of Array.from(video.querySelectorAll("track"))) {
-      const src = srcById.get(trackElement.dataset.trackId ?? "");
-      if (src) trackElement.src = src;
+    if (player.currentSrc !== streamUrl && player.src !== streamUrl) {
+      player.src = streamUrl;
     }
     void applySubtitleTrack(selectedSubtitleId);
-  }
-
-  async function restorePlaybackPositionAfterSourceSwap(
-    player: HTMLVideoElement,
-    absoluteSeconds: number,
-  ) {
-    const relativeSeconds = streamRelativePlaybackSeconds({
-      absoluteSeconds,
-      streamStartSeconds: data.playback.streamStartSeconds,
-    });
-    if (player.readyState < HTMLMediaElement.HAVE_METADATA) {
-      await new Promise<void>((resolve) => {
-        player.addEventListener("loadedmetadata", () => resolve(), {
-          once: true,
-        });
-      });
-    }
-    if (Number.isFinite(relativeSeconds) && relativeSeconds > 0) {
-      player.currentTime = relativeSeconds;
-    }
-    updateTimelineFromVideo();
+    return true;
   }
 
   function showAirPlayTargetPicker() {
@@ -469,33 +345,12 @@
     )
       return;
 
-    const prepared =
-      airPlayPreparedKey === airPlayPreparationKey()
-        ? airPlayPreparedPlayback
-        : null;
-    if (prepared) {
-      applyPreparedAirPlayPlayback(prepared);
-      picker?.call(player);
-      showControls();
+    if (!ensureAirPlayPlaybackSource()) {
+      showRemotePlaybackNotice("AirPlay playback is not ready yet.");
       return;
     }
-
-    void prepareAirPlayPlayback()
-      .then((nextPrepared) => {
-        if (!nextPrepared) return;
-        applyPreparedAirPlayPlayback(nextPrepared);
-        picker?.call(player);
-        showControls();
-      })
-      .catch((error) => {
-        airPlayPreparedKey = null;
-        airPlayPreparedPlayback = null;
-        showRemotePlaybackNotice(
-          error instanceof Error && error.message
-            ? error.message
-            : "Could not prepare AirPlay playback.",
-        );
-      });
+    picker?.call(player);
+    showControls();
   }
 
   function displayedPlaybackSeconds() {
@@ -1328,39 +1183,33 @@
     return Number.isFinite(data.startSeconds) ? data.startSeconds : 0;
   }
 
-  function remotePlaybackRequestBody() {
-    const playback = data.playback;
-    return {
-      mediaItemId: data.item.id,
-      mediaFileId: playback.file.id,
-      playbackSessionId: playback.playbackSessionId,
-      mode: playback.mode,
-      subtitleTrackIds: playback.tracks.map((track) => track.id),
-    };
-  }
-
-  async function prepareCastPlayback() {
-    const response = await fetch("/api/playback/cast", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(remotePlaybackRequestBody()),
-    });
-    if (!response.ok) {
-      throw new Error(
-        await remotePlaybackErrorMessage(
-          response,
-          "Could not prepare Cast playback.",
-        ),
-      );
+  function castContentType() {
+    if (data.playback.mode === "remux" || data.playback.mode === "transcode") {
+      return "application/vnd.apple.mpegurl";
     }
-    return (await response.json()) as RemotePlaybackResponse;
+    switch (data.playback.file.extension) {
+      case ".mp4":
+        return "video/mp4";
+      case ".mkv":
+        return "video/x-matroska";
+      case ".mov":
+        return "video/quicktime";
+      case ".avi":
+        return "video/x-msvideo";
+      case ".webm":
+        return "video/webm";
+      default:
+        return "application/octet-stream";
+    }
   }
 
   async function castPlayback() {
     if (castLaunchState === "connecting") return;
     castLaunchState = "connecting";
-    let preparedPlaybackSessionId: string | null = null;
     try {
+      if (data.playback.status !== "ready" || !data.playback.streamUrl) {
+        throw new Error("Cast playback is not ready yet.");
+      }
       const api = await ensureCastFramework();
       const context = configureCastFramework(api);
       const currentSession = connectedCastSession(
@@ -1377,29 +1226,23 @@
         throw new Error("Cast receiver is not connected.");
       }
 
-      let castPlayback = currentSession ? await prepareCastPlayback() : null;
-      preparedPlaybackSessionId = castPlayback?.playbackSessionId ?? null;
-      if (!castPlayback) {
-        castPlayback = await prepareCastPlayback();
-        preparedPlaybackSessionId = castPlayback.playbackSessionId;
-      }
       const mediaInfo = new api.chrome.cast.media.MediaInfo(
-        castPlayback.streamUrl,
-        castPlayback.contentType,
+        data.playback.streamUrl,
+        castContentType(),
       );
       const metadata = new api.chrome.cast.media.MovieMediaMetadata();
-      metadata.title = castPlayback.title ?? data.item.title;
+      metadata.title = data.item.title;
       mediaInfo.metadata = metadata;
       mediaInfo.duration =
-        Number.isFinite(castPlayback.durationSeconds) &&
-        Number(castPlayback.durationSeconds) > 0
+        Number.isFinite(data.playback.file.duration_seconds) &&
+        Number(data.playback.file.duration_seconds) > 0
           ? castReceiverTimelineSeconds({
-              absoluteSeconds: Number(castPlayback.durationSeconds),
+              absoluteSeconds: Number(data.playback.file.duration_seconds),
               mode: data.playback.mode,
               streamStartSeconds: data.playback.streamStartSeconds,
             })
           : undefined;
-      mediaInfo.tracks = castPlayback.tracks.map((track, index) => {
+      mediaInfo.tracks = data.playback.tracks.map((track, index) => {
         const castTrack = new api.chrome.cast.media.Track(
           index + 1,
           api.chrome.cast.media.TrackType.TEXT,
@@ -1419,7 +1262,7 @@
         mode: data.playback.mode,
         streamStartSeconds: data.playback.streamStartSeconds,
       });
-      const defaultTrackIds = castPlayback.tracks
+      const defaultTrackIds = data.playback.tracks
         .map((track, index) => (track.default ? index + 1 : null))
         .filter((id): id is number => id !== null);
       if (defaultTrackIds.length > 0) {
@@ -1428,17 +1271,13 @@
 
       castSession = session;
       attachCastMediaUpdateListener(await session.loadMedia(loadRequest));
-      markCastOwnedSession(castPlayback.playbackSessionId);
-      preparedPlaybackSessionId = null;
+      markCastOwnedSession(data.playback.playbackSessionId);
       clearRemotePlaybackNotice();
       syncCastRemotePlayerState();
       castLaunchState = "connected";
       playerUiState = "playing";
       video?.pause();
     } catch (error) {
-      if (preparedPlaybackSessionId) {
-        cancelPlaybackSessionById(preparedPlaybackSessionId);
-      }
       castLaunchState = "error";
       showRemotePlaybackNotice(
         error instanceof Error && error.message
@@ -1484,8 +1323,6 @@
         playbackActivityKey = currentPlaybackActivityKey;
         hasPlaybackActivity = false;
         hasStartedPlayback = false;
-        airPlayPreparedKey = null;
-        airPlayPreparedPlayback = null;
         playerUiState = "starting";
         saveState = "idle";
         playerControlsVisible = true;
@@ -1865,16 +1702,6 @@
       disposed = true;
       removeListener?.();
     };
-  });
-
-  $effect(() => {
-    if (!browser || !airPlayAvailable || !video || airPlayActive) return;
-    const key = airPlayPreparationKey();
-    if (airPlayPreparedKey === key) return;
-    void prepareAirPlayPlayback().catch(() => {
-      airPlayPreparedKey = null;
-      airPlayPreparedPlayback = null;
-    });
   });
 
   $effect(() => {

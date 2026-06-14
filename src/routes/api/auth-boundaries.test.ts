@@ -15,9 +15,10 @@ import {
 } from "$lib/server/transcoding/sessions";
 import { verifyRemotePlaybackToken } from "$lib/server/playback/remote-auth";
 import { GET as jobsGet } from "./jobs/+server";
-import { POST as airPlayPlaybackPost } from "./playback/airplay/+server";
-import { POST as castPlaybackPost } from "./playback/cast/+server";
-import { POST as playbackPost } from "./playback/[id]/+server";
+import {
+  GET as playbackGet,
+  POST as playbackPost,
+} from "./playback/[id]/+server";
 import { POST as cancelPlaybackSessionPost } from "./playback-sessions/[sessionId]/cancel/+server";
 import { POST as heartbeatPlaybackSessionPost } from "./playback-sessions/[sessionId]/heartbeat/+server";
 import {
@@ -44,18 +45,14 @@ describe("authenticated API route boundaries", () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
 
-    const airPlayResponse = await airPlayPlaybackPost({
-      request: new Request("http://localhost/api/playback/airplay", {
-        method: "POST",
-        body: JSON.stringify({}),
-        headers: { "content-type": "application/json" },
-      }),
-      url: new URL("http://localhost/api/playback/airplay"),
+    const getResponse = await playbackGet({
+      params: { id: "movie-1" },
+      url: new URL("http://localhost/api/playback/movie-1"),
       locals: { user: null },
     } as never);
 
-    expect(airPlayResponse.status).toBe(401);
-    expect(await airPlayResponse.json()).toEqual({ error: "Unauthorized" });
+    expect(getResponse.status).toBe(401);
+    expect(await getResponse.json()).toEqual({ error: "Unauthorized" });
   });
 
   test("saves playback progress for authenticated playback API calls", async () => {
@@ -483,7 +480,7 @@ describe("authenticated API route boundaries", () => {
     }
   });
 
-  test("prepares remote receiver URLs for direct, HLS, and subtitles", async () => {
+  test("returns signed playback URLs for direct, HLS, and subtitles", async () => {
     const tempDir = await mkdtemp(
       path.join(tmpdir(), "lunarr-api-cast-playback-"),
     );
@@ -579,37 +576,33 @@ describe("authenticated API route boundaries", () => {
         })
         .execute();
 
-      const directResponse = await castPlaybackPost({
-        request: new Request("http://localhost/api/playback/cast", {
-          method: "POST",
-          body: JSON.stringify({
-            mediaItemId: "movie-1",
-            mediaFileId: "file-1",
-            mode: "direct",
-            subtitleTrackIds: ["subtitle-1"],
-          }),
-          headers: { "content-type": "application/json" },
-        }),
+      const directResponse = await playbackGet({
+        params: { id: "movie-1" },
+        url: new URL("http://localhost/api/playback/movie-1?file=file-1"),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
 
       expect(directResponse.status).toBe(200);
       const directBody = await directResponse.json();
       expect(directBody).toMatchObject({
-        contentType: "video/mp4",
-        title: "Movie",
-        durationSeconds: 120,
-        playbackSessionId: null,
-        tracks: [
-          {
-            id: "subtitle-1",
-            label: "English",
-            language: "en",
-            default: true,
-          },
-        ],
+        item: { title: "Movie" },
+        playback: {
+          mode: "direct",
+          status: "ready",
+          file: { id: "file-1", duration_seconds: 120 },
+          playbackSessionId: null,
+          tracks: [
+            {
+              id: "subtitle-1",
+              label: "English",
+              language: "en",
+              default: true,
+            },
+          ],
+        },
       });
-      const directStreamUrl = new URL(directBody.streamUrl);
+      const directStreamUrl = new URL(directBody.playback.streamUrl);
+      expect(directStreamUrl.origin).toBe("http://localhost");
       expect(directStreamUrl.pathname).toBe("/media/files/file-1/stream");
       expect(
         verifyRemotePlaybackToken(
@@ -624,7 +617,8 @@ describe("authenticated API route boundaries", () => {
         userId: "user-1",
         mediaFileId: "file-1",
       });
-      const subtitleUrl = new URL(directBody.tracks[0].src);
+      const subtitleUrl = new URL(directBody.playback.tracks[0].src);
+      expect(subtitleUrl.origin).toBe("http://localhost");
       expect(subtitleUrl.pathname).toBe("/media/subtitles/subtitle-1");
       expect(
         verifyRemotePlaybackToken(subtitleUrl.searchParams.get("remoteToken"), {
@@ -638,70 +632,28 @@ describe("authenticated API route boundaries", () => {
         subtitleTrackId: "subtitle-1",
       });
 
-      const airPlayResponse = await airPlayPlaybackPost({
-        request: new Request("http://iphone.local/api/playback/airplay", {
-          method: "POST",
-          body: JSON.stringify({
-            mediaItemId: "movie-1",
-            mediaFileId: "file-1",
-            mode: "direct",
-            subtitleTrackIds: ["subtitle-1"],
-          }),
-          headers: { "content-type": "application/json" },
-        }),
-        url: new URL("http://iphone.local/api/playback/airplay"),
+      const alternateOriginResponse = await playbackGet({
+        params: { id: "movie-1" },
+        url: new URL("http://iphone.local/api/playback/movie-1?file=file-1"),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
 
-      expect(airPlayResponse.status).toBe(200);
-      const airPlayBody = await airPlayResponse.json();
-      expect(airPlayBody).toMatchObject({
-        contentType: "video/mp4",
-        title: "Movie",
-        durationSeconds: 120,
-        playbackSessionId: null,
-        tracks: [
-          {
-            id: "subtitle-1",
-            label: "English",
-            language: "en",
-            default: true,
-          },
-        ],
-      });
-      const airPlayStreamUrl = new URL(airPlayBody.streamUrl);
-      expect(airPlayStreamUrl.origin).toBe("http://iphone.local");
-      expect(airPlayStreamUrl.pathname).toBe("/media/files/file-1/stream");
-      expect(
-        verifyRemotePlaybackToken(
-          airPlayStreamUrl.searchParams.get("remoteToken"),
-          {
-            route: "direct",
-            mediaFileId: "file-1",
-          },
-        ),
-      ).toMatchObject({
-        route: "direct",
-        userId: "user-1",
-        mediaFileId: "file-1",
-      });
-      const airPlaySubtitleUrl = new URL(airPlayBody.tracks[0].src);
-      expect(airPlaySubtitleUrl.origin).toBe("http://iphone.local");
-      expect(airPlaySubtitleUrl.pathname).toBe("/media/subtitles/subtitle-1");
-      expect(
-        verifyRemotePlaybackToken(
-          airPlaySubtitleUrl.searchParams.get("remoteToken"),
-          {
-            route: "subtitle",
-            subtitleTrackId: "subtitle-1",
-          },
-        ),
-      ).toMatchObject({
-        route: "subtitle",
-        userId: "user-1",
-        mediaFileId: "file-1",
-        subtitleTrackId: "subtitle-1",
-      });
+      expect(alternateOriginResponse.status).toBe(200);
+      const alternateOriginBody = await alternateOriginResponse.json();
+      const alternateOriginStreamUrl = new URL(
+        alternateOriginBody.playback.streamUrl,
+      );
+      expect(alternateOriginStreamUrl.origin).toBe("http://iphone.local");
+      expect(alternateOriginStreamUrl.pathname).toBe(
+        "/media/files/file-1/stream",
+      );
+      const alternateOriginSubtitleUrl = new URL(
+        alternateOriginBody.playback.tracks[0].src,
+      );
+      expect(alternateOriginSubtitleUrl.origin).toBe("http://iphone.local");
+      expect(alternateOriginSubtitleUrl.pathname).toBe(
+        "/media/subtitles/subtitle-1",
+      );
 
       await db
         .insertInto("playback_session")
@@ -736,28 +688,22 @@ describe("authenticated API route boundaries", () => {
         mimeType: "application/vnd.apple.mpegurl",
       });
 
-      const hlsResponse = await castPlaybackPost({
-        request: new Request("http://localhost/api/playback/cast", {
-          method: "POST",
-          body: JSON.stringify({
-            mediaItemId: "movie-1",
-            mediaFileId: "file-1",
-            playbackSessionId: "transcode-1",
-            mode: "transcode",
-            subtitleTrackIds: ["subtitle-1"],
-          }),
-          headers: { "content-type": "application/json" },
-        }),
+      const hlsResponse = await playbackGet({
+        params: { id: "movie-1" },
+        url: new URL(
+          "http://localhost/api/playback/movie-1?file=file-1&transcode=true",
+        ),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
 
       expect(hlsResponse.status).toBe(200);
       const hlsBody = await hlsResponse.json();
-      expect(hlsBody).toMatchObject({
-        contentType: "application/vnd.apple.mpegurl",
+      expect(hlsBody.playback).toMatchObject({
+        mode: "transcode",
+        status: "ready",
         playbackSessionId: "transcode-1",
       });
-      const hlsStreamUrl = new URL(hlsBody.streamUrl);
+      const hlsStreamUrl = new URL(hlsBody.playback.streamUrl);
       expect(hlsStreamUrl.pathname).toBe(
         "/media/playback-sessions/transcode-1/master.m3u8",
       );
@@ -774,68 +720,6 @@ describe("authenticated API route boundaries", () => {
         userId: "user-1",
         mediaFileId: "file-1",
         playbackSessionId: "transcode-1",
-      });
-
-      await db
-        .insertInto("playback_session")
-        .values({
-          id: "transcode-missing-playlist",
-          media_file_id: "file-1",
-          user_id: "user-1",
-          status: "running",
-          mode: "transcode",
-          error_message: null,
-          started_at: now,
-          finished_at: null,
-          created_at: now,
-          updated_at: now,
-        })
-        .execute();
-      await registerTranscodeHlsArtifact({
-        sessionId: "transcode-missing-playlist",
-        mediaFileId: "file-1",
-        path: path.join(
-          tempDir,
-          "playback-sessions",
-          "transcode-missing-playlist",
-          "master.m3u8",
-        ),
-        mimeType: "application/vnd.apple.mpegurl",
-      });
-
-      const missingPlaylistResponse = await castPlaybackPost({
-        request: new Request("http://localhost/api/playback/cast", {
-          method: "POST",
-          body: JSON.stringify({
-            mediaItemId: "movie-1",
-            mediaFileId: "file-1",
-            playbackSessionId: "transcode-missing-playlist",
-            mode: "transcode",
-          }),
-          headers: { "content-type": "application/json" },
-        }),
-        locals: { user: { id: "user-1", role: "user" } },
-      } as never);
-      expect(missingPlaylistResponse.status).toBe(409);
-      expect(await missingPlaylistResponse.json()).toEqual({
-        error: "Cast playlist is not available yet.",
-      });
-
-      const missingSessionResponse = await castPlaybackPost({
-        request: new Request("http://localhost/api/playback/cast", {
-          method: "POST",
-          body: JSON.stringify({
-            mediaItemId: "movie-1",
-            mediaFileId: "file-1",
-            mode: "transcode",
-          }),
-          headers: { "content-type": "application/json" },
-        }),
-        locals: { user: { id: "user-1", role: "user" } },
-      } as never);
-      expect(missingSessionResponse.status).toBe(400);
-      expect(await missingSessionResponse.json()).toEqual({
-        error: "Cast HLS playback requires a session.",
       });
     } finally {
       await closeDatabaseForTests();

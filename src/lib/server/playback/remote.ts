@@ -1,6 +1,3 @@
-import { getDb } from "$lib/server/db";
-import { getMediaFile } from "$lib/server/media";
-import { mediaContentTypeForExtension } from "$lib/server/media/stream";
 import {
   absoluteRemotePlaybackUrl,
   appendRemotePlaybackToken,
@@ -12,217 +9,145 @@ import {
   getAuthorizedHlsArtifact,
   isEndedPlaybackArtifactFresh,
 } from "$lib/server/transcoding/sessions";
+import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
 
-export type RemotePlaybackRequest = {
-  mediaItemId?: unknown;
-  mediaFileId?: unknown;
-  playbackSessionId?: unknown;
-  mode?: unknown;
-  subtitleTrackIds?: unknown;
-};
-
-export type RemotePlaybackResponse = {
-  streamUrl: string;
-  contentType: string;
-  title: string | null;
-  durationSeconds: number | null;
-  playbackSessionId: string | null;
-  tracks: {
-    id: string;
-    label: string;
-    language: string;
-    default: boolean;
-    src: string;
-  }[];
-};
-
-export class RemotePlaybackRequestError extends Error {
+export class PlaybackSourceRequestError extends Error {
   readonly status: number;
 
   constructor(message: string, status: number) {
     super(message);
-    this.name = "RemotePlaybackRequestError";
+    this.name = "PlaybackSourceRequestError";
     this.status = status;
   }
 }
 
-function stringValue(value: unknown) {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function stringArrayValue(value: unknown) {
-  if (!Array.isArray(value)) return [];
-  return value.filter(
-    (entry): entry is string => typeof entry === "string" && entry.length > 0,
-  );
-}
-
-function hlsContentType() {
-  return "application/vnd.apple.mpegurl";
-}
-
-async function assertRemoteHlsReady(input: {
-  label: "AirPlay" | "Cast";
-  artifact: Awaited<ReturnType<typeof getAuthorizedHlsArtifact>>;
-}) {
-  const { artifact } = input;
-  if (!artifact) {
-    throw new RemotePlaybackRequestError("Playback session not found.", 404);
-  }
-  if (artifact.status === "failed" || artifact.status === "cancelled") {
-    throw new RemotePlaybackRequestError(
-      artifact.errorMessage ?? "Remote playback stream is not playable.",
-      409,
-    );
-  }
-  if (artifact.status !== "running" && artifact.status !== "completed") {
-    throw new RemotePlaybackRequestError(
-      `${input.label} stream is not ready yet.`,
-      409,
-    );
-  }
-  if (artifact.status === "completed" && !isEndedPlaybackArtifactFresh(artifact)) {
-    throw new RemotePlaybackRequestError(
-      "Remote playback stream is no longer active.",
-      410,
-    );
-  }
-  if (!artifact.playlistPath) {
-    throw new RemotePlaybackRequestError(
-      `${input.label} stream is not ready yet.`,
-      409,
-    );
-  }
-  if (!(await hlsPlaylistFileExists(artifact.playlistPath))) {
-    throw new RemotePlaybackRequestError(
-      `${input.label} playlist is not available yet.`,
-      409,
-    );
-  }
-}
-
-function absoluteRemoteUrl(pathname: string, token: string, origin?: string) {
+function absoluteSignedUrl(pathname: string, token: string, origin?: string) {
   if (!origin) return absoluteRemotePlaybackUrl(pathname, token);
   return new URL(appendRemotePlaybackToken(pathname, token), origin).toString();
 }
 
-async function subtitleTracks(input: {
-  mediaItemId: string;
-  mediaFileId: string;
-  ids: string[];
+async function assertSignedHlsReady(input: {
+  artifact: Awaited<ReturnType<typeof getAuthorizedHlsArtifact>>;
 }) {
-  if (input.ids.length === 0) return [];
-  const uniqueIds = [...new Set(input.ids)];
-  const db = await getDb();
-  return db
-    .selectFrom("subtitle_track")
-    .select(["id", "label", "language", "is_default"])
-    .where("id", "in", uniqueIds)
-    .where("media_item_id", "=", input.mediaItemId)
-    .where((eb) =>
-      eb.or([
-        eb("media_file_id", "is", null),
-        eb("media_file_id", "=", input.mediaFileId),
-      ]),
-    )
-    .where("source_kind", "=", "external")
-    .orderBy("is_default", "desc")
-    .orderBy("label", "asc")
-    .execute();
-}
-
-export async function prepareRemotePlayback(input: {
-  request: RemotePlaybackRequest;
-  userId: string;
-  label: "AirPlay" | "Cast";
-  origin?: string;
-}): Promise<RemotePlaybackResponse> {
-  const mediaItemId = stringValue(input.request.mediaItemId);
-  const mediaFileId = stringValue(input.request.mediaFileId);
-  const mode =
-    input.request.mode === "remux" || input.request.mode === "transcode"
-      ? input.request.mode
-      : input.request.mode === "direct"
-        ? "direct"
-        : null;
-  if (!mediaItemId || !mediaFileId || !mode) {
-    throw new RemotePlaybackRequestError(
-      `${input.label} playback request is incomplete.`,
-      400,
+  const { artifact } = input;
+  if (!artifact) {
+    throw new PlaybackSourceRequestError("Playback session not found.", 404);
+  }
+  if (artifact.status === "failed" || artifact.status === "cancelled") {
+    throw new PlaybackSourceRequestError(
+      artifact.errorMessage ?? "Playback stream is not playable.",
+      409,
     );
   }
-
-  const file = await getMediaFile(mediaFileId, input.userId);
-  if (!file || file.media_item_id !== mediaItemId) {
-    throw new RemotePlaybackRequestError("Playable item not found.", 404);
+  if (artifact.status !== "running" && artifact.status !== "completed") {
+    throw new PlaybackSourceRequestError("Playback stream is not ready yet.", 409);
   }
+  if (artifact.status === "completed" && !isEndedPlaybackArtifactFresh(artifact)) {
+    throw new PlaybackSourceRequestError(
+      "Playback stream is no longer active.",
+      410,
+    );
+  }
+  if (!artifact.playlistPath) {
+    throw new PlaybackSourceRequestError("Playback stream is not ready yet.", 409);
+  }
+  if (!(await hlsPlaylistFileExists(artifact.playlistPath))) {
+    throw new PlaybackSourceRequestError(
+      "Playback playlist is not available yet.",
+      409,
+    );
+  }
+}
 
+async function signedPlaybackStreamUrl(input: {
+  playback: PlaybackDecision;
+  userId: string;
+  origin: string;
+}) {
+  const { playback } = input;
   let route: RemotePlaybackRoute;
   let streamPath: string;
-  let playbackSessionId: string | null = null;
-  if (mode === "direct") {
+  let playbackSessionId: string | undefined;
+
+  if (playback.mode === "direct") {
     route = "direct";
-    streamPath = `/media/files/${encodeURIComponent(mediaFileId)}/stream`;
-  } else {
-    const requestedSessionId = stringValue(input.request.playbackSessionId);
-    if (!requestedSessionId) {
-      throw new RemotePlaybackRequestError(
-        `${input.label} HLS playback requires a session.`,
+    streamPath = `/media/files/${encodeURIComponent(playback.file.id)}/stream`;
+  } else if (playback.mode === "remux" || playback.mode === "transcode") {
+    if (!playback.playbackSessionId) {
+      throw new PlaybackSourceRequestError(
+        "HLS playback requires a session.",
         400,
       );
     }
     const artifact = await getAuthorizedHlsArtifact(
-      requestedSessionId,
+      playback.playbackSessionId,
       input.userId,
     );
-    if (!artifact || artifact.mediaFileId !== mediaFileId) {
-      throw new RemotePlaybackRequestError("Playback session not found.", 404);
+    if (!artifact || artifact.mediaFileId !== playback.file.id) {
+      throw new PlaybackSourceRequestError("Playback session not found.", 404);
     }
-    await assertRemoteHlsReady({ label: input.label, artifact });
+    await assertSignedHlsReady({ artifact });
     route = "hls";
-    playbackSessionId = requestedSessionId;
-    streamPath = `/media/playback-sessions/${encodeURIComponent(requestedSessionId)}/master.m3u8`;
+    playbackSessionId = playback.playbackSessionId;
+    streamPath = `/media/playback-sessions/${encodeURIComponent(playback.playbackSessionId)}/master.m3u8`;
+  } else {
+    return playback.streamUrl;
   }
 
-  const streamToken = createRemotePlaybackToken({
+  const token = createRemotePlaybackToken({
     route,
     userId: input.userId,
-    mediaFileId,
-    playbackSessionId: playbackSessionId ?? undefined,
+    mediaFileId: playback.file.id,
+    playbackSessionId,
   });
-  const tracks = await subtitleTracks({
-    mediaItemId,
-    mediaFileId,
-    ids: stringArrayValue(input.request.subtitleTrackIds),
+  return absoluteSignedUrl(streamPath, token, input.origin);
+}
+
+function signedSubtitleSrc(input: {
+  trackId: string;
+  mediaFileId: string;
+  userId: string;
+  origin: string;
+}) {
+  const token = createRemotePlaybackToken({
+    route: "subtitle",
+    userId: input.userId,
+    mediaFileId: input.mediaFileId,
+    subtitleTrackId: input.trackId,
   });
+  return absoluteSignedUrl(
+    `/media/subtitles/${encodeURIComponent(input.trackId)}`,
+    token,
+    input.origin,
+  );
+}
+
+export async function withSignedPlaybackSource(input: {
+  data: PlaybackData;
+  userId: string;
+  origin: string;
+}): Promise<PlaybackData> {
+  const playback = input.data.playback;
+  if (playback.status !== "ready" || !playback.streamUrl) return input.data;
 
   return {
-    streamUrl: absoluteRemoteUrl(streamPath, streamToken, input.origin),
-    contentType:
-      route === "hls"
-        ? hlsContentType()
-        : mediaContentTypeForExtension(file.extension),
-    title: file.title,
-    durationSeconds: file.duration_seconds,
-    playbackSessionId,
-    tracks: tracks.map((track) => {
-      const token = createRemotePlaybackToken({
-        route: "subtitle",
+    ...input.data,
+    playback: {
+      ...playback,
+      streamUrl: await signedPlaybackStreamUrl({
+        playback,
         userId: input.userId,
-        mediaFileId,
-        subtitleTrackId: track.id,
-      });
-      return {
-        id: track.id,
-        label: track.label,
-        language: track.language,
-        default: Boolean(track.is_default),
-        src: absoluteRemoteUrl(
-          `/media/subtitles/${encodeURIComponent(track.id)}`,
-          token,
-          input.origin,
-        ),
-      };
-    }),
+        origin: input.origin,
+      }),
+      tracks: playback.tracks.map((track) => ({
+        ...track,
+        src: signedSubtitleSrc({
+          trackId: track.id,
+          mediaFileId: playback.file.id,
+          userId: input.userId,
+          origin: input.origin,
+        }),
+      })),
+    },
   };
 }
