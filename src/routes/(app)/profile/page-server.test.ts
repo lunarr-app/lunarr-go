@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -10,12 +10,42 @@ import {
 } from "$lib/server/db";
 import { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
-import { actions, load } from "./+page.server";
+import type * as ProfilePageServer from "./+page.server";
+
+const updateUser = mock(async (_input: unknown) => ({}));
+const changePassword = mock(async (_input: unknown) => ({}));
+
+mock.module("$lib/server/auth", () => ({
+  auth: {
+    api: {
+      updateUser,
+      changePassword,
+    },
+  },
+}));
+
+const profileRoutePromise = import("./+page.server");
+
+async function expectRedirect(operation: unknown, location: string) {
+  try {
+    await operation;
+    throw new Error(`Expected redirect to ${location}.`);
+  } catch (error) {
+    expect(error).toMatchObject({
+      status: 303,
+      location,
+    });
+  }
+}
 
 describe("profile page server", () => {
   let tempDir: string;
+  let load: typeof ProfilePageServer.load;
+  let actions: typeof ProfilePageServer.actions;
 
   beforeEach(async () => {
+    updateUser.mockClear();
+    changePassword.mockClear();
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-profile-page-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();
@@ -34,6 +64,10 @@ describe("profile page server", () => {
         updated_at: now,
       })
       .execute();
+
+    const profileRoute = await profileRoutePromise;
+    load = profileRoute.load;
+    actions = profileRoute.actions;
   });
 
   afterEach(async () => {
@@ -104,21 +138,16 @@ describe("profile page server", () => {
     form.set("preferredAudioLanguage", " JPN ");
     form.set("preferredSubtitleLanguage", " ENG ");
 
-    try {
-      await actions.savePlaybackPreference({
+    await expectRedirect(
+      actions.savePlaybackPreference({
         request: new Request("http://localhost/profile", {
           method: "POST",
           body: form,
         }),
         locals: { user: { id: "user-1", role: "user" } },
-      } as never);
-      throw new Error("Expected playback preference save to redirect.");
-    } catch (error) {
-      expect(error).toMatchObject({
-        status: 303,
-        location: "/profile",
-      });
-    }
+      } as never),
+      "/profile",
+    );
 
     expect(
       await getTranscodePolicy("user-1").then(
@@ -141,21 +170,16 @@ describe("profile page server", () => {
     const form = new FormData();
     form.set("playbackPreference", "always_transcode");
 
-    try {
-      await actions.savePlaybackPreference({
+    await expectRedirect(
+      actions.savePlaybackPreference({
         request: new Request("http://localhost/profile", {
           method: "POST",
           body: form,
         }),
         locals: { user: { id: "user-1", role: "user" } },
-      } as never);
-      throw new Error("Expected playback preference save to redirect.");
-    } catch (error) {
-      expect(error).toMatchObject({
-        status: 303,
-        location: "/profile",
-      });
-    }
+      } as never),
+      "/profile",
+    );
 
     expect(
       await getTranscodePolicy("user-1").then(
@@ -198,7 +222,8 @@ describe("profile page server", () => {
     } as never);
 
     expect(result).toMatchObject({
-      apiKeySuccess: "API key created. Copy it now; it will not be shown again.",
+      apiKeySuccess:
+        "API key created. Copy it now; it will not be shown again.",
       createdApiKey: {
         name: "Android phone",
         expiresAt: expect.any(String),
@@ -261,22 +286,211 @@ describe("profile page server", () => {
     const form = new FormData();
     form.set("apiKeyId", created.apiKey.id);
 
-    try {
-      await actions.revokeApiKey({
+    await expectRedirect(
+      actions.revokeApiKey({
         request: new Request("http://localhost/profile", {
           method: "POST",
           body: form,
         }),
         locals: { user: { id: "user-1", role: "user" } },
-      } as never);
-      throw new Error("Expected API key revoke to redirect.");
-    } catch (error) {
-      expect(error).toMatchObject({
-        status: 303,
-        location: "/profile",
-      });
-    }
+      } as never),
+      "/profile",
+    );
 
     expect(await listApiKeys("user-1")).toEqual([]);
+  });
+
+  test("updates account name through auth", async () => {
+    const form = new FormData();
+    form.set("name", "Amina Khan");
+
+    await expectRedirect(
+      actions.updateAccount({
+        request: new Request("http://localhost/profile", {
+          method: "POST",
+          body: form,
+          headers: { "user-agent": "profile-test" },
+        }),
+        locals: {
+          user: {
+            id: "user-1",
+            name: "Amina",
+            email: "amina@example.com",
+            role: "user",
+          },
+        },
+      } as never),
+      "/profile",
+    );
+
+    expect(updateUser).toHaveBeenCalledTimes(1);
+    expect(updateUser.mock.calls[0]?.[0]).toMatchObject({
+      body: { name: "Amina Khan" },
+    });
+  });
+
+  test("rejects empty account names", async () => {
+    const form = new FormData();
+    form.set("name", "   ");
+
+    const result = await actions.updateAccount({
+      request: new Request("http://localhost/profile", {
+        method: "POST",
+        body: form,
+      }),
+      locals: {
+        user: {
+          id: "user-1",
+          name: "Amina",
+          email: "amina@example.com",
+          role: "user",
+        },
+      },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 400,
+      data: {
+        name: "",
+        accountError: "Name is required.",
+      },
+    });
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  test("rejects account updates without a user", async () => {
+    const form = new FormData();
+    form.set("name", "Amina Khan");
+
+    const result = await actions.updateAccount({
+      request: new Request("http://localhost/profile", {
+        method: "POST",
+        body: form,
+      }),
+      locals: { user: null },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 401,
+      data: {
+        accountError: "Sign in to update your account.",
+      },
+    });
+  });
+
+  test("changes password through auth", async () => {
+    const form = new FormData();
+    form.set("currentPassword", "old-password");
+    form.set("newPassword", "new-password");
+    form.set("confirmPassword", "new-password");
+
+    await expectRedirect(
+      actions.changePassword({
+        request: new Request("http://localhost/profile", {
+          method: "POST",
+          body: form,
+          headers: { "user-agent": "profile-test" },
+        }),
+        locals: {
+          user: {
+            id: "user-1",
+            name: "Amina",
+            email: "amina@example.com",
+            role: "user",
+          },
+        },
+      } as never),
+      "/profile",
+    );
+
+    expect(changePassword).toHaveBeenCalledTimes(1);
+    expect(changePassword.mock.calls[0]?.[0]).toMatchObject({
+      body: {
+        currentPassword: "old-password",
+        newPassword: "new-password",
+      },
+    });
+  });
+
+  test("rejects mismatched new passwords", async () => {
+    const form = new FormData();
+    form.set("currentPassword", "old-password");
+    form.set("newPassword", "new-password");
+    form.set("confirmPassword", "different-password");
+
+    const result = await actions.changePassword({
+      request: new Request("http://localhost/profile", {
+        method: "POST",
+        body: form,
+      }),
+      locals: {
+        user: {
+          id: "user-1",
+          name: "Amina",
+          email: "amina@example.com",
+          role: "user",
+        },
+      },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 400,
+      data: {
+        passwordError: "New passwords do not match.",
+      },
+    });
+    expect(changePassword).not.toHaveBeenCalled();
+  });
+
+  test("rejects short new passwords", async () => {
+    const form = new FormData();
+    form.set("currentPassword", "old-password");
+    form.set("newPassword", "short");
+    form.set("confirmPassword", "short");
+
+    const result = await actions.changePassword({
+      request: new Request("http://localhost/profile", {
+        method: "POST",
+        body: form,
+      }),
+      locals: {
+        user: {
+          id: "user-1",
+          name: "Amina",
+          email: "amina@example.com",
+          role: "user",
+        },
+      },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 400,
+      data: {
+        passwordError: "New password must be at least 8 characters.",
+      },
+    });
+    expect(changePassword).not.toHaveBeenCalled();
+  });
+
+  test("rejects password changes without a user", async () => {
+    const form = new FormData();
+    form.set("currentPassword", "old-password");
+    form.set("newPassword", "new-password");
+    form.set("confirmPassword", "new-password");
+
+    const result = await actions.changePassword({
+      request: new Request("http://localhost/profile", {
+        method: "POST",
+        body: form,
+      }),
+      locals: { user: null },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 401,
+      data: {
+        passwordError: "Sign in to change your password.",
+      },
+    });
   });
 });

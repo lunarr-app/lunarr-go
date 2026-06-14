@@ -1,3 +1,4 @@
+import { auth } from "$lib/server/auth";
 import {
   createApiKey,
   listApiKeys,
@@ -23,7 +24,85 @@ export const load: PageServerLoad = async ({ locals }) => {
   };
 };
 
+function authErrorMessage(error: unknown, fallback: string) {
+  return error && typeof error === "object" && "message" in error
+    ? String(error.message)
+    : fallback;
+}
+
 export const actions: Actions = {
+  updateAccount: async ({ request, locals }) => {
+    if (!locals.user)
+      return fail(401, {
+        accountError: "Sign in to update your account.",
+      });
+
+    const form = await request.formData();
+    const name = String(form.get("name") ?? "").trim();
+
+    if (!name) {
+      return fail(400, {
+        name,
+        accountError: "Name is required.",
+      });
+    }
+
+    try {
+      await auth.api.updateUser({
+        body: { name },
+        headers: request.headers,
+      });
+    } catch (error) {
+      return fail(400, {
+        name,
+        accountError: authErrorMessage(error, "Could not update account."),
+      });
+    }
+
+    throw redirect(303, "/profile");
+  },
+  changePassword: async ({ request, locals }) => {
+    if (!locals.user)
+      return fail(401, {
+        passwordError: "Sign in to change your password.",
+      });
+
+    const form = await request.formData();
+    const currentPassword = String(form.get("currentPassword") ?? "");
+    const newPassword = String(form.get("newPassword") ?? "");
+    const confirmPassword = String(form.get("confirmPassword") ?? "");
+
+    if (!currentPassword || !newPassword) {
+      return fail(400, {
+        passwordError: "Current and new password are required.",
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return fail(400, {
+        passwordError: "New password must be at least 8 characters.",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return fail(400, {
+        passwordError: "New passwords do not match.",
+      });
+    }
+
+    try {
+      await auth.api.changePassword({
+        body: { currentPassword, newPassword },
+        headers: request.headers,
+      });
+    } catch (error) {
+      return fail(400, {
+        passwordError: authErrorMessage(error, "Could not change password."),
+      });
+    }
+
+    throw redirect(303, "/profile");
+  },
   savePlaybackPreference: async ({ request, locals }) => {
     if (!locals.user)
       return fail(401, {
@@ -56,9 +135,7 @@ export const actions: Actions = {
     const expiresPreset = String(form.get("expiresPreset") ?? "");
     const customExpiresIn = String(form.get("expiresIn") ?? "").trim();
     const expiresIn =
-      expiresPreset === "custom"
-        ? customExpiresIn
-        : expiresPreset;
+      expiresPreset === "custom" ? customExpiresIn : expiresPreset;
 
     try {
       const created = await createApiKey({
@@ -68,7 +145,8 @@ export const actions: Actions = {
       });
 
       return {
-        apiKeySuccess: "API key created. Copy it now; it will not be shown again.",
+        apiKeySuccess:
+          "API key created. Copy it now; it will not be shown again.",
         createdApiKey: created.apiKey,
         createdApiKeyToken: created.token,
       };
