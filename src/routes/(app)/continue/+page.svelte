@@ -7,6 +7,8 @@
   const hasProgress = $derived(
     data.movies.length > 0 || data.episodes.length > 0,
   );
+  const movieCountLabel = $derived(`${data.movies.length} ${data.movies.length === 1 ? "movie" : "movies"}`);
+  const episodeCountLabel = $derived(`${data.episodes.length} ${data.episodes.length === 1 ? "episode" : "episodes"}`);
 </script>
 
 <svelte:head>
@@ -19,15 +21,17 @@
 
 <header class="page-header">
   <div>
-    <h1>Continue Watching</h1>
-    <p class="muted">Resume movies and episodes that are still in progress.</p>
+    <h1 class="page-title">Continue Watching</h1>
   </div>
 </header>
 
 {#if hasProgress}
   {#if data.movies.length}
     <section class="media-section" aria-labelledby="movies-heading">
-      <h2 id="movies-heading">Movies</h2>
+      <div class="section-heading">
+        <h2 id="movies-heading" class="section-title">Movies</h2>
+        <span>{movieCountLabel}</span>
+      </div>
       <div class="movie-grid">
         {#each data.movies as movie}
           <MovieCard {movie} />
@@ -38,7 +42,10 @@
 
   {#if data.episodes.length}
     <section class="media-section" aria-labelledby="episodes-heading">
-      <h2 id="episodes-heading">Episodes</h2>
+      <div class="section-heading">
+        <h2 id="episodes-heading" class="section-title">Episodes</h2>
+        <span>{episodeCountLabel}</span>
+      </div>
       <div class="episode-grid">
         {#each data.episodes as episode}
           <EpisodeCard {episode} />
@@ -48,7 +55,7 @@
   {/if}
 {:else}
   <section class="empty">
-    <h2>Nothing in progress</h2>
+    <h2 class="empty-title">Nothing in progress</h2>
     <p class="muted">
       Start a movie or episode and Lunarr will keep it here until it is watched.
     </p>
@@ -70,8 +77,8 @@
     margin-bottom: 1.6rem;
   }
 
-  h1 {
-    margin: 0 0 0.25rem;
+  .page-title {
+    margin: 0;
     font-size: clamp(1.55rem, 2.4vw, 2.25rem);
   }
 
@@ -79,8 +86,23 @@
     margin-top: 1.8rem;
   }
 
-  h2 {
-    margin: 0 0 0.85rem;
+  .section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .section-title,
+  .empty-title {
+    margin: 0;
+  }
+
+  .section-heading span {
+    color: var(--color-muted);
+    font-size: 0.86rem;
+    font-weight: 700;
   }
 
   .movie-grid,
@@ -103,10 +125,6 @@
     gap: 0.8rem;
     margin-top: 3rem;
     max-width: 34rem;
-  }
-
-  .empty h2 {
-    margin: 0;
   }
 
   .empty-actions {
