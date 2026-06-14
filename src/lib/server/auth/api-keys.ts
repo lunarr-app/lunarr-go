@@ -43,7 +43,9 @@ function normalizeExpiresIn(expiresIn: unknown) {
     throw new Error("Expiration must be a positive number of seconds.");
   }
   if (seconds > API_KEY_MAX_EXPIRES_IN_SECONDS) {
-    throw new Error(`Expiration cannot be more than ${API_KEY_MAX_EXPIRES_IN_DAYS} days.`);
+    throw new Error(
+      `Expiration cannot be more than ${API_KEY_MAX_EXPIRES_IN_DAYS} days.`,
+    );
   }
   return seconds;
 }
@@ -81,6 +83,9 @@ export async function createApiKey(input: {
   const token = `${API_KEY_PREFIX}${randomBytes(TOKEN_RANDOM_BYTES).toString("base64url")}`;
   const now = Date.now();
   const expiresIn = normalizeExpiresIn(input.expiresIn);
+  const expiresAt = expiresIn
+    ? new Date(now + expiresIn * 1000).toISOString()
+    : null;
   const row = {
     id: createId(),
     config_id: "default",
@@ -99,7 +104,7 @@ export async function createApiKey(input: {
     request_count: 0,
     remaining: null,
     last_request: null,
-    expires_at: expiresIn ? now + expiresIn * 1000 : null,
+    expires_at: expiresAt,
     created_at: now,
     updated_at: now,
     permissions: null,
@@ -118,7 +123,15 @@ export async function listApiKeys(userId: string) {
   const db = await getDb();
   const rows = await db
     .selectFrom("apikey")
-    .select(["id", "name", "start", "last_request", "expires_at", "created_at", "updated_at"])
+    .select([
+      "id",
+      "name",
+      "start",
+      "last_request",
+      "expires_at",
+      "created_at",
+      "updated_at",
+    ])
     .where("reference_id", "=", userId)
     .orderBy("created_at", "desc")
     .execute();

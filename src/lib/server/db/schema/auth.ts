@@ -1,5 +1,5 @@
 import type { ColumnType } from "kysely";
-import type { TimestampMs, TimestampText } from "./common";
+import type { TimestampMs, TimestampStorage, TimestampText } from "./common";
 
 export type UserTable = {
   id: string;
@@ -72,7 +72,7 @@ export type ApiKeyTable = {
   request_count: ColumnType<number, number | undefined, number | undefined>;
   remaining: number | null;
   last_request: TimestampMs | null;
-  expires_at: TimestampMs | null;
+  expires_at: TimestampStorage | null;
   created_at: TimestampMs;
   updated_at: TimestampMs;
   permissions: string | null;

@@ -1,6 +1,11 @@
 import type { ColumnType } from "kysely";
 
 export type TimestampMs = ColumnType<number, number, number>;
+export type TimestampStorage = ColumnType<
+  number | string,
+  number | string | null,
+  number | string | null
+>;
 export type TimestampText = ColumnType<string, string, string>;
 export type JsonText = ColumnType<string | null, string | null | undefined, string | null | undefined>;
 export type NullableText = ColumnType<string | null, string | null | undefined, string | null | undefined>;
