@@ -172,9 +172,12 @@ describe("API key routes", () => {
     });
 
     const response = await DELETE({
-      request: new Request(`http://localhost/api/api-keys/${created.apiKey.id}`, {
-        headers: other.sessionHeaders,
-      }),
+      request: new Request(
+        `http://localhost/api/api-keys/${created.apiKey.id}`,
+        {
+          headers: other.sessionHeaders,
+        },
+      ),
       params: { id: created.apiKey.id },
       locals: { user: other.user },
     } as never);

@@ -178,10 +178,12 @@ export const actions: Actions = {
       return fail(400, { apiKeyError: "API key is required." });
     }
 
-    if (!(await revokePersonalApiKey({
-      headers: request.headers,
-      apiKeyId,
-    }))) {
+    if (
+      !(await revokePersonalApiKey({
+        headers: request.headers,
+        apiKeyId,
+      }))
+    ) {
       return fail(404, { apiKeyError: "API key not found." });
     }
 
