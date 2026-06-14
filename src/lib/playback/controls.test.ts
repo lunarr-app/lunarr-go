@@ -8,7 +8,6 @@ import {
   castControlLabel,
   castMediaTimelineSeconds,
   castPlaybackSecondsAfterSeek,
-  castPlaybackCommandForUiState,
   castPlayerUiState,
   castReceiverTimelineSeconds,
   castUiStateAfterCommand,
@@ -34,12 +33,12 @@ import {
   playerStatusOverlayState,
   releaseCastOwnedPlaybackSession,
   shouldAutoHideControls,
+  shouldApplyLocalWaitingState,
   shouldCancelPlaybackSessionForCleanup,
   shouldAttemptLocalAutoplay,
   shouldClosePlaybackModalOnKeydown,
   shouldCloseSubtitleMenuOnPlayerKeydown,
   shouldHandlePlayerShortcut,
-  shouldRefreshControlsOnPointerMove,
   shouldShowCustomControls,
   shouldUseHlsRepositionForSeek,
   subtitleTextTrackMode,
@@ -349,10 +348,7 @@ describe("custom player controls", () => {
     ).toBe(180);
   });
 
-  test("routes Cast play controls from the current UI state", () => {
-    expect(castPlaybackCommandForUiState("playing")).toBe("pause");
-    expect(castPlaybackCommandForUiState("paused")).toBe("play");
-    expect(castPlaybackCommandForUiState("buffering")).toBe("pause");
+  test("updates Cast UI state after command attempts", () => {
     expect(
       castUiStateAfterCommand({
         command: "pause",
@@ -446,6 +442,42 @@ describe("custom player controls", () => {
         autoplayAttempted: false,
         disposed: false,
         paused: false,
+        casting: false,
+      }),
+    ).toBe(false);
+  });
+
+  test("applies local waiting state only for active local playback", () => {
+    expect(
+      shouldApplyLocalWaitingState({
+        uiState: "playing",
+        paused: false,
+        ended: false,
+        casting: false,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldApplyLocalWaitingState({
+        uiState: "paused",
+        paused: true,
+        ended: false,
+        casting: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldApplyLocalWaitingState({
+        uiState: "playing",
+        paused: false,
+        ended: false,
+        casting: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldApplyLocalWaitingState({
+        uiState: "autoplayBlocked",
+        paused: false,
+        ended: false,
         casting: false,
       }),
     ).toBe(false);
@@ -838,6 +870,16 @@ describe("custom player controls", () => {
     ).toBe(false);
     expect(
       shouldShowCustomControls({
+        controlsVisible: true,
+        uiState: "playing",
+        casting: false,
+        subtitleMenuOpen: false,
+        controlsFocused: false,
+        controlsHovered: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldShowCustomControls({
         controlsVisible: false,
         uiState: "playing",
         casting: false,
@@ -854,49 +896,6 @@ describe("custom player controls", () => {
         subtitleMenuOpen: false,
         controlsFocused: false,
         controlsHovered: true,
-      }),
-    ).toBe(true);
-  });
-
-  test("refreshes controls on pointer movement only when controls are already visible", () => {
-    expect(
-      shouldRefreshControlsOnPointerMove({
-        controlsVisible: false,
-        uiState: "playing",
-        casting: false,
-        subtitleMenuOpen: false,
-        controlsFocused: false,
-        controlsHovered: false,
-      }),
-    ).toBe(false);
-    expect(
-      shouldRefreshControlsOnPointerMove({
-        controlsVisible: true,
-        uiState: "playing",
-        casting: false,
-        subtitleMenuOpen: false,
-        controlsFocused: false,
-        controlsHovered: false,
-      }),
-    ).toBe(true);
-    expect(
-      shouldRefreshControlsOnPointerMove({
-        controlsVisible: false,
-        uiState: "paused",
-        casting: false,
-        subtitleMenuOpen: false,
-        controlsFocused: false,
-        controlsHovered: false,
-      }),
-    ).toBe(true);
-    expect(
-      shouldRefreshControlsOnPointerMove({
-        controlsVisible: false,
-        uiState: "playing",
-        casting: true,
-        subtitleMenuOpen: false,
-        controlsFocused: false,
-        controlsHovered: false,
       }),
     ).toBe(true);
   });

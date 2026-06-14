@@ -296,12 +296,6 @@ export function playbackProgressSnapshot(input: {
   };
 }
 
-export function castPlaybackCommandForUiState(
-  uiState: PlayerControlUiState,
-): "play" | "pause" {
-  return primaryPlaybackButtonState({ uiState }).action;
-}
-
 export function primaryPlaybackButtonState(input: {
   uiState: PlayerControlUiState;
 }) {
@@ -337,6 +331,20 @@ export function shouldAttemptLocalAutoplay(input: {
     (!input.autoplayAttempted || input.retryAfterReady === true) &&
     !input.disposed &&
     input.paused &&
+    !input.casting
+  );
+}
+
+export function shouldApplyLocalWaitingState(input: {
+  uiState: PlayerControlUiState;
+  paused: boolean;
+  ended: boolean;
+  casting: boolean;
+}) {
+  return (
+    input.uiState !== "autoplayBlocked" &&
+    !input.paused &&
+    !input.ended &&
     !input.casting
   );
 }
@@ -559,17 +567,6 @@ export function shouldAutoHideControls(input: {
     !input.controlsFocused &&
     !input.controlsHovered
   );
-}
-
-export function shouldRefreshControlsOnPointerMove(input: {
-  controlsVisible: boolean;
-  uiState: PlayerControlUiState;
-  casting: boolean;
-  subtitleMenuOpen: boolean;
-  controlsFocused: boolean;
-  controlsHovered: boolean;
-}) {
-  return shouldShowCustomControls(input);
 }
 
 export function nextControlsActivityTick(currentTick: number) {

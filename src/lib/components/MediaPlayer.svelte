@@ -24,7 +24,6 @@
     castControlLabel,
     castMediaTimelineSeconds,
     castPlaybackSecondsAfterSeek,
-    castPlaybackCommandForUiState,
     castPlayerUiState,
     castReceiverTimelineSeconds,
     castUiStateAfterCommand,
@@ -50,9 +49,9 @@
     shouldAutoHideControls,
     shouldCancelPlaybackSessionForCleanup,
     shouldCloseSubtitleMenuOnPlayerKeydown,
+    shouldApplyLocalWaitingState,
     shouldAttemptLocalAutoplay,
     shouldHandlePlayerShortcut,
-    shouldRefreshControlsOnPointerMove,
     shouldShowCustomControls,
     subtitleTextTrackMode,
     volumeSliderAriaValue,
@@ -249,6 +248,10 @@
     return castLaunchState === "connected";
   }
 
+  function castControlsPlayback() {
+    return castLaunchState === "connecting" || castLaunchState === "connected";
+  }
+
   function shouldHoldScreenWakeLock() {
     return (
       browser &&
@@ -371,7 +374,7 @@
 
   function handlePlayerPointerMove() {
     if (
-      shouldRefreshControlsOnPointerMove({
+      shouldShowCustomControls({
         controlsVisible: playerControlsVisible,
         uiState: playerUiState,
         casting: isCasting(),
@@ -451,7 +454,7 @@
       showSurfaceFeedback("seek-forward");
       skipPlayback(30);
     } else {
-      showSurfaceFeedback(video?.paused || video?.ended ? "play" : "pause");
+      showSurfaceFeedback(playbackButtonState.action);
       void toggleLocalPlayback();
     }
   }
@@ -724,8 +727,15 @@
     detachCastMediaUpdateListener();
     castMedia = null;
     syncCastRemotePlayerState();
+    const castPositionSeconds = currentPlaybackSeconds;
     castLaunchState = "idle";
     playerUiState = "paused";
+    if (video && Number.isFinite(castPositionSeconds)) {
+      video.currentTime = streamRelativePlaybackSeconds({
+        absoluteSeconds: castPositionSeconds,
+        streamStartSeconds: data.playback.streamStartSeconds,
+      });
+    }
     showControls();
   }
 
@@ -999,8 +1009,9 @@
   async function toggleLocalPlayback() {
     if (!video) return;
     showControls();
+    if (castLaunchState === "connecting") return;
     if (isCasting()) {
-      const command = castPlaybackCommandForUiState(playerUiState);
+      const command = playbackButtonState.action;
       playerUiState = castUiStateAfterCommand({
         command,
         commandSent: castCommand(command),
@@ -1030,6 +1041,8 @@
   }
 
   function seekToPlaybackSeconds(targetSeconds: number) {
+    seekPreviewSeconds = null;
+    if (castLaunchState === "connecting") return;
     const action = playbackSeekAction({
       casting: isCasting(),
       mode: data.playback.mode,
@@ -1037,7 +1050,6 @@
       durationSeconds,
       streamStartSeconds: data.playback.streamStartSeconds,
     });
-    seekPreviewSeconds = null;
     showControls();
 
     if (action.kind === "cast") {
@@ -1186,6 +1198,7 @@
 
   async function castPlayback() {
     if (castLaunchState === "connecting") return;
+    const previousUiState = playerUiState;
     castLaunchState = "connecting";
     try {
       if (data.playback.status !== "ready" || !data.playback.streamUrl) {
@@ -1253,16 +1266,17 @@
         loadRequest.activeTrackIds = defaultTrackIds;
       }
 
+      playerUiState = "buffering";
       castSession = session;
       attachCastMediaUpdateListener(await session.loadMedia(loadRequest));
       markCastOwnedSession(data.playback.playbackSessionId);
       clearSignedPlaybackNotice();
       syncCastRemotePlayerState();
       castLaunchState = "connected";
-      playerUiState = "playing";
       video?.pause();
     } catch (error) {
       castLaunchState = "error";
+      playerUiState = previousUiState;
       showSignedPlaybackNotice(
         error instanceof Error && error.message
           ? error.message
@@ -1384,7 +1398,7 @@
             retryAfterReady,
             disposed,
             paused: player.paused,
-            casting: isCasting(),
+            casting: castControlsPlayback(),
           })
         )
           return;
@@ -1396,12 +1410,12 @@
         playerUiState = "starting";
         try {
           await player.play();
-          if (disposed) return;
+          if (disposed || castControlsPlayback()) return;
           hasPlaybackActivity = true;
           hasStartedPlayback = true;
           playerUiState = "playing";
         } catch {
-          if (!disposed && !hasStartedPlayback)
+          if (!disposed && !castControlsPlayback() && !hasStartedPlayback)
             playerUiState = "autoplayBlocked";
         }
       };
@@ -1423,6 +1437,7 @@
         });
       const clearTransientOverlayIfPlaying = () => {
         if (
+          castControlsPlayback() ||
           (playerUiState !== "buffering" && playerUiState !== "seeking") ||
           player.paused ||
           player.seeking ||
@@ -1494,6 +1509,7 @@
       };
 
       const onTimeUpdate = () => {
+        if (castControlsPlayback()) return;
         if (player.currentTime > 0) hasPlaybackActivity = true;
         hlsSeekController.timeUpdate({
           relativeSeconds: Number.isFinite(player.currentTime)
@@ -1505,12 +1521,15 @@
         clearTransientOverlayIfPlaying();
       };
       const onDurationChange = () => {
+        if (castControlsPlayback()) return;
         updateTimelineFromVideo(sourceData);
       };
       const onLoadStart = () => {
+        if (castControlsPlayback()) return;
         if (!hasStartedPlayback) playerUiState = "starting";
       };
       const onCanPlay = () => {
+        if (castControlsPlayback()) return;
         clearTransientOverlayIfPlaying();
         if (
           !hasStartedPlayback &&
@@ -1529,6 +1548,7 @@
         }
       };
       const onPlaying = () => {
+        if (castControlsPlayback()) return;
         hasPlaybackActivity = true;
         hasStartedPlayback = true;
         playerUiState = "playing";
@@ -1537,7 +1557,7 @@
       const onPause = () => {
         if (
           disposed ||
-          isCasting() ||
+          castControlsPlayback() ||
           player.ended ||
           repositioning ||
           playerUiState === "autoplayBlocked"
@@ -1546,16 +1566,26 @@
         playerUiState = "paused";
       };
       const onWaiting = () => {
-        if (playerUiState === "autoplayBlocked") return;
+        if (
+          !shouldApplyLocalWaitingState({
+            uiState: playerUiState,
+            paused: player.paused,
+            ended: player.ended,
+            casting: castControlsPlayback(),
+          })
+        )
+          return;
         playerUiState = player.seeking ? "seeking" : "buffering";
       };
       const onSeeking = () => {
+        if (castControlsPlayback()) return;
         const decision = hlsSeekController.seeking();
         playerUiState = decision.uiState;
         updateTimelineFromVideo(sourceData);
         showControls();
       };
       const onSeeked = () => {
+        if (castControlsPlayback()) return;
         const decision = hlsSeekController.seeked({
           relativeSeconds: Number.isFinite(player.currentTime)
             ? player.currentTime
@@ -1567,10 +1597,12 @@
         updateTimelineFromVideo(sourceData);
       };
       const onPlayerError = () => {
+        if (castControlsPlayback()) return;
         playerUiState = "error";
         restartHlsNearCurrentTime("native");
       };
       const onEnded = () => {
+        if (castControlsPlayback()) return;
         hasPlaybackActivity = true;
         hasStartedPlayback = true;
         playerUiState = "paused";

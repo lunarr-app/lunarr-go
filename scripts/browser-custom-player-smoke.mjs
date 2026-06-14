@@ -107,7 +107,7 @@ function assertMediaPlayerSourceContract(source) {
     '"webkitplaybacktargetavailabilitychanged"',
     '"webkitcurrentplaybacktargetiswirelesschanged"',
     "airPlayTargetPickerAction({",
-    "{#if airPlayButtonState().visible}",
+    "{#if airPlayButton.visible}",
     "<Airplay size={20} aria-hidden=\"true\" />",
   ]) {
     if (!source.includes(requiredSnippet)) {
@@ -559,7 +559,7 @@ try {
       };
     }
     const hiddenPlayingPointerMove =
-      controls.shouldRefreshControlsOnPointerMove({
+      controls.shouldShowCustomControls({
         controlsVisible: false,
         uiState: "playing",
         casting: false,
@@ -568,7 +568,7 @@ try {
         controlsHovered: false,
       });
     const visiblePlayingPointerMove =
-      controls.shouldRefreshControlsOnPointerMove({
+      controls.shouldShowCustomControls({
         controlsVisible: true,
         uiState: "playing",
         casting: false,
