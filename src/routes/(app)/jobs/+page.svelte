@@ -130,7 +130,7 @@
   <meta name="description" content="Review Lunarr scan jobs, playback sessions, and recent processing errors." />
 </svelte:head>
 
-<div class="page-heading">
+<div class="ops-page-header">
   <div>
     <h1>Jobs</h1>
     <p class="muted">Scan and playback processing status.</p>
@@ -144,8 +144,8 @@
   <p class="error">{form.jobActionError}</p>
 {/if}
 
-<section class="overview" aria-label="Jobs overview">
-  <article>
+<section class="overview ops-stat-grid" aria-label="Jobs overview">
+  <article class="ops-stat-card">
     <div class="overview-heading">
       <Activity size={18} aria-hidden="true" />
       <h2>Scans</h2>
@@ -159,7 +159,7 @@
     </dl>
   </article>
 
-  <article>
+  <article class="ops-stat-card">
     <div class="overview-heading">
       <Clock3 size={18} aria-hidden="true" />
       <h2>Playback</h2>
@@ -176,22 +176,22 @@
 
 <div class="content-grid">
   <div class="primary-stack">
-    <section class="section-block">
-      <div class="section-heading">
+    <section class="ops-panel">
+      <div class="ops-panel-header">
         <div>
           <h2>Scan jobs</h2>
           <p class="muted">Latest {data.jobs.length} scans and metadata refreshes.</p>
         </div>
       </div>
 
-      <div class="job-list">
+      <div class="ops-table">
         {#each data.jobs as job}
           {@const jobErrors = errorsByJob.get(job.id) ?? []}
-          <article class="job-row">
+          <article class="job-row ops-row">
             <div class="job-main">
               <div class="job-title">
                 <strong>{jobName(job)}</strong>
-                <span class={`status ${statusClass(job)}`}>{displayStatus(job)}</span>
+                <span class={`status-badge ${statusClass(job)}`}>{displayStatus(job)}</span>
               </div>
               <div class="job-meta">
                 <span>{formatRelativeTime(job.updated_at ?? job.created_at)}</span>
@@ -249,21 +249,21 @@
       </div>
     </section>
 
-    <section class="section-block">
-      <div class="section-heading">
+    <section class="ops-panel">
+      <div class="ops-panel-header">
         <div>
           <h2>Playback sessions</h2>
           <p class="muted">Latest {data.playbackSessions.length} HLS playback sessions.</p>
         </div>
       </div>
 
-      <div class="job-list">
+      <div class="ops-table">
         {#each data.playbackSessions as job}
-          <article class="job-row playback-session-row">
+          <article class="job-row ops-row">
             <div class="job-main">
               <div class="job-title">
                 <strong>{playbackSessionName(job)}</strong>
-                <span class={`status ${job.status}`}>{playbackStatusLabel[job.status]}</span>
+                <span class={`status-badge ${job.status}`}>{playbackStatusLabel[job.status]}</span>
               </div>
               <div class="job-meta">
                 <span>{formatRelativeTime(job.updated_at ?? job.created_at)}</span>
@@ -311,16 +311,16 @@
     </section>
   </div>
 
-  <aside class="section-block recent-errors" aria-labelledby="recent-errors-heading">
-    <div class="section-heading">
+  <aside class="recent-errors ops-panel" aria-labelledby="recent-errors-heading">
+    <div class="ops-panel-header">
       <div>
         <h2 id="recent-errors-heading">Recent errors</h2>
         <p class="muted">Latest {data.errors.length} scan errors.</p>
       </div>
     </div>
-    <div class="errors">
+    <div class="errors ops-table">
       {#each data.errors as item}
-        <article>
+        <article class="ops-row">
           <div class="error-meta">
             <span>{jobName(item)}</span>
             <span>{scanStatusLabel[item.job_status]}</span>
@@ -337,71 +337,45 @@
 </div>
 
 <style>
-  .page-heading,
-  .section-heading {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  h1 {
-    margin: 0 0 0.25rem;
-    font-size: clamp(1.55rem, 2.4vw, 2.25rem);
-  }
-
-  h2 {
-    margin: 0;
-  }
-
-  .section-heading .muted {
-    margin: 0.25rem 0 0;
-  }
-
   .live-indicator {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    min-height: 1.9rem;
-    border: 1px solid rgba(0, 204, 255, 0.25);
+    gap: 0.3rem;
+    min-height: 1.8rem;
+    border: 1px solid rgba(0, 168, 214, 0.26);
     border-radius: 999px;
-    background: rgba(0, 204, 255, 0.1);
+    background: rgba(0, 168, 214, 0.11);
     color: #9deaff;
-    padding: 0 0.75rem;
-    font-size: 0.84rem;
+    padding: 0 0.7rem;
+    font-size: 0.8rem;
     font-weight: 800;
     white-space: nowrap;
   }
 
   .overview {
-    margin-top: 1.2rem;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-  }
-
-  .overview > article {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.9rem 1rem;
+    margin-top: 1rem;
   }
 
   .overview-heading {
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.65rem;
   }
 
   .overview-heading :global(svg) {
-    color: #95a4ae;
+    color: var(--ops-muted);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
   }
 
   dl {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.65rem;
+    gap: 0.55rem;
     margin: 0;
   }
 
@@ -415,56 +389,49 @@
   .job-meta,
   .metrics,
   .error-meta {
-    color: #a8a195;
-    font-size: 0.86rem;
+    color: var(--ops-muted);
+    font-size: 0.82rem;
+  }
+
+  dt {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
   }
 
   dd {
     margin: 0;
-    color: #f7f9fb;
-    font-size: 1.45rem;
+    color: var(--ops-text);
+    font-size: 1.25rem;
     font-weight: 850;
     line-height: 1;
   }
 
   .content-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
-    gap: 1.2rem;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 23rem);
+    gap: 1rem;
     align-items: start;
-    margin-top: 1.3rem;
+    margin-top: 1rem;
   }
 
   .primary-stack {
     display: grid;
-    gap: 1.6rem;
+    gap: 1rem;
     min-width: 0;
-  }
-
-  .section-block {
-    min-width: 0;
-  }
-
-  .job-list,
-  .errors {
-    display: grid;
-    gap: 0;
-    margin-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .job-row {
     display: grid;
     grid-template-columns: minmax(14rem, 1fr) minmax(18rem, 0.9fr) auto;
-    gap: 0.9rem;
-    align-items: start;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 0.85rem 0;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.72rem 0.85rem;
   }
 
   .job-main {
     display: grid;
-    gap: 0.35rem;
+    gap: 0.32rem;
     min-width: 0;
   }
 
@@ -477,60 +444,21 @@
 
   .job-title strong {
     overflow-wrap: anywhere;
-  }
-
-  .status {
-    display: inline-flex;
-    align-items: center;
-    min-height: 1.45rem;
-    border-radius: 999px;
-    padding: 0 0.55rem;
-    font-size: 0.76rem;
-    font-weight: 900;
-  }
-
-  .status.queued {
-    background: rgba(183, 195, 204, 0.12);
-    color: #dce4e8;
-  }
-
-  .status.running {
-    background: rgba(0, 204, 255, 0.12);
-    color: #9deaff;
-  }
-
-  .status.cancelling {
-    background: rgba(255, 217, 154, 0.12);
-    color: #ffd99a;
-  }
-
-  .status.completed {
-    background: rgba(62, 211, 137, 0.12);
-    color: #9df0c3;
-  }
-
-  .status.failed {
-    background: rgba(255, 105, 115, 0.13);
-    color: #ffb5bb;
-  }
-
-  .status.cancelled {
-    background: rgba(255, 217, 154, 0.12);
-    color: #ffd99a;
+    line-height: 1.2;
   }
 
   .job-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem 0.8rem;
+    gap: 0.4rem 0.75rem;
   }
 
   .metrics {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem 0.7rem;
+    gap: 0.35rem 0.65rem;
     min-width: 0;
-    line-height: 1.35;
+    line-height: 1.3;
   }
 
   .metrics span {
@@ -538,12 +466,12 @@
   }
 
   .metrics strong {
-    color: #f7f9fb;
-    font-size: 0.94rem;
+    color: var(--ops-text);
+    font-size: 0.9rem;
   }
 
   .metrics .error-count {
-    color: #ffb5bb;
+    color: #ffbcc3;
   }
 
   .playback-metrics {
@@ -557,7 +485,7 @@
 
   .playback-session-error {
     margin: 0;
-    color: #ffb5bb;
+    color: #ffbcc3;
     font-size: 0.9rem;
     overflow-wrap: anywhere;
   }
@@ -569,9 +497,9 @@
   }
 
   .compact {
-    min-height: 2rem;
+    min-height: 1.95rem;
     padding: 0 0.65rem;
-    font-size: 0.86rem;
+    font-size: 0.82rem;
   }
 
   .job-errors {
@@ -582,7 +510,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    color: #ffd99a;
+    color: var(--ops-warning);
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 800;
@@ -603,17 +531,7 @@
   .errors article {
     display: grid;
     gap: 0.25rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 0.7rem;
-  }
-
-  .errors article:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  .errors article:first-child {
-    padding-top: 0.7rem;
+    padding: 0.65rem 0.85rem;
   }
 
   .errors strong {
@@ -638,7 +556,6 @@
   }
 
   @media (max-width: 1080px) {
-    .overview,
     .content-grid {
       grid-template-columns: 1fr;
     }
@@ -662,12 +579,6 @@
   }
 
   @media (max-width: 560px) {
-    .page-heading,
-    .section-heading {
-      display: grid;
-      align-items: start;
-    }
-
     dl {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }

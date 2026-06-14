@@ -43,7 +43,7 @@
   <meta name="description" content="Add local and SFTP movie sources, manage configured libraries, and start scans." />
 </svelte:head>
 
-<header class="page-header">
+<header class="ops-page-header">
   <div>
     <h1>Libraries</h1>
     <p class="muted">Add movie and TV sources and start scans.</p>
@@ -65,119 +65,136 @@
 {/if}
 
 <section class="content">
-  <form class="panel" method="POST" action="?/add">
-    <h2>Add library</h2>
-    <label>
-      Name
-      <input name="name" value={formData.name ?? ""} placeholder="Movies" />
-    </label>
-    <label>
-      Type
-      <select name="kind">
-        <option value="movie" selected={(formData.kind ?? "movie") === "movie"}>Movies</option>
-        <option value="tv" selected={formData.kind === "tv"}>TV shows</option>
-      </select>
-    </label>
-    <label>
-      Source
-      <select name="source" bind:value={selectedSource}>
-        <option value="local">Local folder</option>
-        <option value="sftp">SFTP</option>
-      </select>
-    </label>
-    {#if selectedSource === "sftp"}
-      <div class="source-grid">
-        <label>
-          Host
-          <input name="host" value={formData.host ?? ""} placeholder="sftp.example.com" />
-        </label>
-        <label>
-          Port
-          <input name="port" inputmode="numeric" value={formData.port ?? "22"} placeholder="22" />
-        </label>
-        <label class="wide">
-          Username
-          <input name="username" value={formData.username ?? ""} placeholder="mediauser" />
-        </label>
-        <label class="wide">
-          Password
-          <input name="password" value="" autocomplete="off" />
-        </label>
-        <label>
-          Walk concurrency
-          <input
-            name="walkConcurrency"
-            type="number"
-            min="1"
-            max="32"
-            value={formData.walkConcurrency ?? "4"}
-          />
-        </label>
-        <label>
-          Timeout ms
-          <input
-            name="operationTimeoutMs"
-            type="number"
-            min="5000"
-            max="300000"
-            step="1000"
-            value={formData.operationTimeoutMs ?? "30000"}
-          />
-        </label>
+  <form class="ops-panel" method="POST" action="?/add">
+    <div class="ops-panel-header">
+      <div>
+        <h2>Add library</h2>
+        <p class="muted">Create a local or SFTP source.</p>
       </div>
+    </div>
+
+    <div class="ops-panel-body">
       <label>
-        Root path
-        <input name="root" value={formData.root ?? ""} placeholder="/media" autocomplete="off" />
+        Name
+        <input name="name" value={formData.name ?? ""} placeholder="Movies" />
       </label>
-    {:else}
       <label>
-        Folder path
-        <input name="path" value={formData.path ?? ""} placeholder="/Volumes/Media" autocomplete="off" />
-      </label>
-    {/if}
-    <fieldset class="automation-fieldset">
-      <legend>Automation</legend>
-      {#if selectedSource === "local"}
-        <input type="hidden" name="watchEnabled" value="0" />
-        <label class="check subdued">
-          <input
-            type="checkbox"
-            name="watchEnabled"
-            value="1"
-            checked={(formData.watchEnabled ?? "1") !== "0"}
-          />
-          <span>Watch local changes</span>
-        </label>
-      {/if}
-      <label>
-        Scheduled rescan
-        <select name="scanIntervalMinutes">
-          <option value="" selected={(formData.scanIntervalMinutes ?? "") === ""}>Off</option>
-          <option value="15" selected={formData.scanIntervalMinutes === "15"}>Every 15 minutes</option>
-          <option value="60" selected={formData.scanIntervalMinutes === "60"}>Hourly</option>
-          <option value="360" selected={formData.scanIntervalMinutes === "360"}>Every 6 hours</option>
-          <option value="720" selected={formData.scanIntervalMinutes === "720"}>Every 12 hours</option>
-          <option value="1440" selected={formData.scanIntervalMinutes === "1440"}>Daily</option>
+        Type
+        <select name="kind">
+          <option value="movie" selected={(formData.kind ?? "movie") === "movie"}>Movies</option>
+          <option value="tv" selected={formData.kind === "tv"}>TV shows</option>
         </select>
       </label>
-    </fieldset>
-    {#if form?.addError}
-      <p class="error">{form.addError}</p>
-    {/if}
-    <button>
-      <CirclePlus size={16} aria-hidden="true" />
-      Add library
-    </button>
+      <label>
+        Source
+        <select name="source" bind:value={selectedSource}>
+          <option value="local">Local folder</option>
+          <option value="sftp">SFTP</option>
+        </select>
+      </label>
+      {#if selectedSource === "sftp"}
+        <div class="source-grid">
+          <label>
+            Host
+            <input name="host" value={formData.host ?? ""} placeholder="sftp.example.com" />
+          </label>
+          <label>
+            Port
+            <input name="port" inputmode="numeric" value={formData.port ?? "22"} placeholder="22" />
+          </label>
+          <label class="wide">
+            Username
+            <input name="username" value={formData.username ?? ""} placeholder="mediauser" />
+          </label>
+          <label class="wide">
+            Password
+            <input name="password" value="" autocomplete="off" />
+          </label>
+          <label>
+            Walk concurrency
+            <input
+              name="walkConcurrency"
+              type="number"
+              min="1"
+              max="32"
+              value={formData.walkConcurrency ?? "4"}
+            />
+          </label>
+          <label>
+            Timeout ms
+            <input
+              name="operationTimeoutMs"
+              type="number"
+              min="5000"
+              max="300000"
+              step="1000"
+              value={formData.operationTimeoutMs ?? "30000"}
+            />
+          </label>
+        </div>
+        <label>
+          Root path
+          <input name="root" value={formData.root ?? ""} placeholder="/media" autocomplete="off" />
+        </label>
+      {:else}
+        <label>
+          Folder path
+          <input name="path" value={formData.path ?? ""} placeholder="/Volumes/Media" autocomplete="off" />
+        </label>
+      {/if}
+      <fieldset class="automation-fieldset">
+        <legend>Automation</legend>
+        {#if selectedSource === "local"}
+          <input type="hidden" name="watchEnabled" value="0" />
+          <label class="check subdued">
+            <input
+              type="checkbox"
+              name="watchEnabled"
+              value="1"
+              checked={(formData.watchEnabled ?? "1") !== "0"}
+            />
+            <span>Watch local changes</span>
+          </label>
+        {/if}
+        <label>
+          Scheduled rescan
+          <select name="scanIntervalMinutes">
+            <option value="" selected={(formData.scanIntervalMinutes ?? "") === ""}>Off</option>
+            <option value="15" selected={formData.scanIntervalMinutes === "15"}>Every 15 minutes</option>
+            <option value="60" selected={formData.scanIntervalMinutes === "60"}>Hourly</option>
+            <option value="360" selected={formData.scanIntervalMinutes === "360"}>Every 6 hours</option>
+            <option value="720" selected={formData.scanIntervalMinutes === "720"}>Every 12 hours</option>
+            <option value="1440" selected={formData.scanIntervalMinutes === "1440"}>Daily</option>
+          </select>
+        </label>
+      </fieldset>
+      {#if form?.addError}
+        <p class="error">{form.addError}</p>
+      {/if}
+      <button>
+        <CirclePlus size={16} aria-hidden="true" />
+        Add library
+      </button>
+    </div>
   </form>
 
-  <div class="panel">
-    <h2>Configured libraries</h2>
+  <div class="ops-panel">
+    <div class="ops-panel-header">
+      <div>
+        <h2>Configured libraries</h2>
+        <p class="muted">{data.libraries.length} sources configured.</p>
+      </div>
+    </div>
+
     {#if form?.libraryActionError}
-      <p class="error">{form.libraryActionError}</p>
+      <div class="ops-panel-body">
+        <p class="error">{form.libraryActionError}</p>
+      </div>
     {/if}
-    <div class="list">
+
+    <div class="ops-table">
       {#each data.libraries as library}
-        <article>
+        <article class="ops-row">
           <div class="library-summary">
             <strong>{library.name}</strong>
             <span class="muted">{library.kind === "tv" ? "TV shows" : "Movies"} - {library.source} - {library.path}</span>
@@ -372,16 +389,12 @@
 </section>
 
 <style>
-  h1 {
-    margin: 0 0 0.25rem;
-    font-size: clamp(1.55rem, 2.4vw, 2.25rem);
-  }
-
   .content {
     display: grid;
     grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr);
     gap: 1rem;
     align-items: start;
+    margin-top: 1rem;
   }
 
   .notice {
@@ -406,14 +419,9 @@
     margin: 0.25rem 0 0;
   }
 
-  .panel {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 1rem;
-    display: grid;
+  .content .ops-panel-body {
     gap: 1rem;
-    align-content: start;
+    padding: 1rem;
   }
 
   h2 {
@@ -430,26 +438,10 @@
     grid-column: 1 / -1;
   }
 
-  .list {
-    display: grid;
-  }
-
   article {
     display: grid;
     gap: 1rem;
-    padding: 0.75rem 0;
-  }
-
-  article + article {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  article:first-child {
-    padding-top: 0;
-  }
-
-  article:last-child {
-    padding-bottom: 0;
+    padding: 0.8rem 1rem;
   }
 
   .library-summary {
@@ -544,7 +536,7 @@
   }
 
   .share-list small {
-    color: var(--muted);
+    color: var(--ops-muted);
     margin-left: 0.25rem;
   }
 

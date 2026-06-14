@@ -67,436 +67,455 @@
   />
 </svelte:head>
 
-<div class="page-heading">
-  <h1>Settings</h1>
-  <p class="muted">
-    Server configuration for this self-hosted Lunarr instance.
-  </p>
+<div class="ops-page-header">
+  <div>
+    <h1>Settings</h1>
+    <p class="muted">
+      Server configuration for this self-hosted Lunarr instance.
+    </p>
+  </div>
 </div>
 
 <div class="settings-grid">
   <section class="left-column" aria-label="Access and metadata settings">
     <form
-      class="panel registration-panel"
+      class="ops-panel"
       method="POST"
       action="?/saveRegistration"
       bind:this={registrationForm}
     >
-      <div class="section-heading">
+      <div class="ops-panel-header">
         <div>
           <h2>User registration</h2>
           <p class="muted">New account creation.</p>
         </div>
       </div>
 
-      <label class="switch-row">
-        <span>
-          <strong>Allow new users</strong>
-          <small
-            >{signupOpen ? "Registration open" : "Registration closed"}</small
-          >
-        </span>
-        <span class="switch">
-          <input
-            type="checkbox"
-            name="signupOpen"
-            bind:checked={signupOpen}
-            onchange={submitRegistration}
-          />
-          <span class="switch-track" aria-hidden="true"></span>
-        </span>
-      </label>
-      <p class="muted detail-copy">
-        Existing users and admins are unaffected when registration is disabled.
-        Manage per-library sharing from Libraries.
-      </p>
+      <div class="ops-panel-body">
+        <label class="switch-row">
+          <span>
+            <strong>Allow new users</strong>
+            <small
+              >{signupOpen ? "Registration open" : "Registration closed"}</small
+            >
+          </span>
+          <span class="switch">
+            <input
+              type="checkbox"
+              name="signupOpen"
+              bind:checked={signupOpen}
+              onchange={submitRegistration}
+            />
+            <span class="switch-track" aria-hidden="true"></span>
+          </span>
+        </label>
+        <p class="muted detail-copy">
+          Existing users and admins are unaffected when registration is
+          disabled. Manage per-library sharing from Libraries.
+        </p>
 
-      {#if form?.registrationError}
-        <p class="error">{form.registrationError}</p>
-      {/if}
+        {#if form?.registrationError}
+          <p class="error">{form.registrationError}</p>
+        {/if}
+      </div>
     </form>
 
     <form
-      class="panel"
+      class="ops-panel"
       method="POST"
       action="?/saveTranscoding"
       bind:this={transcodingForm}
     >
-      <div class="section-heading">
+      <div class="ops-panel-header">
         <div>
           <h2>Transcoding</h2>
           <p class="muted">Temporary HLS playback policy.</p>
         </div>
       </div>
 
-      <label class="switch-row">
-        <span>
-          <strong>Allow transcoding</strong>
-          <small
-            >{transcodingEnabled
-              ? "Unsupported files can use HLS playback"
-              : "Direct play only"}</small
+      <div class="ops-panel-body">
+        <label class="switch-row">
+          <span>
+            <strong>Allow transcoding</strong>
+            <small
+              >{transcodingEnabled
+                ? "Unsupported files can use HLS playback"
+                : "Direct play only"}</small
+            >
+          </span>
+          <span class="switch">
+            <input
+              type="checkbox"
+              name="transcodingEnabled"
+              bind:checked={transcodingEnabled}
+              onchange={submitTranscoding}
+            />
+            <span class="switch-track" aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <label>
+          Hardware acceleration
+          <select
+            name="hardwareAcceleration"
+            bind:value={hardwareAcceleration}
+            onchange={submitTranscoding}
           >
-        </span>
-        <span class="switch">
+            <option value="off">Off</option>
+            <option value="auto">Auto</option>
+            <option value="videotoolbox">VideoToolbox</option>
+            <option value="vaapi">VAAPI</option>
+            <option value="qsv">Intel Quick Sync</option>
+            <option value="nvenc">NVIDIA NVENC</option>
+            <option value="amf">AMD AMF</option>
+          </select>
+        </label>
+
+        <label>
+          HLS quality
+          <select
+            name="transcodeQualityPreset"
+            bind:value={transcodeQualityPreset}
+            onchange={submitTranscoding}
+          >
+            <option value="auto">Auto</option>
+            <option value="720p">720p</option>
+            <option value="1080p">1080p</option>
+            <option value="original">Original resolution</option>
+          </select>
+        </label>
+
+        <label>
+          Temporary transcode storage
+          <select
+            name="playbackSessionArtifactMaxBytes"
+            onchange={submitTranscoding}
+          >
+            {#each data.playbackSessionArtifactMaxBytesOptions as bytes}
+              <option
+                value={bytes}
+                selected={bytes === data.playbackSessionArtifactMaxBytes}
+              >
+                {formatBytes(bytes)}
+              </option>
+            {/each}
+          </select>
+        </label>
+
+        <label class="check subdued">
           <input
             type="checkbox"
-            name="transcodingEnabled"
-            bind:checked={transcodingEnabled}
+            name="hardwareAccelerationRequired"
+            bind:checked={hardwareAccelerationRequired}
+            disabled={hardwareAcceleration === "off"}
             onchange={submitTranscoding}
           />
-          <span class="switch-track" aria-hidden="true"></span>
-        </span>
-      </label>
+          <span>Require hardware acceleration; fail if unavailable</span>
+        </label>
 
-      <label>
-        Hardware acceleration
-        <select
-          name="hardwareAcceleration"
-          bind:value={hardwareAcceleration}
-          onchange={submitTranscoding}
-        >
-          <option value="off">Off</option>
-          <option value="auto">Auto</option>
-          <option value="videotoolbox">VideoToolbox</option>
-          <option value="vaapi">VAAPI</option>
-          <option value="qsv">Intel Quick Sync</option>
-          <option value="nvenc">NVIDIA NVENC</option>
-          <option value="amf">AMD AMF</option>
-        </select>
-      </label>
+        <p class="muted detail-copy">
+          Direct play stays first. Transcoding uses temporary FFmpeg HLS
+          sessions when the browser cannot play a file directly or the user
+          prefers HLS. HLS quality controls FFmpeg transcode resolution and
+          bitrate; Auto keeps the current server default. Temporary HLS files
+          are stored under LUNARR_DATA_DIR/playback-sessions and cleaned
+          automatically. Hardware acceleration is best-effort unless required;
+          when required, playback fails if FFmpeg cannot use the selected device
+          or H.264 encoder.
+        </p>
 
-      <label>
-        HLS quality
-        <select
-          name="transcodeQualityPreset"
-          bind:value={transcodeQualityPreset}
-          onchange={submitTranscoding}
-        >
-          <option value="auto">Auto</option>
-          <option value="720p">720p</option>
-          <option value="1080p">1080p</option>
-          <option value="original">Original resolution</option>
-        </select>
-      </label>
-
-      <label>
-        Temporary transcode storage
-        <select
-          name="playbackSessionArtifactMaxBytes"
-          onchange={submitTranscoding}
-        >
-          {#each data.playbackSessionArtifactMaxBytesOptions as bytes}
-            <option
-              value={bytes}
-              selected={bytes === data.playbackSessionArtifactMaxBytes}
-            >
-              {formatBytes(bytes)}
-            </option>
-          {/each}
-        </select>
-      </label>
-
-      <label class="check subdued">
-        <input
-          type="checkbox"
-          name="hardwareAccelerationRequired"
-          bind:checked={hardwareAccelerationRequired}
-          disabled={hardwareAcceleration === "off"}
-          onchange={submitTranscoding}
-        />
-        <span>Require hardware acceleration; fail if unavailable</span>
-      </label>
-
-      <p class="muted detail-copy">
-        Direct play stays first. Transcoding uses temporary FFmpeg HLS sessions
-        when the browser cannot play a file directly or the user prefers HLS.
-        HLS quality controls FFmpeg transcode resolution and bitrate; Auto keeps
-        the current server default. Temporary HLS files are stored under
-        LUNARR_DATA_DIR/playback-sessions and cleaned automatically. Hardware
-        acceleration is best-effort unless required; when required, playback
-        fails if FFmpeg cannot use the selected device or H.264 encoder.
-      </p>
-
-      {#if form?.transcodingError}
-        <p class="error">{form.transcodingError}</p>
-      {/if}
+        {#if form?.transcodingError}
+          <p class="error">{form.transcodingError}</p>
+        {/if}
+      </div>
     </form>
 
-    <form class="panel primary-panel" method="POST" action="?/saveMetadata">
-      <div class="section-heading">
+    <form
+      class="ops-panel"
+      method="POST"
+      action="?/saveMetadata"
+    >
+      <div class="ops-panel-header">
         <div>
           <h2>TMDb metadata</h2>
           <p class="muted">Movie and TV metadata lookup.</p>
         </div>
       </div>
-      <p class="muted detail-copy">
-        Provide either a TMDb read access token or an API key; both are not
-        required. A read access token is preferred.
-      </p>
 
-      <label>
-        TMDb access token
-        <input
-          name="tmdbAccessToken"
-          type="text"
-          bind:value={tmdbAccessToken}
-          autocomplete="off"
-          autocapitalize="off"
-          spellcheck="false"
-          placeholder={data.tmdbAccessTokenConfigured
-            ? "Configured"
-            : "Read access token"}
-        />
-      </label>
+      <div class="ops-panel-body">
+        <p class="muted detail-copy">
+          Provide either a TMDb read access token or an API key; both are not
+          required. A read access token is preferred.
+        </p>
 
-      {#if data.tmdbAccessTokenSaved}
-        <label class="check subdued">
+        <label>
+          TMDb access token
           <input
-            type="checkbox"
-            name="clearTmdbAccessToken"
-            bind:checked={clearTmdbAccessToken}
+            name="tmdbAccessToken"
+            type="text"
+            bind:value={tmdbAccessToken}
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder={data.tmdbAccessTokenConfigured
+              ? "Configured"
+              : "Read access token"}
           />
-          <span>Clear saved TMDb access token</span>
         </label>
-      {/if}
 
-      <label>
-        TMDb API key
-        <input
-          name="tmdbApiKey"
-          type="text"
-          bind:value={tmdbApiKey}
-          autocomplete="off"
-          autocapitalize="off"
-          spellcheck="false"
-          placeholder={data.tmdbApiKeyConfigured ? "Configured" : "API key"}
-        />
-      </label>
+        {#if data.tmdbAccessTokenSaved}
+          <label class="check subdued">
+            <input
+              type="checkbox"
+              name="clearTmdbAccessToken"
+              bind:checked={clearTmdbAccessToken}
+            />
+            <span>Clear saved TMDb access token</span>
+          </label>
+        {/if}
 
-      {#if data.tmdbApiKeySaved}
-        <label class="check subdued">
+        <label>
+          TMDb API key
           <input
-            type="checkbox"
-            name="clearTmdbApiKey"
-            bind:checked={clearTmdbApiKey}
+            name="tmdbApiKey"
+            type="text"
+            bind:value={tmdbApiKey}
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder={data.tmdbApiKeyConfigured ? "Configured" : "API key"}
           />
-          <span>Clear saved TMDb API key</span>
         </label>
-      {/if}
 
-      {#if form?.metadataSaveError}
-        <p class="error">{form.metadataSaveError}</p>
-      {/if}
-      <button disabled={!metadataChanged}>
-        <Save size={16} aria-hidden="true" />
-        Save metadata
-      </button>
+        {#if data.tmdbApiKeySaved}
+          <label class="check subdued">
+            <input
+              type="checkbox"
+              name="clearTmdbApiKey"
+              bind:checked={clearTmdbApiKey}
+            />
+            <span>Clear saved TMDb API key</span>
+          </label>
+        {/if}
+
+        {#if form?.metadataSaveError}
+          <p class="error">{form.metadataSaveError}</p>
+        {/if}
+        <button disabled={!metadataChanged}>
+          <Save size={16} aria-hidden="true" />
+          Save metadata
+        </button>
+      </div>
     </form>
   </section>
 
-  <section class="panel maintenance-panel" aria-label="Settings actions">
-    <div class="section-heading">
+  <section
+    class="ops-panel maintenance-panel"
+    aria-label="Settings actions"
+  >
+    <div class="ops-panel-header">
       <div>
         <h2>Actions</h2>
         <p class="muted">Checks, metadata repair, and scans.</p>
       </div>
     </div>
 
-    {#if !data.tmdbConfigured}
-      <p class="muted action-note">TMDb actions need metadata credentials.</p>
-    {/if}
+    <div class="ops-panel-body">
+      {#if !data.tmdbConfigured}
+        <p class="muted action-note">TMDb actions need metadata credentials.</p>
+      {/if}
 
-    <div class="action-row">
-      <div class="action-copy">
-        <h3>TMDb connection</h3>
-        <p class="muted">Validate the active credential.</p>
-        {#if form?.tmdbTestMessage}
-          <p class:error={form.tmdbTestOk === false}>{form.tmdbTestMessage}</p>
-        {/if}
-      </div>
-      <form method="POST" action="?/testTmdb">
-        <button class="secondary compact-action">
-          <SearchCheck size={16} aria-hidden="true" />
-          Test
-        </button>
-      </form>
-    </div>
-
-    <div class="action-row">
-      <div class="action-copy">
-        <h3>Metadata repair</h3>
-        <p class="muted">Refresh stored TMDb data.</p>
-        <div class="action-messages">
-          {#if form?.metadataError}
-            <p class="error">{form.metadataError}</p>
-          {/if}
-          {#if form?.metadataMessage}
-            <p>{form.metadataMessage}</p>
-          {/if}
-          {#if form?.tvMetadataError}
-            <p class="error">{form.tvMetadataError}</p>
-          {/if}
-          {#if form?.tvMetadataMessage}
-            <p>{form.tvMetadataMessage}</p>
+      <div class="action-row">
+        <div class="action-copy">
+          <h3>TMDb connection</h3>
+          <p class="muted">Validate the active credential.</p>
+          {#if form?.tmdbTestMessage}
+            <p class:error={form.tmdbTestOk === false}>
+              {form.tmdbTestMessage}
+            </p>
           {/if}
         </div>
-      </div>
-      <div class="button-group">
-        <form method="POST" action="?/refreshMetadata">
-          <button
-            class="secondary compact-action"
-            disabled={!data.tmdbConfigured}
-          >
-            <RefreshCw size={16} aria-hidden="true" />
-            Movies
-          </button>
-        </form>
-        <form method="POST" action="?/refreshTvMetadata">
-          <button
-            class="secondary compact-action"
-            disabled={!data.tmdbConfigured}
-          >
-            <RefreshCw size={16} aria-hidden="true" />
-            TV
+        <form method="POST" action="?/testTmdb">
+          <button class="secondary compact-action">
+            <SearchCheck size={16} aria-hidden="true" />
+            Test
           </button>
         </form>
       </div>
-    </div>
 
-    <div class="action-row">
-      <div class="action-copy">
-        <h3>Library scans</h3>
-        <p class="muted">Detect file additions, changes, and removals.</p>
-        {#if form?.scanError}
-          <p class="error">{form.scanError}</p>
-        {/if}
-        {#if form?.scanMessage}
-          <p>{form.scanMessage}</p>
-        {/if}
+      <div class="action-row">
+        <div class="action-copy">
+          <h3>Metadata repair</h3>
+          <p class="muted">Refresh stored TMDb data.</p>
+          <div class="action-messages">
+            {#if form?.metadataError}
+              <p class="error">{form.metadataError}</p>
+            {/if}
+            {#if form?.metadataMessage}
+              <p>{form.metadataMessage}</p>
+            {/if}
+            {#if form?.tvMetadataError}
+              <p class="error">{form.tvMetadataError}</p>
+            {/if}
+            {#if form?.tvMetadataMessage}
+              <p>{form.tvMetadataMessage}</p>
+            {/if}
+          </div>
+        </div>
+        <div class="button-group">
+          <form method="POST" action="?/refreshMetadata">
+            <button
+              class="secondary compact-action"
+              disabled={!data.tmdbConfigured}
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              Movies
+            </button>
+          </form>
+          <form method="POST" action="?/refreshTvMetadata">
+            <button
+              class="secondary compact-action"
+              disabled={!data.tmdbConfigured}
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              TV
+            </button>
+          </form>
+        </div>
       </div>
-      <form method="POST" action="?/scanAll">
-        <button class="secondary compact-action">
-          <ScanSearch size={16} aria-hidden="true" />
-          Scan all
-        </button>
-      </form>
-    </div>
 
-    <div class="action-row">
-      <div class="action-copy">
-        <h3>Media probes</h3>
-        <p class="muted">Backfill duration and codec details for playback.</p>
-        {#if form?.probeError}
-          <p class="error">{form.probeError}</p>
-        {/if}
-        {#if form?.probeMessage}
-          <p>{form.probeMessage}</p>
-        {/if}
+      <div class="action-row">
+        <div class="action-copy">
+          <h3>Library scans</h3>
+          <p class="muted">Detect file additions, changes, and removals.</p>
+          {#if form?.scanError}
+            <p class="error">{form.scanError}</p>
+          {/if}
+          {#if form?.scanMessage}
+            <p>{form.scanMessage}</p>
+          {/if}
+        </div>
+        <form method="POST" action="?/scanAll">
+          <button class="secondary compact-action">
+            <ScanSearch size={16} aria-hidden="true" />
+            Scan all
+          </button>
+        </form>
       </div>
-      <form method="POST" action="?/repairMediaProbes">
-        <button class="secondary compact-action">
-          <Wrench size={16} aria-hidden="true" />
-          Repair
-        </button>
-      </form>
+
+      <div class="action-row">
+        <div class="action-copy">
+          <h3>Media probes</h3>
+          <p class="muted">Backfill duration and codec details for playback.</p>
+          {#if form?.probeError}
+            <p class="error">{form.probeError}</p>
+          {/if}
+          {#if form?.probeMessage}
+            <p>{form.probeMessage}</p>
+          {/if}
+        </div>
+        <form method="POST" action="?/repairMediaProbes">
+          <button class="secondary compact-action">
+            <Wrench size={16} aria-hidden="true" />
+            Repair
+          </button>
+        </form>
+      </div>
     </div>
   </section>
 </div>
 
-<section class="panel status-panel">
-  <div class="section-heading">
+<section class="ops-panel status-panel">
+  <div class="ops-panel-header">
     <div>
       <h2>Server status</h2>
       <p class="muted">Library, scan, and storage counts.</p>
     </div>
   </div>
 
-  <div class="status-cards" aria-label="Server summary">
-    <div>
-      <span>Registration</span><strong
-        >{data.signupOpen ? "Open" : "Closed"}</strong
-      >
+  <div class="ops-panel-body">
+    <div class="status-cards" aria-label="Server summary">
+      <div class="ops-stat-card">
+        <span>Registration</span><strong
+          >{data.signupOpen ? "Open" : "Closed"}</strong
+        >
+      </div>
+      <div class="ops-stat-card">
+        <span>Libraries</span><strong>{data.status.libraries}</strong>
+      </div>
+      <div class="ops-stat-card">
+        <span>Movies</span><strong>{data.status.movies}</strong>
+      </div>
+      <div class="ops-stat-card">
+        <span>Shows</span><strong>{data.status.shows}</strong>
+      </div>
+      <div class="ops-stat-card">
+        <span>Active scans</span><strong>{data.status.activeScanJobs}</strong>
+      </div>
     </div>
-    <div><span>Libraries</span><strong>{data.status.libraries}</strong></div>
-    <div><span>Movies</span><strong>{data.status.movies}</strong></div>
-    <div><span>Shows</span><strong>{data.status.shows}</strong></div>
-    <div>
-      <span>Active scans</span><strong>{data.status.activeScanJobs}</strong>
-    </div>
-  </div>
 
-  <dl>
-    <div>
-      <dt>Version</dt>
-      <dd>{data.version}</dd>
-    </div>
-    <div>
-      <dt>Data directory</dt>
-      <dd>{data.status.dataDir}</dd>
-    </div>
-    <div>
-      <dt>Database</dt>
-      <dd>{data.status.dbFile}</dd>
-    </div>
-    <div>
-      <dt>Playable episodes</dt>
-      <dd>{data.status.episodes}</dd>
-    </div>
-    <div>
-      <dt>Movie metadata</dt>
-      <dd>{data.status.matchedMovies} / {data.status.movies} matched</dd>
-    </div>
-    <div>
-      <dt>Movie posters</dt>
-      <dd>{data.status.moviesWithPosters} / {data.status.movies}</dd>
-    </div>
-    <div>
-      <dt>TV show metadata</dt>
-      <dd>{data.status.matchedShows} / {data.status.shows} matched</dd>
-    </div>
-    <div>
-      <dt>TV show posters</dt>
-      <dd>{data.status.showsWithPosters} / {data.status.shows}</dd>
-    </div>
-    <div>
-      <dt>Episode metadata</dt>
-      <dd>{data.status.matchedEpisodes} / {data.status.episodes} matched</dd>
-    </div>
-    <div>
-      <dt>Media files</dt>
-      <dd>{data.status.mediaFiles}</dd>
-    </div>
-    <div>
-      <dt>Scan jobs</dt>
-      <dd>{data.status.scanJobs}</dd>
-    </div>
-    <div>
-      <dt>Scan errors</dt>
-      <dd>{data.status.scanErrors}</dd>
-    </div>
-    <div>
-      <dt>Last scan</dt>
-      <dd>
-        {data.status.lastScan
-          ? `${data.status.lastScan.status} - ${formatTime(data.status.lastScan.finished_at ?? data.status.lastScan.created_at)}`
-          : "Never"}
-      </dd>
-    </div>
-  </dl>
+    <dl>
+      <div>
+        <dt>Version</dt>
+        <dd>{data.version}</dd>
+      </div>
+      <div>
+        <dt>Data directory</dt>
+        <dd>{data.status.dataDir}</dd>
+      </div>
+      <div>
+        <dt>Database</dt>
+        <dd>{data.status.dbFile}</dd>
+      </div>
+      <div>
+        <dt>Playable episodes</dt>
+        <dd>{data.status.episodes}</dd>
+      </div>
+      <div>
+        <dt>Movie metadata</dt>
+        <dd>{data.status.matchedMovies} / {data.status.movies} matched</dd>
+      </div>
+      <div>
+        <dt>Movie posters</dt>
+        <dd>{data.status.moviesWithPosters} / {data.status.movies}</dd>
+      </div>
+      <div>
+        <dt>TV show metadata</dt>
+        <dd>{data.status.matchedShows} / {data.status.shows} matched</dd>
+      </div>
+      <div>
+        <dt>TV show posters</dt>
+        <dd>{data.status.showsWithPosters} / {data.status.shows}</dd>
+      </div>
+      <div>
+        <dt>Episode metadata</dt>
+        <dd>{data.status.matchedEpisodes} / {data.status.episodes} matched</dd>
+      </div>
+      <div>
+        <dt>Media files</dt>
+        <dd>{data.status.mediaFiles}</dd>
+      </div>
+      <div>
+        <dt>Scan jobs</dt>
+        <dd>{data.status.scanJobs}</dd>
+      </div>
+      <div>
+        <dt>Scan errors</dt>
+        <dd>{data.status.scanErrors}</dd>
+      </div>
+      <div>
+        <dt>Last scan</dt>
+        <dd>
+          {data.status.lastScan
+            ? `${data.status.lastScan.status} - ${formatTime(data.status.lastScan.finished_at ?? data.status.lastScan.created_at)}`
+            : "Never"}
+        </dd>
+      </div>
+    </dl>
+  </div>
 </section>
 
 <style>
-  .page-heading {
-    display: grid;
-    gap: 0.25rem;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(1.55rem, 2.4vw, 2.25rem);
-  }
-
   h2 {
     font-size: 1.02rem;
   }
@@ -519,29 +538,9 @@
     margin-top: 0.8rem;
   }
 
-  .panel {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.75rem;
-    display: grid;
-    gap: 0.65rem;
-  }
-
   .left-column {
     display: grid;
     gap: 0.75rem;
-  }
-
-  .primary-panel,
-  .registration-panel {
-    min-width: 0;
-  }
-
-  .section-heading {
-    display: flex;
-    align-items: start;
-    min-width: 0;
   }
 
   .maintenance-panel {
@@ -691,7 +690,7 @@
   }
 
   dt {
-    color: #a8a195;
+    color: var(--ops-muted);
   }
 
   .status-panel {
@@ -708,14 +707,10 @@
     display: grid;
     gap: 0.15rem;
     align-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.035);
-    padding: 0.5rem 0.6rem;
   }
 
   .status-cards span {
-    color: #a8a195;
+    color: var(--ops-muted);
     font-size: 0.86rem;
   }
 

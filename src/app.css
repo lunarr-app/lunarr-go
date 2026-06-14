@@ -4,6 +4,13 @@
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #080c11;
   color: #f7f9fb;
+  --ops-surface: rgba(14, 22, 29, 0.84);
+  --ops-surface-strong: rgba(22, 32, 41, 0.92);
+  --ops-border: rgba(255, 255, 255, 0.09);
+  --ops-muted: #95a4ae;
+  --ops-text: #f7f9fb;
+  --ops-warning: #ffd99a;
+  --ops-radius: 7px;
 }
 
 * {
@@ -93,4 +100,141 @@ label {
 
 .error {
   color: #ffb4b8;
+}
+
+.ops-page-header,
+.ops-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ops-page-header h1,
+.ops-panel-header h2,
+.ops-page-header p,
+.ops-panel-header p {
+  margin: 0;
+}
+
+.ops-page-header h1 {
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  line-height: 1.15;
+}
+
+.ops-page-header p,
+.ops-panel-header p {
+  margin-top: 0.25rem;
+}
+
+.ops-panel-header h2 {
+  font-size: 1rem;
+}
+
+.ops-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.ops-stat-card,
+.ops-panel {
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  background: var(--ops-surface);
+}
+
+.ops-stat-card {
+  padding: 0.75rem 0.85rem;
+}
+
+.ops-panel {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ops-panel-header {
+  border-bottom: 1px solid var(--ops-border);
+  background: var(--ops-surface-strong);
+  padding: 0.75rem 0.85rem;
+}
+
+.ops-panel-body {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.75rem;
+}
+
+.ops-table {
+  display: grid;
+  min-width: 0;
+}
+
+.ops-table > p {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+}
+
+.ops-row {
+  border-bottom: 1px solid var(--ops-border);
+}
+
+.ops-row:last-child {
+  border-bottom: 0;
+}
+
+.ops-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.35rem;
+  border-radius: 999px;
+  padding: 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.status-badge.queued {
+  background: rgba(183, 195, 204, 0.12);
+  color: #dce4e8;
+}
+
+.status-badge.running {
+  background: rgba(0, 168, 214, 0.14);
+  color: #9deaff;
+}
+
+.status-badge.cancelling,
+.status-badge.cancelled {
+  background: rgba(255, 217, 154, 0.13);
+  color: var(--ops-warning);
+}
+
+.status-badge.completed {
+  background: rgba(98, 211, 137, 0.13);
+  color: #a8efc7;
+}
+
+.status-badge.failed {
+  background: rgba(255, 143, 153, 0.14);
+  color: #ffbcc3;
+}
+
+@media (max-width: 760px) {
+  .ops-page-header,
+  .ops-panel-header {
+    display: grid;
+  }
+
+  .ops-stat-grid {
+    grid-template-columns: 1fr;
+  }
 }

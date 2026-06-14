@@ -27,13 +27,15 @@
   />
 </svelte:head>
 
-<div class="page-heading">
-  <h1>Profile</h1>
-  <p class="muted">Account and playback preferences.</p>
+<div class="ops-page-header">
+  <div>
+    <h1>Profile</h1>
+    <p class="muted">Account and playback preferences.</p>
+  </div>
 </div>
 
 <div class="profile-grid">
-  <section class="panel account-panel" aria-label="Account details">
+  <section class="ops-panel account-panel" aria-label="Account details">
     <div class="avatar" aria-hidden="true">
       <span
         >{(data.user.name || data.user.email || "L")
@@ -51,12 +53,12 @@
   </section>
 
   <form
-    class="panel"
+    class="ops-panel"
     method="POST"
     action="?/savePlaybackPreference"
     bind:this={playbackForm}
   >
-    <div class="section-heading">
+    <div class="ops-panel-header">
       <div>
         <h2>Playback</h2>
         <p class="muted">
@@ -67,82 +69,74 @@
       <UserRound size={18} aria-hidden="true" />
     </div>
 
-    <label>
-      Playback preference
-      <select
-        name="playbackPreference"
-        bind:value={playbackPreference}
-        onchange={submitPlaybackPreference}
-      >
-        <option value="auto">Auto</option>
-        <option value="prefer_direct">Prefer direct play</option>
-        <option value="prefer_transcode">Prefer temporary HLS</option>
-      </select>
-    </label>
+    <div class="ops-panel-body">
+      <label>
+        Playback preference
+        <select
+          name="playbackPreference"
+          bind:value={playbackPreference}
+          onchange={submitPlaybackPreference}
+        >
+          <option value="auto">Auto</option>
+          <option value="prefer_direct">Prefer direct play</option>
+          <option value="prefer_transcode">Prefer temporary HLS</option>
+        </select>
+      </label>
 
-    <label>
-      Preferred audio language
-      <input
-        name="preferredAudioLanguage"
-        type="text"
-        maxlength="32"
-        placeholder="eng, jpn, en"
-        bind:value={preferredAudioLanguage}
-        onchange={submitPlaybackPreference}
-      />
-    </label>
+      <label>
+        Preferred audio language
+        <input
+          name="preferredAudioLanguage"
+          type="text"
+          maxlength="32"
+          placeholder="eng, jpn, en"
+          bind:value={preferredAudioLanguage}
+          onchange={submitPlaybackPreference}
+        />
+      </label>
 
-    <label>
-      Preferred subtitle language
-      <input
-        name="preferredSubtitleLanguage"
-        type="text"
-        maxlength="32"
-        placeholder="eng, jpn, en"
-        bind:value={preferredSubtitleLanguage}
-        onchange={submitPlaybackPreference}
-      />
-    </label>
+      <label>
+        Preferred subtitle language
+        <input
+          name="preferredSubtitleLanguage"
+          type="text"
+          maxlength="32"
+          placeholder="eng, jpn, en"
+          bind:value={preferredSubtitleLanguage}
+          onchange={submitPlaybackPreference}
+        />
+      </label>
 
-    <p class="muted detail-copy">
-      Auto uses direct play for browser-compatible files and temporary HLS only
-      when needed. Preferred audio language is used for temporary HLS when probe
-      metadata has a matching audio stream. Preferred subtitle language chooses
-      the default external subtitle track when available.
-    </p>
-
-    {#if !data.transcodePolicy.transcodingEnabled}
-      <p class="muted status-note">
-        Temporary HLS playback is currently disabled by an admin. Compatible
-        files still use direct play.
+      <p class="muted detail-copy">
+        Auto uses direct play for browser-compatible files and temporary HLS
+        only when needed. Preferred audio language is used for temporary HLS
+        when probe metadata has a matching audio stream. Preferred subtitle
+        language chooses the default external subtitle track when available.
       </p>
-    {/if}
 
-    {#if form?.playbackPreferenceError}
-      <p class="error">{form.playbackPreferenceError}</p>
-    {/if}
+      {#if !data.transcodePolicy.transcodingEnabled}
+        <p class="muted status-note">
+          Temporary HLS playback is currently disabled by an admin. Compatible
+          files still use direct play.
+        </p>
+      {/if}
 
-    <button>
-      <Save size={16} aria-hidden="true" />
-      Save playback
-    </button>
+      {#if form?.playbackPreferenceError}
+        <p class="error">{form.playbackPreferenceError}</p>
+      {/if}
+
+      <button>
+        <Save size={16} aria-hidden="true" />
+        Save playback
+      </button>
+    </div>
   </form>
 </div>
 
 <style>
-  .page-heading {
-    display: grid;
-    gap: 0.25rem;
-  }
-
-  h1,
   h2,
   p {
     margin: 0;
-  }
-
-  h1 {
-    font-size: clamp(1.55rem, 2.4vw, 2.25rem);
   }
 
   h2 {
@@ -157,19 +151,11 @@
     margin-top: 0.8rem;
   }
 
-  .panel {
-    display: grid;
-    gap: 0.65rem;
-    min-width: 0;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.75rem;
-  }
-
   .account-panel {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
   }
 
   .avatar {
@@ -209,12 +195,9 @@
     font-weight: 700;
   }
 
-  .section-heading {
-    display: flex;
-    align-items: start;
-    justify-content: space-between;
-    gap: 0.75rem;
-    min-width: 0;
+  .ops-panel-header :global(svg) {
+    color: var(--ops-muted);
+    flex-shrink: 0;
   }
 
   .detail-copy {
