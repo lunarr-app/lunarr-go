@@ -9,8 +9,9 @@ import {
   useDatabaseFileForTests,
 } from "$lib/server/db";
 import { sessionHeadersFor } from "$lib/server/auth/test/session-headers";
+import { createApiKeyForUser } from "$lib/server/auth/test/create-api-key-for-user";
 import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
-import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
+import { resetAuthForTests } from "$lib/server/auth/test/reset-auth-for-tests";
 
 mock.module("$app/environment", () => ({
   building: false,
@@ -53,10 +54,37 @@ describe("API key routes", () => {
         updated_at: now,
       })
       .execute();
-    const { resetAuthForTests } = await loadAuthModule();
     await resetAuthForTests();
     sessionHeaders = await sessionHeadersFor(user);
     return user;
+  }
+
+  async function setupSecondUser() {
+    const db = await getDb();
+    const now = Date.now();
+    const user = {
+      id: "user-2",
+      name: "Other",
+      email: "other@example.com",
+      role: "user" as const,
+    };
+    await db
+      .insertInto("user")
+      .values({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        email_verified: 0,
+        image: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    return {
+      user,
+      sessionHeaders: await sessionHeadersFor(user),
+    };
   }
 
   test("creates, lists, and revokes personal API keys", async () => {
@@ -119,5 +147,39 @@ describe("API key routes", () => {
       locals: { user },
     } as never);
     expect(await afterDelete.json()).toEqual({ apiKeys: [] });
+  });
+
+  test("rejects listing API keys without session cookies", async () => {
+    const user = await setupUser();
+    const { GET } = await import("./+server");
+
+    const response = await GET({
+      request: new Request("http://localhost/api/api-keys"),
+      locals: { user },
+    } as never);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  test("does not revoke another user's API key", async () => {
+    const user = await setupUser();
+    const other = await setupSecondUser();
+    const { DELETE } = await import("./[id]/+server");
+    const created = await createApiKeyForUser({
+      userId: user.id,
+      name: "Mine",
+    });
+
+    const response = await DELETE({
+      request: new Request(`http://localhost/api/api-keys/${created.apiKey.id}`, {
+        headers: other.sessionHeaders,
+      }),
+      params: { id: created.apiKey.id },
+      locals: { user: other.user },
+    } as never);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "API key not found." });
   });
 });

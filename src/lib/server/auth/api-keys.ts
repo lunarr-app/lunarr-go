@@ -64,11 +64,30 @@ function normalizeExpiresIn(expiresIn: unknown) {
   return seconds;
 }
 
+function isUnauthorizedError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  if (
+    "status" in error &&
+    (error.status === 401 || error.status === "UNAUTHORIZED")
+  ) {
+    return true;
+  }
+  if ("message" in error) {
+    return String(error.message).toLowerCase().includes("unauthorized");
+  }
+  return false;
+}
+
 function mapAuthError(error: unknown, fallback: string) {
   if (error && typeof error === "object" && "message" in error) {
     return new Error(String(error.message));
   }
   return new Error(fallback);
+}
+
+export function apiKeyHttpStatus(error: unknown) {
+  if (error instanceof Error && isUnauthorizedError(error)) return 401;
+  return 400;
 }
 
 async function getAuth() {
@@ -94,30 +113,19 @@ function isNotFoundError(error: unknown) {
 export async function createApiKey(input: {
   name?: unknown;
   expiresIn?: unknown;
-  headers?: Headers;
-  userId?: string;
+  headers: Headers;
 }) {
   const name = normalizeApiKeyName(input.name);
   const expiresIn = normalizeExpiresIn(input.expiresIn);
 
-  if (!input.headers && !input.userId) {
-    throw new Error("Sign in to create API keys.");
-  }
-
   try {
     const auth = await getAuth();
     const created = await auth.api.createApiKey({
-      body: input.headers
-        ? {
-            name,
-            ...(expiresIn != null ? { expiresIn } : {}),
-          }
-        : {
-            name,
-            userId: input.userId!,
-            ...(expiresIn != null ? { expiresIn } : {}),
-          },
-      ...(input.headers ? { headers: input.headers } : {}),
+      body: {
+        name,
+        ...(expiresIn != null ? { expiresIn } : {}),
+      },
+      headers: input.headers,
     });
 
     return {
@@ -144,6 +152,10 @@ export async function listApiKeys(headers: Headers) {
   } catch (error) {
     throw mapAuthError(error, "Could not list API keys.");
   }
+}
+
+export function isApiKeyUnauthorized(error: unknown) {
+  return error instanceof Error && isUnauthorizedError(error);
 }
 
 export async function revokeApiKey(input: {

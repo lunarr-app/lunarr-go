@@ -131,7 +131,8 @@ async function createAuth() {
 
 export let auth = await createAuth();
 
-export async function resetAuthForTests() {
+/** @internal Used by auth test helpers to rebind Better Auth to the active test database. */
+export async function rebindAuthForTests() {
   auth = await createAuth();
 }
 

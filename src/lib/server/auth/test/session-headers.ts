@@ -11,26 +11,34 @@ export async function sessionHeadersFor(
 ) {
   const db = await getDb();
   const now = Date.now();
-  const accountId = createId();
 
-  await db
-    .insertInto("account")
-    .values({
-      id: accountId,
-      account_id: user.email,
-      provider_id: "credential",
-      user_id: user.id,
-      access_token: null,
-      refresh_token: null,
-      id_token: null,
-      access_token_expires_at: null,
-      refresh_token_expires_at: null,
-      scope: null,
-      password: await hashPassword(password),
-      created_at: now,
-      updated_at: now,
-    })
-    .execute();
+  const existingAccount = await db
+    .selectFrom("account")
+    .select(["id"])
+    .where("user_id", "=", user.id)
+    .where("provider_id", "=", "credential")
+    .executeTakeFirst();
+
+  if (!existingAccount) {
+    await db
+      .insertInto("account")
+      .values({
+        id: createId(),
+        account_id: user.email,
+        provider_id: "credential",
+        user_id: user.id,
+        access_token: null,
+        refresh_token: null,
+        id_token: null,
+        access_token_expires_at: null,
+        refresh_token_expires_at: null,
+        scope: null,
+        password: await hashPassword(password),
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+  }
 
   const { auth } = await import("../index");
   const response = await auth.api.signInEmail({

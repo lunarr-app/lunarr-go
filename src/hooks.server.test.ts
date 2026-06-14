@@ -13,7 +13,8 @@ import {
 import type { Database } from "$lib/server/db/schema";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
 import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
-import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
+import { createApiKeyForUser } from "$lib/server/auth/test/create-api-key-for-user";
+import { resetAuthForTests } from "$lib/server/auth/test/reset-auth-for-tests";
 
 mock.module("$app/environment", () => ({
   building: false,
@@ -36,7 +37,6 @@ describe("server hook route boundaries", () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-hooks-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();
-    const { resetAuthForTests } = await loadAuthModule();
     await resetAuthForTests();
     db = await getDb();
 
@@ -225,8 +225,10 @@ describe("server hook route boundaries", () => {
   });
 
   test("accepts an API key header for protected API requests", async () => {
-    const { createApiKey } = await import("$lib/server/auth/api-keys");
-    const { token } = await createApiKey({ userId: "admin-1", name: "Mobile" });
+    const { token } = await createApiKeyForUser({
+      userId: "admin-1",
+      name: "Mobile",
+    });
     const event = eventFor("/api/jobs", {
       headers: {
         "x-api-key": token,
@@ -255,9 +257,8 @@ describe("server hook route boundaries", () => {
   });
 
   test("keeps expiring api keys after repeated session lookup", async () => {
-    const { createApiKey } = await import("$lib/server/auth/api-keys");
     const before = Date.now();
-    const { token, apiKey } = await createApiKey({
+    const { token, apiKey } = await createApiKeyForUser({
       userId: "admin-1",
       name: "Expiring mobile",
       expiresIn: 7200,

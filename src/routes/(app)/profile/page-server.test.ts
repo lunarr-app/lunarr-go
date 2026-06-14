@@ -9,9 +9,11 @@ import {
   useDatabaseFileForTests,
 } from "$lib/server/db";
 import { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
+import { createApiKeyForUser } from "$lib/server/auth/test/create-api-key-for-user";
 import { sessionHeadersFor } from "$lib/server/auth/test/session-headers";
 import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
 import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
+import { resetAuthForTests } from "$lib/server/auth/test/reset-auth-for-tests";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
 
 mock.module("$app/environment", () => ({
@@ -66,7 +68,6 @@ describe("profile page server", () => {
         updated_at: now,
       })
       .execute();
-    const { resetAuthForTests } = await loadAuthModule();
     await resetAuthForTests();
     sessionHeaders = await sessionHeadersFor(testUser);
 
@@ -106,7 +107,7 @@ describe("profile page server", () => {
   });
 
   test("loads the signed-in user's API keys", async () => {
-    const created = await createApiKey({
+    const created = await createApiKeyForUser({
       userId: "user-1",
       name: "iPhone",
       expiresIn: 60,
@@ -279,7 +280,7 @@ describe("profile page server", () => {
   });
 
   test("revokes an API key from profile", async () => {
-    const created = await createApiKey({
+    const created = await createApiKeyForUser({
       userId: "user-1",
       name: "Tablet",
     });

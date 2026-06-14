@@ -1,24 +1,17 @@
 import { describe, expect, mock, test } from "bun:test";
-import { mockAppServerForAuthTests } from "$lib/server/auth/test/app-server-mock";
-import { loadAuthModule } from "$lib/server/auth/test/load-auth-module";
 import type { RequestEvent } from "./$types";
-
-mock.module("$app/environment", () => ({
-  building: false,
-}));
-
-mock.module("$app/server", () => mockAppServerForAuthTests());
 
 const signOut = mock(async (_input: unknown) => ({}));
 
-const logoutRoutePromise = (async () => {
-  const { auth } = await loadAuthModule();
-  auth.api = {
-    ...auth.api,
-    signOut: signOut as unknown as typeof auth.api.signOut,
-  };
-  return import("./+server");
-})();
+mock.module("$lib/server/auth", () => ({
+  auth: {
+    api: {
+      signOut,
+    },
+  },
+}));
+
+const logoutRoutePromise = import("./+server");
 
 function createEvent(request: Request): RequestEvent {
   return {

@@ -1,6 +1,7 @@
 import { auth } from "$lib/server/auth";
 import {
   createApiKey,
+  isApiKeyUnauthorized,
   listApiKeys,
   revokeApiKey as revokePersonalApiKey,
 } from "$lib/server/auth/api-keys";
@@ -17,9 +18,17 @@ import type { Actions, PageServerLoad } from "./$types";
 export const load: PageServerLoad = async ({ locals, request }) => {
   if (!locals.user) throw error(401, "Unauthorized");
 
+  let apiKeys;
+  try {
+    apiKeys = await listApiKeys(request.headers);
+  } catch (loadError) {
+    if (isApiKeyUnauthorized(loadError)) throw error(401, "Unauthorized");
+    throw loadError;
+  }
+
   return {
     user: locals.user,
-    apiKeys: await listApiKeys(request.headers),
+    apiKeys,
     transcodePolicy: await getTranscodePolicy(locals.user.id),
   };
 };

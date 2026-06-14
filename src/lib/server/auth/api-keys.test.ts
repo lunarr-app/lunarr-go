@@ -8,9 +8,11 @@ import {
   migrateDatabase,
   useDatabaseFileForTests,
 } from "$lib/server/db";
-import { createApiKey } from "./api-keys";
+import { createApiKey, listApiKeys } from "./api-keys";
+import { createApiKeyForUser } from "./test/create-api-key-for-user";
 import { mockAppServerForAuthTests } from "./test/app-server-mock";
-import { loadAuthModule } from "./test/load-auth-module";
+import { resetAuthForTests } from "./test/reset-auth-for-tests";
+import { sessionHeadersFor } from "./test/session-headers";
 
 mock.module("$app/environment", () => ({
   building: false,
@@ -40,7 +42,6 @@ describe("API keys", () => {
         updated_at: now,
       })
       .execute();
-    const { resetAuthForTests } = await loadAuthModule();
     await resetAuthForTests();
   });
 
@@ -52,7 +53,7 @@ describe("API keys", () => {
   test("creates expiring keys through Better Auth with adapter-safe expiry timestamps", async () => {
     const db = await getDb();
     const before = Date.now();
-    const { apiKey } = await createApiKey({
+    const { apiKey } = await createApiKeyForUser({
       userId: "user-1",
       expiresIn: 7200,
     });
@@ -68,5 +69,31 @@ describe("API keys", () => {
     expect(apiKey.expiresAt).toBe(
       new Date(String(row.expires_at)).toISOString(),
     );
+  });
+
+  test("requires session headers to create API keys", async () => {
+    await expect(createApiKey({ headers: new Headers() })).rejects.toThrow(
+      "Unauthorized",
+    );
+  });
+
+  test("creates keys for the signed-in user from session headers", async () => {
+    const sessionHeaders = await sessionHeadersFor({
+      id: "user-1",
+      email: "user@example.com",
+    });
+
+    const created = await createApiKey({
+      headers: sessionHeaders,
+      name: "Phone",
+    });
+
+    expect(created.token.startsWith("lunarr_")).toBe(true);
+    expect(await listApiKeys(sessionHeaders)).toEqual([
+      {
+        ...created.apiKey,
+        tokenPrefix: created.token.slice(0, 18),
+      },
+    ]);
   });
 });
