@@ -91,6 +91,18 @@
   function runtimeLabel(seconds: number | null) {
     return seconds ? `${Math.round(seconds / 60)} min` : null;
   }
+
+  function episodeProgressLabel(
+    episode: Pick<Episode, "completed" | "durationSeconds" | "progressSeconds">,
+  ) {
+    if (episode.completed || episode.progressSeconds <= 0) return null;
+    if (!episode.durationSeconds) return "In progress";
+    const percent = Math.min(
+      99,
+      Math.max(1, Math.round((episode.progressSeconds / episode.durationSeconds) * 100)),
+    );
+    return `${percent}%`;
+  }
 </script>
 
 <svelte:head>
@@ -156,53 +168,32 @@
   <p class="error">{form.error}</p>
 {/if}
 
+<div class="season-return-row">
+  <a class="show-return" href={`/shows/${data.show.id}`}>
+    <ChevronLeft size={16} aria-hidden="true" />
+    {data.show.title}
+  </a>
+  <div class="season-stepper">
+    {#if previousSeason}
+      <a class="step-link" href={seasonHref(previousSeason)}>
+        <ChevronLeft size={16} aria-hidden="true" />
+        <span>{previousSeason.title}</span>
+      </a>
+    {/if}
+    {#if nextSeason}
+      <a class="step-link" href={seasonHref(nextSeason)}>
+        <span>{nextSeason.title}</span>
+        <ChevronRight size={16} aria-hidden="true" />
+      </a>
+    {/if}
+  </div>
+</div>
+
 <nav class="season-navigation" aria-label="Season navigation">
   <div class="season-toolbar">
-    <a class="back-link" href={`/shows/${data.show.id}`}>
-      <ChevronLeft size={16} aria-hidden="true" />
-      Show
-    </a>
     <div class="current-season">
       <strong>{data.season.title}</strong>
       <span>{seasonProgressLabel}</span>
-    </div>
-    <div class="season-stepper">
-      {#if previousSeason}
-        <a class="step-link" href={seasonHref(previousSeason)}>
-          <ChevronLeft size={16} aria-hidden="true" />
-          <span>{previousSeason.title}</span>
-        </a>
-      {/if}
-      {#if nextSeason}
-        <a class="step-link" href={seasonHref(nextSeason)}>
-          <span>{nextSeason.title}</span>
-          <ChevronRight size={16} aria-hidden="true" />
-        </a>
-      {/if}
-    </div>
-  </div>
-
-  <div class="season-list" aria-label="All seasons">
-    {#each data.seasons as season}
-      <a class:active={season.id === data.season.id} href={seasonHref(season)}>
-        <span>{season.title}</span>
-        <small>{season.episodes.length}</small>
-      </a>
-    {/each}
-  </div>
-</nav>
-
-<section class="episodes-section" aria-labelledby="episodes-heading">
-  <div class="season-header">
-    <div>
-      <h2 id="episodes-heading">Episodes</h2>
-      <p class="muted">{seasonProgressLabel}</p>
-      <div
-        class="season-progress"
-        aria-label={`${watchedCount} of ${episodeCount} episodes watched in ${data.season.title}`}
-      >
-        <span style={`width: ${progressPercent}%`}></span>
-      </div>
     </div>
     {#if playableCount > 0}
       <form class="season-bulk-action" method="POST" action="?/seasonWatched">
@@ -224,9 +215,22 @@
     {/if}
   </div>
 
+  <div class="season-list" aria-label="All seasons">
+    {#each data.seasons as season}
+      <a class:active={season.id === data.season.id} href={seasonHref(season)}>
+        <span>{season.title}</span>
+        <small>{season.episodes.length}</small>
+      </a>
+    {/each}
+  </div>
+</nav>
+
+<section class="episodes-section" aria-label="Episodes">
   <div class="episodes">
     {#each data.season.episodes as episode}
+      {@const progressLabel = episodeProgressLabel(episode)}
       <article
+        class="episode-row"
         class:watched={episode.completed}
         class:missing={!episode.fileId}
       >
@@ -294,6 +298,9 @@
               <span class="missing-badge">Missing</span>
             {/if}
             {#if episode.completed}<span>Watched</span>{/if}
+            {#if progressLabel}
+              <span class="progress-badge">{progressLabel}</span>
+            {/if}
           </div>
           {#if episode.overview}
             <p>{episode.overview}</p>
@@ -307,7 +314,7 @@
                 ? "Resume"
                 : "Play"}
             </a>
-            <form method="POST" action="?/watched">
+            <form class="episode-action-form" method="POST" action="?/watched">
               <input type="hidden" name="episodeId" value={episode.id} />
               <input type="hidden" name="fileId" value={episode.fileId} />
               <input
@@ -380,44 +387,69 @@
     background: var(--color-accent);
   }
 
+  .season-return-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: -0.45rem 0 0.45rem;
+  }
+
+  .show-return {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: fit-content;
+    min-height: 1.85rem;
+    color: var(--color-muted);
+    font-size: 0.86rem;
+    font-weight: 750;
+  }
+
+  .show-return:hover {
+    color: var(--color-text);
+  }
+
   .season-navigation {
     position: sticky;
     top: 0;
     z-index: 5;
     display: grid;
-    gap: 0.45rem;
-    margin: -0.2rem 0 1.35rem;
+    gap: 0.25rem;
+    margin: -0.25rem 0 1rem;
     border-bottom: 1px solid var(--color-border-strong);
-    background: var(--color-surface-strong);
-    backdrop-filter: blur(14px);
-    padding: 0.45rem 0 0;
+    padding: 0.35rem 0 0;
   }
 
   .season-toolbar {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.7rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.55rem;
     align-items: center;
   }
 
-  .back-link,
   .step-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    min-height: 2rem;
+    min-height: 1.8rem;
     border: 1px solid var(--color-border-strong);
     border-radius: 6px;
     background: var(--color-surface-faint);
     color: var(--color-text-soft);
-    padding: 0 0.65rem;
-    font-size: 0.86rem;
+    padding: 0 0.55rem;
+    font-size: 0.82rem;
     font-weight: 750;
     white-space: nowrap;
   }
 
-  .back-link:hover,
+  .step-link {
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-muted);
+  }
+
   .step-link:hover {
     border-color: var(--color-accent-border);
     background: var(--color-accent-soft);
@@ -426,7 +458,7 @@
 
   .current-season {
     display: grid;
-    gap: 0.05rem;
+    gap: 0;
     min-width: 0;
   }
 
@@ -440,7 +472,7 @@
 
   .current-season span {
     color: var(--color-muted);
-    font-size: 0.82rem;
+    font-size: 0.78rem;
   }
 
   .season-stepper,
@@ -465,9 +497,10 @@
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    min-height: 2.35rem;
-    padding: 0 0.75rem;
+    min-height: 2rem;
+    padding: 0 0.65rem;
     color: var(--color-muted);
+    font-size: 0.86rem;
     font-weight: 700;
     white-space: nowrap;
   }
@@ -503,37 +536,8 @@
     gap: 0.9rem;
   }
 
-  .season-header {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  h2,
   h4 {
     margin: 0;
-  }
-
-  .season-header .muted {
-    margin: 0.25rem 0 0;
-  }
-
-  .season-progress {
-    width: min(18rem, 100%);
-    height: 0.3rem;
-    margin-top: 0.55rem;
-    overflow: hidden;
-    border-radius: 999px;
-    background: var(--color-border);
-  }
-
-  .season-progress span {
-    display: block;
-    height: 100%;
-    min-width: 0;
-    border-radius: inherit;
-    background: var(--color-accent);
   }
 
   .season-bulk-action {
@@ -542,23 +546,23 @@
 
   .episodes {
     display: grid;
-    gap: 0.7rem;
+    gap: 0;
   }
 
-  article {
+  .episode-row {
     display: grid;
-    grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr) auto;
-    gap: 1rem;
+    grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr) auto;
+    gap: 0.9rem;
     align-items: center;
     border-bottom: 1px solid var(--color-border);
-    padding: 0.8rem 0;
+    padding: 0.7rem 0;
   }
 
-  article.watched {
+  .episode-row.watched {
     opacity: 0.72;
   }
 
-  article.missing {
+  .episode-row.missing {
     color: var(--color-text-soft);
   }
 
@@ -627,7 +631,9 @@
   .episode-facts {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.35rem 0.55rem;
+    color: var(--color-muted);
+    font-size: 0.84rem;
   }
 
   .episode-main p {
@@ -637,7 +643,8 @@
   }
 
   .missing-badge,
-  .missing-note {
+  .missing-note,
+  .progress-badge {
     color: var(--color-warning);
   }
 
@@ -654,7 +661,7 @@
     justify-content: flex-end;
   }
 
-  .episode-actions form {
+  .episode-action-form {
     margin: 0;
   }
 
@@ -669,13 +676,14 @@
       grid-template-columns: 1fr;
     }
 
+    .season-return-row {
+      display: grid;
+      gap: 0.35rem;
+    }
+
     .season-toolbar {
       grid-template-columns: 1fr;
       align-items: start;
-    }
-
-    .back-link {
-      justify-self: start;
     }
 
     .season-stepper {
@@ -683,11 +691,7 @@
       max-width: 100%;
     }
 
-    .season-header {
-      display: grid;
-    }
-
-    article {
+    .episode-row {
       grid-template-columns: 1fr;
     }
 
