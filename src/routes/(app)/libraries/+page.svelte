@@ -1,14 +1,16 @@
 <script lang="ts">
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
   import LibraryAutomationFields from "./_components/LibraryAutomationFields.svelte";
+  import LibraryEditModal from "./_components/LibraryEditModal.svelte";
   import RemoteLibraryFields, { type RemoteLibraryFieldValues } from "./_components/RemoteLibraryFields.svelte";
-  import { CirclePlus, RefreshCw, Save, Settings, Trash2, TriangleAlert } from "@lucide/svelte";
+  import { CirclePlus, RefreshCw, Settings, Trash2, TriangleAlert } from "@lucide/svelte";
+  import type { PageData } from "./$types";
 
   let { data, form } = $props();
 
   const formData = $derived((form ?? {}) as Record<string, string>);
   let selectedSource = $state("local");
-  let editingLibraryId = $state<string | null>(null);
+  let editingLibrary = $state<PageData["libraries"][number] | null>(null);
 
   $effect(() => {
     if (formData.source) selectedSource = formData.source;
@@ -23,29 +25,6 @@
       operationTimeoutMs: formData.operationTimeoutMs ?? "30000",
       root: formData.root ?? "",
       secure: (formData.secure ?? "1") !== "0",
-    };
-  }
-
-  function libraryRemoteFieldValues(library: (typeof data.libraries)[number]): RemoteLibraryFieldValues {
-    if (library.source === "sftp") {
-      return {
-        host: library.sftpConfig?.host ?? "",
-        port: library.sftpConfig?.port ?? 22,
-        username: library.sftpConfig?.username ?? "",
-        walkConcurrency: library.sftpConfig?.walkConcurrency ?? 4,
-        operationTimeoutMs: library.sftpConfig?.operationTimeoutMs ?? 30_000,
-        root: library.sftpConfig?.root ?? "",
-      };
-    }
-
-    return {
-      host: library.webdavConfig?.host ?? "",
-      port: library.webdavConfig?.port ?? 443,
-      username: library.webdavConfig?.username ?? "",
-      walkConcurrency: library.webdavConfig?.walkConcurrency ?? 4,
-      operationTimeoutMs: library.webdavConfig?.operationTimeoutMs ?? 30_000,
-      root: library.webdavConfig?.root ?? "",
-      secure: library.webdavConfig?.secure !== false,
     };
   }
 
@@ -204,12 +183,12 @@
             <button
               class="secondary compact-action"
               type="button"
-              aria-expanded={editingLibraryId === library.id}
+              disabled={library.scanActive}
               onclick={() => {
-                editingLibraryId = editingLibraryId === library.id ? null : library.id;
+                editingLibrary = library;
               }}
             >
-              {editingLibraryId === library.id ? "Close" : "Edit"}
+              Edit
             </button>
             <form method="POST" action="?/scan">
               <input type="hidden" name="libraryId" value={library.id} />
@@ -232,83 +211,6 @@
               Remove
             </ConfirmAction>
           </div>
-          {#if editingLibraryId === library.id}
-            <div class="edit-panel">
-              <form method="POST" action="?/edit">
-                <input type="hidden" name="libraryId" value={library.id} />
-                <input type="hidden" name="source" value={library.source} />
-                <label>
-                  Name
-                  <input name="name" value={library.name} />
-                </label>
-                {#if library.source === "sftp"}
-                  <RemoteLibraryFields
-                    protocol="sftp"
-                    values={libraryRemoteFieldValues(library)}
-                    passwordPlaceholder="Leave blank to keep current password"
-                    rootPlaceholder="media/movies"
-                  />
-                {:else if library.source === "webdav"}
-                  <RemoteLibraryFields
-                    protocol="webdav"
-                    values={libraryRemoteFieldValues(library)}
-                    passwordPlaceholder="Leave blank to keep current password"
-                    rootPlaceholder="media/movies"
-                  />
-                {:else}
-                  <label>
-                    Folder path
-                    <input name="path" value={library.path} placeholder="/Volumes/Media/Movies" autocomplete="off" />
-                  </label>
-                {/if}
-                <LibraryAutomationFields
-                  showWatch={library.source === "local"}
-                  watchEnabled={library.watch_enabled !== 0}
-                  scanIntervalMinutes={library.scan_interval_minutes}
-                />
-                <button class="secondary" disabled={library.scanActive}>
-                  <Save size={16} aria-hidden="true" />
-                  Save changes
-                </button>
-                {#if library.scanActive}
-                  <p class="muted">Finish or cancel the active scan before editing this library.</p>
-                {/if}
-              </form>
-              <form method="POST" action="?/access">
-                <input type="hidden" name="libraryId" value={library.id} />
-                <fieldset>
-                  <legend>Sharing</legend>
-                  <label class="check subdued">
-                    <input type="radio" name="accessMode" value="all" checked={library.access_mode !== "shared"} />
-                    <span>All users</span>
-                  </label>
-                  <label class="check subdued">
-                    <input type="radio" name="accessMode" value="shared" checked={library.access_mode === "shared"} />
-                    <span>Selected users</span>
-                  </label>
-                  <div class="share-list">
-                    {#each data.users as user}
-                      <label class="check subdued">
-                        <input
-                          type="checkbox"
-                          name="userIds"
-                          value={user.id}
-                          checked={library.sharedUserIds.includes(user.id)}
-                        />
-                        <span>{user.name} <small>{user.email}</small></span>
-                      </label>
-                    {:else}
-                      <p class="muted">No regular users yet.</p>
-                    {/each}
-                  </div>
-                </fieldset>
-                <button class="secondary">
-                  <Save size={16} aria-hidden="true" />
-                  Save sharing
-                </button>
-              </form>
-            </div>
-          {/if}
         </article>
       {:else}
         <p class="muted">No libraries configured.</p>
@@ -316,6 +218,10 @@
     </div>
   </div>
 </section>
+
+{#if editingLibrary}
+  <LibraryEditModal library={editingLibrary} users={data.users} onClose={() => (editingLibrary = null)} />
+{/if}
 
 <style>
   .content {
@@ -393,58 +299,6 @@
 
   .actions :global(.compact-action.danger) {
     padding: 0 0.65rem;
-  }
-
-  .edit-panel {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .edit-panel form {
-    display: grid;
-    gap: 0.75rem;
-    max-width: 34rem;
-  }
-
-  fieldset {
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    margin: 0;
-    padding: 0.75rem;
-    display: grid;
-    gap: 0.55rem;
-  }
-
-  legend {
-    padding: 0 0.25rem;
-    font-weight: 700;
-  }
-
-  .check {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-
-  .check input[type="checkbox"],
-  .check input[type="radio"] {
-    width: 1rem;
-    height: 1rem;
-    min-height: 0;
-    margin: 0;
-    padding: 0;
-    flex: 0 0 auto;
-  }
-
-  .share-list {
-    display: grid;
-    gap: 0.35rem;
-    padding-top: 0.25rem;
-  }
-
-  .share-list small {
-    color: var(--ops-muted);
-    margin-left: 0.25rem;
   }
 
   .scan-status {
