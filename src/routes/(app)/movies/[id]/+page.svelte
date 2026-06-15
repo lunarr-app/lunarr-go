@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import MediaHero from "$lib/components/MediaHero.svelte";
+  import { formatClockDuration, formatDateTime, formatFileSize, formatMediaDuration } from "$lib/media/format";
   import { tmdbImageUrl } from "$lib/media/images";
   import { playbackModalHref } from "$lib/playback/links";
   import {
@@ -20,7 +21,7 @@
   let { data, form } = $props();
 
   const firstFile = $derived(data.files[0]);
-  const runtimeLabel = $derived(data.movie.runtime_seconds ? formatDuration(data.movie.runtime_seconds) : null);
+  const runtimeLabel = $derived(data.movie.runtime_seconds ? formatMediaDuration(data.movie.runtime_seconds) : null);
   const ratingLabel = $derived(
     data.movie.vote_average === null || data.movie.vote_average === undefined
       ? null
@@ -64,8 +65,8 @@
       resumeProgress.duration_seconds === null
         ? null
         : Math.max(0, Math.floor(Number(resumeProgress.duration_seconds)));
-    if (!duration) return `Resume at ${formatDuration(position)}`;
-    return `Resume at ${formatDuration(position)} of ${formatDuration(duration)}`;
+    if (!duration) return `Resume at ${formatMediaDuration(position)}`;
+    return `Resume at ${formatMediaDuration(position)} of ${formatMediaDuration(duration)}`;
   });
   const resumePercent = $derived.by(() => {
     if (!resumeProgress?.duration_seconds) return 0;
@@ -130,46 +131,10 @@
     return Math.min(99, Math.max(1, Math.round((position / duration) * 100)));
   }
 
-  function formatDuration(totalSeconds: number) {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
-    if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-    return `${seconds}s`;
-  }
-
-  function formatClockDuration(totalSeconds: number) {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(2, "0")}`;
-    }
-    return `${minutes}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  function formatFileSize(bytes: number | string | null | undefined) {
-    const value = Number(bytes ?? 0);
-    if (!Number.isFinite(value) || value <= 0) return "Unknown size";
-    const gib = value / 1024 / 1024 / 1024;
-    if (gib >= 1) return `${gib.toFixed(2)} GB`;
-    return `${(value / 1024 / 1024).toFixed(1)} MB`;
-  }
-
-  function formatDateTime(value: string | null | undefined) {
-    if (!value) return "Unknown";
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  }
-
   function fileDetails(file: (typeof data.files)[number]) {
     const parts = [
       file.container?.toUpperCase() ?? file.extension.replace(/^\./, "").toUpperCase(),
-      file.duration_seconds ? formatDuration(file.duration_seconds) : null,
+      file.duration_seconds ? formatMediaDuration(file.duration_seconds) : null,
       file.video_codec ? `Video ${file.video_codec}` : null,
       file.audio_codec ? `Audio ${file.audio_codec}` : null,
     ].filter(Boolean);

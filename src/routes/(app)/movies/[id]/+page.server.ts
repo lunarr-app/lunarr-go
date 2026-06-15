@@ -1,5 +1,6 @@
 import { isAdmin } from "$lib/server/auth/users";
 import { getMovieDetail } from "$lib/server/media";
+import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
 import { refreshMovieMetadataResult } from "$lib/server/metadata/movies";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
 import { markWatched } from "$lib/server/playback";
@@ -39,11 +40,8 @@ export const actions: Actions = {
     throw redirect(303, `/movies/${params.id}`);
   },
   refreshMetadata: async ({ params, locals }) => {
-    if (!isAdmin(locals.user)) return fail(403, { metadataError: "Only admins can refresh metadata." });
-    if (!(await tmdbCredentialsConfigured()))
-      return fail(400, {
-        metadataError: "TMDb credentials are not configured.",
-      });
+    const prerequisiteFailure = await metadataRefreshPrerequisites(locals.user);
+    if (prerequisiteFailure) return prerequisiteFailure;
 
     let redirectId = params.id;
     try {
@@ -55,9 +53,7 @@ export const actions: Actions = {
         });
       redirectId = result.mediaItemId;
     } catch (error) {
-      return fail(400, {
-        metadataError: error instanceof Error ? error.message : "Could not refresh metadata.",
-      });
+      return metadataRefreshFailure(error);
     }
 
     throw redirect(303, `/movies/${redirectId}`);

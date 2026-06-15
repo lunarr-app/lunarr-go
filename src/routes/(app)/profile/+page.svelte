@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
+  import { formatDateTime } from "$lib/media/format";
   import { getStoredTheme, setStoredTheme, type Theme } from "$lib/theme";
   import { Clipboard, ExternalLink, KeyRound, Plus, Save, SunMoon, Trash2, UserRound } from "@lucide/svelte";
 
@@ -51,16 +52,6 @@
   function chooseTheme(theme: Theme) {
     selectedTheme = theme;
     setStoredTheme(theme);
-  }
-
-  function formatDate(value: string | null) {
-    if (!value) return "Never";
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) return "Unknown";
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(date);
   }
 
   async function copyToken(token: string) {
@@ -365,9 +356,9 @@
                   <h3>{apiKey.name}</h3>
                   <p class="muted">
                     {apiKey.tokenPrefix}...
-                    <span>Created {formatDate(apiKey.createdAt)}</span>
-                    <span>Last used {formatDate(apiKey.lastUsedAt)}</span>
-                    <span>Expires {formatDate(apiKey.expiresAt)}</span>
+                    <span>Created {formatDateTime(apiKey.createdAt, { fallback: "never" })}</span>
+                    <span>Last used {formatDateTime(apiKey.lastUsedAt, { fallback: "never" })}</span>
+                    <span>Expires {formatDateTime(apiKey.expiresAt, { fallback: "never" })}</span>
                   </p>
                 </div>
                 <ConfirmAction

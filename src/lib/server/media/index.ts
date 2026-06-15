@@ -1,6 +1,7 @@
 import { sql } from "kysely";
 import { getDb } from "../db";
 import { tmdbImageUrl } from "$lib/media/images";
+import { TV_SHOW_CREATOR_JOBS } from "../metadata/show-creators";
 
 export const MOVIE_STATUS_FILTERS = ["all", "watched", "unwatched"] as const;
 export const MOVIE_SORTS = ["title", "recent", "year_desc", "rating", "release_date"] as const;
@@ -721,7 +722,7 @@ export async function getShowDetail(id: string, userId: string) {
     .select(["name"])
     .where("media_item_id", "=", id)
     .where("credit_type", "=", "crew")
-    .where("job", "in", ["Creator", "Developer", "Original Series Creator", "Series Creator"])
+    .where("job", "in", [...TV_SHOW_CREATOR_JOBS])
     .orderBy("credit_order", "asc")
     .execute();
   const keywords = await db

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
+  import { formatFileSize, formatMediaDuration } from "$lib/media/format";
   import { playbackModalHref } from "$lib/playback/links";
   import { Check, Play, RotateCcw } from "@lucide/svelte";
 
@@ -19,27 +20,10 @@
     });
   }
 
-  function formatDuration(totalSeconds: number) {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
-    if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-    return `${seconds}s`;
-  }
-
-  function formatFileSize(bytes: number | string | null | undefined) {
-    const value = Number(bytes ?? 0);
-    if (!Number.isFinite(value) || value <= 0) return "Unknown size";
-    const gib = value / 1024 / 1024 / 1024;
-    if (gib >= 1) return `${gib.toFixed(2)} GB`;
-    return `${(value / 1024 / 1024).toFixed(1)} MB`;
-  }
-
   function fileDetails(file: (typeof data.files)[number]) {
     return [
       file.container?.toUpperCase() ?? file.extension.replace(/^\./, "").toUpperCase(),
-      file.duration_seconds ? formatDuration(file.duration_seconds) : null,
+      file.duration_seconds ? formatMediaDuration(file.duration_seconds) : null,
       file.video_codec?.toUpperCase() ?? null,
       file.audio_codec?.toUpperCase() ?? null,
       formatFileSize(file.size_bytes),

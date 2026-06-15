@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import MediaHero from "$lib/components/MediaHero.svelte";
+  import { formatDateTime } from "$lib/media/format";
   import { tmdbImageUrl } from "$lib/media/images";
   import { playbackModalHref } from "$lib/playback/links";
   import { Calendar, CirclePlay, ExternalLink, RefreshCw, Star, Users } from "@lucide/svelte";
@@ -73,14 +74,6 @@
   function episodeCode(episode: Pick<Episode, "seasonNumber" | "episodeNumber"> | undefined) {
     if (!episode || episode.seasonNumber === null || episode.episodeNumber === null) return "";
     return `S${String(episode.seasonNumber).padStart(2, "0")}E${String(episode.episodeNumber).padStart(2, "0")}`;
-  }
-
-  function formatDateTime(value: string | null | undefined) {
-    if (!value) return "Unknown";
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
   }
 </script>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatDateTime, formatGibibytes } from "$lib/media/format";
   import { RefreshCw, Save, ScanSearch, SearchCheck, Wrench } from "@lucide/svelte";
 
   let { data, form } = $props();
@@ -33,19 +34,6 @@
 
   function submitTranscoding() {
     transcodingForm?.requestSubmit();
-  }
-
-  function formatTime(value: string | null | undefined) {
-    if (!value) return "Never";
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  }
-
-  function formatBytes(value: number) {
-    const gib = value / 1024 / 1024 / 1024;
-    return `${Number.isInteger(gib) ? gib : gib.toFixed(1)} GiB`;
   }
 </script>
 
@@ -149,7 +137,7 @@
           <select name="playbackSessionArtifactMaxBytes" onchange={submitTranscoding}>
             {#each data.playbackSessionArtifactMaxBytesOptions as bytes}
               <option value={bytes} selected={bytes === data.playbackSessionArtifactMaxBytes}>
-                {formatBytes(bytes)}
+                {formatGibibytes(bytes)}
               </option>
             {/each}
           </select>
@@ -432,7 +420,7 @@
         <dt>Last scan</dt>
         <dd>
           {data.status.lastScan
-            ? `${data.status.lastScan.status} - ${formatTime(data.status.lastScan.finished_at ?? data.status.lastScan.created_at)}`
+            ? `${data.status.lastScan.status} - ${formatDateTime(data.status.lastScan.finished_at ?? data.status.lastScan.created_at, { fallback: "never" })}`
             : "Never"}
         </dd>
       </div>

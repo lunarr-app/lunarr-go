@@ -1,5 +1,6 @@
 import { isAdmin } from "$lib/server/auth/users";
 import { getShowDetail } from "$lib/server/media";
+import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
 import { refreshTvShowMetadataResult } from "$lib/server/metadata/tv";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
 import { error, fail, redirect } from "@sveltejs/kit";
@@ -17,11 +18,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 export const actions: Actions = {
   refreshMetadata: async ({ params, locals }) => {
-    if (!isAdmin(locals.user)) return fail(403, { metadataError: "Only admins can refresh metadata." });
-    if (!(await tmdbCredentialsConfigured()))
-      return fail(400, {
-        metadataError: "TMDb credentials are not configured.",
-      });
+    const prerequisiteFailure = await metadataRefreshPrerequisites(locals.user);
+    if (prerequisiteFailure) return prerequisiteFailure;
 
     let redirectId = params.id;
     try {
@@ -33,9 +31,7 @@ export const actions: Actions = {
         });
       redirectId = result.mediaItemId;
     } catch (error) {
-      return fail(400, {
-        metadataError: error instanceof Error ? error.message : "Could not refresh metadata.",
-      });
+      return metadataRefreshFailure(error);
     }
 
     throw redirect(303, `/shows/${redirectId}`);

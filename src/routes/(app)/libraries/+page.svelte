@@ -5,6 +5,7 @@
   import LibrarySharingModal from "./_components/LibrarySharingModal.svelte";
   import RemoteLibraryFields from "./_components/RemoteLibraryFields.svelte";
   import type { RemoteLibraryFieldValues } from "./_components/libraryRemoteFieldValues";
+  import { formatDateTime } from "$lib/media/format";
   import { CirclePlus, Settings, TriangleAlert } from "@lucide/svelte";
   import type { PageData } from "./$types";
 
@@ -46,14 +47,6 @@
     const scheduled = `scheduled ${scanIntervalLabel(library.scan_interval_minutes)}`;
     if (library.source !== "local") return scheduled;
     return `watcher ${library.watch_enabled === 0 ? "off" : "on"} - ${scheduled}`;
-  }
-
-  function formatTime(value: string | null | undefined) {
-    if (!value) return "Not yet";
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
   }
 </script>
 
@@ -175,8 +168,8 @@
               </span>
               <span class="muted">
                 {library.latestScanJob.finished_at
-                  ? `Finished ${formatTime(library.latestScanJob.finished_at)}`
-                  : `Started ${formatTime(library.latestScanJob.started_at ?? library.latestScanJob.created_at)}`}
+                  ? `Finished ${formatDateTime(library.latestScanJob.finished_at, { fallback: "not-yet" })}`
+                  : `Started ${formatDateTime(library.latestScanJob.started_at ?? library.latestScanJob.created_at, { fallback: "not-yet" })}`}
               </span>
             {:else}
               <span class="muted">No scans yet.</span>

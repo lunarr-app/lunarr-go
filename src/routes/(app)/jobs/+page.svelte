@@ -2,6 +2,7 @@
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
   import ScanJobErrors from "./_components/ScanJobErrors.svelte";
   import { invalidateAll } from "$app/navigation";
+  import { formatDateTime, formatElapsedDuration, formatRelativeTime } from "$lib/media/format";
   import { Activity, XCircle } from "@lucide/svelte";
   import { onMount } from "svelte";
 
@@ -47,35 +48,12 @@
     return job.status === "running" && job.cancel_requested_at ? "cancelling" : job.status;
   }
 
-  function formatTime(value: string | null | undefined) {
-    if (!value) return "Not yet";
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  }
-
-  function formatRelativeTime(value: string | null | undefined) {
-    if (!value) return "Not yet";
-    const seconds = Math.max(0, Math.floor((now - new Date(value).getTime()) / 1000));
-    if (seconds < 60) return "just now";
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-  }
-
-  function formatDuration(start: string | null, end: string | null, status: Job["status"] | PlaybackSession["status"]) {
-    if (!start) return "Not started";
-    const endMs = end ? new Date(end).getTime() : status === "running" ? now : new Date(start).getTime();
-    const seconds = Math.max(0, Math.floor((endMs - new Date(start).getTime()) / 1000));
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
-    const hours = Math.floor(minutes / 60);
-    return `${hours}h ${minutes % 60}m`;
+  function formatJobDuration(
+    start: string | null,
+    end: string | null,
+    status: Job["status"] | PlaybackSession["status"],
+  ) {
+    return formatElapsedDuration(start, end, { running: status === "running", nowMs: now });
   }
 
   function jobMetricsSummary(job: Job) {
@@ -133,8 +111,8 @@
   }
 
   function playbackSessionActivity(job: PlaybackSession) {
-    if (job.last_segment_request_at) return `Segment ${formatRelativeTime(job.last_segment_request_at)}`;
-    if (job.last_heartbeat_at) return `Heartbeat ${formatRelativeTime(job.last_heartbeat_at)}`;
+    if (job.last_segment_request_at) return `Segment ${formatRelativeTime(job.last_segment_request_at, now)}`;
+    if (job.last_heartbeat_at) return `Heartbeat ${formatRelativeTime(job.last_heartbeat_at, now)}`;
     return "No playback activity";
   }
 
@@ -247,12 +225,12 @@
             </div>
             <div class="job-meta">
               <span>{scanKindLabel[job.job_kind]}</span>
-              <span>{formatRelativeTime(job.updated_at ?? job.created_at)}</span>
-              <span>{formatDuration(job.started_at, job.finished_at, job.status)}</span>
+              <span>{formatRelativeTime(job.updated_at ?? job.created_at, now)}</span>
+              <span>{formatJobDuration(job.started_at, job.finished_at, job.status)}</span>
               {#if job.cancel_requested_at}
-                <span>Cancel requested {formatRelativeTime(job.cancel_requested_at)}</span>
+                <span>Cancel requested {formatRelativeTime(job.cancel_requested_at, now)}</span>
               {:else}
-                <span>Started {formatTime(job.started_at)}</span>
+                <span>Started {formatDateTime(job.started_at, { fallback: "not-yet" })}</span>
               {/if}
             </div>
           </div>
@@ -310,8 +288,8 @@
               <span class={`status-badge ${job.status}`}>{playbackStatusLabel[job.status]}</span>
             </div>
             <div class="job-meta">
-              <span>{formatRelativeTime(job.updated_at ?? job.created_at)}</span>
-              <span>{formatDuration(job.started_at, job.finished_at, job.status)}</span>
+              <span>{formatRelativeTime(job.updated_at ?? job.created_at, now)}</span>
+              <span>{formatJobDuration(job.started_at, job.finished_at, job.status)}</span>
               <span>{job.mode} · {playbackPipelineLabel(job)}</span>
               {#if job.user_email}
                 <span>{job.user_email}</span>
