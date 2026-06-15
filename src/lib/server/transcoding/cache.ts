@@ -251,15 +251,18 @@ export async function touchPlaybackCacheForSession(sessionId: string) {
     .execute();
 }
 
-export async function getEncodeArtifactDirectoryForSession(sessionId: string) {
+export async function getPlaybackCacheBindingForSession(sessionId: string) {
   const db = await getDb();
   const row = await db
     .selectFrom("playback_session")
     .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
-    .select(["playback_hls_cache.artifact_dir as artifactDir"])
+    .select(["playback_session.cache_id as cacheId", "playback_hls_cache.artifact_dir as artifactDir"])
     .where("playback_session.id", "=", sessionId)
     .executeTakeFirst();
-  return row?.artifactDir ?? null;
+  return {
+    cacheId: row?.cacheId ?? null,
+    encodeArtifactDirectory: row?.artifactDir ?? null,
+  };
 }
 
 export async function updatePlaybackCacheStats(cacheId: string, furthestSegmentIndex: number) {

@@ -10,7 +10,7 @@ import {
   hlsSegmentResponse,
   pruneHlsSegmentsBehind,
 } from "$lib/server/transcoding/hls";
-import { getEncodeArtifactDirectoryForSession } from "$lib/server/transcoding/cache";
+import { getPlaybackCacheBindingForSession } from "$lib/server/transcoding/cache";
 import { ensureHlsLookaheadForSegment, ensureHlsSegmentForRequest } from "$lib/server/transcoding/manager";
 import {
   getAuthorizedHlsArtifact,
@@ -126,7 +126,8 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
       if (generated) {
         if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
         const encodeDirectory =
-          (await getEncodeArtifactDirectoryForSession(params.sessionId)) ?? artifact.encodeArtifactDirectory;
+          (await getPlaybackCacheBindingForSession(params.sessionId)).encodeArtifactDirectory ??
+          artifact.encodeArtifactDirectory;
         response = await hlsSegmentResponse(artifact.playlistPath, params.segment, {
           signal: request?.signal,
           encodeDirectory,

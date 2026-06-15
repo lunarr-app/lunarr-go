@@ -6,7 +6,12 @@ import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import type { HlsSegmentWindowTranscodeInput } from "./backend";
-import { acquirePlaybackCache, computePlaybackCacheId, computePlaybackPolicyHash } from "./cache";
+import {
+  acquirePlaybackCache,
+  computePlaybackCacheId,
+  computePlaybackPolicyHash,
+  setEncodeAheadSegmentCount,
+} from "./cache";
 import {
   cleanupTranscodeStartupFailure,
   ensureHlsLookaheadForSegment,
@@ -578,5 +583,185 @@ describe("request-driven HLS manager", () => {
       .executeTakeFirstOrThrow();
     expect(cache.ref_count).toBe(0);
     await setTranscodingEnabled(true);
+  });
+
+  test("serializes encode work for sessions sharing the same cache entry", async () => {
+    const samplePolicy = {
+      transcodingEnabled: true,
+      playbackPreference: "auto" as const,
+      preferredAudioLanguage: null,
+      preferredSubtitleLanguage: null,
+      hardwareAcceleration: "off" as const,
+      hardwareAccelerationRequired: false,
+      transcodeQualityPreset: "auto" as const,
+      transcodeQuality: transcodeQualityTarget("auto"),
+    };
+    const sessionB = await createTranscodeSession({ mediaFileId: "file-1", userId: "user-1" });
+    await updateTranscodeSessionPipeline(sessionB, "request_driven");
+    const artifactDirB = path.join(tempDir, "playback-sessions", sessionB);
+    await mkdir(artifactDirB, { recursive: true });
+    const playlistPathB = path.join(artifactDirB, "master.m3u8");
+    await writeFile(playlistPathB, "#EXTM3U\n");
+    await registerTranscodeHlsArtifact({
+      sessionId: sessionB,
+      mediaFileId: "file-1",
+      path: playlistPathB,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionB, "running");
+    await acquirePlaybackCache({
+      sessionId,
+      mediaFileId: "file-1",
+      fileSizeBytes: 100,
+      fileMtimeMs: nowMs,
+      mode: "transcode",
+      policy: samplePolicy,
+      segmentFormat: "mpegts",
+      audioStreamIndex: null,
+    });
+    await acquirePlaybackCache({
+      sessionId: sessionB,
+      mediaFileId: "file-1",
+      fileSizeBytes: 100,
+      fileMtimeMs: nowMs,
+      mode: "transcode",
+      policy: samplePolicy,
+      segmentFormat: "mpegts",
+      audioStreamIndex: null,
+    });
+    await setEncodeAheadSegmentCount(1);
+
+    let releaseSessionA: (() => void) | undefined;
+    const sessionAGate = new Promise<void>((resolve) => {
+      releaseSessionA = resolve;
+    });
+    let sessionAEncodeStarted = false;
+    let sessionBEncodeStarted = false;
+    let activeEncodes = 0;
+    let maxConcurrentEncodes = 0;
+
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input: HlsSegmentWindowTranscodeInput) {
+        activeEncodes += 1;
+        maxConcurrentEncodes = Math.max(maxConcurrentEncodes, activeEncodes);
+        try {
+          const segment = input.segments[0]?.segment;
+          if (!segment) throw new Error("Expected a requested HLS window segment.");
+          if (input.sessionId === sessionId && segment === "segment-00010.ts") {
+            sessionAEncodeStarted = true;
+            await sessionAGate;
+          }
+          if (input.sessionId === sessionB && segment === "segment-00030.ts") {
+            sessionBEncodeStarted = true;
+          }
+          await mkdir(input.artifactDirectory, { recursive: true });
+          for (const windowSegment of input.segments) {
+            await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
+          }
+          return { completion: Promise.resolve() };
+        } finally {
+          activeEncodes -= 1;
+        }
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const sessionAGeneration = ensureHlsSegmentForRequest({
+      sessionId,
+      userId: "user-1",
+      segment: "segment-00010.ts",
+    });
+    await waitFor(() => sessionAEncodeStarted);
+
+    const sessionBGeneration = ensureHlsSegmentForRequest({
+      sessionId: sessionB,
+      userId: "user-1",
+      segment: "segment-00030.ts",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(sessionBEncodeStarted).toBe(false);
+
+    releaseSessionA?.();
+    await sessionAGeneration;
+    await sessionBGeneration;
+    expect(sessionBEncodeStarted).toBe(true);
+    expect(maxConcurrentEncodes).toBe(1);
+  });
+
+  test("removes failed partial segments but preserves unrelated shared cache segments when ref_count > 1", async () => {
+    const samplePolicy = {
+      transcodingEnabled: true,
+      playbackPreference: "auto" as const,
+      preferredAudioLanguage: null,
+      preferredSubtitleLanguage: null,
+      hardwareAcceleration: "off" as const,
+      hardwareAccelerationRequired: false,
+      transcodeQualityPreset: "auto" as const,
+      transcodeQuality: transcodeQualityTarget("auto"),
+    };
+    const sessionB = await createTranscodeSession({ mediaFileId: "file-1", userId: "user-1" });
+    await updateTranscodeSessionPipeline(sessionB, "request_driven");
+    const artifactDirB = path.join(tempDir, "playback-sessions", sessionB);
+    await mkdir(artifactDirB, { recursive: true });
+    const playlistPathB = path.join(artifactDirB, "master.m3u8");
+    await writeFile(playlistPathB, "#EXTM3U\n");
+    await registerTranscodeHlsArtifact({
+      sessionId: sessionB,
+      mediaFileId: "file-1",
+      path: playlistPathB,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionB, "running");
+
+    const { encodeArtifactDirectory } = await acquirePlaybackCache({
+      sessionId,
+      mediaFileId: "file-1",
+      fileSizeBytes: 100,
+      fileMtimeMs: nowMs,
+      mode: "transcode",
+      policy: samplePolicy,
+      segmentFormat: "mpegts",
+      audioStreamIndex: null,
+    });
+    await acquirePlaybackCache({
+      sessionId: sessionB,
+      mediaFileId: "file-1",
+      fileSizeBytes: 100,
+      fileMtimeMs: nowMs,
+      mode: "transcode",
+      policy: samplePolicy,
+      segmentFormat: "mpegts",
+      audioStreamIndex: null,
+    });
+    await mkdir(encodeArtifactDirectory, { recursive: true });
+    await writeFile(path.join(encodeArtifactDirectory, "segment-00000.ts"), "shared");
+
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input: HlsSegmentWindowTranscodeInput) {
+        if (input.sessionId !== sessionB) {
+          throw new Error("unexpected session encode");
+        }
+        await mkdir(input.artifactDirectory, { recursive: true });
+        await writeFile(path.join(input.artifactDirectory, "segment-00001.ts"), "partial");
+        throw new Error("encode failed");
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    await expectRejectsToThrow(
+      ensureHlsSegmentForRequest({
+        sessionId: sessionB,
+        userId: "user-1",
+        segment: "segment-00001.ts",
+      }),
+      "encode failed",
+    );
+
+    expect(await stat(path.join(encodeArtifactDirectory, "segment-00000.ts"))).toBeDefined();
+    await expect(stat(path.join(encodeArtifactDirectory, "segment-00001.ts"))).rejects.toThrow();
   });
 });

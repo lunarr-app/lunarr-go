@@ -13,7 +13,7 @@ import {
   computePlaybackCacheId,
   computePlaybackPolicyHash,
   getEncodeAheadSegmentCount,
-  getEncodeArtifactDirectoryForSession,
+  getPlaybackCacheBindingForSession,
   getPlaybackCacheStatus,
   invalidateStalePlaybackCacheEntries,
   isPlaybackCacheEntryStale,
@@ -223,8 +223,8 @@ describe("playback HLS cache", () => {
       .where("id", "=", cacheId)
       .executeTakeFirstOrThrow();
     expect(cache.ref_count).toBe(1);
-    expect(await getEncodeArtifactDirectoryForSession(sessionA)).toBeNull();
-    expect(await getEncodeArtifactDirectoryForSession(sessionB)).toBe(encodeArtifactDirectory);
+    expect((await getPlaybackCacheBindingForSession(sessionA)).encodeArtifactDirectory).toBeNull();
+    expect((await getPlaybackCacheBindingForSession(sessionB)).encodeArtifactDirectory).toBe(encodeArtifactDirectory);
 
     await releasePlaybackCacheForSession(sessionB);
     const released = await db
@@ -495,7 +495,9 @@ describe("playback HLS cache", () => {
     });
 
     expect(second.cacheId).not.toBe(first.cacheId);
-    expect(await getEncodeArtifactDirectoryForSession(sessionId)).toBe(second.encodeArtifactDirectory);
+    expect((await getPlaybackCacheBindingForSession(sessionId)).encodeArtifactDirectory).toBe(
+      second.encodeArtifactDirectory,
+    );
 
     const firstCache = await db
       .selectFrom("playback_hls_cache")
