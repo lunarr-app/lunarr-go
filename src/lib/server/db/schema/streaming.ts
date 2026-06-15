@@ -23,8 +23,25 @@ export type PlaybackSessionTable = {
   last_segment_name: string | null;
   last_segment_index: number | null;
   start_time_seconds: ColumnType<number, number | undefined, number | undefined>;
+  cache_id: ColumnType<string | null, string | null | undefined, string | null | undefined>;
   started_at: string | null;
   finished_at: string | null;
+  created_at: TimestampText;
+  updated_at: TimestampText;
+};
+
+export type PlaybackHlsCacheTable = {
+  id: string;
+  media_file_id: string;
+  mode: TranscodeMode;
+  policy_hash: string;
+  file_size_bytes: number;
+  file_mtime_ms: number;
+  artifact_dir: string;
+  furthest_segment_index: number | null;
+  bytes: number;
+  ref_count: number;
+  last_access_at: string;
   created_at: TimestampText;
   updated_at: TimestampText;
 };

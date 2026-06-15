@@ -509,9 +509,7 @@ export async function showBrowseRows(
   const cleanPageSize = Math.max(1, Math.min(Math.floor(pageSize), 200));
   const filtered = await filteredShows(userId, search);
 
-  const totalRow = await filtered
-    .select(sql<number>`count(distinct show.id)`.as("total"))
-    .executeTakeFirst();
+  const totalRow = await filtered.select(sql<number>`count(distinct show.id)`.as("total")).executeTakeFirst();
   const total = Number(totalRow?.total ?? 0);
   const totalPages = Math.max(1, Math.ceil(total / cleanPageSize));
   const currentPage = Math.min(page, totalPages);
@@ -1333,6 +1331,7 @@ export async function getMediaFile(id: string, userId: string) {
       "media_file.basename",
       "media_file.extension",
       "media_file.size_bytes",
+      "media_file.mtime_ms",
       "media_file.duration_seconds",
       "media_file.video_codec",
       "media_file.audio_codec",

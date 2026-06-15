@@ -14,7 +14,11 @@ Request-driven HLS defaults to MPEG-TS segments for broad compatibility. `LUNARR
 
 HEVC HLS remux compatibility is deliberately narrower than HEVC direct play. The compatibility checks require HEVC, native HLS, fMP4 HLS support, and an fMP4 server segment format before a copied HEVC/AAC HLS stream is considered safe. Other HEVC HLS requests fall back to transcode.
 
-For SFTP and WebDAV libraries, direct playback and HLS generation both read from the remote server through Lunarr. Remote playback quality depends on server/network range-read performance, known file sizes, and stable remote connectivity.
+For SFTP and WebDAV libraries, browser-compatible files direct-play through authenticated range reads when automatic mode selects direct playback. HLS is used only when remux or transcode is required. Remote HLS and direct playback both read from the remote server through Lunarr. Remote playback quality depends on server/network range-read performance, known file sizes, and stable remote connectivity.
+
+Request-driven HLS encodes only a bounded window ahead of the current playhead. FFmpeg is limited to a configurable number of segments beyond the requested segment (default 4, about 64 seconds at 16-second segments) instead of running to end-of-file. When the viewer stops or seeks ahead, remote reads stop once the encode-ahead buffer is satisfied.
+
+Encoded HLS segments are stored in a server-wide cache keyed by media file identity, encode mode, and transcode policy. Multiple playback sessions and users can reuse the same cached segments. Per-session virtual playlists remain under `playback-sessions/`, and shared segment payloads live under `playback-cache/`.
 
 Admins can choose an HLS quality preset in Settings. `Auto` preserves the default output behavior. `720p` and `1080p` cap transcode height without upscaling and adjust FFmpeg bitrate/CRF targets. `Original resolution` keeps source height and uses a higher transcode target.
 
@@ -82,13 +86,14 @@ The hardware smoke checks the VAAPI device path before invoking FFmpeg, so a mis
 
 ## Transcode Cache
 
-Temporary HLS playback artifacts are stored under:
+Temporary HLS playback uses two storage areas under `LUNARR_DATA_DIR`:
 
 ```text
-LUNARR_DATA_DIR/playback-sessions
+playback-sessions/   # per-session virtual playlists and session metadata
+playback-cache/      # shared encoded HLS segments (content-keyed, LRU-evicted)
 ```
 
-The default temporary playback artifact storage limit is 20 GiB. Admins can choose one of these limits in Settings:
+The default combined temporary playback storage limit is 20 GiB. Admins can choose one of these limits in Settings:
 
 ```text
 5 GiB
@@ -98,7 +103,9 @@ The default temporary playback artifact storage limit is 20 GiB. Admins can choo
 100 GiB
 ```
 
-Completed playback artifacts are temporary and are not treated as durable optimized media. Active playback keeps needed artifacts alive while the player is consuming them.
+Admins can also configure encode-ahead segment count (default 4) and shared cache TTL (default 24 hours). Cache entries invalidate when the source file size or modification time changes.
+
+Active playback keeps needed cache entries alive through reference counting (`ref_count` on each cache entry) while sessions are running. Completed or cancelled sessions decrement cache references, and unreferenced cache entries become eligible for TTL eviction (idle longer than the configured TTL) and LRU eviction (oldest idle entries removed first when combined playback storage exceeds the configured limit).
 
 ## Playback Cleanup
 
@@ -106,9 +113,9 @@ The maintenance loop runs every 15 seconds for active playback/session cleanup. 
 
 On startup, Lunarr also recovers interrupted transcode sessions and cleans configured playback artifacts before resuming interrupted scan jobs.
 
-Playback artifact cleanup removes expired completed/failed/cancelled session artifacts, orphaned artifact directories, and the oldest inactive artifacts when temporary storage exceeds the configured limit.
+Playback artifact cleanup removes expired completed/failed/cancelled session playlists, orphaned session directories, stale shared cache entries, and the oldest inactive artifacts when combined temporary storage exceeds the configured limit.
 
-When a playback session is cancelled or replaced by a seek, Lunarr asks the FFmpeg process to exit with `SIGTERM` and escalates to `SIGKILL` if it does not close within the grace window.
+When a playback session is cancelled or replaced by a seek, Lunarr stops FFmpeg for that session and releases cache references. Session playlist directories are removed by the cleanup job rather than synchronously on cancel.
 
 ## Job History Cleanup
 

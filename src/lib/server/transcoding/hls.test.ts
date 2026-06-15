@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
   hlsEventPlaylistContainsSegment,
   hlsPlaylistBodySegmentFormat,
   hlsPlaylistSegmentEntries,
   hlsSegmentName,
+  hlsSegmentResponse,
   rewriteHlsPlaylistUris,
   virtualHlsPlaylist,
 } from "./hls";
@@ -182,5 +186,66 @@ describe("HLS helpers", () => {
         "",
       ].join("\n"),
     );
+  });
+
+  test("serves segments from a shared encode directory when provided", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-hls-encode-dir-"));
+    try {
+      const playlistDir = path.join(tempDir, "session");
+      const encodeDir = path.join(tempDir, "playback-cache", "cache-1");
+      const playlistPath = path.join(playlistDir, "master.m3u8");
+      await mkdir(playlistDir, { recursive: true });
+      await writeFile(playlistPath, "#EXTM3U\n");
+      await mkdir(encodeDir, { recursive: true });
+      await writeFile(path.join(encodeDir, "segment-00001.ts"), "cached-segment");
+
+      const response = await hlsSegmentResponse(playlistPath, "segment-00001.ts", {
+        encodeDirectory: encodeDir,
+      });
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe("cached-segment");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("returns 404 when the segment file is missing", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-hls-missing-segment-"));
+    try {
+      const playlistDir = path.join(tempDir, "session");
+      const playlistPath = path.join(playlistDir, "master.m3u8");
+      await mkdir(playlistDir, { recursive: true });
+      await writeFile(playlistPath, "#EXTM3U\n");
+
+      const response = await hlsSegmentResponse(playlistPath, "segment-00001.ts");
+
+      expect(response.status).toBe(404);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("skips non-file candidates and serves the segment from a later directory", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-hls-segment-candidates-"));
+    try {
+      const playlistDir = path.join(tempDir, "session");
+      const encodeDir = path.join(tempDir, "playback-cache", "cache-1");
+      const playlistPath = path.join(playlistDir, "master.m3u8");
+      await mkdir(playlistDir, { recursive: true });
+      await mkdir(encodeDir, { recursive: true });
+      await writeFile(playlistPath, "#EXTM3U\n");
+      await mkdir(path.join(encodeDir, "segment-00001.ts"), { recursive: true });
+      await writeFile(path.join(playlistDir, "segment-00001.ts"), "playlist-dir-segment");
+
+      const response = await hlsSegmentResponse(playlistPath, "segment-00001.ts", {
+        encodeDirectory: encodeDir,
+      });
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe("playlist-dir-segment");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

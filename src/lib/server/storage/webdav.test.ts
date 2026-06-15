@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Readable } from "node:stream";
 import { encryptSecret } from "../secrets";
 import type { WebdavLibraryConfig } from "./webdav";
+import { expectRejectsToThrow } from "$lib/test/async-expect";
 
 type MockWebdavStat = {
   type: "file" | "directory";
@@ -104,7 +105,7 @@ describe("parseWebdavConfig errors", () => {
 
 describe("testWebdavConnection", () => {
   test("accepts an existing remote directory root", async () => {
-    expect(testWebdavConnection(sampleConfig())).resolves.toBeUndefined();
+    await testWebdavConnection(sampleConfig());
     expect(mockStat).toHaveBeenCalledWith("/media/movies");
   });
 
@@ -116,7 +117,7 @@ describe("testWebdavConnection", () => {
       lastmod: new Date(0).toUTCString(),
     }));
 
-    expect(testWebdavConnection(sampleConfig())).rejects.toThrow("WebDAV root must be a directory.");
+    await expectRejectsToThrow(testWebdavConnection(sampleConfig()), "WebDAV root must be a directory.");
   });
 
   test("suggests dropping a leading slash when only the alternate root exists", async () => {
@@ -133,7 +134,8 @@ describe("testWebdavConnection", () => {
       throw new Error("missing");
     });
 
-    expect(testWebdavConnection(sampleConfig())).rejects.toThrow(
+    await expectRejectsToThrow(
+      testWebdavConnection(sampleConfig()),
       'WebDAV root was not found. Try "media/movies" without the leading slash.',
     );
   });

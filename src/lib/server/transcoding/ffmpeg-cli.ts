@@ -1,9 +1,7 @@
 import type {
-  CompatibilityHlsBackend,
   HlsSegmentWindowGeneration,
   HlsSegmentWindowTranscodeInput,
   HlsTranscodeInput,
-  RunningTranscode,
   TranscodeBackend,
 } from "./backend";
 import { startSeekableInputProxy, type RunningSeekableInputProxy } from "./input-proxy";
@@ -11,7 +9,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { ffmpegPath } from "node-av/ffmpeg";
-import { hlsEventPlaylistHasSegment, type HlsSegmentFormat } from "./hls";
+import { hlsEventPlaylistHasSegment, ENCODE_AHEAD_SEGMENT_COUNT, type HlsSegmentFormat } from "./hls";
 
 const STDERR_MAX_BYTES = 32 * 1024;
 const SEGMENT_POLL_MS = 50;
@@ -29,6 +27,7 @@ type FfmpegHardwareMode = "videotoolbox" | "vaapi" | "qsv" | "nvenc" | "amf";
 type FfmpegHlsOptions = {
   inputUrl?: string;
   startSegmentNumber?: number;
+  maxOutputSeconds?: number;
 };
 type ActiveHlsStream = {
   active: ActiveFfmpeg;
@@ -294,6 +293,9 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
   }
 
   args.push("-i", inputPathForFfmpeg(input, options));
+  if (options?.maxOutputSeconds && options.maxOutputSeconds > 0) {
+    args.push("-t", String(options.maxOutputSeconds));
+  }
   args.push("-map", "0:v:0", "-map", audioMapArg(input), "-sn", "-dn");
 
   if (input.mode === "remux") {
@@ -545,6 +547,11 @@ function reusableHlsStream(input: HlsSegmentWindowTranscodeInput, firstSegment: 
   if (stream.transcodeQualityKey !== transcodeQualityKey(input)) return null;
   if (stream.hlsSegmentFormat !== hlsSegmentFormat(input)) return null;
   if (firstSegment.segmentIndex < stream.startSegmentIndex) return null;
+  if (
+    firstSegment.segmentIndex >=
+    stream.startSegmentIndex + (input.encodeAheadSegmentCount ?? ENCODE_AHEAD_SEGMENT_COUNT)
+  )
+    return null;
   return stream;
 }
 
@@ -558,7 +565,10 @@ async function startHlsStream(
       ...input,
       startTimeSeconds: firstSegment.segmentStartSeconds,
     },
-    { startSegmentNumber: firstSegment.segmentIndex },
+    {
+      startSegmentNumber: firstSegment.segmentIndex,
+      maxOutputSeconds: input.segmentSeconds * (input.encodeAheadSegmentCount ?? ENCODE_AHEAD_SEGMENT_COUNT),
+    },
   );
   const stream: ActiveHlsStream = {
     active,
@@ -607,7 +617,7 @@ async function generateStreamingFfmpegWindow(
     timeoutMs: input.segmentGenerationTimeoutMs,
   });
   await waitForEventPlaylistSegment({
-    playlistPath: input.playlistPath,
+    playlistPath: hlsPlaylistPath(input.artifactDirectory),
     segment: firstSegment.segment,
     completion: stream.active.completion,
     signal: input.signal,
@@ -620,23 +630,9 @@ async function generateStreamingFfmpegWindow(
   };
 }
 
-export const ffmpegCliBackend: TranscodeBackend & CompatibilityHlsBackend = {
+export const ffmpegCliBackend: TranscodeBackend = {
   validateHlsSegmentGenerationPolicy(input) {
     if (!isFfmpegCliAvailable()) throw new FfmpegBackendError(ffmpegUnavailableMessage());
-  },
-
-  async startCompatibilityHls(input: HlsTranscodeInput): Promise<RunningTranscode> {
-    await mkdir(input.artifactDirectory, { recursive: true });
-    const active = await runFfmpeg(input);
-    active.completion.catch(() => undefined);
-    return {
-      sessionId: input.sessionId,
-      playlistPath: hlsPlaylistPath(input.artifactDirectory),
-      completion: active.completion,
-      async cancel() {
-        await terminateActiveFfmpeg(active);
-      },
-    };
   },
 
   async generateHlsSegmentWindow(input: HlsSegmentWindowTranscodeInput) {

@@ -7,7 +7,7 @@ import {
   scheduleForceKill,
 } from "./ffmpeg-cli";
 import type { HlsSegmentWindowTranscodeInput, HlsTranscodeInput, SeekableTranscodeInputSource } from "./backend";
-import { open, mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { open, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -562,6 +562,37 @@ describe("FFmpeg HLS playback backend", () => {
     }
   });
 
+  smokeTest("generates HLS when the virtual playlist path differs from the cache directory", async () => {
+    const directory = await makeTempDir();
+    const sourcePath = path.join(directory, "source.mp4");
+    await generateSmokeInput(sourcePath);
+
+    const artifactDirectory = path.join(directory, "playback-cache", "cache-key");
+    const sessionDirectory = path.join(directory, "playback-sessions", "session-1");
+    await mkdir(artifactDirectory, { recursive: true });
+    await mkdir(sessionDirectory, { recursive: true });
+    const virtualPlaylistPath = path.join(sessionDirectory, "master.m3u8");
+    await writeFile(
+      virtualPlaylistPath,
+      ["#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-PLAYLIST-TYPE:VOD", "#EXT-X-TARGETDURATION:16", ""].join("\n"),
+    );
+
+    const generation = await ffmpegCliBackend.generateHlsSegmentWindow?.(
+      smokeWindowInput({
+        sessionId: "session-playlist-split-smoke",
+        inputPath: sourcePath,
+        artifactDirectory,
+        playlistPath: virtualPlaylistPath,
+      }),
+    );
+    await generation?.completion;
+    expect((await expectGeneratedSegment(artifactDirectory)).length).toBeGreaterThan(0);
+    const eventPlaylist = await readFile(path.join(artifactDirectory, "master.m3u8"), "utf8");
+    expect(hlsPlaylistSegmentEntries(eventPlaylist, path.join(artifactDirectory, "master.m3u8"))).toEqual(
+      expect.arrayContaining([expect.objectContaining({ segment: "segment-00000.ts" })]),
+    );
+  });
+
   smokeTest("generates real copied-remux HLS with event timing", async () => {
     const directory = await makeTempDir();
     const sourcePath = path.join(directory, "source.mp4");
@@ -624,70 +655,89 @@ describe("FFmpeg HLS playback backend", () => {
     expect(await readFile(path.join(artifactDirectory, "master.m3u8"), "utf8")).toContain('#EXT-X-MAP:URI="init.mp4"');
   });
 
-  smokeTest("reuses an active proxied FFmpeg stream for same-session forward segment requests", async () => {
-    const directory = await makeTempDir();
-    const sourcePath = path.join(directory, "source.mp4");
-    await generateSmokeInput(sourcePath, {
-      durationSeconds: 30,
-      size: "640x360",
-      rate: 24,
-    });
-    const artifactDirectory = path.join(directory, "reuse-hls");
-    await mkdir(artifactDirectory, { recursive: true });
+  smokeTest(
+    "reuses an active proxied FFmpeg stream for same-session forward segment requests",
+    async () => {
+      await ffmpegCliBackend.cancel?.("reuse-smoke");
 
-    const firstSource = await createFileInputSource(sourcePath, undefined, {
-      readDelayMs: 80,
-    });
-    let replacementSourceCloseCount = 0;
-    const replacementSource = await createFileInputSource(
-      sourcePath,
-      () => {
-        replacementSourceCloseCount += 1;
-      },
-      { readDelayMs: 80 },
-    );
+      const directory = await makeTempDir();
+      const sourcePath = path.join(directory, "source.mp4");
+      await generateSmokeInput(sourcePath, {
+        durationSeconds: 30,
+        size: "640x360",
+        rate: 24,
+      });
+      const artifactDirectory = path.join(directory, "reuse-hls");
+      await mkdir(artifactDirectory, { recursive: true });
+      const segmentSeconds = 4;
 
-    try {
-      const firstGeneration = await ffmpegCliBackend.generateHlsSegmentWindow?.(
-        smokeWindowInput({
-          sessionId: "reuse-smoke",
-          inputPath: sourcePath,
-          inputSource: firstSource,
-          artifactDirectory,
-          playlistPath: path.join(artifactDirectory, "master.m3u8"),
-        }),
-      );
-      expect((await expectGeneratedSegment(artifactDirectory, "segment-00000.ts")).length).toBeGreaterThan(0);
-
-      const secondGeneration = await ffmpegCliBackend.generateHlsSegmentWindow?.(
-        smokeWindowInput({
-          sessionId: "reuse-smoke",
-          inputPath: sourcePath,
-          inputSource: replacementSource,
-          artifactDirectory,
-          playlistPath: path.join(artifactDirectory, "master.m3u8"),
-          segments: [
-            {
-              segment: "segment-00001.ts",
-              segmentIndex: 1,
-              segmentStartSeconds: 1,
-              segmentSeconds: 1,
-            },
-          ],
-        }),
+      const firstSource = await createFileInputSource(sourcePath, undefined, {
+        readDelayMs: 80,
+      });
+      let replacementSourceCloseCount = 0;
+      const replacementSource = await createFileInputSource(
+        sourcePath,
+        () => {
+          replacementSourceCloseCount += 1;
+        },
+        { readDelayMs: 80 },
       );
 
-      expect(secondGeneration?.inputSourceDisposition).toBe("backend");
-      expect(replacementSourceCloseCount).toBe(1);
-      expect((await expectGeneratedSegment(artifactDirectory, "segment-00001.ts")).length).toBeGreaterThan(0);
+      try {
+        const firstGeneration = await ffmpegCliBackend.generateHlsSegmentWindow?.(
+          smokeWindowInput({
+            sessionId: "reuse-smoke",
+            inputPath: sourcePath,
+            inputSource: firstSource,
+            artifactDirectory,
+            playlistPath: path.join(artifactDirectory, "master.m3u8"),
+            segmentSeconds,
+            encodeAheadSegmentCount: 6,
+            segments: [
+              {
+                segment: "segment-00000.ts",
+                segmentIndex: 0,
+                segmentStartSeconds: 0,
+                segmentSeconds,
+              },
+            ],
+          }),
+        );
+        void firstGeneration?.completion.catch(() => undefined);
+        expect((await expectGeneratedSegment(artifactDirectory, "segment-00000.ts")).length).toBeGreaterThan(0);
 
-      await ffmpegCliBackend.cancel?.("reuse-smoke");
-      await firstGeneration?.completion.catch(() => undefined);
-      await secondGeneration?.completion.catch(() => undefined);
-    } finally {
-      await ffmpegCliBackend.cancel?.("reuse-smoke");
-      await firstSource.close().catch(() => undefined);
-      await replacementSource.close().catch(() => undefined);
-    }
-  });
+        const secondGeneration = await ffmpegCliBackend.generateHlsSegmentWindow?.(
+          smokeWindowInput({
+            sessionId: "reuse-smoke",
+            inputPath: sourcePath,
+            inputSource: replacementSource,
+            artifactDirectory,
+            playlistPath: path.join(artifactDirectory, "master.m3u8"),
+            segmentSeconds,
+            segments: [
+              {
+                segment: "segment-00001.ts",
+                segmentIndex: 1,
+                segmentStartSeconds: segmentSeconds,
+                segmentSeconds,
+              },
+            ],
+          }),
+        );
+
+        expect(secondGeneration?.inputSourceDisposition).toBe("backend");
+        expect(replacementSourceCloseCount).toBe(1);
+        expect((await expectGeneratedSegment(artifactDirectory, "segment-00001.ts")).length).toBeGreaterThan(0);
+
+        await ffmpegCliBackend.cancel?.("reuse-smoke");
+        await firstGeneration?.completion.catch(() => undefined);
+        await secondGeneration?.completion.catch(() => undefined);
+      } finally {
+        await ffmpegCliBackend.cancel?.("reuse-smoke");
+        await firstSource.close().catch(() => undefined);
+        await replacementSource.close().catch(() => undefined);
+      }
+    },
+    30_000,
+  );
 });

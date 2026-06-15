@@ -7,6 +7,8 @@ const FMP4_SEGMENT_MIME_TYPE = "video/iso.segment";
 const SEGMENT_ROUTE_PREFIX = "segments/";
 const DEFAULT_SEGMENT_KEEP_BEHIND = 12;
 export const DEFAULT_HLS_SEGMENT_SECONDS = 16;
+export const ENCODE_AHEAD_SEGMENT_COUNT = 4;
+export const DEFAULT_ENCODE_AHEAD_SEGMENT_COUNT = ENCODE_AHEAD_SEGMENT_COUNT;
 export type HlsSegmentFormat = "mpegts" | "fmp4";
 
 type HlsSegmentPayload = {
@@ -18,6 +20,7 @@ type HlsSegmentPayload = {
 type HlsReadOptions = {
   signal?: AbortSignal;
   segmentQuery?: string | null;
+  encodeDirectory?: string | null;
 };
 
 export type HlsPlaylistSegmentEntry = {
@@ -105,28 +108,38 @@ function canPruneSegment(segment: string) {
   return extension === ".ts" || extension === ".m4s" || extension === ".cmfv";
 }
 
-function segmentLoadKey(playlistPath: string, segment: string) {
-  return `${path.resolve(playlistPath)}\0${segment}`;
+function segmentLoadKey(playlistPath: string, segment: string, encodeDirectory?: string | null) {
+  return `${encodeDirectory ?? ""}\0${path.resolve(playlistPath)}\0${segment}`;
+}
+
+function resolveSegmentPath(playlistPath: string, segment: string, encodeDirectory?: string | null) {
+  const candidates = encodeDirectory ? [encodeDirectory, path.dirname(playlistPath)] : [path.dirname(playlistPath)];
+  return candidates.map((directory) => path.join(directory, segment));
 }
 
 async function loadHlsSegmentPayload(
   playlistPath: string,
   segment: string,
   signal?: AbortSignal,
+  encodeDirectory?: string | null,
 ): Promise<HlsSegmentPayload> {
-  const segmentPath = path.join(path.dirname(playlistPath), segment);
-  let details;
-  try {
-    details = await stat(segmentPath);
-  } catch {
-    await waitForMaybeDelayedRead(segmentReadDelayForTests, signal);
-    return {
-      body: new Uint8Array(),
-      mimeType: "text/plain; charset=utf-8",
-      size: 0,
-    };
+  const segmentPaths = resolveSegmentPath(playlistPath, segment, encodeDirectory);
+  let segmentPath: string | null = null;
+  let segmentSize = 0;
+  for (const candidate of segmentPaths) {
+    try {
+      const details = await stat(candidate);
+      if (details.isFile()) {
+        segmentPath = candidate;
+        segmentSize = details.size;
+        break;
+      }
+    } catch {
+      // try next path
+    }
   }
-  if (!details.isFile()) {
+  if (!segmentPath) {
+    await waitForMaybeDelayedRead(segmentReadDelayForTests, signal);
     return {
       body: new Uint8Array(),
       mimeType: "text/plain; charset=utf-8",
@@ -140,7 +153,7 @@ async function loadHlsSegmentPayload(
   return {
     body,
     mimeType: hlsSegmentMimeType(segment),
-    size: details.size,
+    size: segmentSize,
   };
 }
 
@@ -205,15 +218,20 @@ function waitForPendingSegmentLoad(pending: PendingSegmentLoad, signal?: AbortSi
   });
 }
 
-async function coalescedHlsSegmentPayload(playlistPath: string, segment: string, signal?: AbortSignal) {
-  const key = segmentLoadKey(playlistPath, segment);
+async function coalescedHlsSegmentPayload(
+  playlistPath: string,
+  segment: string,
+  signal?: AbortSignal,
+  encodeDirectory?: string | null,
+) {
+  const key = segmentLoadKey(playlistPath, segment, encodeDirectory);
   const existing = pendingSegmentLoads.get(key);
   if (existing) return waitForPendingSegmentLoad(existing, signal);
 
   const controller = new AbortController();
   const pending: PendingSegmentLoad = {
     controller,
-    promise: loadHlsSegmentPayload(playlistPath, segment, controller.signal),
+    promise: loadHlsSegmentPayload(playlistPath, segment, controller.signal, encodeDirectory),
     waiters: new Set(),
   };
   pendingSegmentLoads.set(key, pending);
@@ -537,7 +555,7 @@ export async function hlsSegmentResponse(playlistPath: string, segment: string, 
     return new Response("Invalid segment.", { status: 400 });
   }
 
-  const payload = await coalescedHlsSegmentPayload(playlistPath, segment, options.signal);
+  const payload = await coalescedHlsSegmentPayload(playlistPath, segment, options.signal, options.encodeDirectory);
   if (!payload) return new Response("Not found.", { status: 404 });
   if (payload.size <= 0) return new Response("Not found.", { status: 404 });
 
@@ -555,35 +573,39 @@ export async function hlsSegmentHeadResponse(playlistPath: string, segment: stri
     return new Response(null, { status: 400 });
   }
 
-  const segmentPath = path.join(path.dirname(playlistPath), segment);
-  let details;
-  try {
-    details = await stat(segmentPath);
-  } catch {
-    return new Response(null, { status: 404 });
+  const segmentPaths = resolveSegmentPath(playlistPath, segment, options.encodeDirectory);
+  for (const candidate of segmentPaths) {
+    try {
+      const details = await stat(candidate);
+      if (details.isFile() && details.size > 0) {
+        await waitForMaybeDelayedRead(headResponseDelayForTests, options.signal);
+        return new Response(null, {
+          headers: {
+            "content-type": hlsSegmentMimeType(segment),
+            "content-length": String(details.size),
+            "cache-control": "no-store",
+          },
+        });
+      }
+    } catch {
+      // try next path
+    }
   }
-  if (!details.isFile() || details.size <= 0) {
-    return new Response(null, { status: 404 });
-  }
-
-  await waitForMaybeDelayedRead(headResponseDelayForTests, options.signal);
-  return new Response(null, {
-    headers: {
-      "content-type": hlsSegmentMimeType(segment),
-      "content-length": String(details.size),
-      "cache-control": "no-store",
-    },
-  });
+  return new Response(null, { status: 404 });
 }
 
-export async function hlsSegmentFileExists(playlistPath: string, segment: string) {
+export async function hlsSegmentFileExists(playlistPath: string, segment: string, encodeDirectory?: string) {
   if (!isSafeHlsSegmentName(segment)) return false;
-  try {
-    const details = await stat(path.join(path.dirname(playlistPath), segment));
-    return details.isFile() && details.size > 0;
-  } catch {
-    return false;
+  const directories = encodeDirectory ? [encodeDirectory, path.dirname(playlistPath)] : [path.dirname(playlistPath)];
+  for (const directory of directories) {
+    try {
+      const details = await stat(path.join(directory, segment));
+      if (details.isFile() && details.size > 0) return true;
+    } catch {
+      // try next directory
+    }
   }
+  return false;
 }
 
 export async function pruneHlsSegmentsBehind(

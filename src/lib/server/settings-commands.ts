@@ -14,6 +14,7 @@ import {
   setTranscodingEnabled,
 } from "./transcoding/policy";
 import { setPlaybackSessionArtifactMaxBytes } from "./transcoding/sessions";
+import { setEncodeAheadSegmentCount, setPlaybackCacheTtlMs } from "./transcoding/cache";
 
 type InputSource = Record<string, unknown> | FormData;
 
@@ -62,6 +63,14 @@ export async function updateTranscodingSettings(input: InputSource) {
   await setTranscodeQualityPreset(transcodeQualityPreset);
   if (hasInput(input, "playbackSessionArtifactMaxBytes")) {
     await setPlaybackSessionArtifactMaxBytes(stringInput(input, "playbackSessionArtifactMaxBytes"));
+  }
+  if (hasInput(input, "encodeAheadSegmentCount")) {
+    const parsed = Number.parseInt(stringInput(input, "encodeAheadSegmentCount"), 10);
+    if (Number.isFinite(parsed) && parsed > 0) await setEncodeAheadSegmentCount(parsed);
+  }
+  if (hasInput(input, "playbackCacheTtlHours")) {
+    const parsed = Number.parseFloat(stringInput(input, "playbackCacheTtlHours"));
+    if (Number.isFinite(parsed) && parsed > 0) await setPlaybackCacheTtlMs(Math.round(parsed * 60 * 60 * 1000));
   }
 }
 

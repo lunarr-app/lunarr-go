@@ -11,7 +11,7 @@ Direct play stays the preferred path when the selected file is already compatibl
 
 - Install dependencies with Bun so the pinned `node-av` package is present for probing.
 - Provide an executable FFmpeg binary. Lunarr resolves it from `FFMPEG_PATH`, system `ffmpeg` on `PATH`, or the bundled `node-av` FFmpeg path as a fallback.
-- Keep temporary playback-session artifact storage on fast local disk. Generated HLS artifacts live under `playback-sessions/<sessionId>/` in the configured Lunarr data directory.
+- Keep temporary playback artifact storage on fast local disk. Per-session virtual playlists live under `playback-sessions/<sessionId>/`, and shared encoded segments live under `playback-cache/<cacheKey>/` in the configured Lunarr data directory.
 - Keep remote libraries (SFTP and WebDAV) seekable by preserving remote file size and duration metadata. Non-direct remote playback streams through Lunarr's private localhost range proxy into FFmpeg, not by exposing remote credentials to FFmpeg.
 
 The Docker runtime image installs system FFmpeg and runs the baseline FFmpeg playback verifier plus the NodeAV probe verifier during image build.
@@ -30,9 +30,11 @@ Request-driven HLS defaults to MPEG-TS segments for broad compatibility. `LUNARR
 
 ## Request-Driven HLS
 
-Lunarr publishes a virtual VOD playlist for duration-known HLS playback and generates requested segments on demand. FFmpeg starts at the requested segment timestamp and writes directly into the session artifact directory. The FFmpeg HLS `start_number` matches Lunarr's virtual segment names so large seeks request and receive the expected segment number.
+Lunarr publishes a virtual VOD playlist for duration-known HLS playback and generates requested segments on demand. FFmpeg starts at the requested segment timestamp and writes encoded segments into the shared cache directory for the file's encode policy. The FFmpeg HLS `start_number` matches Lunarr's virtual segment names so large seeks request and receive the expected segment number.
 
-Active FFmpeg streams are reused for adjacent same-session segment requests when the source, mode, output directory, segment size, hardware settings, quality settings, and segment format still match. Large seeks cancel stale request-driven work and replace it with a new FFmpeg stream at the target timestamp.
+Each FFmpeg invocation is bounded to an encode-ahead window (default 4 segments) using `-t` rather than running to end-of-file. Active FFmpeg streams are reused only within that window for adjacent same-session segment requests when the source, mode, output directory, segment size, hardware settings, quality settings, and segment format still match. Large seeks cancel stale request-driven work and replace it with a new bounded FFmpeg stream at the target timestamp.
+
+Cache entries are keyed by media file identity (id, size, mtime), encode mode, and transcode policy hash. Multiple sessions reference the same cache entry through reference counting. Segment payloads are served from cache when present, and FFmpeg runs only for missing segments within the encode-ahead horizon.
 
 Segment requests are serialized per playback session. Duplicate in-flight requests coalesce, and queued generation rechecks whether the requested segment appeared before starting more backend work. This keeps normal forward playback from spawning duplicate encoders for the same session.
 
@@ -52,7 +54,7 @@ HLS playlist and segment routes serve only authorized sessions owned by the sign
 
 Playlist and segment `HEAD` routes return metadata without refreshing playback heartbeat, reading bodies, or triggering segment generation. Segment `GET` records the consumed segment only after the final state check succeeds.
 
-Temporary artifacts are cleaned up for failed, cancelled, completed, orphaned, abandoned, and over-limit playback sessions. Active HLS sessions keep recently consumed artifacts alive while the player is still using them.
+Temporary session playlists and shared cache entries are cleaned up for failed, cancelled, completed, orphaned, abandoned, and over-limit playback storage. Active HLS sessions keep referenced cache entries alive while players are still using them. Cancelled sessions release cache references immediately, and filesystem cleanup is deferred to the maintenance job.
 
 ## Audio And Subtitles
 

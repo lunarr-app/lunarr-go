@@ -67,7 +67,7 @@ describe("refreshTvShowMetadata", () => {
   });
 
   test("returns missing for unknown shows", async () => {
-    await expect(refreshTvShowMetadataResult("missing")).resolves.toEqual({
+    expect(await refreshTvShowMetadataResult("missing")).toEqual({
       status: "missing",
       mediaItemId: null,
     });
@@ -91,7 +91,7 @@ describe("refreshTvShowMetadata", () => {
       })
       .execute();
 
-    await expect(refreshTvShowMetadataResult("show-empty")).resolves.toEqual({
+    expect(await refreshTvShowMetadataResult("show-empty")).toEqual({
       status: "no_seasons",
       mediaItemId: "show-empty",
     });
@@ -184,11 +184,11 @@ describe("refreshTvShowMetadata", () => {
       episodes: [],
     };
 
-    await expect(
-      refreshTvShowMetadataResult("show-local", {
+    expect(
+      await refreshTvShowMetadataResult("show-local", {
         metadataMatcher: async () => metadata,
       }),
-    ).resolves.toEqual({
+    ).toEqual({
       status: "matched",
       mediaItemId: "show-provider",
       matchedSeasons: 1,
@@ -196,12 +196,14 @@ describe("refreshTvShowMetadata", () => {
       addedEpisodes: 0,
     });
 
-    await expect(
-      db.selectFrom("media_item").select("id").where("id", "=", "show-local").executeTakeFirst(),
-    ).resolves.toBeUndefined();
-    await expect(
-      db.selectFrom("media_item").select("id").where("id", "=", "show-provider").executeTakeFirst(),
-    ).resolves.toMatchObject({ id: "show-provider" });
+    expect(
+      await db.selectFrom("media_item").select("id").where("id", "=", "show-local").executeTakeFirst(),
+    ).toBeUndefined();
+    expect(
+      await db.selectFrom("media_item").select("id").where("id", "=", "show-provider").executeTakeFirst(),
+    ).toMatchObject({
+      id: "show-provider",
+    });
   });
 
   test("refreshes all seasons for a show", async () => {
@@ -261,7 +263,7 @@ describe("refreshTvShowMetadata", () => {
       });
     }) as typeof fetch;
 
-    await expect(refreshTvShowMetadataResult("show-1")).resolves.toEqual({
+    expect(await refreshTvShowMetadataResult("show-1")).toEqual({
       status: "matched",
       mediaItemId: "show-1",
       matchedSeasons: 1,

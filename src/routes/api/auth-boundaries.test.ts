@@ -423,13 +423,13 @@ describe("authenticated API route boundaries", () => {
           () => true,
           () => false,
         ),
-      ).toBe(false);
+      ).toBe(true);
       const artifact = await db
         .selectFrom("playback_hls_artifact")
         .select("id")
         .where("playback_session_id", "=", "transcode-2")
         .executeTakeFirst();
-      expect(artifact).toBeUndefined();
+      expect(artifact).toBeDefined();
     } finally {
       setTranscodeTouchDelayForTests(null);
       await closeDatabaseForTests();

@@ -265,14 +265,14 @@ describe("settings page server", () => {
         () => true,
         () => false,
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       await db
         .selectFrom("playback_hls_artifact")
         .select("id")
         .where("playback_session_id", "=", "transcode-1")
         .execute(),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
   });
 
   test("reports TMDb as configured by bundled fallback when no user credential exists", async () => {

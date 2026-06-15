@@ -4,8 +4,8 @@ import { detectContainerFromMagic, resolveNodeAvInputFormat } from "./container-
 import type { Readable } from "node:stream";
 
 export const REMOTE_READ_CANCELLED_MESSAGE = "Remote media read was cancelled.";
-const SEEKABLE_READ_AHEAD_BYTES = 2 * 1024 * 1024;
-const SEEKABLE_MAX_BUFFER_BYTES = 4 * 1024 * 1024;
+const SEEKABLE_READ_AHEAD_BYTES = 512 * 1024;
+const SEEKABLE_MAX_BUFFER_BYTES = 1024 * 1024;
 const MAGIC_SNIFF_BYTES = 64;
 
 export type SeekableStorageFile = {

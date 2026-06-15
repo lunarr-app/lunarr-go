@@ -397,13 +397,13 @@ describe("profile page server", () => {
     );
 
     expect(
-      auth.api.signInEmail({
+      await auth.api.signInEmail({
         body: {
           email: "amina@example.com",
           password: "new-password",
         },
       }),
-    ).resolves.toBeDefined();
+    ).toBeDefined();
   });
 
   test("rejects mismatched new passwords", async () => {

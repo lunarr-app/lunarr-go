@@ -15,6 +15,8 @@
   let hardwareAcceleration = $state("off");
   let hardwareAccelerationRequired = $state(false);
   let transcodeQualityPreset = $state("auto");
+  let encodeAheadSegmentCount = $state(4);
+  let playbackCacheTtlHours = $state(24);
 
   const metadataChanged = $derived(
     tmdbAccessToken.trim().length > 0 || tmdbApiKey.trim().length > 0 || clearTmdbAccessToken || clearTmdbApiKey,
@@ -26,6 +28,8 @@
     hardwareAcceleration = data.transcodePolicy.hardwareAcceleration;
     hardwareAccelerationRequired = data.transcodePolicy.hardwareAccelerationRequired;
     transcodeQualityPreset = data.transcodePolicy.transcodeQualityPreset;
+    encodeAheadSegmentCount = data.encodeAheadSegmentCount;
+    playbackCacheTtlHours = data.playbackCacheTtlHours;
   });
 
   function submitRegistration() {
@@ -143,6 +147,30 @@
           </select>
         </label>
 
+        <label>
+          Encode-ahead segments
+          <input
+            type="number"
+            name="encodeAheadSegmentCount"
+            min="1"
+            max="16"
+            bind:value={encodeAheadSegmentCount}
+            onchange={submitTranscoding}
+          />
+        </label>
+
+        <label>
+          Shared HLS cache TTL (hours)
+          <input
+            type="number"
+            name="playbackCacheTtlHours"
+            min="1"
+            step="1"
+            bind:value={playbackCacheTtlHours}
+            onchange={submitTranscoding}
+          />
+        </label>
+
         <label class="check subdued">
           <input
             type="checkbox"
@@ -151,15 +179,16 @@
             disabled={hardwareAcceleration === "off"}
             onchange={submitTranscoding}
           />
-          <span>Require hardware acceleration; fail if unavailable</span>
+          <span>Require hardware acceleration, fail if not available.</span>
         </label>
 
         <p class="muted detail-copy">
           Direct play stays first. Transcoding uses temporary FFmpeg HLS sessions when the browser cannot play a file
-          directly or the user prefers HLS. HLS quality controls FFmpeg transcode resolution and bitrate; Auto keeps the
-          current server default. Temporary HLS files are stored under LUNARR_DATA_DIR/playback-sessions and cleaned
-          automatically. Hardware acceleration is best-effort unless required; when required, playback fails if FFmpeg
-          cannot use the selected device or H.264 encoder.
+          directly or the user prefers HLS. HLS quality controls FFmpeg transcode resolution and bitrate, and Auto keeps
+          the current server default. Encoded HLS segments are cached under LUNARR_DATA_DIR/playback-cache and reused
+          across sessions, and per-session playlists live under playback-sessions. Encode-ahead limits how many segments
+          FFmpeg may generate beyond the current playhead. Hardware acceleration is best-effort unless required, and
+          playback fails if FFmpeg cannot use the selected device or H.264 encoder.
         </p>
 
         {#if form?.transcodingError}
@@ -365,9 +394,16 @@
       <div class="ops-stat-card">
         <span>Active scans</span><strong>{data.status.activeScanJobs}</strong>
       </div>
+      <div class="ops-stat-card">
+        <span>HLS cache</span><strong>{formatGibibytes(data.status.playbackCacheBytes)}</strong>
+      </div>
     </div>
 
     <dl>
+      <div>
+        <dt>HLS cache entries</dt>
+        <dd>{data.status.playbackCacheEntries} ({data.status.playbackCacheActiveRefs} active refs)</dd>
+      </div>
       <div>
         <dt>Version</dt>
         <dd>{data.version}</dd>

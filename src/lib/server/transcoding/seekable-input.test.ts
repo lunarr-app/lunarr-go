@@ -54,14 +54,20 @@ describe("sniffContainerFromStorage", () => {
     controller.abort();
     const head = Buffer.from("000000206674797069736f6d00000200", "hex");
 
-    await expect(
-      sniffContainerFromStorage({
+    let caught: unknown;
+    try {
+      await sniffContainerFromStorage({
         filePath: "shows/example.mkv",
         storage: storageFromHead(head),
         sizeBytes: head.length,
         setupSignal: controller.signal,
-      }),
-    ).rejects.toThrow(REMOTE_READ_CANCELLED_MESSAGE);
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toBe(REMOTE_READ_CANCELLED_MESSAGE);
   });
 
   test("falls back when sniff read fails for non-cancel reasons", async () => {
@@ -84,12 +90,12 @@ describe("sniffContainerFromStorage", () => {
       async close() {},
     };
 
-    await expect(
-      sniffContainerFromStorage({
+    expect(
+      await sniffContainerFromStorage({
         filePath: "shows/example.mkv",
         storage,
         sizeBytes: 64,
       }),
-    ).resolves.toEqual({ container: null, head: null });
+    ).toEqual({ container: null, head: null });
   });
 });

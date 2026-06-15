@@ -38,12 +38,7 @@ import {
   setTranscodePolicyRecheckDelayForTests,
   setTranscodeStorageFactoryForTests,
 } from "../transcoding/manager";
-import type {
-  HlsSegmentWindowGeneration,
-  HlsSegmentWindowTranscodeInput,
-  HlsTranscodeInput,
-  RunningTranscode,
-} from "../transcoding/backend";
+import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "../transcoding/backend";
 
 async function writeRequestedWindowSegment(input: HlsSegmentWindowTranscodeInput, body = "generated") {
   const segment = input.segments[0];
@@ -488,13 +483,8 @@ describe("getPlaybackDecision", () => {
 
   test("explicit force transcode starts HLS for a direct-play compatible file", async () => {
     await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "file-b").execute();
-    let linearStartCount = 0;
     let segmentGenerationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -516,7 +506,6 @@ describe("getPlaybackDecision", () => {
     });
     expect(decision?.playbackSessionId).toBeTruthy();
     expect(decision?.streamUrl).toBe(`/media/playback-sessions/${decision?.playbackSessionId}/master.m3u8`);
-    expect(linearStartCount).toBe(0);
     expect(segmentGenerationCount).toBe(1);
   });
 
@@ -590,9 +579,6 @@ describe("getPlaybackDecision", () => {
   test("uses client HEVC support to direct play compatible MP4 files", async () => {
     let segmentGenerationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -622,9 +608,6 @@ describe("getPlaybackDecision", () => {
   test("uses client AV1 and WebM support for direct play decisions", async () => {
     let segmentGenerationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -657,9 +640,6 @@ describe("getPlaybackDecision", () => {
     process.env.LUNARR_HLS_SEGMENT_FORMAT = "auto";
     const segmentFormats: Array<string | undefined> = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentFormats.push(input.hlsSegmentFormat);
         return completedWindowGeneration(input);
@@ -703,9 +683,6 @@ describe("getPlaybackDecision", () => {
       format: HlsSegmentWindowTranscodeInput["hlsSegmentFormat"];
     }> = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         generations.push({
           mode: input.mode,
@@ -744,9 +721,6 @@ describe("getPlaybackDecision", () => {
 
   test("returns clear unavailable playback when request-driven HLS is not available", async () => {
     setTranscodeBackendForTests({
-      async startCompatibilityHls() {
-        throw new Error("FFmpeg test backend unavailable.");
-      },
       async cancel() {
         return;
       },
@@ -780,7 +754,7 @@ describe("getPlaybackDecision", () => {
     });
   });
 
-  test("does not start linear HLS for a missing local source file", async () => {
+  test("fails playback for a missing local source file without starting HLS", async () => {
     await db
       .updateTable("media_file")
       .set({
@@ -791,12 +765,7 @@ describe("getPlaybackDecision", () => {
       .execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
-    let linearStartCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        throw new Error("linear HLS should not start");
-      },
       async cancel() {
         return;
       },
@@ -811,8 +780,6 @@ describe("getPlaybackDecision", () => {
       streamStartSeconds: 0,
       message: "Media file is no longer available.",
     });
-    expect(linearStartCount).toBe(0);
-
     const sessionId = decision?.playbackSessionId;
     if (!sessionId) throw new Error("Expected failed playback session id.");
     const job = await db
@@ -848,15 +815,10 @@ describe("getPlaybackDecision", () => {
     expect(await db.selectFrom("playback_session").select("id").execute()).toEqual([]);
   });
 
-  test("does not use linear compatibility HLS for duration-unknown local media by default", async () => {
+  test("does not start HLS for duration-unknown local media by default", async () => {
     await db.updateTable("media_file").set({ duration_seconds: null }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
-    let linearStartCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        throw new Error("linear HLS should not start");
-      },
       async cancel() {
         return;
       },
@@ -869,8 +831,6 @@ describe("getPlaybackDecision", () => {
       streamUrl: null,
       message: "Request-driven HLS requires known media duration.",
     });
-    expect(linearStartCount).toBe(0);
-
     const job = await db
       .selectFrom("playback_session")
       .select(["status", "pipeline", "error_message"])
@@ -891,10 +851,6 @@ describe("getPlaybackDecision", () => {
     const requestedWindows: string[][] = [];
     const windowTimelineStarts: number[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        startCalled = true;
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         requestedWindows.push(input.segments.map((segment) => segment.segment));
         windowTimelineStarts.push(input.segments[0]?.segmentStartSeconds ?? -1);
@@ -947,9 +903,6 @@ describe("getPlaybackDecision", () => {
 
     let cancelledSessionId: string | null = null;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         cancelledSessionId = input.sessionId;
         expect(await cancelPlaybackSession(input.sessionId, "Cancelled during initial warmup.")).toBe("cancelled");
@@ -984,9 +937,6 @@ describe("getPlaybackDecision", () => {
   test("falls back to transcode when request-driven remux generation fails", async () => {
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode ?? "transcode");
         if (input.mode === "remux") throw new Error("remux segment failed");
@@ -1024,15 +974,14 @@ describe("getPlaybackDecision", () => {
     });
   });
 
-  test("does not reuse ready request-driven HLS sessions across playback decisions", async () => {
+  test("reuses encoded HLS cache across playback decisions", async () => {
     await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
+    let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
+        generationCount += 1;
         return completedWindowGeneration(input);
       },
       async cancel() {
@@ -1061,7 +1010,7 @@ describe("getPlaybackDecision", () => {
       throw new Error("Expected both request-driven playback loads to create sessions.");
     }
     expect(secondSessionId).not.toBe(firstSessionId);
-    expect(second?.streamUrl).not.toBe(first?.streamUrl);
+    expect(generationCount).toBe(1);
 
     const sessions = await db
       .selectFrom("playback_session")
@@ -1098,13 +1047,8 @@ describe("getPlaybackDecision", () => {
       .execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
-    let linearStartCount = 0;
     let segmentGenerationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -1123,7 +1067,6 @@ describe("getPlaybackDecision", () => {
       streamStartSeconds: 20,
       message: "Media file is no longer available.",
     });
-    expect(linearStartCount).toBe(0);
     expect(segmentGenerationCount).toBe(0);
 
     const sessionId = decision?.playbackSessionId;
@@ -1146,9 +1089,6 @@ describe("getPlaybackDecision", () => {
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async cancel() {
         return;
       },
@@ -1179,9 +1119,6 @@ describe("getPlaybackDecision", () => {
 
     let segmentGenerationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -1211,16 +1148,11 @@ describe("getPlaybackDecision", () => {
     expect(sessions).toEqual([{ id: failedSessionId, status: "failed" }]);
   });
 
-  test("does not fall back to linear HLS when request-driven support is missing for known-duration media", async () => {
+  test("fails when request-driven HLS support is missing for known-duration media", async () => {
     await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");
 
-    let linearStartCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        throw new Error("linear HLS should not start");
-      },
       async cancel() {
         return;
       },
@@ -1235,8 +1167,6 @@ describe("getPlaybackDecision", () => {
       streamStartSeconds: 20,
       message: "Request-driven HLS segment generation is not available.",
     });
-    expect(linearStartCount).toBe(0);
-
     const sessionId = decision?.playbackSessionId;
     if (!sessionId) throw new Error("Expected failed playback session id.");
     const session = await db
@@ -1267,10 +1197,6 @@ describe("getPlaybackDecision", () => {
     let startCount = 0;
     let segmentGenerationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        startCount += 1;
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -1316,9 +1242,6 @@ describe("getPlaybackDecision", () => {
       hardwareAccelerationRequired: boolean;
     }> = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       validateHlsSegmentGenerationPolicy(input) {
         validatedPolicies.push({
           hardwareAcceleration: input.hardwareAcceleration,
@@ -1372,9 +1295,6 @@ describe("getPlaybackDecision", () => {
     });
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1425,9 +1345,6 @@ describe("getPlaybackDecision", () => {
     });
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1479,9 +1396,6 @@ describe("getPlaybackDecision", () => {
       });
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("linear HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1526,18 +1440,6 @@ describe("getPlaybackDecision", () => {
       resolveCompletion = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        await mkdir(input.artifactDirectory, { recursive: true });
-        await writeFile(path.join(input.artifactDirectory, "segment-00001.ts"), "partial");
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion,
-          async cancel() {
-            cancelledSessionId = input.sessionId;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1568,23 +1470,13 @@ describe("getPlaybackDecision", () => {
     });
     expect(
       await db.selectFrom("playback_hls_artifact").select("id").where("playback_session_id", "=", sessionId).execute(),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
   });
 
   test("bulk cancellation stops queued and running playback sessions", async () => {
     await setUserPlaybackPreference("user-1", "prefer_transcode");
     const cancelledSessionIds: string[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            cancelledSessionIds.push(input.sessionId);
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1635,18 +1527,6 @@ describe("getPlaybackDecision", () => {
     await setUserPlaybackPreference("user-1", "prefer_transcode");
     let cancelledSessionId: string | null = null;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        await mkdir(input.artifactDirectory, { recursive: true });
-        await writeFile(path.join(input.artifactDirectory, "segment-00001.ts"), "partial");
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            cancelledSessionId = input.sessionId;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1684,32 +1564,19 @@ describe("getPlaybackDecision", () => {
     });
     expect(
       await db.selectFrom("playback_hls_artifact").select("id").where("playback_session_id", "=", sessionId).execute(),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
     expect(
       await stat(artifactDir).then(
         () => true,
         () => false,
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test("keeps ready HLS playback alive while heartbeat continues during buffering", async () => {
     await setUserPlaybackPreference("user-1", "prefer_transcode");
     let cancelledSessionId: string | null = null;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        await mkdir(input.artifactDirectory, { recursive: true });
-        await writeFile(path.join(input.artifactDirectory, "master.m3u8"), "#EXTM3U\n");
-        await writeFile(path.join(input.artifactDirectory, "segment-00001.ts"), "partial");
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            cancelledSessionId = input.sessionId;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1764,7 +1631,7 @@ describe("getPlaybackDecision", () => {
         () => true,
         () => false,
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test("prunes active HLS segments behind the consumed playback window", async () => {
@@ -1844,16 +1711,6 @@ describe("getPlaybackDecision", () => {
       .execute();
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1906,16 +1763,6 @@ describe("getPlaybackDecision", () => {
     await updateTranscodeSessionStatus(sessionId, "completed");
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -1954,16 +1801,6 @@ describe("getPlaybackDecision", () => {
     await updateTranscodeSessionPipeline(oldSessionId, "request_driven");
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -2010,16 +1847,6 @@ describe("getPlaybackDecision", () => {
     await updateTranscodeSessionPipeline(oldSessionId, "request_driven");
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         if (input.sessionId !== oldSessionId) {
           throw new Error("replacement startup failed");
@@ -2103,16 +1930,6 @@ describe("getPlaybackDecision", () => {
     await updateTranscodeSessionPipeline(user2SessionId, "request_driven");
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -2172,16 +1989,6 @@ describe("getPlaybackDecision", () => {
     await updateTranscodeSessionStatus(oldSessionId, "completed");
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -2224,16 +2031,6 @@ describe("getPlaybackDecision", () => {
       .execute();
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -2303,9 +2100,6 @@ describe("getPlaybackDecision", () => {
 
     setReadableSftpStorageForTests();
     setTranscodeBackendForTests({
-      async startCompatibilityHls() {
-        throw new Error("linear HLS should not start for duration-known SFTP media");
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -2336,7 +2130,7 @@ describe("getPlaybackDecision", () => {
     });
   });
 
-  test("uses HLS instead of direct streaming for SFTP media in automatic mode", async () => {
+  test("direct streams compatible SFTP media in automatic mode", async () => {
     const now = new Date().toISOString();
     await db
       .insertInto("library")
@@ -2371,34 +2165,21 @@ describe("getPlaybackDecision", () => {
       })
       .execute();
 
-    setReadableSftpStorageForTests();
-    setTranscodeBackendForTests({
-      async startCompatibilityHls() {
-        throw new Error("linear HLS should not start for SFTP auto playback");
-      },
-      async generateHlsSegmentWindow(input) {
-        return completedWindowGeneration(input);
-      },
-      async cancel() {
-        return;
-      },
-    });
-
     const decision = await getPlaybackDecision("movie-1", "sftp-auto-file", "user-1");
-    const sessionId = decision?.playbackSessionId;
     expect(decision).toMatchObject({
-      mode: "remux",
+      mode: "direct",
       status: "ready",
       modeDecision: {
-        mode: "remux",
-        reason: "container_unsupported",
+        mode: "direct",
+        reason: "direct_supported",
       },
-      streamUrl: sessionId ? `/media/playback-sessions/${sessionId}/master.m3u8` : null,
+      playbackSessionId: null,
+      streamUrl: "/media/files/sftp-auto-file/stream",
       message: null,
     });
   });
 
-  test("uses HLS instead of direct streaming for WebDAV media in automatic mode", async () => {
+  test("direct streams compatible WebDAV media in automatic mode", async () => {
     const now = new Date().toISOString();
     await db
       .insertInto("library")
@@ -2433,34 +2214,21 @@ describe("getPlaybackDecision", () => {
       })
       .execute();
 
-    setReadableSftpStorageForTests();
-    setTranscodeBackendForTests({
-      async startCompatibilityHls() {
-        throw new Error("linear HLS should not start for WebDAV auto playback");
-      },
-      async generateHlsSegmentWindow(input) {
-        return completedWindowGeneration(input);
-      },
-      async cancel() {
-        return;
-      },
-    });
-
     const decision = await getPlaybackDecision("movie-1", "webdav-auto-file", "user-1");
-    const sessionId = decision?.playbackSessionId;
     expect(decision).toMatchObject({
-      mode: "remux",
+      mode: "direct",
       status: "ready",
       modeDecision: {
-        mode: "remux",
-        reason: "container_unsupported",
+        mode: "direct",
+        reason: "direct_supported",
       },
-      streamUrl: sessionId ? `/media/playback-sessions/${sessionId}/master.m3u8` : null,
+      playbackSessionId: null,
+      streamUrl: "/media/files/webdav-auto-file/stream",
       message: null,
     });
   });
 
-  test("transcodes SFTP direct-compatible media when HLS remux would be unsafe", async () => {
+  test("direct streams compatible SFTP HEVC media in automatic mode", async () => {
     const now = new Date().toISOString();
     await db
       .insertInto("library")
@@ -2501,9 +2269,6 @@ describe("getPlaybackDecision", () => {
     }> = [];
     setReadableSftpStorageForTests();
     setTranscodeBackendForTests({
-      async startCompatibilityHls() {
-        throw new Error("linear HLS should not start for SFTP auto playback");
-      },
       async generateHlsSegmentWindow(input) {
         generations.push({
           mode: input.mode,
@@ -2519,15 +2284,15 @@ describe("getPlaybackDecision", () => {
     const decision = await getPlaybackDecision("movie-1", "sftp-auto-hevc-file", "user-1", 0, {
       clientCapabilities: { hevc: true },
     });
-    const sessionId = decision?.playbackSessionId;
     expect(decision).toMatchObject({
-      mode: "transcode",
+      mode: "direct",
       status: "ready",
-      modeDecision: { mode: "transcode", reason: "direct_unsupported" },
-      streamUrl: sessionId ? `/media/playback-sessions/${sessionId}/master.m3u8` : null,
+      modeDecision: { mode: "direct", reason: "direct_supported" },
+      streamUrl: "/media/files/sftp-auto-hevc-file/stream",
+      playbackSessionId: null,
       message: null,
     });
-    expect(generations).toEqual([{ mode: "transcode", format: "mpegts" }]);
+    expect(generations).toEqual([]);
   });
 
   test("does not stage seekable SFTP media when request-driven backend support is missing", async () => {
@@ -2565,12 +2330,7 @@ describe("getPlaybackDecision", () => {
       })
       .execute();
 
-    let linearStartCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        throw new Error("linear HLS should not start for seekable SFTP media");
-      },
       async cancel() {
         return;
       },
@@ -2586,8 +2346,6 @@ describe("getPlaybackDecision", () => {
       streamStartSeconds: 24,
       message: "Request-driven HLS segment generation is not available.",
     });
-    expect(linearStartCount).toBe(0);
-
     const sessionId = decision?.playbackSessionId;
     if (!sessionId) throw new Error("Expected failed SFTP playback session id.");
     const session = await db
@@ -2670,14 +2428,7 @@ describe("getPlaybackDecision", () => {
     });
 
     let segmentGenerationCount = 0;
-    let linearStartCount = 0;
-    const startedInputs: HlsTranscodeInput[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        startedInputs.push(input);
-        throw new Error("compatibility HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -2700,8 +2451,6 @@ describe("getPlaybackDecision", () => {
     });
     expect(storageOpened).toBe(false);
     expect(segmentGenerationCount).toBe(0);
-    expect(linearStartCount).toBe(0);
-    expect(startedInputs).toEqual([]);
     const sessionId = decision?.playbackSessionId;
     if (!sessionId) throw new Error("Expected failed SFTP playback session id.");
     const session = await db
@@ -2775,14 +2524,7 @@ describe("getPlaybackDecision", () => {
     });
 
     let segmentGenerationCount = 0;
-    let linearStartCount = 0;
-    const startedInputs: HlsTranscodeInput[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        startedInputs.push(input);
-        throw new Error("compatibility HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -2805,8 +2547,6 @@ describe("getPlaybackDecision", () => {
     });
     expect(storageOpened).toBe(false);
     expect(segmentGenerationCount).toBe(0);
-    expect(linearStartCount).toBe(0);
-    expect(startedInputs).toEqual([]);
     const sessionId = decision?.playbackSessionId;
     if (!sessionId) throw new Error("Expected failed SFTP playback session id.");
     const session = await db
@@ -2880,12 +2620,7 @@ describe("getPlaybackDecision", () => {
     });
 
     let segmentGenerationCount = 0;
-    let linearStartCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        linearStartCount += 1;
-        throw new Error("compatibility HLS should not start");
-      },
       async generateHlsSegmentWindow(input) {
         segmentGenerationCount += 1;
         return completedWindowGeneration(input);
@@ -2906,7 +2641,6 @@ describe("getPlaybackDecision", () => {
     });
     expect(storageOpened).toBe(false);
     expect(segmentGenerationCount).toBe(0);
-    expect(linearStartCount).toBe(0);
     const sessionId = decision?.playbackSessionId;
     expect(typeof sessionId).toBe("string");
     if (typeof sessionId !== "string") {

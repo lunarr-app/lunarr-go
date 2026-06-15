@@ -6,6 +6,7 @@ import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { createApiKey, listApiKeys, apiKeyHttpStatus, ApiKeyError } from "./api-keys";
 import { createApiKeyForUser, resetAuthForTests, sessionHeadersFor } from "./test/setup";
+import { expectRejectsToThrow } from "$lib/test/async-expect";
 
 describe("API keys", () => {
   let tempDir: string;
@@ -57,7 +58,7 @@ describe("API keys", () => {
   });
 
   test("requires session headers to create API keys", async () => {
-    expect(createApiKey({ headers: new Headers() })).rejects.toThrow("Unauthorized");
+    await expectRejectsToThrow(createApiKey({ headers: new Headers() }), "Unauthorized");
   });
 
   test("maps Better Auth 401 status to HTTP 401 on mapped errors", async () => {

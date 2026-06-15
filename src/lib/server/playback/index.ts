@@ -9,7 +9,7 @@ import {
 import { getDb } from "../db";
 import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media";
 import { nowIso } from "../time";
-import { decidePlaybackMode, isHlsRemuxCompatible, type PlaybackModeDecision } from "../transcoding/capabilities";
+import { decidePlaybackMode, type PlaybackModeDecision } from "../transcoding/capabilities";
 import {
   requestDrivenHlsSegmentFormat,
   resolveHlsPlayback,
@@ -17,7 +17,6 @@ import {
 } from "../transcoding/manager";
 import { normalizePlaybackSessionMessage } from "../transcoding/messages";
 import { getTranscodePolicy } from "../transcoding/policy";
-import { isRemoteLibrarySource } from "../libraries/source";
 import { sql } from "kysely";
 
 export type SubtitleTrack = {
@@ -190,23 +189,13 @@ export async function getPlaybackDecision(
     clientCapabilities: options.clientCapabilities,
   });
   const playbackTarget = options.playbackTarget ?? "web";
-  let modeDecision = decidePlaybackMode({
+  const modeDecision = decidePlaybackMode({
     file: mediaCapabilities,
     policy,
     clientCapabilities: options.clientCapabilities,
     hlsSegmentFormat,
     target: playbackTarget,
   });
-  if (
-    isRemoteLibrarySource(file.source) &&
-    policy.transcodingEnabled &&
-    policy.playbackPreference === "auto" &&
-    modeDecision.mode === "direct"
-  ) {
-    modeDecision = isHlsRemuxCompatible(mediaCapabilities, options.clientCapabilities, hlsSegmentFormat, playbackTarget)
-      ? { mode: "remux", reason: "container_unsupported" }
-      : { mode: "transcode", reason: "direct_unsupported" };
-  }
   const tracks = await db
     .selectFrom("subtitle_track")
     .select(["id", "label", "language", "is_default"])

@@ -5,11 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import { setTranscodeBackendForTests } from "$lib/server/transcoding/manager";
-import type {
-  HlsSegmentWindowGeneration,
-  HlsSegmentWindowTranscodeInput,
-  RunningTranscode,
-} from "$lib/server/transcoding/backend";
+import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "$lib/server/transcoding/backend";
 import { getPlaybackData } from ".";
 
 async function completedWindowGeneration(input: HlsSegmentWindowTranscodeInput): Promise<HlsSegmentWindowGeneration> {
@@ -344,9 +340,6 @@ describe("playback data", () => {
 
   test("loads episode playback with show context", async () => {
     setTranscodeBackendForTests({
-      async startCompatibilityHls() {
-        throw new Error("FFmpeg test backend unavailable.");
-      },
       async cancel() {
         return;
       },
@@ -447,16 +440,6 @@ describe("playback data", () => {
 
   test("uses explicit start query to reposition HLS playback", async () => {
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },
@@ -486,16 +469,6 @@ describe("playback data", () => {
 
   test("keeps explicit transcode query on the full transcode path", async () => {
     setTranscodeBackendForTests({
-      async startCompatibilityHls(input): Promise<RunningTranscode> {
-        return {
-          sessionId: input.sessionId,
-          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
-          completion: new Promise<void>(() => undefined),
-          async cancel() {
-            return;
-          },
-        };
-      },
       async generateHlsSegmentWindow(input) {
         return completedWindowGeneration(input);
       },

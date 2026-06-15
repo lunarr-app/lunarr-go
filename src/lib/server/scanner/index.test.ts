@@ -276,9 +276,6 @@ describe("runScanJob", () => {
     expect(subtitles[0].path).toEndWith("/movies/The.Matrix.1999.en.vtt");
 
     setTranscodeBackendForTests({
-      async startCompatibilityHls() {
-        throw new Error("FFmpeg test backend unavailable.");
-      },
       async cancel() {
         return;
       },

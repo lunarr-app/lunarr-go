@@ -1,5 +1,6 @@
 import { sql } from "kysely";
 import { currentDatabasePaths, getDb } from "./db";
+import { getPlaybackCacheStatus } from "./transcoding/cache";
 
 async function countRows(table: "library" | "media_item" | "media_file" | "scan_job") {
   const db = await getDb();
@@ -90,6 +91,7 @@ export async function getServerStatus() {
     .where("media_item.provider_id", "is not", null)
     .select(sql<number>`count(distinct media_item.id)`.as("count"))
     .executeTakeFirst();
+  const playbackCache = await getPlaybackCacheStatus();
 
   return {
     dataDir: paths.dataDir,
@@ -108,5 +110,8 @@ export async function getServerStatus() {
     activeScanJobs: Number(activeScanRow?.count ?? 0),
     scanErrors: Number(scanErrorRow?.count ?? 0),
     lastScan,
+    playbackCacheEntries: playbackCache.entries,
+    playbackCacheBytes: playbackCache.bytes,
+    playbackCacheActiveRefs: playbackCache.activeRefs,
   };
 }

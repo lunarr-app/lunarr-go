@@ -71,6 +71,7 @@ export type HlsSegmentWindowTranscodeInput = HlsTranscodeInput & {
   playlistPath: string;
   segments: HlsSegmentWindowEntry[];
   expectAudio?: boolean;
+  encodeAheadSegmentCount?: number;
   segmentGenerationTimeoutMs?: number;
   signal?: AbortSignal;
 };
@@ -85,13 +86,6 @@ export type HlsSegmentGenerationPolicyInput = Pick<
   "hardwareAcceleration" | "hardwareAccelerationRequired" | "mode" | "transcodeQuality"
 >;
 
-export type RunningTranscode = {
-  sessionId: string;
-  playlistPath: string;
-  completion: Promise<void>;
-  cancel(): Promise<void>;
-};
-
 export type ProbeBackend = {
   probe(input: ProbeInput): Promise<MediaProbe>;
 };
@@ -100,10 +94,4 @@ export type TranscodeBackend = {
   validateHlsSegmentGenerationPolicy?(input: HlsSegmentGenerationPolicyInput): Promise<void> | void;
   generateHlsSegmentWindow?(input: HlsSegmentWindowTranscodeInput): Promise<HlsSegmentWindowGeneration>;
   cancel(sessionId: string): Promise<void>;
-};
-
-export type CompatibilityHlsBackend = {
-  // Backend smoke helper for long-running compatibility HLS artifact generation.
-  // Normal playback must publish a virtual playlist and call generateHlsSegmentWindow.
-  startCompatibilityHls(input: HlsTranscodeInput): Promise<RunningTranscode>;
 };

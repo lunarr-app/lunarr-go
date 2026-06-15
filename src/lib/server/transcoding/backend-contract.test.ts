@@ -95,7 +95,6 @@ describe("transcoding backend contract", () => {
 
     expect(text).toContain("export const nodeAvBackend: ProbeBackend =");
     expect(text).not.toMatch(/export const nodeAvBackend:[\s\S]*TranscodeBackend[\s\S]*=/);
-    expect(text).not.toMatch(/export const nodeAvBackend:[\s\S]*CompatibilityHlsBackend[\s\S]*=/);
     expect(text).not.toMatch(/\bHls[A-Z]/);
     expect(text).not.toMatch(/\bMuxer\b/);
     expect(text).not.toMatch(/\bEncoder\b/);

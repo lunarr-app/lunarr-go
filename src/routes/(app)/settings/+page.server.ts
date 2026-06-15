@@ -14,6 +14,7 @@ import {
   getPlaybackSessionArtifactMaxBytes,
   PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
 } from "$lib/server/transcoding/sessions";
+import { getEncodeAheadSegmentCount, getPlaybackCacheTtlMs } from "$lib/server/transcoding/cache";
 import { APP_VERSION } from "$lib/server/version";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
@@ -35,6 +36,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     transcodePolicy: await getTranscodePolicy(locals.user?.id),
     playbackSessionArtifactMaxBytes: await getPlaybackSessionArtifactMaxBytes(),
     playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
+    encodeAheadSegmentCount: await getEncodeAheadSegmentCount(),
+    playbackCacheTtlHours: (await getPlaybackCacheTtlMs()) / (60 * 60 * 1000),
     version: APP_VERSION,
     status: await getServerStatus(),
   };

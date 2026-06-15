@@ -10,6 +10,7 @@ import {
   hlsSegmentResponse,
   pruneHlsSegmentsBehind,
 } from "$lib/server/transcoding/hls";
+import { getEncodeArtifactDirectoryForSession } from "$lib/server/transcoding/cache";
 import { ensureHlsLookaheadForSegment, ensureHlsSegmentForRequest } from "$lib/server/transcoding/manager";
 import {
   getAuthorizedHlsArtifact,
@@ -84,6 +85,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
   try {
     let response = await hlsSegmentResponse(artifact.playlistPath, params.segment, {
       signal: request?.signal,
+      encodeDirectory: artifact.encodeArtifactDirectory,
     });
     if (response.status === 404) {
       let generated = false;
@@ -123,8 +125,11 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
       }
       if (generated) {
         if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
+        const encodeDirectory =
+          (await getEncodeArtifactDirectoryForSession(params.sessionId)) ?? artifact.encodeArtifactDirectory;
         response = await hlsSegmentResponse(artifact.playlistPath, params.segment, {
           signal: request?.signal,
+          encodeDirectory,
         });
       }
     }
@@ -144,6 +149,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         userId: auth.userId,
         playlistPath: artifact.playlistPath,
         artifact: "segment",
+        options: { cancelledResponse: staleCancelledPlaybackSegmentResponse },
       });
       if (current instanceof Response) return withSignedPlaybackHeaders(current, auth.signed);
       if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
@@ -162,6 +168,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
             playlistPath: artifact.playlistPath,
             artifact: "segment",
             allowCompleted: true,
+            options: { cancelledResponse: staleCancelledPlaybackSegmentResponse },
           });
           if (stale) return withSignedPlaybackHeaders(stale, auth.signed);
         }
@@ -199,6 +206,7 @@ export const HEAD: RequestHandler = async ({ params, locals, request, url }) => 
   try {
     response = await hlsSegmentHeadResponse(artifact.playlistPath, params.segment, {
       signal: request?.signal,
+      encodeDirectory: artifact.encodeArtifactDirectory,
     });
   } catch {
     if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentHeadResponse(), auth.signed);
@@ -211,6 +219,7 @@ export const HEAD: RequestHandler = async ({ params, locals, request, url }) => 
       userId: auth.userId,
       playlistPath: artifact.playlistPath,
       artifact: "segment",
+      options: { cancelledResponse: staleCancelledPlaybackSegmentResponse },
     });
     if (current instanceof Response) return withSignedPlaybackHeaders(current, auth.signed);
     if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentHeadResponse(), auth.signed);

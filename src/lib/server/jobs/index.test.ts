@@ -322,12 +322,12 @@ describe("scan job listings", () => {
       .execute();
 
     expect(
-      cleanupJobHistory({
+      await cleanupJobHistory({
         maxAgeMs: 24 * 60 * 60 * 1000,
         minRows: 1,
         now: new Date("2026-02-15T00:00:00.000Z"),
       }),
-    ).resolves.toEqual({ scanJobs: 1, playbackSessions: 1 });
+    ).toEqual({ scanJobs: 1, playbackSessions: 1 });
 
     expect((await db.selectFrom("scan_job").select("id").orderBy("id").execute()).map((job) => job.id)).toContain(
       "old-scan-keep-active",
@@ -513,12 +513,12 @@ describe("scan job listings", () => {
       .execute();
 
     expect(
-      cleanupJobHistory({
+      await cleanupJobHistory({
         maxAgeMs: 0,
         minRows: 0,
         now: new Date(now),
       }),
-    ).resolves.toEqual({ scanJobs: 0, playbackSessions: 3 });
+    ).toEqual({ scanJobs: 0, playbackSessions: 3 });
 
     const remainingPlaybackIds = (
       await db
@@ -594,12 +594,12 @@ describe("scan job listings", () => {
       .execute();
 
     expect(
-      cleanupJobHistory({
+      await cleanupJobHistory({
         maxAgeMs: 24 * 60 * 60 * 1000,
         minRows: 0,
         now: new Date("2026-02-15T00:00:00.000Z"),
       }),
-    ).resolves.toEqual({ scanJobs: 2, playbackSessions: 0 });
+    ).toEqual({ scanJobs: 2, playbackSessions: 0 });
 
     const remainingScanIds = (await db.selectFrom("scan_job").select("id").orderBy("id").execute()).map(
       (job) => job.id,

@@ -41,11 +41,7 @@ import {
   updateTranscodeSessionStatus,
 } from "$lib/server/transcoding/sessions";
 import { setTranscodingEnabled, setUserPreferredAudioLanguage } from "$lib/server/transcoding/policy";
-import type {
-  HlsSegmentWindowGeneration,
-  HlsSegmentWindowTranscodeInput,
-  RunningTranscode,
-} from "$lib/server/transcoding/backend";
+import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "$lib/server/transcoding/backend";
 import { resolvedFfmpegPath } from "$lib/server/transcoding/ffmpeg-cli";
 import type { LibraryStorage } from "$lib/server/storage";
 import { GET as getPlaylist, HEAD as headPlaylist } from "./[sessionId]/master.m3u8/+server";
@@ -59,7 +55,8 @@ function requestedWindowSegment(input: HlsSegmentWindowTranscodeInput) {
 
 async function writeRequestedWindowSegment(input: HlsSegmentWindowTranscodeInput, body: string) {
   const segment = requestedWindowSegment(input);
-  await writeFile(path.join(path.dirname(input.playlistPath), segment.segment), body);
+  await mkdir(input.artifactDirectory, { recursive: true });
+  await writeFile(path.join(input.artifactDirectory, segment.segment), body);
 }
 
 function completedWindowGeneration(): HlsSegmentWindowGeneration {
@@ -1197,9 +1194,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await writeRequestedWindowSegment(input, "generated");
@@ -1267,10 +1261,9 @@ describe("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
     } as never);
 
-    expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session was cancelled.",
-    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).toBe("");
     const job = await db
       .selectFrom("playback_session")
       .select(["status", "last_segment_name", "last_segment_request_at"])
@@ -1407,9 +1400,6 @@ describe("playback-session HLS routes", () => {
     let cancelCount = 0;
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await writeRequestedWindowSegment(input, "generated");
@@ -1482,7 +1472,7 @@ describe("playback-session HLS routes", () => {
       last_segment_name: null,
       last_segment_request_at: null,
     });
-    expect(await exists(path.dirname(playlistPath))).toBe(false);
+    expect(await exists(path.dirname(playlistPath))).toBe(true);
   });
 
   test("returns terminal HLS errors before disabled-policy errors", async () => {
@@ -1495,9 +1485,6 @@ describe("playback-session HLS routes", () => {
     await updateTranscodeSessionStatus(sessionId, "failed", "FFmpeg segment validation failed.");
     let cancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         throw new Error("not used");
       },
@@ -1617,10 +1604,9 @@ describe("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
     } as never);
 
-    expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session was cancelled.",
-    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).toBe("");
     const job = await db
       .selectFrom("playback_session")
       .select(["status", "last_segment_name", "last_segment_request_at"])
@@ -1818,9 +1804,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -1872,9 +1855,6 @@ describe("playback-session HLS routes", () => {
       releaseGeneration = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         requested.startSeconds = requestedWindowSegment(input).segmentStartSeconds;
@@ -1926,9 +1906,6 @@ describe("playback-session HLS routes", () => {
       releaseGeneration = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         generationStarted = true;
@@ -1990,9 +1967,6 @@ describe("playback-session HLS routes", () => {
     let backendCancelCount = 0;
     let generationStarted = false;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         generationStarted = true;
@@ -2067,9 +2041,6 @@ describe("playback-session HLS routes", () => {
     let staleSignalAborted = false;
     let backendCancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         const segment = requestedWindowSegment(input).segment;
         requestedSegments.push(segment);
@@ -2147,9 +2118,6 @@ describe("playback-session HLS routes", () => {
     let backendCancelCount = 0;
     const requestedSegments: string[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         const segment = requestedWindowSegment(input).segment;
         requestedSegments.push(segment);
@@ -2212,9 +2180,6 @@ describe("playback-session HLS routes", () => {
     let backendCancelStarted = false;
     let farGenerationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         const segment = requestedWindowSegment(input).segment;
         requestedSegments.push(segment);
@@ -2329,9 +2294,6 @@ describe("playback-session HLS routes", () => {
     const expectedAudioFlags: Array<boolean | undefined> = [];
     const audioStreamIndexes: Array<number | null | undefined> = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         requestedWindows.push(input.segments.map((segment) => segment.segment));
@@ -2390,9 +2352,6 @@ describe("playback-session HLS routes", () => {
     let backendSegmentFormat: string | undefined;
     const requestedWindows: string[][] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         backendSegmentFormat = input.hlsSegmentFormat;
         requestedWindows.push(input.segments.map((segment) => segment.segment));
@@ -2483,9 +2442,6 @@ describe("playback-session HLS routes", () => {
     const audioStreamIndexes: Array<number | null | undefined> = [];
     const requestedModes: Array<string | undefined> = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode);
         audioStreamIndexes.push(input.audioStreamIndex);
@@ -2564,9 +2520,6 @@ describe("playback-session HLS routes", () => {
 
     const audioStreamIndexes: Array<number | null | undefined> = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         audioStreamIndexes.push(input.audioStreamIndex);
         await writeRequestedWindowSegment(input, "preferred-audio-segment");
@@ -2664,9 +2617,6 @@ describe("playback-session HLS routes", () => {
     const audioStreamIndexes: Array<number | null | undefined> = [];
     const requestedModes: Array<string | undefined> = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode);
         audioStreamIndexes.push(input.audioStreamIndex);
@@ -2789,10 +2739,8 @@ describe("playback-session HLS routes", () => {
       return playlist.includes("segment-00007.ts");
     }, 5_000);
     const generatedPlaylist = await readFile(playlistPath, "utf8");
-    expect(generatedPlaylist).toContain("#EXT-X-MEDIA-SEQUENCE:3");
-    expect(generatedPlaylist).toContain("segment-00003.ts");
+    expect(generatedPlaylist).toContain("#EXT-X-MEDIA-SEQUENCE:7");
     expect(generatedPlaylist).toContain("segment-00007.ts");
-    expect(generatedPlaylist).not.toContain("segment-00002.ts");
     const session = await db
       .selectFrom("playback_session")
       .select(["status", "start_time_seconds", "last_segment_name", "last_segment_index"])
@@ -3069,9 +3017,6 @@ describe("playback-session HLS routes", () => {
 
     const requestedWindows: Array<Array<{ segment: string; startSeconds: number }>> = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedWindows.push(
           input.segments.map((segment) => ({
@@ -3139,9 +3084,6 @@ describe("playback-session HLS routes", () => {
       releaseLookahead = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
@@ -3211,9 +3153,6 @@ describe("playback-session HLS routes", () => {
 
     const requestedWindows: string[][] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedWindows.push(input.segments.map((segment) => segment.segment));
         for (const segment of input.segments) {
@@ -3265,9 +3204,6 @@ describe("playback-session HLS routes", () => {
       releaseLookahead = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
@@ -3336,9 +3272,6 @@ describe("playback-session HLS routes", () => {
       failLookahead = () => reject(new Error("lookahead failed"));
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment] = input.segments;
@@ -3399,9 +3332,6 @@ describe("playback-session HLS routes", () => {
       releaseLookahead = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
@@ -3462,9 +3392,6 @@ describe("playback-session HLS routes", () => {
       releaseLookahead = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
@@ -3529,9 +3456,6 @@ describe("playback-session HLS routes", () => {
       releaseLookahead = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const [requestedSegment, ...lookaheadSegments] = input.segments;
@@ -3589,9 +3513,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -3636,9 +3557,6 @@ describe("playback-session HLS routes", () => {
       releaseGeneration = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await generationGate;
@@ -3688,9 +3606,6 @@ describe("playback-session HLS routes", () => {
       releaseGeneration = resolve;
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await generationGate;
@@ -3816,9 +3731,6 @@ describe("playback-session HLS routes", () => {
     let readChunk: string | undefined;
     let readAheadChunk: string | undefined;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         const chunk = await input.inputSource?.read(4, 5);
         readChunk = chunk?.toString("utf8");
@@ -3883,9 +3795,6 @@ describe("playback-session HLS routes", () => {
     let readChunk: string | undefined;
     let readAheadChunk: string | undefined;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         const chunk = await input.inputSource?.read(4, 5);
         readChunk = chunk?.toString("utf8");
@@ -3944,9 +3853,6 @@ describe("playback-session HLS routes", () => {
     let backgroundError: unknown = null;
     let backgroundRead: string | undefined;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         const requestedChunk = await input.inputSource?.read(0, 4);
         await writeFile(
@@ -4014,9 +3920,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await input.inputSource?.read(0, 8);
@@ -4072,9 +3975,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await input.inputSource?.read(0, 8);
@@ -4163,9 +4063,6 @@ describe("playback-session HLS routes", () => {
     });
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -4209,9 +4106,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -4256,9 +4150,6 @@ describe("playback-session HLS routes", () => {
     let generationCount = 0;
     const unresolvedLookahead = new Promise<void>(() => undefined);
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await writeRequestedWindowSegment(input, "generated-before-missing-source");
@@ -4306,9 +4197,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -4376,9 +4264,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -4448,9 +4333,6 @@ describe("playback-session HLS routes", () => {
     let cancelCount = 0;
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -4538,9 +4420,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await input.inputSource?.read(0, 4);
@@ -4605,9 +4484,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         const controller = new AbortController();
@@ -4677,9 +4553,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await input.inputSource?.read(0, 4);
@@ -4751,9 +4624,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await input.inputSource?.read(0, 4);
@@ -4790,9 +4660,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -4832,9 +4699,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -4878,9 +4742,6 @@ describe("playback-session HLS routes", () => {
       segmentSeconds: null as number | null,
     };
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         const segment = requestedWindowSegment(input);
         requested.startSeconds = segment.segmentStartSeconds;
@@ -4914,9 +4775,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await writeRequestedWindowSegment(input, "generated");
@@ -4955,9 +4813,6 @@ describe("playback-session HLS routes", () => {
 
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode ?? "transcode");
         if (input.mode === "remux") throw new Error("remux segment failed");
@@ -5003,9 +4858,6 @@ describe("playback-session HLS routes", () => {
     const requestedModes: string[] = [];
     let cancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode ?? "transcode");
         const now = new Date().toISOString();
@@ -5050,9 +4902,6 @@ describe("playback-session HLS routes", () => {
 
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode ?? "transcode");
         await setTranscodingEnabled(false);
@@ -5098,9 +4947,6 @@ describe("playback-session HLS routes", () => {
     const requestedModes: string[] = [];
     let cancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode ?? "transcode");
         if (input.mode === "remux") throw new Error("remux segment failed");
@@ -5160,9 +5006,6 @@ describe("playback-session HLS routes", () => {
 
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode ?? "transcode");
         if (input.mode === "remux") throw new Error("remux segment failed");
@@ -5211,9 +5054,6 @@ describe("playback-session HLS routes", () => {
     let generationStarted = false;
     let backendSignalAborted = false;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationStarted = true;
         await new Promise<void>((_resolve, reject) => {
@@ -5261,9 +5101,6 @@ describe("playback-session HLS routes", () => {
     let backendSignalAborted = false;
     let backendCancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationStarted = true;
         await new Promise<void>((_resolve, reject) => {
@@ -5316,7 +5153,7 @@ describe("playback-session HLS routes", () => {
       last_segment_name: null,
       last_segment_request_at: null,
     });
-    expect(await exists(path.dirname(playlistPath))).toBe(false);
+    expect(await exists(path.dirname(playlistPath))).toBe(true);
   });
 
   test("aborts request-driven generation when the segment request is cancelled", async () => {
@@ -5334,9 +5171,6 @@ describe("playback-session HLS routes", () => {
     let backendSignalAborted = false;
     let backendCancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationStarted = true;
         await new Promise<void>((_resolve, reject) => {
@@ -5397,9 +5231,6 @@ describe("playback-session HLS routes", () => {
     const requestController = new AbortController();
     let backendCancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         await writeRequestedWindowSegment(input, "stale-segment");
         requestController.abort();
@@ -5446,9 +5277,6 @@ describe("playback-session HLS routes", () => {
     let generationCount = 0;
     let cancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await writeRequestedWindowSegment(input, "generated-after-cancel");
@@ -5506,9 +5334,6 @@ describe("playback-session HLS routes", () => {
     let generationCount = 0;
     let cancelCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         generationCount += 1;
         await writeRequestedWindowSegment(input, "generated-after-disable");
@@ -5558,9 +5383,6 @@ describe("playback-session HLS routes", () => {
 
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         await setTranscodingEnabled(false);
@@ -5609,9 +5431,6 @@ describe("playback-session HLS routes", () => {
       await setTranscodingEnabled(false);
     });
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();
@@ -5657,9 +5476,6 @@ describe("playback-session HLS routes", () => {
 
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow(input) {
         requestedModes.push(input.mode ?? "transcode");
         return completedWindowGeneration();
@@ -5701,9 +5517,6 @@ describe("playback-session HLS routes", () => {
     });
     await updateTranscodeSessionStatus(sessionId, "running");
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         throw new Error("segment encoder failed");
       },
@@ -5747,9 +5560,6 @@ describe("playback-session HLS routes", () => {
     await updateTranscodeSessionStatus(sessionId, "running");
     let generationCount = 0;
     setTranscodeBackendForTests({
-      async startCompatibilityHls(): Promise<RunningTranscode> {
-        throw new Error("not used");
-      },
       async generateHlsSegmentWindow() {
         generationCount += 1;
         return completedWindowGeneration();

@@ -8,6 +8,12 @@ import { readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
 import { getSetting, setSetting } from "../settings";
+import {
+  cleanupPlaybackHlsCache,
+  getPlaybackCacheTtlMs,
+  releasePlaybackCacheForSession,
+  sumPlaybackCacheBytes,
+} from "./cache";
 
 export type CreateTranscodeSessionInput = {
   mediaFileId: string;
@@ -32,6 +38,7 @@ export type AuthorizedHlsArtifact = {
   status: TranscodeSessionStatus;
   errorMessage: string | null;
   playlistPath: string | null;
+  encodeArtifactDirectory: string | null;
   startTimeSeconds: number;
   durationSeconds: number | null;
   updatedAt: string;
@@ -57,6 +64,7 @@ export type TranscodeSessionRecord = {
   status: TranscodeSessionStatus;
   errorMessage: string | null;
   playlistPath: string | null;
+  cacheId: string | null;
   startTimeSeconds: number;
   durationSeconds: number | null;
   lastSegmentName: string | null;
@@ -575,6 +583,7 @@ export async function getAuthorizedHlsArtifact(
     .leftJoin("playback_hls_artifact", (join) =>
       join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
+    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
     .select([
       "playback_session.id as sessionId",
       "playback_session.media_file_id as mediaFileId",
@@ -584,6 +593,7 @@ export async function getAuthorizedHlsArtifact(
       "playback_session.status as status",
       "playback_session.error_message as errorMessage",
       "playback_hls_artifact.path as playlistPath",
+      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
       "playback_session.start_time_seconds as startTimeSeconds",
       "media_file.duration_seconds as durationSeconds",
       "playback_session.updated_at as updatedAt",
@@ -628,6 +638,7 @@ export async function findActiveHlsArtifact(
     .leftJoin("playback_hls_artifact", (join) =>
       join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
+    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
     .select([
       "playback_session.id as sessionId",
       "playback_session.media_file_id as mediaFileId",
@@ -637,6 +648,7 @@ export async function findActiveHlsArtifact(
       "playback_session.status as status",
       "playback_session.error_message as errorMessage",
       "playback_hls_artifact.path as playlistPath",
+      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
       "playback_session.start_time_seconds as startTimeSeconds",
       "media_file.duration_seconds as durationSeconds",
       "playback_session.created_at as createdAt",
@@ -667,6 +679,7 @@ export async function findActiveHlsArtifact(
         status: row.status,
         errorMessage: row.errorMessage,
         playlistPath: row.playlistPath,
+        encodeArtifactDirectory: row.encodeArtifactDirectory,
         startTimeSeconds: row.startTimeSeconds,
         durationSeconds: row.durationSeconds,
         createdAt: row.createdAt,
@@ -690,6 +703,7 @@ export async function findRecentFailedHlsPlayback(
     .leftJoin("playback_hls_artifact", (join) =>
       join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
+    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
     .select([
       "playback_session.id as sessionId",
       "playback_session.media_file_id as mediaFileId",
@@ -699,6 +713,7 @@ export async function findRecentFailedHlsPlayback(
       "playback_session.status as status",
       "playback_session.error_message as errorMessage",
       "playback_hls_artifact.path as playlistPath",
+      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
       "playback_session.start_time_seconds as startTimeSeconds",
       "media_file.duration_seconds as durationSeconds",
       "playback_session.created_at as createdAt",
@@ -728,6 +743,7 @@ export async function findRecentFailedHlsPlayback(
         status: row.status,
         errorMessage: row.errorMessage,
         playlistPath: row.playlistPath,
+        encodeArtifactDirectory: row.encodeArtifactDirectory,
         startTimeSeconds: row.startTimeSeconds,
         durationSeconds: row.durationSeconds,
         createdAt: row.createdAt,
@@ -749,6 +765,7 @@ export async function listActiveHlsPlaybackSessionsForMedia(
     .leftJoin("playback_hls_artifact", (join) =>
       join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
+    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
     .select([
       "playback_session.id as sessionId",
       "playback_session.media_file_id as mediaFileId",
@@ -758,6 +775,7 @@ export async function listActiveHlsPlaybackSessionsForMedia(
       "playback_session.status as status",
       "playback_session.error_message as errorMessage",
       "playback_hls_artifact.path as playlistPath",
+      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
       "playback_session.start_time_seconds as startTimeSeconds",
       "media_file.duration_seconds as durationSeconds",
       "playback_session.created_at as createdAt",
@@ -781,6 +799,7 @@ export async function listActiveHlsPlaybackSessionsForMedia(
     status: row.status,
     errorMessage: row.errorMessage,
     playlistPath: row.playlistPath,
+    encodeArtifactDirectory: row.encodeArtifactDirectory,
     startTimeSeconds: row.startTimeSeconds,
     durationSeconds: row.durationSeconds,
     createdAt: row.createdAt,
@@ -802,6 +821,7 @@ export async function listMismatchedActiveHlsArtifacts(
     .leftJoin("playback_hls_artifact", (join) =>
       join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
     )
+    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
     .select([
       "playback_session.id as sessionId",
       "playback_session.media_file_id as mediaFileId",
@@ -811,6 +831,7 @@ export async function listMismatchedActiveHlsArtifacts(
       "playback_session.status as status",
       "playback_session.error_message as errorMessage",
       "playback_hls_artifact.path as playlistPath",
+      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
       "playback_session.start_time_seconds as startTimeSeconds",
       "media_file.duration_seconds as durationSeconds",
       "playback_session.created_at as createdAt",
@@ -844,6 +865,7 @@ export async function listMismatchedActiveHlsArtifacts(
       status: row.status,
       errorMessage: row.errorMessage,
       playlistPath: row.playlistPath,
+      encodeArtifactDirectory: row.encodeArtifactDirectory,
       startTimeSeconds: row.startTimeSeconds,
       durationSeconds: row.durationSeconds,
       createdAt: row.createdAt,
@@ -869,6 +891,7 @@ export async function getTranscodeSession(sessionId: string): Promise<TranscodeS
       "playback_session.status as status",
       "playback_session.error_message as errorMessage",
       "playback_hls_artifact.path as playlistPath",
+      "playback_session.cache_id as cacheId",
       "playback_session.start_time_seconds as startTimeSeconds",
       "playback_session.last_segment_name as lastSegmentName",
       "playback_session.last_segment_index as lastSegmentIndex",
@@ -877,7 +900,23 @@ export async function getTranscodeSession(sessionId: string): Promise<TranscodeS
     .where("playback_session.id", "=", sessionId)
     .executeTakeFirst();
 
-  return row ?? null;
+  return row
+    ? {
+        sessionId: row.sessionId,
+        mediaFileId: row.mediaFileId,
+        userId: row.userId,
+        mode: row.mode,
+        pipeline: row.pipeline,
+        status: row.status,
+        errorMessage: row.errorMessage,
+        playlistPath: row.playlistPath,
+        cacheId: row.cacheId,
+        startTimeSeconds: row.startTimeSeconds,
+        durationSeconds: row.durationSeconds,
+        lastSegmentName: row.lastSegmentName,
+        lastSegmentIndex: row.lastSegmentIndex,
+      }
+    : null;
 }
 
 export async function isTranscodeSessionActive(sessionId: string) {
@@ -910,6 +949,7 @@ export async function recoverInterruptedTranscodeSessions(
 
   for (const session of activeSessions) {
     await updateTranscodeSessionStatus(session.sessionId, "failed", errorMessage);
+    await releasePlaybackCacheForSession(session.sessionId).catch(() => undefined);
     cleaned += await clearPlaybackSessionArtifacts({
       sessionId: session.sessionId,
       playlistPath: session.playlistPath,
@@ -1026,5 +1066,8 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
 export async function cleanupConfiguredPlaybackSessionArtifacts(
   maxAgeMs = DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_AGE_MS,
 ) {
-  return cleanupExpiredPlaybackSessionArtifacts(maxAgeMs, await getPlaybackSessionArtifactMaxBytes());
+  const maxBytes = await getPlaybackSessionArtifactMaxBytes();
+  await cleanupPlaybackHlsCache(maxBytes, await getPlaybackCacheTtlMs());
+  const cacheBytes = await sumPlaybackCacheBytes();
+  return cleanupExpiredPlaybackSessionArtifacts(maxAgeMs, Math.max(0, maxBytes - cacheBytes));
 }

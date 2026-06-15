@@ -59,18 +59,25 @@ Playback preference body:
 
 Supported preferences and language values are normalized by the server.
 
-Transcoding settings accept the temporary playback-session artifact limit in bytes:
+Transcoding settings accept the combined temporary playback storage limit, encode-ahead window, and shared cache TTL:
 
 ```json
 {
   "transcodingEnabled": true,
   "hardwareAcceleration": "off",
   "hardwareAccelerationRequired": false,
-  "playbackSessionArtifactMaxBytes": 21474836480
+  "transcodeQualityPreset": "auto",
+  "playbackSessionArtifactMaxBytes": 21474836480,
+  "encodeAheadSegmentCount": 4,
+  "playbackCacheTtlHours": 24
 }
 ```
 
-Allowed artifact limits are returned by `GET /api/settings` as `playbackSessionArtifactMaxBytesOptions`.
+`playbackSessionArtifactMaxBytes` applies to both per-session virtual playlists under `playback-sessions/` and shared encoded segments under `playback-cache/`. Allowed limits are returned by `GET /api/settings` as `playbackSessionArtifactMaxBytesOptions`.
+
+`encodeAheadSegmentCount` bounds how many HLS segments FFmpeg encodes beyond the requested segment during request-driven playback. `playbackCacheTtlHours` controls how long idle, unreferenced shared cache entries remain before TTL eviction.
+
+`GET /api/settings` also returns `status.playbackCacheEntries`, `status.playbackCacheBytes`, and `status.playbackCacheActiveRefs` for the shared HLS segment cache.
 
 ## Catalog
 

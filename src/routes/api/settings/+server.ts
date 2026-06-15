@@ -3,6 +3,7 @@ import { PUBLIC_TMDB_ACCESS_TOKEN } from "$lib/server/metadata/public-token";
 import { getBooleanSetting, getSetting } from "$lib/server/settings";
 import { getServerStatus } from "$lib/server/status";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
+import { getEncodeAheadSegmentCount, getPlaybackCacheTtlMs } from "$lib/server/transcoding/cache";
 import {
   getPlaybackSessionArtifactMaxBytes,
   PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
@@ -29,6 +30,8 @@ export const GET: RequestHandler = async ({ locals }) => {
     transcodePolicy: await getTranscodePolicy(user.id),
     playbackSessionArtifactMaxBytes: await getPlaybackSessionArtifactMaxBytes(),
     playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
+    encodeAheadSegmentCount: await getEncodeAheadSegmentCount(),
+    playbackCacheTtlHours: (await getPlaybackCacheTtlMs()) / (60 * 60 * 1000),
     version: APP_VERSION,
     status: await getServerStatus(),
   });
