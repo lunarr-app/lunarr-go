@@ -2784,6 +2784,10 @@ describe("playback-session HLS routes", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("video/mp2t");
     expect(Buffer.from(await response.arrayBuffer()).length).toBeGreaterThan(0);
+    await waitFor(async () => {
+      const playlist = await readFile(playlistPath, "utf8");
+      return playlist.includes("segment-00007.ts");
+    }, 5_000);
     const generatedPlaylist = await readFile(playlistPath, "utf8");
     expect(generatedPlaylist).toContain("#EXT-X-MEDIA-SEQUENCE:3");
     expect(generatedPlaylist).toContain("segment-00003.ts");
