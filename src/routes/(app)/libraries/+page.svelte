@@ -2,8 +2,9 @@
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
   import LibraryAutomationFields from "./_components/LibraryAutomationFields.svelte";
   import LibraryEditModal from "./_components/LibraryEditModal.svelte";
+  import LibrarySharingModal from "./_components/LibrarySharingModal.svelte";
   import RemoteLibraryFields, { type RemoteLibraryFieldValues } from "./_components/RemoteLibraryFields.svelte";
-  import { CirclePlus, RefreshCw, Settings, Trash2, TriangleAlert } from "@lucide/svelte";
+  import { CirclePlus, RefreshCw, Settings, Trash2, TriangleAlert, Users } from "@lucide/svelte";
   import type { PageData } from "./$types";
 
   let { data, form } = $props();
@@ -11,6 +12,7 @@
   const formData = $derived((form ?? {}) as Record<string, string>);
   let selectedSource = $state("local");
   let editingLibrary = $state<PageData["libraries"][number] | null>(null);
+  let sharingLibrary = $state<PageData["libraries"][number] | null>(null);
 
   $effect(() => {
     if (formData.source) selectedSource = formData.source;
@@ -190,6 +192,16 @@
             >
               Edit
             </button>
+            <button
+              class="secondary compact-action"
+              type="button"
+              onclick={() => {
+                sharingLibrary = library;
+              }}
+            >
+              <Users size={16} aria-hidden="true" />
+              Sharing
+            </button>
             <form method="POST" action="?/scan">
               <input type="hidden" name="libraryId" value={library.id} />
               <button class="secondary compact-action" disabled={library.scanActive}>
@@ -220,7 +232,11 @@
 </section>
 
 {#if editingLibrary}
-  <LibraryEditModal library={editingLibrary} users={data.users} onClose={() => (editingLibrary = null)} />
+  <LibraryEditModal library={editingLibrary} onClose={() => (editingLibrary = null)} />
+{/if}
+
+{#if sharingLibrary}
+  <LibrarySharingModal library={sharingLibrary} users={data.users} onClose={() => (sharingLibrary = null)} />
 {/if}
 
 <style>
