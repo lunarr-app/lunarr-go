@@ -89,7 +89,7 @@ export async function listLibrariesWithScanStatus() {
     > | null = null;
     if (library.source === "sftp") {
       try {
-        const config = parseExistingSftpConfig(library.config_json);
+        const config = parseSftpConfig(library.config_json);
         sftpConfig = {
           host: config.host,
           port: config.port,
@@ -104,7 +104,7 @@ export async function listLibrariesWithScanStatus() {
     }
     if (library.source === "webdav") {
       try {
-        const config = parseExistingWebdavConfig(library.config_json);
+        const config = parseWebdavConfig(library.config_json);
         webdavConfig = {
           host: config.host,
           port: config.port,
@@ -372,14 +372,6 @@ function parseSftpInput(input: CreateSftpLibraryInput): SftpLibraryConfig {
   };
 }
 
-function parseExistingSftpConfig(configJson: string | null) {
-  return parseSftpConfig(configJson);
-}
-
-function parseExistingWebdavConfig(configJson: string | null) {
-  return parseWebdavConfig(configJson);
-}
-
 function parseWebdavInput(input: CreateWebdavLibraryInput): WebdavLibraryConfig {
   const host = input.host.trim();
   const username = input.username.trim();
@@ -602,7 +594,7 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
 
   const now = nowIso();
   if (existingLibrary.source === "sftp" && input.source === "sftp") {
-    const existingConfig = parseExistingSftpConfig(existingLibrary.config_json);
+    const existingConfig = parseSftpConfig(existingLibrary.config_json);
     const config = parseSftpUpdateInput(input, existingConfig);
     await (options.testSftpConnection ?? testSftpConnection)(config);
 
@@ -624,7 +616,7 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
     const overlapping = libraries.find((library) => {
       if (!library.config_json) return false;
       try {
-        const otherConfig = parseExistingSftpConfig(library.config_json);
+        const otherConfig = parseSftpConfig(library.config_json);
         return (
           otherConfig.host === config.host &&
           Number(otherConfig.port) === config.port &&
@@ -655,7 +647,7 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
   }
 
   if (existingLibrary.source === "webdav" && input.source === "webdav") {
-    const existingConfig = parseExistingWebdavConfig(existingLibrary.config_json);
+    const existingConfig = parseWebdavConfig(existingLibrary.config_json);
     const config = parseWebdavUpdateInput(input, existingConfig);
     await (options.testWebdavConnection ?? testWebdavConnection)(config);
 
@@ -677,7 +669,7 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
     const overlapping = libraries.find((library) => {
       if (!library.config_json) return false;
       try {
-        const otherConfig = parseExistingWebdavConfig(library.config_json);
+        const otherConfig = parseWebdavConfig(library.config_json);
         return (
           otherConfig.host === config.host &&
           Number(otherConfig.port) === config.port &&
