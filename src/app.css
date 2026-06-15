@@ -169,6 +169,38 @@ button:disabled {
   opacity: 0.55;
 }
 
+button.ops-action-link,
+.ops-action-link {
+  min-height: 1.75rem;
+  padding: 0.2rem 0.55rem;
+  background: var(--color-button-secondary);
+  border: 1px solid var(--color-button-secondary-border);
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 650;
+  color: var(--color-text-soft);
+}
+
+button.ops-action-link:hover:not(:disabled),
+.ops-action-link:hover:not(:disabled) {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-button-secondary));
+  border-color: var(--color-border-strong);
+}
+
+button.ops-action-link.danger,
+.ops-action-link.danger {
+  background: color-mix(in srgb, var(--color-danger-text) 8%, var(--color-button-secondary));
+  border-color: color-mix(in srgb, var(--color-danger-border) 70%, var(--color-button-secondary-border));
+  color: var(--color-danger-text);
+}
+
+button.ops-action-link.danger:hover:not(:disabled),
+.ops-action-link.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger-text) 14%, var(--color-button-secondary));
+  border-color: var(--color-danger-border);
+}
+
 input,
 select,
 textarea {

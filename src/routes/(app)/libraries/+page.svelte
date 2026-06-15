@@ -4,7 +4,7 @@
   import LibraryEditModal from "./_components/LibraryEditModal.svelte";
   import LibrarySharingModal from "./_components/LibrarySharingModal.svelte";
   import RemoteLibraryFields, { type RemoteLibraryFieldValues } from "./_components/RemoteLibraryFields.svelte";
-  import { CirclePlus, RefreshCw, Settings, Trash2, TriangleAlert, Users } from "@lucide/svelte";
+  import { CirclePlus, Settings, TriangleAlert } from "@lucide/svelte";
   import type { PageData } from "./$types";
 
   let { data, form } = $props();
@@ -181,9 +181,9 @@
               <span class="muted">No scans yet.</span>
             {/if}
           </div>
-          <div class="actions">
+          <div class="actions" role="toolbar" aria-label={`Actions for ${library.name}`}>
             <button
-              class="secondary compact-action"
+              class="ops-action-link"
               type="button"
               disabled={library.scanActive}
               onclick={() => {
@@ -193,20 +193,18 @@
               Edit
             </button>
             <button
-              class="secondary compact-action"
+              class="ops-action-link"
               type="button"
               onclick={() => {
                 sharingLibrary = library;
               }}
             >
-              <Users size={16} aria-hidden="true" />
               Sharing
             </button>
             <form method="POST" action="?/scan">
               <input type="hidden" name="libraryId" value={library.id} />
-              <button class="secondary compact-action" disabled={library.scanActive}>
-                <RefreshCw size={16} aria-hidden="true" />
-                {library.scanActive ? "Scanning" : "Scan"}
+              <button class="ops-action-link" disabled={library.scanActive}>
+                {library.scanActive ? "Scanning…" : "Scan"}
               </button>
             </form>
             <ConfirmAction
@@ -217,9 +215,8 @@
               message="This removes the library from Lunarr and deletes media records that are not referenced by another library. Files on disk, SFTP, or WebDAV are not deleted."
               confirmLabel="Remove library"
               disabled={library.scanActive}
-              buttonClass="secondary danger compact-action"
+              buttonClass="ops-action-link danger"
             >
-              <Trash2 size={16} aria-hidden="true" />
               Remove
             </ConfirmAction>
           </div>
@@ -275,13 +272,11 @@
     padding: 1rem;
   }
 
-  h2 {
-    margin: 0;
-  }
-
-  article {
+  .ops-row {
     display: grid;
-    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem 1rem;
     padding: 0.8rem 1rem;
   }
 
@@ -291,30 +286,20 @@
     min-width: 0;
   }
 
-  article span {
+  .ops-row span {
     overflow-wrap: anywhere;
   }
 
   .actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.35rem;
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 
   .actions form {
     margin: 0;
-  }
-
-  .actions :global(.compact-action),
-  .compact-action {
-    min-height: 2rem;
-    padding: 0 0.65rem;
-    font-size: 0.86rem;
-  }
-
-  .actions :global(.compact-action.danger) {
-    padding: 0 0.65rem;
   }
 
   .scan-status {
@@ -334,6 +319,10 @@
     .notice {
       align-items: stretch;
       flex-direction: column;
+    }
+
+    .ops-row {
+      grid-template-columns: 1fr;
     }
 
     .actions {
