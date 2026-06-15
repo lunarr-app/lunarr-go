@@ -1,3 +1,5 @@
+import { APP_VERSION } from "./version";
+
 type OpenApiDocument = Record<string, unknown>;
 
 const stringSchema = { type: "string" };
@@ -97,7 +99,7 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "Lunarr API",
-    version: "0.2.3",
+    version: APP_VERSION,
     description: "HTTP API for Lunarr catalog, playback, and administration.",
   },
   servers: [{ url: "/" }],

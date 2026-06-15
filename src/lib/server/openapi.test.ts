@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { openApiDocument, openApiYaml } from "./openapi";
+import { APP_VERSION } from "./version";
 
 const ROUTE_ROOTS = ["src/routes/api", "src/routes/media"];
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
@@ -56,8 +57,12 @@ function resolveJsonPointer(document: unknown, pointer: string) {
 }
 
 describe("OpenAPI document", () => {
-  test("describes the mobile-facing API contract", () => {
+  test("describes the Lunarr API contract", () => {
     expect(openApiDocument.openapi).toBe("3.1.0");
+    expect(openApiDocument.info).toMatchObject({
+      title: "Lunarr API",
+      version: APP_VERSION,
+    });
     expect(openApiDocument.paths).toHaveProperty("/api/me");
     expect(openApiDocument.paths).toHaveProperty("/api/continue");
     expect(openApiDocument.paths).toHaveProperty("/api/playback/{id}");

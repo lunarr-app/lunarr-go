@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { APP_VERSION } from "$lib/server/version";
 import { GET as jsonGet } from "./openapi.json/+server";
 import { GET as yamlGet } from "./openapi.yaml/+server";
 
@@ -10,7 +11,7 @@ describe("OpenAPI routes", () => {
     expect(response.headers.get("content-type")).toContain("application/json");
     expect(await response.json()).toMatchObject({
       openapi: "3.1.0",
-      info: { title: "Lunarr API" },
+      info: { title: "Lunarr API", version: APP_VERSION },
     });
   });
 
