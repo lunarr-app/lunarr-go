@@ -380,5 +380,6 @@ export async function getPlaybackCacheStatus() {
     entries: rows.length,
     bytes: rows.reduce((sum, row) => sum + row.bytes, 0),
     activeRefs: rows.reduce((sum, row) => sum + row.ref_count, 0),
+    idleEntries: rows.filter((row) => row.ref_count === 0).length,
   };
 }

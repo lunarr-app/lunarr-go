@@ -527,8 +527,14 @@ describe("playback HLS cache", () => {
       entries: 1,
       bytes: cache.bytes,
       activeRefs: 1,
+      idleEntries: 0,
     });
     await releasePlaybackCacheForSession(sessionId);
+    expect(await getPlaybackCacheStatus()).toMatchObject({
+      entries: 1,
+      activeRefs: 0,
+      idleEntries: 1,
+    });
   });
 
   test("persists encode-ahead segment count settings", async () => {

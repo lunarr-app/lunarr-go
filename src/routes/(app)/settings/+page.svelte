@@ -1,6 +1,6 @@
 <script lang="ts">
   import { formatDateTime, formatGibibytes } from "$lib/media/format";
-  import { RefreshCw, Save, ScanSearch, SearchCheck, Wrench } from "@lucide/svelte";
+  import { RefreshCw, Save, ScanSearch, SearchCheck, Trash2, Wrench } from "@lucide/svelte";
 
   let { data, form } = $props();
 
@@ -365,6 +365,25 @@
           </button>
         </form>
       </div>
+
+      <div class="action-row">
+        <div class="action-copy">
+          <h3>HLS playback cache</h3>
+          <p class="muted">Remove idle shared segments and expired session artifacts. Active playback is preserved.</p>
+          {#if form?.playbackCleanupError}
+            <p class="error">{form.playbackCleanupError}</p>
+          {/if}
+          {#if form?.playbackCleanupMessage}
+            <p>{form.playbackCleanupMessage}</p>
+          {/if}
+        </div>
+        <form method="POST" action="?/cleanupPlaybackArtifacts">
+          <button class="secondary compact-action">
+            <Trash2 size={16} aria-hidden="true" />
+            Clean up
+          </button>
+        </form>
+      </div>
     </div>
   </section>
 </div>
@@ -402,7 +421,17 @@
     <dl>
       <div>
         <dt>HLS cache entries</dt>
-        <dd>{data.status.playbackCacheEntries} ({data.status.playbackCacheActiveRefs} active refs)</dd>
+        <dd>
+          {data.status.playbackCacheEntries} ({data.status.playbackCacheActiveRefs} active refs, {data.status
+            .playbackCacheIdleEntries}
+          idle)
+        </dd>
+      </div>
+      <div>
+        <dt>HLS cache limits</dt>
+        <dd>
+          {formatGibibytes(data.playbackSessionArtifactMaxBytes)} cap, {data.playbackCacheTtlHours}h idle TTL
+        </dd>
       </div>
       <div>
         <dt>Version</dt>

@@ -13,7 +13,11 @@ import {
   setTranscodeQualityPreset,
   setTranscodingEnabled,
 } from "./transcoding/policy";
-import { setPlaybackSessionArtifactMaxBytes } from "./transcoding/sessions";
+import {
+  cleanupConfiguredPlaybackSessionArtifacts,
+  formatPlaybackArtifactsCleanupMessage,
+  setPlaybackSessionArtifactMaxBytes,
+} from "./transcoding/sessions";
 import { setEncodeAheadSegmentCount, setPlaybackCacheTtlMs } from "./transcoding/cache";
 
 type InputSource = Record<string, unknown> | FormData;
@@ -97,6 +101,14 @@ export async function runSettingsAction(action: string) {
 
   if (action === "testTmdb") {
     return testTmdbConnection();
+  }
+
+  if (action === "cleanupPlaybackArtifacts") {
+    const result = await cleanupConfiguredPlaybackSessionArtifacts();
+    return {
+      ...result,
+      message: formatPlaybackArtifactsCleanupMessage(result),
+    };
   }
 
   throw new Error("Unknown settings action.");

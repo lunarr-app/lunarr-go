@@ -1063,11 +1063,36 @@ export async function cleanupExpiredPlaybackSessionArtifacts(
   return { sessions: cleanedSessionIds.size, cleaned };
 }
 
+export type PlaybackArtifactsCleanupResult = {
+  cacheRemoved: number;
+  sessionsRemoved: number;
+  sessionArtifactsRemoved: number;
+};
+
+export function formatPlaybackArtifactsCleanupMessage(result: PlaybackArtifactsCleanupResult) {
+  const parts: string[] = [];
+  if (result.cacheRemoved > 0) {
+    parts.push(`${result.cacheRemoved} idle HLS cache ${result.cacheRemoved === 1 ? "entry" : "entries"}`);
+  }
+  if (result.sessionArtifactsRemoved > 0) {
+    parts.push(
+      `${result.sessionArtifactsRemoved} session artifact ${result.sessionArtifactsRemoved === 1 ? "directory" : "directories"}`,
+    );
+  }
+  if (parts.length === 0) return "No idle HLS cache or session artifacts to clean up.";
+  return `Removed ${parts.join(" and ")}.`;
+}
+
 export async function cleanupConfiguredPlaybackSessionArtifacts(
   maxAgeMs = DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_AGE_MS,
-) {
+): Promise<PlaybackArtifactsCleanupResult> {
   const maxBytes = await getPlaybackSessionArtifactMaxBytes();
-  await cleanupPlaybackHlsCache(maxBytes, await getPlaybackCacheTtlMs());
+  const cacheResult = await cleanupPlaybackHlsCache(maxBytes, await getPlaybackCacheTtlMs());
   const cacheBytes = await sumPlaybackCacheBytes();
-  return cleanupExpiredPlaybackSessionArtifacts(maxAgeMs, Math.max(0, maxBytes - cacheBytes));
+  const sessionResult = await cleanupExpiredPlaybackSessionArtifacts(maxAgeMs, Math.max(0, maxBytes - cacheBytes));
+  return {
+    cacheRemoved: cacheResult.removed,
+    sessionsRemoved: sessionResult.sessions,
+    sessionArtifactsRemoved: sessionResult.cleaned,
+  };
 }

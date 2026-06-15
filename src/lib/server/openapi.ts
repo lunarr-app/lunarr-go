@@ -680,6 +680,8 @@ export const openApiDocument = {
       post: {
         tags: ["Admin"],
         summary: "Run a settings maintenance action.",
+        description:
+          "Job-starting actions return 202. Synchronous actions (`testTmdb`, `cleanupPlaybackArtifacts`) return 200.",
         operationId: "runSettingsAction",
         requestBody: {
           $ref: "#/components/requestBodies/SettingsActionRequest",
@@ -1374,6 +1376,7 @@ export const openApiDocument = {
           "playbackCacheEntries",
           "playbackCacheBytes",
           "playbackCacheActiveRefs",
+          "playbackCacheIdleEntries",
         ],
         properties: {
           dataDir: stringSchema,
@@ -1406,6 +1409,11 @@ export const openApiDocument = {
             type: "integer",
             minimum: 0,
             description: "Sum of playback session reference counts across cache entries.",
+          },
+          playbackCacheIdleEntries: {
+            type: "integer",
+            minimum: 0,
+            description: "Number of shared HLS cache entries with no active playback session refs.",
           },
         },
       },
@@ -1494,11 +1502,62 @@ export const openApiDocument = {
         properties: {
           action: {
             type: "string",
-            enum: ["scanAll", "refreshMovieMetadata", "refreshTvMetadata", "repairMediaProbes", "testTmdb"],
+            enum: [
+              "scanAll",
+              "refreshMovieMetadata",
+              "refreshTvMetadata",
+              "repairMediaProbes",
+              "testTmdb",
+              "cleanupPlaybackArtifacts",
+            ],
           },
         },
       },
-      SettingsActionResponse: objectSchema("Settings action result."),
+      SettingsActionResponse: {
+        description:
+          "Settings action result. Synchronous actions use PlaybackArtifactsCleanupResponse or TmdbTestResponse. Job actions return job metadata.",
+        oneOf: [
+          { $ref: "#/components/schemas/PlaybackArtifactsCleanupResponse" },
+          { $ref: "#/components/schemas/TmdbTestResponse" },
+          objectSchema("Job action result."),
+        ],
+      },
+      PlaybackArtifactsCleanupResponse: {
+        type: "object",
+        required: ["cacheRemoved", "sessionsRemoved", "sessionArtifactsRemoved", "message"],
+        description: "Result of `cleanupPlaybackArtifacts`.",
+        properties: {
+          cacheRemoved: {
+            type: "integer",
+            minimum: 0,
+            description: "Idle shared HLS cache entries removed.",
+          },
+          sessionsRemoved: {
+            type: "integer",
+            minimum: 0,
+            description: "Distinct playback sessions whose artifacts were cleaned.",
+          },
+          sessionArtifactsRemoved: {
+            type: "integer",
+            minimum: 0,
+            description: "Session artifact directories removed (including orphans).",
+          },
+          message: {
+            ...stringSchema,
+            description: "Human-readable cleanup summary.",
+          },
+        },
+      },
+      TmdbTestResponse: {
+        type: "object",
+        required: ["ok", "message"],
+        additionalProperties: true,
+        description: "Result of `testTmdb`.",
+        properties: {
+          ok: { type: "boolean" },
+          message: stringSchema,
+        },
+      },
       WatchedRequest: {
         type: "object",
         required: ["mediaFileId", "completed"],

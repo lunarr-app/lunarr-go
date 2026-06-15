@@ -77,7 +77,7 @@ Transcoding settings accept the combined temporary playback storage limit, encod
 
 `encodeAheadSegmentCount` bounds how many HLS segments FFmpeg encodes beyond the requested segment during request-driven playback. `playbackCacheTtlHours` controls how long idle, unreferenced shared cache entries remain before TTL eviction.
 
-`GET /api/settings` also returns `status.playbackCacheEntries`, `status.playbackCacheBytes`, and `status.playbackCacheActiveRefs` for the shared HLS segment cache.
+`GET /api/settings` also returns `status.playbackCacheEntries`, `status.playbackCacheBytes`, `status.playbackCacheActiveRefs`, and `status.playbackCacheIdleEntries` for the shared HLS segment cache.
 
 ## Catalog
 
@@ -277,7 +277,23 @@ refreshMovieMetadata
 refreshTvMetadata
 repairMediaProbes
 testTmdb
+cleanupPlaybackArtifacts
 ```
+
+`cleanupPlaybackArtifacts` runs the same idle HLS cache and session artifact cleanup used on startup. It returns **200** with counts and a human-readable `message`. Active playback refs are preserved.
+
+Example response:
+
+```json
+{
+  "cacheRemoved": 2,
+  "sessionsRemoved": 1,
+  "sessionArtifactsRemoved": 3,
+  "message": "Removed 2 idle HLS cache entries and 3 session artifact directories."
+}
+```
+
+Job-starting actions (`scanAll`, metadata refresh, probe repair) return **202**.
 
 ## Responses
 

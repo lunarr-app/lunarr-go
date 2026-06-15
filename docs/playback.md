@@ -105,7 +105,9 @@ The default combined temporary playback storage limit is 20 GiB. Admins can choo
 
 Admins can also configure encode-ahead segment count (default 4) and shared cache TTL (default 24 hours). Cache entries invalidate when the source file size or modification time changes.
 
-Active playback keeps needed cache entries alive through reference counting (`ref_count` on each cache entry) while sessions are running. Completed or cancelled sessions decrement cache references, and unreferenced cache entries become eligible for TTL eviction (idle longer than the configured TTL) and LRU eviction (oldest idle entries removed first when combined playback storage exceeds the configured limit).
+Active playback keeps needed cache entries alive through reference counting (`ref_count` on each cache entry) while sessions are running. FFmpeg segment writes for the same cache entry are serialized so concurrent sessions sharing cached segments do not race on disk. Completed or cancelled sessions decrement cache references, and unreferenced cache entries become eligible for TTL eviction (idle longer than the configured TTL) and LRU eviction (oldest idle entries removed first when combined playback storage exceeds the configured limit).
+
+Admins can inspect shared cache size, entry counts, idle entries, and configured limits in **Settings → Server status**, and trigger the same cleanup path manually from **Settings → Maintenance → HLS playback cache**. Manual cleanup preserves entries with active playback references.
 
 ## Playback Cleanup
 

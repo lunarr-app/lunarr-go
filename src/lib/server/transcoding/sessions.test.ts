@@ -8,6 +8,7 @@ import type { Database } from "../db/schema";
 import {
   cleanupExpiredPlaybackSessionArtifacts,
   createTranscodeSession,
+  formatPlaybackArtifactsCleanupMessage,
   listIdleReadyHlsTranscodeSessions,
   listStaleActiveTranscodeSessions,
   recoverInterruptedTranscodeSessions,
@@ -636,5 +637,29 @@ describe("transcode sessions", () => {
       last_segment_name: "segment-00042.ts",
       last_segment_index: 42,
     });
+  });
+
+  test("formatPlaybackArtifactsCleanupMessage summarizes cleanup results", () => {
+    expect(
+      formatPlaybackArtifactsCleanupMessage({
+        cacheRemoved: 0,
+        sessionsRemoved: 0,
+        sessionArtifactsRemoved: 0,
+      }),
+    ).toBe("No idle HLS cache or session artifacts to clean up.");
+    expect(
+      formatPlaybackArtifactsCleanupMessage({
+        cacheRemoved: 2,
+        sessionsRemoved: 1,
+        sessionArtifactsRemoved: 3,
+      }),
+    ).toBe("Removed 2 idle HLS cache entries and 3 session artifact directories.");
+    expect(
+      formatPlaybackArtifactsCleanupMessage({
+        cacheRemoved: 1,
+        sessionsRemoved: 0,
+        sessionArtifactsRemoved: 0,
+      }),
+    ).toBe("Removed 1 idle HLS cache entry.");
   });
 });

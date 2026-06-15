@@ -163,6 +163,24 @@ export const actions: Actions = {
       });
     }
   },
+  cleanupPlaybackArtifacts: async ({ locals }) => {
+    if (!isAdmin(locals.user))
+      return fail(403, { playbackCleanupError: "Only admins can clean up playback artifacts." });
+
+    try {
+      return {
+        playbackCleanupMessage: (
+          (await runSettingsAction("cleanupPlaybackArtifacts")) as {
+            message: string;
+          }
+        ).message,
+      };
+    } catch (error) {
+      return fail(400, {
+        playbackCleanupError: error instanceof Error ? error.message : "Could not clean up playback artifacts.",
+      });
+    }
+  },
   testTmdb: async ({ locals }) => {
     if (!isAdmin(locals.user)) {
       return fail(403, {

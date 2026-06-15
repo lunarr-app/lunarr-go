@@ -113,5 +113,6 @@ export async function getServerStatus() {
     playbackCacheEntries: playbackCache.entries,
     playbackCacheBytes: playbackCache.bytes,
     playbackCacheActiveRefs: playbackCache.activeRefs,
+    playbackCacheIdleEntries: playbackCache.idleEntries,
   };
 }

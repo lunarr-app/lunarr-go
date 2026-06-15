@@ -827,4 +827,21 @@ describe("settings page server", () => {
       { library_id: "library-2", status: "completed", files_seen: 0 },
     ]);
   });
+
+  test("cleanupPlaybackArtifacts requires admin and reports idle cleanup results", async () => {
+    const denied = await actions.cleanupPlaybackArtifacts({
+      locals: { user: { id: "user-1", role: "user" } },
+    } as never);
+    expect(denied).toMatchObject({
+      status: 403,
+      data: { playbackCleanupError: "Only admins can clean up playback artifacts." },
+    });
+
+    const result = await actions.cleanupPlaybackArtifacts({
+      locals: { user: { id: "admin-1", role: "admin" } },
+    } as never);
+    expect(result).toEqual({
+      playbackCleanupMessage: "No idle HLS cache or session artifacts to clean up.",
+    });
+  });
 });
