@@ -1,5 +1,7 @@
 <script lang="ts">
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
+  import LibraryAutomationFields from "./_components/LibraryAutomationFields.svelte";
+  import RemoteLibraryFields, { type RemoteLibraryFieldValues } from "./_components/RemoteLibraryFields.svelte";
   import { CirclePlus, RefreshCw, Save, Settings, Trash2, TriangleAlert } from "@lucide/svelte";
 
   let { data, form } = $props();
@@ -11,6 +13,41 @@
   $effect(() => {
     if (formData.source) selectedSource = formData.source;
   });
+
+  function addRemoteFieldValues(): RemoteLibraryFieldValues {
+    return {
+      host: formData.host ?? "",
+      port: formData.port ?? (selectedSource === "sftp" ? "22" : "443"),
+      username: formData.username ?? "",
+      walkConcurrency: formData.walkConcurrency ?? "4",
+      operationTimeoutMs: formData.operationTimeoutMs ?? "30000",
+      root: formData.root ?? "",
+      secure: (formData.secure ?? "1") !== "0",
+    };
+  }
+
+  function libraryRemoteFieldValues(library: (typeof data.libraries)[number]): RemoteLibraryFieldValues {
+    if (library.source === "sftp") {
+      return {
+        host: library.sftpConfig?.host ?? "",
+        port: library.sftpConfig?.port ?? 22,
+        username: library.sftpConfig?.username ?? "",
+        walkConcurrency: library.sftpConfig?.walkConcurrency ?? 4,
+        operationTimeoutMs: library.sftpConfig?.operationTimeoutMs ?? 30_000,
+        root: library.sftpConfig?.root ?? "",
+      };
+    }
+
+    return {
+      host: library.webdavConfig?.host ?? "",
+      port: library.webdavConfig?.port ?? 443,
+      username: library.webdavConfig?.username ?? "",
+      walkConcurrency: library.webdavConfig?.walkConcurrency ?? 4,
+      operationTimeoutMs: library.webdavConfig?.operationTimeoutMs ?? 30_000,
+      root: library.webdavConfig?.root ?? "",
+      secure: library.webdavConfig?.secure !== false,
+    };
+  }
 
   function scanIntervalLabel(value: number | string | null | undefined) {
     const minutes = Number(value);
@@ -100,113 +137,20 @@
         </select>
       </label>
       {#if selectedSource === "sftp"}
-        <div class="source-grid">
-          <label>
-            Host
-            <input name="host" value={formData.host ?? ""} placeholder="sftp.example.com" />
-          </label>
-          <label>
-            Port
-            <input name="port" inputmode="numeric" value={formData.port ?? "22"} placeholder="22" />
-          </label>
-          <label class="wide">
-            Username
-            <input name="username" value={formData.username ?? ""} placeholder="mediauser" />
-          </label>
-          <label class="wide">
-            Password
-            <input name="password" value="" autocomplete="off" />
-          </label>
-          <label>
-            Walk concurrency
-            <input name="walkConcurrency" type="number" min="1" max="32" value={formData.walkConcurrency ?? "4"} />
-          </label>
-          <label>
-            Timeout ms
-            <input
-              name="operationTimeoutMs"
-              type="number"
-              min="5000"
-              max="300000"
-              step="1000"
-              value={formData.operationTimeoutMs ?? "30000"}
-            />
-          </label>
-        </div>
-        <label>
-          Root path
-          <input name="root" value={formData.root ?? ""} placeholder="/media" autocomplete="off" />
-        </label>
+        <RemoteLibraryFields protocol="sftp" values={addRemoteFieldValues()} />
       {:else if selectedSource === "webdav"}
-        <div class="source-grid">
-          <label>
-            Host
-            <input name="host" value={formData.host ?? ""} placeholder="nas.example.com" />
-          </label>
-          <label>
-            Port
-            <input name="port" inputmode="numeric" value={formData.port ?? "443"} placeholder="443" />
-          </label>
-          <label class="wide check subdued">
-            <input type="hidden" name="secure" value="0" />
-            <input type="checkbox" name="secure" value="1" checked={(formData.secure ?? "1") !== "0"} />
-            <span>Use HTTPS</span>
-          </label>
-          <label class="wide">
-            Username
-            <input name="username" value={formData.username ?? ""} placeholder="mediauser" />
-          </label>
-          <label class="wide">
-            Password
-            <input name="password" value="" autocomplete="off" />
-          </label>
-          <label>
-            Walk concurrency
-            <input name="walkConcurrency" type="number" min="1" max="32" value={formData.walkConcurrency ?? "4"} />
-          </label>
-          <label>
-            Timeout ms
-            <input
-              name="operationTimeoutMs"
-              type="number"
-              min="5000"
-              max="300000"
-              step="1000"
-              value={formData.operationTimeoutMs ?? "30000"}
-            />
-          </label>
-        </div>
-        <label>
-          Root path
-          <input name="root" value={formData.root ?? ""} placeholder="/media" autocomplete="off" />
-        </label>
+        <RemoteLibraryFields protocol="webdav" values={addRemoteFieldValues()} />
       {:else}
         <label>
           Folder path
           <input name="path" value={formData.path ?? ""} placeholder="/Volumes/Media" autocomplete="off" />
         </label>
       {/if}
-      <fieldset class="automation-fieldset">
-        <legend>Automation</legend>
-        {#if selectedSource === "local"}
-          <input type="hidden" name="watchEnabled" value="0" />
-          <label class="check subdued">
-            <input type="checkbox" name="watchEnabled" value="1" checked={(formData.watchEnabled ?? "1") !== "0"} />
-            <span>Watch local changes</span>
-          </label>
-        {/if}
-        <label>
-          Scheduled rescan
-          <select name="scanIntervalMinutes">
-            <option value="" selected={(formData.scanIntervalMinutes ?? "") === ""}>Off</option>
-            <option value="15" selected={formData.scanIntervalMinutes === "15"}>Every 15 minutes</option>
-            <option value="60" selected={formData.scanIntervalMinutes === "60"}>Hourly</option>
-            <option value="360" selected={formData.scanIntervalMinutes === "360"}>Every 6 hours</option>
-            <option value="720" selected={formData.scanIntervalMinutes === "720"}>Every 12 hours</option>
-            <option value="1440" selected={formData.scanIntervalMinutes === "1440"}>Daily</option>
-          </select>
-        </label>
-      </fieldset>
+      <LibraryAutomationFields
+        showWatch={selectedSource === "local"}
+        watchEnabled={(formData.watchEnabled ?? "1") !== "0"}
+        scanIntervalMinutes={formData.scanIntervalMinutes ?? null}
+      />
       {#if form?.addError}
         <p class="error">{form.addError}</p>
       {/if}
@@ -298,150 +242,30 @@
                   <input name="name" value={library.name} />
                 </label>
                 {#if library.source === "sftp"}
-                  <div class="source-grid">
-                    <label>
-                      Host
-                      <input name="host" value={library.sftpConfig?.host ?? ""} placeholder="sftp.example.com" />
-                    </label>
-                    <label>
-                      Port
-                      <input name="port" inputmode="numeric" value={library.sftpConfig?.port ?? 22} placeholder="22" />
-                    </label>
-                    <label class="wide">
-                      Username
-                      <input name="username" value={library.sftpConfig?.username ?? ""} placeholder="mediauser" />
-                    </label>
-                    <label class="wide">
-                      Password
-                      <input
-                        name="password"
-                        value=""
-                        autocomplete="off"
-                        placeholder="Leave blank to keep current password"
-                      />
-                    </label>
-                    <label>
-                      Walk concurrency
-                      <input
-                        name="walkConcurrency"
-                        type="number"
-                        min="1"
-                        max="32"
-                        value={library.sftpConfig?.walkConcurrency ?? 4}
-                      />
-                    </label>
-                    <label>
-                      Timeout ms
-                      <input
-                        name="operationTimeoutMs"
-                        type="number"
-                        min="5000"
-                        max="300000"
-                        step="1000"
-                        value={library.sftpConfig?.operationTimeoutMs ?? 30000}
-                      />
-                    </label>
-                  </div>
-                  <label>
-                    Root path
-                    <input
-                      name="root"
-                      value={library.sftpConfig?.root ?? ""}
-                      placeholder="media/movies"
-                      autocomplete="off"
-                    />
-                  </label>
+                  <RemoteLibraryFields
+                    protocol="sftp"
+                    values={libraryRemoteFieldValues(library)}
+                    passwordPlaceholder="Leave blank to keep current password"
+                    rootPlaceholder="media/movies"
+                  />
                 {:else if library.source === "webdav"}
-                  <div class="source-grid">
-                    <label>
-                      Host
-                      <input name="host" value={library.webdavConfig?.host ?? ""} placeholder="nas.example.com" />
-                    </label>
-                    <label>
-                      Port
-                      <input
-                        name="port"
-                        inputmode="numeric"
-                        value={library.webdavConfig?.port ?? 443}
-                        placeholder="443"
-                      />
-                    </label>
-                    <label class="wide check subdued">
-                      <input type="hidden" name="secure" value="0" />
-                      <input type="checkbox" name="secure" value="1" checked={library.webdavConfig?.secure !== false} />
-                      <span>Use HTTPS</span>
-                    </label>
-                    <label class="wide">
-                      Username
-                      <input name="username" value={library.webdavConfig?.username ?? ""} placeholder="mediauser" />
-                    </label>
-                    <label class="wide">
-                      Password
-                      <input
-                        name="password"
-                        value=""
-                        autocomplete="off"
-                        placeholder="Leave blank to keep current password"
-                      />
-                    </label>
-                    <label>
-                      Walk concurrency
-                      <input
-                        name="walkConcurrency"
-                        type="number"
-                        min="1"
-                        max="32"
-                        value={library.webdavConfig?.walkConcurrency ?? 4}
-                      />
-                    </label>
-                    <label>
-                      Timeout ms
-                      <input
-                        name="operationTimeoutMs"
-                        type="number"
-                        min="5000"
-                        max="300000"
-                        step="1000"
-                        value={library.webdavConfig?.operationTimeoutMs ?? 30000}
-                      />
-                    </label>
-                  </div>
-                  <label>
-                    Root path
-                    <input
-                      name="root"
-                      value={library.webdavConfig?.root ?? ""}
-                      placeholder="media/movies"
-                      autocomplete="off"
-                    />
-                  </label>
+                  <RemoteLibraryFields
+                    protocol="webdav"
+                    values={libraryRemoteFieldValues(library)}
+                    passwordPlaceholder="Leave blank to keep current password"
+                    rootPlaceholder="media/movies"
+                  />
                 {:else}
                   <label>
                     Folder path
                     <input name="path" value={library.path} placeholder="/Volumes/Media/Movies" autocomplete="off" />
                   </label>
                 {/if}
-                <fieldset class="automation-fieldset">
-                  <legend>Automation</legend>
-                  {#if library.source === "local"}
-                    <input type="hidden" name="watchEnabled" value="0" />
-                    <label class="check subdued">
-                      <input type="checkbox" name="watchEnabled" value="1" checked={library.watch_enabled !== 0} />
-                      <span>Watch local changes</span>
-                    </label>
-                  {/if}
-                  <label>
-                    Scheduled rescan
-                    <select name="scanIntervalMinutes">
-                      <option value="" selected={library.scan_interval_minutes === null}>Off</option>
-                      <option value="15" selected={library.scan_interval_minutes === 15}>Every 15 minutes</option>
-                      <option value="60" selected={library.scan_interval_minutes === 60}>Hourly</option>
-                      <option value="360" selected={library.scan_interval_minutes === 360}>Every 6 hours</option>
-                      <option value="720" selected={library.scan_interval_minutes === 720}>Every 12 hours</option>
-                      <option value="1440" selected={library.scan_interval_minutes === 1440}>Daily</option>
-                    </select>
-                  </label>
-                </fieldset>
+                <LibraryAutomationFields
+                  showWatch={library.source === "local"}
+                  watchEnabled={library.watch_enabled !== 0}
+                  scanIntervalMinutes={library.scan_interval_minutes}
+                />
                 <button class="secondary" disabled={library.scanActive}>
                   <Save size={16} aria-hidden="true" />
                   Save changes
@@ -533,16 +357,6 @@
     margin: 0;
   }
 
-  .source-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 6rem;
-    gap: 0.75rem;
-  }
-
-  .source-grid .wide {
-    grid-column: 1 / -1;
-  }
-
   article {
     display: grid;
     gap: 1rem;
@@ -601,21 +415,9 @@
     gap: 0.55rem;
   }
 
-  .automation-fieldset {
-    border: 0;
-    border-radius: 0;
-    padding: 0;
-    gap: 0.65rem;
-  }
-
   legend {
     padding: 0 0.25rem;
     font-weight: 700;
-  }
-
-  .automation-fieldset legend {
-    margin-bottom: 0.25rem;
-    padding: 0;
   }
 
   .check {
