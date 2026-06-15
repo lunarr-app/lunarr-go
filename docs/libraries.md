@@ -72,7 +72,7 @@ The latest library scan row is preserved during job-history cleanup so the Libra
 
 Scheduled rescans are configured per library. Supported intervals are 5 minutes through 30 days.
 
-When a library is added or changed, the server syncs watchers and scheduled scan timers immediately; a restart is not required for the new settings to take effect.
+When a library is added or changed, the server syncs watchers and scheduled scan timers immediately, a restart is not required for the new settings to take effect.
 
 Long intervals such as 30 days are handled by chaining safe timer windows and rechecking whether the library is due before starting a scan.
 

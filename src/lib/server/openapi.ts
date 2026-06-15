@@ -98,7 +98,7 @@ export const openApiDocument = {
   info: {
     title: "Lunarr API",
     version: "0.2.3",
-    description: "HTTP API used by Lunarr web and mobile clients.",
+    description: "HTTP API for Lunarr catalog, playback, and administration.",
   },
   servers: [{ url: "/" }],
   tags: [

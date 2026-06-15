@@ -9,9 +9,9 @@ GET /api/openapi.json
 GET /api/openapi.yaml
 ```
 
-Use `openapi.json` as the source for generated clients, including the planned React Native app. The recommended mobile repo name is `lunarr-mobile`; generate its API client from the backend OpenAPI document instead of hand-maintaining request and response types.
+Use `openapi.json` as the source for generated API clients instead of hand-maintaining request and response types.
 
-Mobile and custom clients should send API keys with Better Auth's default API-key header:
+Clients using API keys should send them with Better Auth's default API-key header:
 
 ```http
 X-API-Key: lunarr_...
@@ -147,7 +147,7 @@ Body:
 }
 ```
 
-Season watched requests only need `completed`; the server marks the accessible playable episodes in that season.
+Season watched requests only need `completed`, the server marks the accessible playable episodes in that season.
 
 ## Admin
 
@@ -172,7 +172,7 @@ POST /api/settings/actions
 POST /api/movies/:id/metadata/refresh
 ```
 
-Library create/update bodies use the same shape as the web form. Local libraries use `path`; SFTP and WebDAV libraries use remote connection fields:
+Library create/update bodies use the same shape as the web form. Local libraries use `path`, SFTP and WebDAV libraries use remote connection fields:
 
 ```json
 {
@@ -218,7 +218,7 @@ Library create/update bodies use the same shape as the web form. Local libraries
 }
 ```
 
-`watchEnabled` only applies to local libraries and defaults to `true`. `scanIntervalMinutes` is optional for local and remote libraries; use `null` or `0` to disable scheduled rescans. Allowed intervals are 5 minutes through 30 days.
+`watchEnabled` only applies to local libraries and defaults to `true`. `scanIntervalMinutes` is optional for local and remote libraries, use `null` or `0` to disable scheduled rescans. Allowed intervals are 5 minutes through 30 days.
 
 Settings action body:
 

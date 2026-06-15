@@ -6,7 +6,7 @@ Lunarr plays media through authenticated routes. Raw filesystem paths and remote
 
 Lunarr prefers direct browser playback when the media file is already browser-compatible, such as MP4 with H.264 video and AAC audio. Direct playback is served through authenticated, range-capable media routes so browser seeking works without exposing raw paths.
 
-The web player sends conservative client capability hints when starting playback. For example, MP4 HEVC or AV1 files and WebM VP8/VP9/AV1 files can direct play only when the browser reports support for the matching container and codecs; otherwise they fall back to temporary HLS. Capability checks understand common FFmpeg and browser codec-string aliases such as `avc1.*`, `mp4a.*`, `hvc1.*`, `av01.*`, and `vp09.*`.
+The web player sends conservative client capability hints when starting playback. For example, MP4 HEVC or AV1 files and WebM VP8/VP9/AV1 files can direct play only when the browser reports support for the matching container and codecs, otherwise they fall back to temporary HLS. Capability checks understand common FFmpeg and browser codec-string aliases such as `avc1.*`, `mp4a.*`, `hvc1.*`, `av01.*`, and `vp09.*`.
 
 When direct playback is not suitable, Lunarr serves request-driven HLS through direct FFmpeg CLI process management. HLS-compatible files can use copied remux so FFmpeg repackages the source streams without re-encoding. Lunarr waits for FFmpeg's authored event playlist before treating a requested segment as ready, so segment availability follows FFmpeg's real timing instead of only the virtual playlist grid. Unknown video codecs and unknown audio codecs are not copied through HLS remux. Unsupported codecs use FFmpeg-generated HLS transcoding. NodeAV remains useful for probe-oriented work such as metadata and stream inspection, but it is not the user-facing HLS segment generator.
 
@@ -24,7 +24,7 @@ Users can also set a preferred subtitle language in Profile. Lunarr still return
 
 ## Chromecast And AirPlay
 
-Chromecast and AirPlay receivers load media from Lunarr directly. The app must be reachable from the receiver device by its configured public origin, not only from the browser that opened the player. Use HTTPS for production deployments; Chrome and Edge rely on Google's Cast Web Sender SDK, and secure origins are required for reliable Cast discovery and launch behavior.
+Chromecast and AirPlay receivers load media from Lunarr directly. The app must be reachable from the receiver device by its configured public origin, not only from the browser that opened the player. Use HTTPS for production deployments, Chrome and Edge rely on Google's Cast Web Sender SDK, and secure origins are required for reliable Cast discovery and launch behavior.
 
 Direct playback can be sent to a receiver when the receiver supports the served container and codecs. Non-direct playback uses the same temporary HLS sessions as the browser player. Before sending HLS to a receiver, Lunarr waits until the playlist is available, then returns signed receiver URLs for the playlist, segments, and external subtitle tracks. Remote playback tokens are scoped to the media route and expire after 8 hours.
 
@@ -147,7 +147,7 @@ This means the history is not a strict maximum of 500 rows. If more than 500 ina
 
 ## API Keys And Clients
 
-Browser sessions use Better Auth cookies. Mobile and custom clients can use personal API keys:
+Browser sessions use Better Auth cookies. API clients can use personal API keys:
 
 ```http
 X-API-Key: lunarr_...

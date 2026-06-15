@@ -16,11 +16,13 @@ Use **Test TMDb** in Settings before a large scan if you want to confirm the act
 
 ## Add A Library
 
-Open Libraries and add either a local or SFTP source.
+Open Libraries and add a local, SFTP, or WebDAV source.
 
 For local libraries, enter the server-visible path. In Docker, this must be the mounted container path, such as `/media/movies`, not the host-only path.
 
 For SFTP libraries, enter host, port, username, password, and remote root. Lunarr tests the remote root before saving.
+
+For WebDAV libraries, enter host, port, username, password, remote root, and whether to use HTTPS. Lunarr tests the remote root before saving. For Nextcloud and similar servers, you can include the WebDAV path prefix in the host field, such as `cloud.example.com/remote.php/dav/files/username`.
 
 Supported library kinds:
 
@@ -45,7 +47,7 @@ Supported sidecar subtitle extension:
 
 After adding a library, click **Scan** from Libraries. Scans read/probe existing files and create or update media records. Removed files are detected during scans and cleaned from the library view when no remaining file points at the media item.
 
-Local file watching is enabled per local library by default. It watches future media and subtitle changes and triggers debounced background scans. SFTP libraries cannot be watched live, so use manual scans or scheduled rescans for remote changes.
+Local file watching is enabled per local library by default. It watches future media and subtitle changes and triggers debounced background scans. SFTP and WebDAV libraries cannot be watched live, so use manual scans or scheduled rescans for remote changes.
 
 Scheduled rescans are optional per library. Supported intervals are 5 minutes through 30 days.
 
@@ -82,7 +84,7 @@ bun run seed:radarr
 
 By default this creates small mock files in `.lunarr/fixtures/radarr/movies`. Add `-- --sparse` if you need files that report the original remote sizes, or `-- --target /path/to/movies` to write somewhere else.
 
-For browser playback testing, seed the same folders with public MP4 sample videos:
+For playback testing, seed the same folders with public MP4 sample videos:
 
 ```sh
 bun run seed:radarr -- --clean --playback

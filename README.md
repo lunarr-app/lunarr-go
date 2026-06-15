@@ -1,12 +1,19 @@
 # Lunarr
 
-Lunarr is a self-hosted web media server for local and SFTP movie and TV libraries. It scans folders, matches media with TMDb metadata, and plays files in the browser with direct streaming or temporary HLS transcoding.
+Lunarr is a self-hosted media server for movie and TV libraries on local disks, SFTP, or WebDAV. It scans your files, matches them with TMDb metadata, and plays them with direct streaming or on-the-fly HLS transcoding. Chromecast and AirPlay are supported for remote playback.
 
 ![Lunarr preview](static/images/lunarr-preview.gif)
 
+## Features
+
+- Local, SFTP, and WebDAV libraries with TMDb metadata, continue watching, and per-user access
+- Direct play or on-the-fly HLS, Chromecast and AirPlay
+- Sidecar subtitles, FFmpeg transcoding, optional hardware acceleration
+- API keys and OpenAPI at `/api/openapi.json`
+
 ## Quick Start With Docker
 
-Run Lunarr with persistent app data. The `/mnt/media:/media:ro` mount is optional for local media libraries; replace `/mnt/media` with your host media path or remove that line if you only use SFTP.
+Run Lunarr with persistent app data. The `/mnt/media:/media:ro` mount is optional for local media libraries, replace `/mnt/media` with your host media path or remove that line if you only use remote libraries.
 The published Docker image includes system FFmpeg for HLS playback and verifies the baseline FFmpeg requirements during image build.
 
 ```sh
@@ -44,7 +51,7 @@ Open `http://127.0.0.1:5173`, create the first admin account, add a library, and
 
 ## First Scan
 
-Lunarr supports local and SFTP libraries. Local libraries can watch file changes, and both local and SFTP libraries can use scheduled rescans. Manual scans are always available from Libraries.
+Lunarr supports local, SFTP, and WebDAV libraries. Local libraries can watch file changes, remote libraries use manual or scheduled rescans.
 
 Common TV layouts:
 
@@ -62,7 +69,7 @@ Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Side
 
 - [Getting Started](docs/getting-started.md): first-run setup, TMDb, adding libraries, and scanning.
 - [Configuration](docs/configuration.md): environment variables, Docker, data storage, and production start.
-- [Libraries](docs/libraries.md): local and SFTP behavior, watchers, scheduled rescans, and remote tuning.
+- [Libraries](docs/libraries.md): local, SFTP, and WebDAV behavior, watchers, scheduled rescans, and remote tuning.
 - [Playback And Maintenance](docs/playback.md): direct play, HLS, transcode cache, cleanup, and job history retention.
 - [API](docs/api.md): authenticated JSON APIs and API-key usage.
 - [Transcoding Runtime](docs/transcoding-runtime.md): FFmpeg playback and NodeAV probing implementation notes.
@@ -90,6 +97,6 @@ bun run verify:tmdb
 - The first registered user becomes admin.
 - Later signup is disabled by default unless an admin enables it in Settings.
 - `AUTH_SECRET` must stay stable between restarts.
-- `LUNARR_DATA_DIR` stores the SQLite database and temporary playback artifacts; keep it on persistent storage.
+- `LUNARR_DATA_DIR` stores the SQLite database and temporary playback artifacts, keep it on persistent storage.
 - Admins can share each library with all users or only selected regular users.
 - Raw library paths, scan errors, jobs, users, and settings are admin-only.

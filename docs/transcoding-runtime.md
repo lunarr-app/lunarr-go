@@ -12,7 +12,7 @@ Direct play stays the preferred path when the selected file is already compatibl
 - Install dependencies with Bun so the pinned `node-av` package is present for probing.
 - Provide an executable FFmpeg binary. Lunarr resolves it from `FFMPEG_PATH`, system `ffmpeg` on `PATH`, or the bundled `node-av` FFmpeg path as a fallback.
 - Keep temporary playback-session artifact storage on fast local disk. Generated HLS artifacts live under `playback-sessions/<sessionId>/` in the configured Lunarr data directory.
-- Keep SFTP libraries seekable by preserving remote file size and duration metadata. Non-direct SFTP playback streams through Lunarr's private localhost range proxy into FFmpeg, not by exposing remote credentials to FFmpeg.
+- Keep remote libraries (SFTP and WebDAV) seekable by preserving remote file size and duration metadata. Non-direct remote playback streams through Lunarr's private localhost range proxy into FFmpeg, not by exposing remote credentials to FFmpeg.
 
 The Docker runtime image installs system FFmpeg and runs the baseline FFmpeg playback verifier plus the NodeAV probe verifier during image build.
 
@@ -26,7 +26,7 @@ When only the container is unsuitable for the browser, Lunarr can identify compa
 
 Unsupported codecs use FFmpeg-generated HLS transcode. The default software target is H.264 video with AAC audio. Admin quality presets can cap transcode height and adjust software CRF or hardware bitrate targets.
 
-Request-driven HLS defaults to MPEG-TS segments for broad compatibility. `LUNARR_HLS_SEGMENT_FORMAT=fmp4` forces experimental fMP4/CMAF output. `LUNARR_HLS_SEGMENT_FORMAT=auto` selects fMP4 only when the client proves native HLS or MediaSource fMP4 support; other clients keep MPEG-TS.
+Request-driven HLS defaults to MPEG-TS segments for broad compatibility. `LUNARR_HLS_SEGMENT_FORMAT=fmp4` forces experimental fMP4/CMAF output. `LUNARR_HLS_SEGMENT_FORMAT=auto` selects fMP4 only when the client proves native HLS or MediaSource fMP4 support, other clients keep MPEG-TS.
 
 ## Request-Driven HLS
 
@@ -40,11 +40,11 @@ Cancelled or replaced FFmpeg processes are asked to exit with `SIGTERM`. If a pr
 
 When Lunarr serves an FFmpeg-authored playlist, it rewrites media segment URIs and fMP4 `EXT-X-MAP` init URIs through the authenticated segment route. This keeps future FFmpeg-authored remux playlists compatible with the same authorization and route-state checks as virtual playlists.
 
-## SFTP Input
+## Remote Library Input
 
-SFTP HLS generation uses a private localhost input proxy. Lunarr creates a short-lived token URL bound to the playback session, then FFmpeg reads that URL with `HEAD`, ranged `GET`, or full `GET`.
+SFTP and WebDAV HLS generation use the same private localhost input proxy. Lunarr creates a short-lived token URL bound to the playback session, then FFmpeg reads that URL with `HEAD`, ranged `GET`, or full `GET`.
 
-The proxy translates FFmpeg range requests into the existing seekable storage abstraction. Setup, range stream creation, and range body reads are timeout-bounded. Late or cancelled SFTP handles are closed, truncated reads fail clearly, and replacement input sources are closed when an existing FFmpeg stream is reused.
+The proxy translates FFmpeg range requests into the existing seekable storage abstraction. Setup, range stream creation, and range body reads are timeout-bounded. Late or cancelled remote handles are closed, truncated reads fail clearly, and replacement input sources are closed when an existing FFmpeg stream is reused.
 
 ## Session And Route Safety
 
@@ -108,8 +108,8 @@ The hardware smoke validates the VAAPI device path before running FFmpeg. In Doc
 
 If playback fails before a playlist is ready, check the playback-session error message first. FFmpeg backend errors include the relevant stderr tail so missing encoders, unreadable inputs, invalid hardware devices, and HLS muxer failures are visible.
 
-If SFTP playback fails, confirm that the file has known duration, positive size, and a known input format from probe metadata. Also check remote range-read stability and whether the server closes idle sessions under seek load.
+If remote library playback fails, confirm that the file has known duration, positive size, and a known input format from probe metadata. Also check remote range-read stability and whether the server closes idle sessions under seek load.
 
-If hardware acceleration is enabled but playback fails, run the hardware verifier and smoke command inside the same Docker/container environment. Encoder presence in `ffmpeg -encoders` is not enough; the smoke command must actually produce HLS segments.
+If hardware acceleration is enabled but playback fails, run the hardware verifier and smoke command inside the same Docker/container environment. Encoder presence in `ffmpeg -encoders` is not enough, the smoke command must actually produce HLS segments.
 
 NodeAV should remain installed and healthy for probing, but normal non-direct playback should not depend on NodeAV HLS segment generation.
