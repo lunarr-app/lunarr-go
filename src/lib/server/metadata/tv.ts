@@ -31,6 +31,17 @@ type RefreshTvSeasonMetadataResult =
   | { status: "unmatched"; addedEpisodes: 0 }
   | { status: "missing"; addedEpisodes: 0 };
 
+export type RefreshTvShowMetadataResult =
+  | {
+      status: "matched";
+      mediaItemId: string;
+      matchedSeasons: number;
+      unmatchedSeasons: number;
+      addedEpisodes: number;
+    }
+  | { status: "unmatched"; mediaItemId: string }
+  | { status: "missing"; mediaItemId: null };
+
 const runningTvMetadataJobs = new Set<string>();
 
 function isTerminalJobStatus(status: "queued" | "running" | "completed" | "failed" | "cancelled") {
@@ -258,6 +269,57 @@ export async function refreshTvSeasonMetadataResult(
   }
 
   return { status: "matched", addedEpisodes };
+}
+
+export async function refreshTvShowMetadataResult(
+  showId: string,
+  options: RefreshTvMetadataOptions = {},
+): Promise<RefreshTvShowMetadataResult> {
+  const db = await getDb();
+  const show = await db
+    .selectFrom("media_item")
+    .select("id")
+    .where("id", "=", showId)
+    .where("kind", "=", "show")
+    .executeTakeFirst();
+
+  if (!show) return { status: "missing", mediaItemId: null };
+
+  const seasons = await db
+    .selectFrom("media_item")
+    .select("id")
+    .where("parent_id", "=", showId)
+    .where("kind", "=", "season")
+    .where("season_number", "is not", null)
+    .orderBy("season_number", "asc")
+    .execute();
+
+  if (seasons.length === 0) return { status: "unmatched", mediaItemId: showId };
+
+  let mediaItemId = showId;
+  let matchedSeasons = 0;
+  let unmatchedSeasons = 0;
+  let addedEpisodes = 0;
+
+  for (const season of seasons) {
+    const result = await refreshTvSeasonMetadataResult(season.id, options);
+    if (result.status === "matched") {
+      matchedSeasons += 1;
+      addedEpisodes += result.addedEpisodes;
+      const parent = await db
+        .selectFrom("media_item")
+        .select("parent_id")
+        .where("id", "=", season.id)
+        .executeTakeFirst();
+      if (parent?.parent_id) mediaItemId = parent.parent_id;
+    } else if (result.status === "unmatched") {
+      unmatchedSeasons += 1;
+    }
+  }
+
+  if (matchedSeasons === 0) return { status: "unmatched", mediaItemId };
+
+  return { status: "matched", mediaItemId, matchedSeasons, unmatchedSeasons, addedEpisodes };
 }
 
 async function addMetadataJobError(jobId: string, item: string, error: unknown) {

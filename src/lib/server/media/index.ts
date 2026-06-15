@@ -716,6 +716,28 @@ export async function getShowDetail(id: string, userId: string) {
     .where("media_item_id", "=", id)
     .orderBy("position", "asc")
     .execute();
+  const creators = await db
+    .selectFrom("media_item_credit")
+    .select(["name"])
+    .where("media_item_id", "=", id)
+    .where("credit_type", "=", "crew")
+    .where("job", "in", ["Creator", "Developer", "Original Series Creator", "Series Creator"])
+    .orderBy("credit_order", "asc")
+    .execute();
+  const keywords = await db
+    .selectFrom("media_item_keyword")
+    .select(["name"])
+    .where("media_item_id", "=", id)
+    .orderBy("name", "asc")
+    .limit(12)
+    .execute();
+  const productionCompanies = await db
+    .selectFrom("media_item_production_company")
+    .select(["name"])
+    .where("media_item_id", "=", id)
+    .orderBy("name", "asc")
+    .limit(6)
+    .execute();
   const cast = await db
     .selectFrom("media_item_credit")
     .select(["provider", "provider_id", "name", "character_name", "profile_path", "credit_order"])
@@ -747,6 +769,7 @@ export async function getShowDetail(id: string, userId: string) {
     show: {
       id: show.id,
       title: show.title,
+      originalTitle: show.original_title,
       year: show.year,
       overview: show.overview,
       posterUrl: tmdbImageUrl(show.poster_path),
@@ -754,9 +777,20 @@ export async function getShowDetail(id: string, userId: string) {
       releaseDate: show.release_date,
       status: show.status,
       voteAverage: show.vote_average,
+      voteCount: show.vote_count,
       popularity: show.popularity,
       genres: genres.map((genre) => genre.name),
+      provider: show.provider,
+      providerId: show.provider_id,
+      updatedAt: show.updated_at,
+      certification: show.certification,
+      originalLanguage: show.original_language,
+      trailerSite: show.trailer_site,
+      trailerKey: show.trailer_key,
     },
+    creators: creators.map((credit) => credit.name),
+    keywords: keywords.map((keyword) => keyword.name),
+    productionCompanies: productionCompanies.map((company) => company.name),
     cast: cast.map((credit) => ({
       provider: credit.provider,
       providerId: credit.provider_id,

@@ -466,6 +466,23 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/shows/{id}/metadata/refresh": {
+      post: {
+        tags: ["Catalog"],
+        summary: "Refresh metadata for a single TV show.",
+        operationId: "refreshTvShowMetadata",
+        parameters: [pathIdParameter()],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MetadataRefreshResponse",
+          }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+    },
     "/api/shows/{id}/seasons/{seasonId}/watched": {
       post: {
         tags: ["Catalog"],

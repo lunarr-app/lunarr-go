@@ -122,6 +122,14 @@ type TmdbTvDetails = TmdbTvSearchResult & {
     english_name?: string;
     name: string;
   }>;
+  created_by?: Array<{
+    id: number;
+    credit_id?: string;
+    name: string;
+    original_name?: string;
+    gender?: number;
+    profile_path?: string | null;
+  }>;
   aggregate_credits?: {
     cast?: Array<{
       id: number;
@@ -528,6 +536,35 @@ function mapTvShowMetadata(detail: TmdbTvDetails, first: TmdbTvSearchResult): Ma
   const trailer = preferredTvTrailer(detail);
   const cast = detail.aggregate_credits?.cast ?? [];
   const crew = detail.aggregate_credits?.crew ?? [];
+  const createdBy = (detail.created_by ?? [])
+    .filter((person) => person.name)
+    .map((person, index) => ({
+      providerId: String(person.id),
+      creditId: person.credit_id ?? `creator-${person.id}`,
+      name: person.name,
+      originalName: stringOrNull(person.original_name),
+      department: "Creator",
+      job: "Creator",
+      order: index,
+      profilePath: person.profile_path ?? null,
+    }));
+  const createdByIds = new Set(createdBy.map((credit) => credit.providerId));
+  const aggregateCrew = crew
+    .filter((credit) => credit.name)
+    .map((credit, index) => {
+      const job = credit.jobs?.[0];
+      return {
+        providerId: String(credit.id),
+        creditId: credit.credit_id ?? job?.credit_id ?? "",
+        name: credit.name,
+        originalName: stringOrNull(credit.original_name),
+        department: stringOrNull(credit.department),
+        job: stringOrNull(job?.job),
+        order: createdBy.length + index,
+        profilePath: credit.profile_path ?? null,
+      };
+    })
+    .filter((credit) => !createdByIds.has(credit.providerId));
 
   return {
     provider: "tmdb",
@@ -572,21 +609,7 @@ function mapTvShowMetadata(detail: TmdbTvDetails, first: TmdbTvSearchResult): Ma
           profilePath: credit.profile_path ?? null,
         };
       }),
-    crew: crew
-      .filter((credit) => credit.name)
-      .map((credit, index) => {
-        const job = credit.jobs?.[0];
-        return {
-          providerId: String(credit.id),
-          creditId: credit.credit_id ?? job?.credit_id ?? "",
-          name: credit.name,
-          originalName: stringOrNull(credit.original_name),
-          department: stringOrNull(credit.department),
-          job: stringOrNull(job?.job),
-          order: index,
-          profilePath: credit.profile_path ?? null,
-        };
-      }),
+    crew: [...createdBy, ...aggregateCrew],
     videos: (detail.videos?.results ?? [])
       .filter((video) => video.id && video.name && video.site && video.key)
       .map((video) => ({

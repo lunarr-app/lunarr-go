@@ -171,6 +171,7 @@ PUT /api/settings/metadata
 PUT /api/settings/transcoding
 POST /api/settings/actions
 POST /api/movies/:id/metadata/refresh
+POST /api/shows/:id/metadata/refresh
 ```
 
 `GET /api/jobs` returns recent scan jobs, playback sessions, and summary counts. Each scan job row includes `errors_count`, but error rows are not embedded in that response.

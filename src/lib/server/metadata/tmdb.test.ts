@@ -563,6 +563,14 @@ describe("matchTvSeasonMetadata", () => {
         homepage: "https://example.test/bsg",
         original_language: "en",
         genres: [{ id: 10765, name: "Sci-Fi & Fantasy" }],
+        created_by: [
+          {
+            id: 2,
+            credit_id: "creator-1",
+            name: "Ronald D. Moore",
+            profile_path: "/rdm.jpg",
+          },
+        ],
         aggregate_credits: {
           cast: [
             {
@@ -632,7 +640,7 @@ describe("matchTvSeasonMetadata", () => {
     });
     expect(metadata?.show.crew?.[0]).toMatchObject({
       name: "Ronald D. Moore",
-      job: "Developer",
+      job: "Creator",
     });
     expect(metadata?.show.trailer).toMatchObject({
       site: "YouTube",

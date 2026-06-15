@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql, type Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
-import { load as showLoad } from "./[id]/+page.server";
+import { setSetting } from "$lib/server/settings";
+import { actions as showActions, load as showLoad } from "./[id]/+page.server";
 import { actions as seasonActions, load as seasonLoad } from "./[id]/seasons/[seasonId]/+page.server";
 import { load as showsLoad } from "./+page.server";
 
@@ -254,7 +255,7 @@ describe("shows page server", () => {
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
     expect(result).toMatchObject({
-      show: { id: "show-1", title: "The Expanse" },
+      show: { id: "show-1", title: "The Expanse", providerId: "63639", updatedAt: expect.any(String) },
       seasons: [
         {
           id: "season-1",
@@ -378,5 +379,117 @@ describe("shows page server", () => {
       { media_item_id: "episode-1", completed: 0 },
       { media_item_id: "episode-2", completed: 0 },
     ]);
+  });
+
+  test("exposes metadata management flags on show detail load", async () => {
+    const userResult = await showLoad({
+      params: { id: "show-1" },
+      locals: { user: { id: "user-1", role: "user" } },
+    } as never);
+    expect(userResult).toMatchObject({
+      canManageMetadata: false,
+      tmdbConfigured: expect.any(Boolean),
+      show: {
+        provider: "tmdb",
+        providerId: "63639",
+        updatedAt: expect.any(String),
+      },
+    });
+
+    const adminResult = await showLoad({
+      params: { id: "show-1" },
+      locals: { user: { id: "user-1", role: "admin" } },
+    } as never);
+    expect(adminResult.canManageMetadata).toBe(true);
+  });
+
+  test("keeps show detail metadata refresh admin-only", async () => {
+    const userResult = await showActions.refreshMetadata({
+      params: { id: "show-1" },
+      locals: { user: { id: "user-1", role: "user" } },
+    } as never);
+    expect(userResult).toMatchObject({
+      status: 403,
+      data: {
+        metadataError: "Only admins can refresh metadata.",
+      },
+    });
+  });
+
+  test("refreshes a single show from TMDb through the detail action", async () => {
+    await setSetting("tmdb_api_key", "saved-api-key");
+    globalThis.fetch = (async (input: URL | RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: [
+            {
+              id: 63639,
+              name: "The Expanse",
+              first_air_date: "2015-12-14",
+            },
+          ],
+        });
+      }
+
+      if (url.includes("/tv/63639/season/1")) {
+        return Response.json({
+          id: 60001,
+          name: "Season 1",
+          overview: "Refreshed season overview.",
+          air_date: "2015-12-14",
+          poster_path: "/season-refreshed.jpg",
+          season_number: 1,
+          episodes: [
+            {
+              id: 70001,
+              name: "Dulcinea",
+              overview: "Refreshed opener.",
+              air_date: "2015-12-14",
+              episode_number: 1,
+              season_number: 1,
+              runtime: 45,
+              still_path: "/episode-1-refreshed.jpg",
+              vote_average: 8.1,
+              vote_count: 10,
+            },
+          ],
+        });
+      }
+
+      return Response.json({
+        id: 63639,
+        name: "The Expanse",
+        original_name: "The Expanse",
+        overview: "Refreshed from the detail page.",
+        first_air_date: "2015-12-14",
+        poster_path: "/show-refreshed.jpg",
+        backdrop_path: "/backdrop-refreshed.jpg",
+        popularity: 100,
+        vote_average: 8.4,
+        vote_count: 2000,
+        status: "Ended",
+        genres: [{ id: 10765, name: "Sci-Fi & Fantasy" }],
+      });
+    }) as typeof fetch;
+
+    await expectRedirect(
+      showActions.refreshMetadata({
+        params: { id: "show-1" },
+        locals: { user: { id: "user-1", role: "admin" } },
+      } as never),
+      "/shows/show-1",
+    );
+
+    const show = await db.selectFrom("media_item").selectAll().where("id", "=", "show-1").executeTakeFirstOrThrow();
+    expect(show).toMatchObject({
+      provider: "tmdb",
+      provider_id: "63639",
+      overview: "Refreshed from the detail page.",
+      poster_path: "/show-refreshed.jpg",
+      backdrop_path: "/backdrop-refreshed.jpg",
+      vote_average: 8.4,
+    });
   });
 });
