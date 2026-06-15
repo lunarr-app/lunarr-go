@@ -1325,7 +1325,8 @@
         player.src = streamUrl;
       };
 
-      void setupPlayer();
+      await setupPlayer();
+      if (disposed) return;
 
       const seekToStart = () => {
         if (startSeconds <= 0 || !Number.isFinite(startSeconds)) return;

@@ -150,6 +150,17 @@ export function normalizePlaybackProgress(input: {
   };
 }
 
+const REWATCH_MAX_START_SECONDS = 30;
+const REWATCH_MAX_START_FRACTION = 0.05;
+
+export function isRewatchFromStart(positionSeconds: number, durationSeconds: number | null) {
+  if (positionSeconds <= 0) return true;
+  if (durationSeconds !== null && durationSeconds > 0) {
+    return positionSeconds / durationSeconds <= REWATCH_MAX_START_FRACTION;
+  }
+  return positionSeconds <= REWATCH_MAX_START_SECONDS;
+}
+
 export async function getPlaybackDecision(
   mediaItemId: string,
   mediaFileId?: string | null,
@@ -400,7 +411,12 @@ export async function saveProgress(input: {
     .where("media_item_id", "=", input.mediaItemId)
     .where("media_file_id", "=", input.mediaFileId)
     .executeTakeFirst();
-  const completed = normalized.completed || (Boolean(existing?.completed) && input.clearCompleted !== true);
+  const rewatchingFromStart =
+    Boolean(existing?.completed) &&
+    !normalized.completed &&
+    isRewatchFromStart(normalized.positionSeconds, normalized.durationSeconds);
+  const completed =
+    normalized.completed || (Boolean(existing?.completed) && input.clearCompleted !== true && !rewatchingFromStart);
 
   const values = {
     user_id: input.userId,

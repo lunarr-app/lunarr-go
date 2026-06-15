@@ -9,6 +9,7 @@ import type { Database } from "../db/schema";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 import {
   getPlaybackDecision,
+  isRewatchFromStart,
   markWatched,
   normalizePlaybackProgress,
   parseClientPlaybackCapabilities,
@@ -133,6 +134,17 @@ describe("parsePlaybackProgressBody", () => {
         durationSeconds: "nope",
       }),
     ).toThrow("Duration must be a finite number.");
+  });
+});
+
+describe("isRewatchFromStart", () => {
+  test("treats early progress as a rewatch from the beginning", () => {
+    expect(isRewatchFromStart(0, 120)).toBe(true);
+    expect(isRewatchFromStart(4, 120)).toBe(true);
+    expect(isRewatchFromStart(6, 120)).toBe(true);
+    expect(isRewatchFromStart(7, 120)).toBe(false);
+    expect(isRewatchFromStart(20, null)).toBe(true);
+    expect(isRewatchFromStart(45, null)).toBe(false);
   });
 });
 
@@ -2977,6 +2989,28 @@ describe("getPlaybackDecision", () => {
       .where("media_file_id", "=", "file-b")
       .executeTakeFirstOrThrow();
     expect(Boolean(otherCompletedFile.completed)).toBe(true);
+
+    await saveProgress({
+      userId: "user-1",
+      mediaItemId: "movie-1",
+      mediaFileId: "file-a",
+      positionSeconds: 4,
+      durationSeconds: 120,
+      completed: false,
+    });
+
+    const afterRewatchSave = await db
+      .selectFrom("watch_progress")
+      .selectAll()
+      .where("user_id", "=", "user-1")
+      .where("media_item_id", "=", "movie-1")
+      .where("media_file_id", "=", "file-a")
+      .executeTakeFirstOrThrow();
+    expect(afterRewatchSave).toMatchObject({
+      position_seconds: 4,
+      duration_seconds: 120,
+      completed: 0,
+    });
 
     await markWatched({
       userId: "user-1",
