@@ -41,18 +41,13 @@ export async function lookupMovieMetadataFromCandidates(
     matcher?: MovieMetadataMatcher;
   } = {},
 ): Promise<MovieMetadataLookupResult | null> {
-  let best: MovieMetadataLookupResult & { score: number } | null = null;
+  let best: (MovieMetadataLookupResult & { score: number }) | null = null;
 
   for (const candidate of candidates) {
     const metadata = await lookupMovieMetadata(candidate.title, candidate.year, options.onError, options.matcher);
     if (!metadata) continue;
 
-    const score = movieMetadataMatchScore(
-      candidate.title,
-      candidate.year,
-      metadata.title,
-      metadata.year,
-    );
+    const score = movieMetadataMatchScore(candidate.title, candidate.year, metadata.title, metadata.year);
     if (score === 0) continue;
 
     if (!best || score > best.score) {

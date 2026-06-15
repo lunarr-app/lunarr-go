@@ -171,10 +171,7 @@ function scanErrorsQuery(db: Awaited<ReturnType<typeof getDb>>) {
     ]);
 }
 
-export async function listScanErrorsForJobIds(
-  jobIds: string[],
-  limitPerJob = SCAN_ERROR_PER_JOB_LIMIT,
-) {
+export async function listScanErrorsForJobIds(jobIds: string[], limitPerJob = SCAN_ERROR_PER_JOB_LIMIT) {
   if (jobIds.length === 0) return [];
 
   const db = await getDb();
@@ -188,9 +185,7 @@ export async function listScanErrorsForJobIds(
     ),
   );
 
-  return errors
-    .flat()
-    .sort((left, right) => right.created_at.localeCompare(left.created_at));
+  return errors.flat().sort((left, right) => right.created_at.localeCompare(left.created_at));
 }
 
 export async function cleanupJobHistory(options: CleanupJobHistoryOptions = {}) {

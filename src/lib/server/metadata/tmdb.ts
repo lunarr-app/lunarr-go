@@ -426,9 +426,7 @@ function phraseTitleMatches(queryTitle: string, resultTitle: string) {
 }
 
 function titlePhraseMatches(result: TmdbSearchResult, title: string) {
-  return (
-    phraseTitleMatches(title, result.title ?? "") || phraseTitleMatches(title, result.original_title ?? "")
-  );
+  return phraseTitleMatches(title, result.title ?? "") || phraseTitleMatches(title, result.original_title ?? "");
 }
 
 function titleMatches(result: TmdbSearchResult, title: string) {
