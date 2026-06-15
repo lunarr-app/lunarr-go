@@ -29,13 +29,13 @@ import { nodeAvBackend } from "../transcoding/node-av";
 import { mediaFileValuesFromProbe, replaceMediaStreamInfo } from "../transcoding/probe";
 import { runMediaProbeRefreshJob } from "../transcoding/probe-jobs";
 import { createSeekableInputSourceFromStorage } from "../transcoding/seekable-input";
-import { movieLookupFromPath } from "../metadata/movie-lookup";
+import { movieLookupCandidates } from "../metadata/movie-lookup";
 import {
-  lookupMovieMetadata,
+  lookupMovieMetadataFromCandidates,
   lookupTvSeasonMetadata,
   type MovieMetadataMatcher,
   type TvSeasonMetadataMatcher,
-} from "./matching";
+} from "../metadata/matching";
 import { isSidecarSubtitlePath, isVideoFilePath } from "./media-files";
 import { parseTvEpisodePath, type ParsedTvEpisode } from "./tv-parser";
 
@@ -286,8 +286,12 @@ async function findOrCreateMovieItem(
   metadataMatcher?: MovieMetadataMatcher,
 ) {
   const db = await getDb();
-  const parsed = movieLookupFromPath(filePath, undefined, { libraryRoot });
-  const metadata = await lookupMovieMetadata(parsed.title, parsed.year, onMetadataError, metadataMatcher);
+  const candidates = movieLookupCandidates(filePath, undefined, { libraryRoot });
+  const parsed = candidates[0] ?? { title: "", year: null };
+  const metadata = await lookupMovieMetadataFromCandidates(candidates, {
+    onError: onMetadataError,
+    matcher: metadataMatcher,
+  });
   const now = nowIso();
 
   if (metadata) {

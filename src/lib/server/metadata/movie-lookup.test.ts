@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { movieLookupFromPath } from "./movie-lookup";
+import { movieLookupCandidates, movieLookupFromPath } from "./movie-lookup";
 
 describe("movieLookupFromPath", () => {
   test("prefers Radarr-style parent folder title and year over noisy filenames", () => {
@@ -26,5 +26,32 @@ describe("movieLookupFromPath", () => {
         libraryRoot: "/media/Movies (2026)",
       }),
     ).toEqual({ title: "The Matrix", year: 1999 });
+  });
+});
+
+describe("movieLookupCandidates", () => {
+  test("keeps folder first and adds filename year when it differs", () => {
+    expect(
+      movieLookupCandidates("radarr/movies/Redux Redux (2026)/Redux Redux (2025) [720p] [WEBRip] [YTS.BZ].mp4"),
+    ).toEqual([
+      { title: "Redux Redux", year: 2026 },
+      { title: "Redux Redux", year: 2025 },
+    ]);
+  });
+
+  test("adds a filename title candidate when it differs from the folder title", () => {
+    expect(
+      movieLookupCandidates("radarr/movies/Disney's Snow White (2025)/Snow White (2025) 720p WEBRip-LAMA.mp4"),
+    ).toEqual([
+      { title: "Disney's Snow White", year: 2025 },
+      { title: "Snow White", year: 2025 },
+    ]);
+  });
+
+  test("normalizes smart quotes in folder titles", () => {
+    expect(movieLookupFromPath("radarr/movies/“Wuthering Heights” (2026)/Wuthering Heights (2026).mp4")).toEqual({
+      title: "Wuthering Heights",
+      year: 2026,
+    });
   });
 });

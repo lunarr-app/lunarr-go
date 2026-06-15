@@ -5,7 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
-import { cleanupJobHistory, getScanJobSummary, listScanErrors, listScanErrorsForJobIds } from ".";
+import { cleanupJobHistory, getScanJobSummary, listScanErrorsForJobIds } from ".";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 
 describe("scan job listings", () => {
@@ -104,7 +104,7 @@ describe("scan job listings", () => {
   });
 
   test("includes scan job and library context for recent errors", async () => {
-    const errors = await listScanErrors();
+    const errors = await listScanErrorsForJobIds(["job-1", "job-2", "job-3", "job-4"]);
 
     expect(errors).toHaveLength(1);
     expect(errors[0]).toMatchObject({

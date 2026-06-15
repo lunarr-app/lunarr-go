@@ -171,11 +171,6 @@ function scanErrorsQuery(db: Awaited<ReturnType<typeof getDb>>) {
     ]);
 }
 
-export async function listScanErrors(limit = SCAN_ERROR_LIST_LIMIT) {
-  const db = await getDb();
-  return scanErrorsQuery(db).orderBy("scan_job_error.created_at", "desc").limit(limit).execute();
-}
-
 export async function listScanErrorsForJobIds(jobIds: string[], limit = SCAN_ERROR_LIST_LIMIT) {
   if (jobIds.length === 0) return [];
 

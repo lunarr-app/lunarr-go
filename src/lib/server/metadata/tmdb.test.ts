@@ -360,6 +360,74 @@ describe("matchMovieMetadata", () => {
     expect(detailCalls).toEqual([]);
   });
 
+  test("matches a shorter title contained in the TMDb result title", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/search/movie")) {
+        return Response.json({
+          results: [
+            {
+              id: 529,
+              title: "Wallace & Gromit in A Close Shave",
+              release_date: "1995-12-24",
+            },
+          ],
+        });
+      }
+
+      detailCalls.push(url);
+      return Response.json({
+        id: 529,
+        title: "Wallace & Gromit in A Close Shave",
+        release_date: "1995-12-24",
+      });
+    };
+
+    const metadata = await matchMovieMetadata("A Close Shave", 1995, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(detailCalls).toHaveLength(1);
+    expect(metadata?.providerId).toBe("529");
+  });
+
+  test("normalizes volume to vol for strict title matching", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/search/movie")) {
+        return Response.json({
+          results: [
+            {
+              id: 447365,
+              title: "Guardians of the Galaxy Vol. 3",
+              release_date: "2023-05-05",
+            },
+          ],
+        });
+      }
+
+      detailCalls.push(url);
+      return Response.json({
+        id: 447365,
+        title: "Guardians of the Galaxy Vol. 3",
+        release_date: "2023-05-05",
+      });
+    };
+
+    const metadata = await matchMovieMetadata("Guardians of the Galaxy Volume 3", 2023, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(detailCalls).toHaveLength(1);
+    expect(metadata?.providerId).toBe("447365");
+  });
+
   test("does not accept unrelated same-year TV results", async () => {
     const detailCalls: string[] = [];
     const mockedFetch = async (input: URL | RequestInfo) => {

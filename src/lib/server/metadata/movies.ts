@@ -2,7 +2,7 @@ import { sql } from "kysely";
 import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
-import { movieLookupFromPath } from "./movie-lookup";
+import { lookupMovieMetadataFromPath } from "./matching";
 import { movieMetadataValues, syncMovieMetadataRelations } from "./store";
 import { matchMovieMetadata, type MatchedMovieMetadata } from "./tmdb";
 
@@ -102,20 +102,16 @@ export async function refreshMovieMetadataResult(
 
   if (!movie) return { status: "missing", mediaItemId: null };
 
-  const parsed = movieLookupFromPath(
-    movie.path ?? movie.basename ?? "",
-    {
-      title: movie.title,
-      year: movie.year,
-    },
-    {
-      libraryRoot: movie.library_path,
-    },
-  );
-  const title = parsed.title || movie.title;
-  const year = parsed.year ?? movie.year;
   const metadataMatcher = options.metadataMatcher ?? matchMovieMetadata;
-  const metadata = await metadataMatcher(title, year);
+  const metadata =
+    (await lookupMovieMetadataFromPath(movie.path ?? movie.basename ?? "", {
+      libraryRoot: movie.library_path,
+      fallback: {
+        title: movie.title,
+        year: movie.year,
+      },
+      matcher: metadataMatcher,
+    })) ?? null;
   if (!metadata) return { status: "unmatched", mediaItemId };
 
   const now = nowIso();

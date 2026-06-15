@@ -21,7 +21,7 @@ import {
   startAllMovieScans,
   startScan,
 } from "./index";
-import type { MovieMetadataMatcher } from "./matching";
+import type { MovieMetadataMatcher } from "../metadata/matching";
 
 let tempDir: string;
 let db: Kysely<Database>;

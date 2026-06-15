@@ -392,14 +392,43 @@ function extractYear(releaseDate: string | null | undefined) {
 function normalizeTitle(value: string | null | undefined) {
   return (value ?? "")
     .toLowerCase()
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036\u2018\u2019\u201A\u201B\u2032]/g, "")
+    .replace(/\bvolume\b/g, "vol")
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
 }
 
+function wordSequenceEndsWith(haystackWords: string[], needleWords: string[]) {
+  if (needleWords.length === 0 || needleWords.length > haystackWords.length) return false;
+  const offset = haystackWords.length - needleWords.length;
+  return needleWords.every((word, index) => haystackWords[offset + index] === word);
+}
+
+function canUsePhraseMatch(needle: string) {
+  const words = needle.split(" ").filter(Boolean);
+  return words.length >= 2 || needle.length >= 10;
+}
+
+function titlePhraseMatches(result: TmdbSearchResult, title: string) {
+  const query = normalizeTitle(title);
+  if (!canUsePhraseMatch(query)) return false;
+
+  const queryWords = query.split(" ").filter(Boolean);
+  const candidates = [normalizeTitle(result.title), normalizeTitle(result.original_title)].filter(Boolean);
+  return candidates.some((candidate) => {
+    const candidateWords = candidate.split(" ").filter(Boolean);
+    return wordSequenceEndsWith(candidateWords, queryWords) || wordSequenceEndsWith(queryWords, candidateWords);
+  });
+}
+
 function titleMatches(result: TmdbSearchResult, title: string) {
   const normalizedTitle = normalizeTitle(title);
-  return normalizeTitle(result.title) === normalizedTitle || normalizeTitle(result.original_title) === normalizedTitle;
+  return (
+    normalizeTitle(result.title) === normalizedTitle ||
+    normalizeTitle(result.original_title) === normalizedTitle ||
+    titlePhraseMatches(result, title)
+  );
 }
 
 function tvTitleMatches(result: TmdbTvSearchResult, title: string) {
