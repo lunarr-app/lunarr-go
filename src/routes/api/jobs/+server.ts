@@ -3,7 +3,7 @@ import {
   getPlaybackSessionSummary,
   getScanJobSummary,
   listPlaybackSessions,
-  listScanErrors,
+  listScanErrorsForJobIds,
   listScanJobs,
 } from "$lib/server/jobs";
 import { json } from "@sveltejs/kit";
@@ -18,11 +18,14 @@ export const GET: RequestHandler = async ({ locals }) => {
     return json({ error: "Admin access required" }, { status: 403 });
   }
 
+  const jobs = await listScanJobs();
+  const playbackSessions = await listPlaybackSessions();
+
   return json({
     summary: await getScanJobSummary(),
     playbackSessionSummary: await getPlaybackSessionSummary(),
-    playbackSessions: await listPlaybackSessions(),
-    jobs: await listScanJobs(),
-    errors: await listScanErrors(),
+    playbackSessions,
+    jobs,
+    errors: await listScanErrorsForJobIds(jobs.map((job) => job.id)),
   });
 };

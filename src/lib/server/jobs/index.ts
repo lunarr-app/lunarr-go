@@ -153,8 +153,7 @@ export async function listPlaybackSessions(limit = PLAYBACK_SESSION_LIST_LIMIT) 
   }));
 }
 
-export async function listScanErrors(limit = SCAN_ERROR_LIST_LIMIT) {
-  const db = await getDb();
+function scanErrorsQuery(db: Awaited<ReturnType<typeof getDb>>) {
   return db
     .selectFrom("scan_job_error")
     .innerJoin("scan_job", "scan_job.id", "scan_job_error.scan_job_id")
@@ -169,7 +168,20 @@ export async function listScanErrors(limit = SCAN_ERROR_LIST_LIMIT) {
       "scan_job.job_kind",
       "scan_job.library_id",
       "library.name as library_name",
-    ])
+    ]);
+}
+
+export async function listScanErrors(limit = SCAN_ERROR_LIST_LIMIT) {
+  const db = await getDb();
+  return scanErrorsQuery(db).orderBy("scan_job_error.created_at", "desc").limit(limit).execute();
+}
+
+export async function listScanErrorsForJobIds(jobIds: string[], limit = SCAN_ERROR_LIST_LIMIT) {
+  if (jobIds.length === 0) return [];
+
+  const db = await getDb();
+  return scanErrorsQuery(db)
+    .where("scan_job_error.scan_job_id", "in", jobIds)
     .orderBy("scan_job_error.created_at", "desc")
     .limit(limit)
     .execute();

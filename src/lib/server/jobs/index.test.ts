@@ -5,7 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
-import { cleanupJobHistory, getScanJobSummary, listScanErrors } from ".";
+import { cleanupJobHistory, getScanJobSummary, listScanErrors, listScanErrorsForJobIds } from ".";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 
 describe("scan job listings", () => {
@@ -114,6 +114,16 @@ describe("scan job listings", () => {
       library_name: "Movies",
       message: "Could not read file.",
     });
+  });
+
+  test("limits scan errors to the requested job ids", async () => {
+    const errors = await listScanErrorsForJobIds(["job-1"]);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.scan_job_id).toBe("job-1");
+
+    expect(await listScanErrorsForJobIds(["missing-job"])).toEqual([]);
+    expect(await listScanErrorsForJobIds([])).toEqual([]);
   });
 
   test("summarizes scan job status counts and recorded errors", async () => {
