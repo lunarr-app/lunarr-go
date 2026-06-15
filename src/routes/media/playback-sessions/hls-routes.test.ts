@@ -314,6 +314,60 @@ describe("playback-session HLS routes", () => {
     return { sftpSessionId, sftpPlaylistPath };
   }
 
+  async function createRequestDrivenWebdavSession() {
+    const now = new Date().toISOString();
+    await db
+      .insertInto("library")
+      .values({
+        id: "webdav-library",
+        name: "WebDAV Movies",
+        kind: "movie",
+        source: "webdav",
+        path: "webdavs://user@example.test/movies",
+        config_json: "{}",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    await db
+      .insertInto("media_file")
+      .values({
+        id: "webdav-file",
+        library_id: "webdav-library",
+        media_item_id: "movie-1",
+        path: "/movies/Movie.Remote.mkv",
+        basename: "Movie.Remote.mkv",
+        extension: ".mkv",
+        size_bytes: 16,
+        mtime_ms: Date.now(),
+        duration_seconds: 60,
+        video_codec: "hevc",
+        audio_codec: "dts",
+        container: "matroska",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    const webdavSessionId = await createTranscodeSession({
+      mediaFileId: "webdav-file",
+      userId: "user-1",
+    });
+    const webdavArtifactDir = path.join(tempDir, "playback-sessions", webdavSessionId);
+    const webdavPlaylistPath = path.join(webdavArtifactDir, "master.m3u8");
+    await mkdir(webdavArtifactDir, { recursive: true });
+    await writeFile(webdavPlaylistPath, "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nsegment-00001.ts\n");
+    await registerTranscodeHlsArtifact({
+      sessionId: webdavSessionId,
+      mediaFileId: "webdav-file",
+      path: webdavPlaylistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionPipeline(webdavSessionId, "request_driven");
+    await updateTranscodeSessionStatus(webdavSessionId, "running");
+
+    return { webdavSessionId, webdavPlaylistPath };
+  }
+
   test("validates segment names and MIME types", () => {
     expect(isSafeHlsSegmentName("segment-0001.ts")).toBe(true);
     expect(isSafeHlsSegmentName("segment-0001.m4s")).toBe(true);
@@ -3787,6 +3841,73 @@ describe("playback-session HLS routes", () => {
     expect(storageClosed).toBe(true);
   });
 
+  test("generates request-driven WebDAV segments through seekable range reads", async () => {
+    const { webdavSessionId } = await createRequestDrivenWebdavSession();
+
+    const remoteBody = Buffer.from("0123456789abcdef");
+    const reads: Array<{
+      start: number;
+      end: number;
+      keepOpen: boolean | undefined;
+    }> = [];
+    let storageClosed = false;
+    setTranscodeStorageFactoryForTests(async () => ({
+      source: "webdav",
+      async statFile() {
+        return null;
+      },
+      async listFiles() {
+        return null;
+      },
+      async *walkFiles() {
+        return;
+      },
+      async createReadStream(_filePath, range, options) {
+        if (!range) throw new Error("Expected a range read.");
+        reads.push({
+          start: range.start,
+          end: range.end,
+          keepOpen: options?.keepOpen,
+        });
+        return Readable.from(remoteBody.subarray(range.start, range.end + 1));
+      },
+      async close() {
+        storageClosed = true;
+      },
+    }));
+
+    let readChunk: string | undefined;
+    let readAheadChunk: string | undefined;
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("not used");
+      },
+      async generateHlsSegmentWindow(input) {
+        const chunk = await input.inputSource?.read(4, 5);
+        readChunk = chunk?.toString("utf8");
+        const bufferedChunk = await input.inputSource?.read(9, 4);
+        readAheadChunk = bufferedChunk?.toString("utf8");
+        await writeRequestedWindowSegment(input, "remote-webdav");
+        return completedWindowGeneration();
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const response = await getSegment({
+      params: { sessionId: webdavSessionId, segment: "segment-00001.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("remote-webdav");
+    expect(readChunk as string | undefined).toBe("45678");
+    expect(readAheadChunk as string | undefined).toBe("9abc");
+    expect(reads).toEqual([{ start: 4, end: 15, keepOpen: true }]);
+    expect(storageClosed).toBe(true);
+  });
+
   test("keeps SFTP seekable input open until bounded lookahead completes", async () => {
     const { sftpSessionId } = await createRequestDrivenSftpSession();
     const remoteBody = Buffer.from("0123456789abcdef");
@@ -3909,7 +4030,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error: "SFTP range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
+      error: "Remote range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
     });
     expect(generationCount).toBe(1);
 
@@ -3920,7 +4041,65 @@ describe("playback-session HLS routes", () => {
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
       status: "failed",
-      error_message: "SFTP range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
+      error_message: "Remote range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
+    });
+  });
+
+  test("rejects truncated request-driven WebDAV range reads", async () => {
+    const { webdavSessionId } = await createRequestDrivenWebdavSession();
+    setTranscodeStorageFactoryForTests(async () => ({
+      source: "webdav",
+      async statFile() {
+        return null;
+      },
+      async listFiles() {
+        return null;
+      },
+      async *walkFiles() {
+        return;
+      },
+      async createReadStream() {
+        return Readable.from(Buffer.from("abc"));
+      },
+      async close() {
+        return;
+      },
+    }));
+
+    let generationCount = 0;
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(): Promise<RunningTranscode> {
+        throw new Error("not used");
+      },
+      async generateHlsSegmentWindow(input) {
+        generationCount += 1;
+        await input.inputSource?.read(0, 8);
+        return completedWindowGeneration();
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const response = await getSegment({
+      params: { sessionId: webdavSessionId, segment: "segment-00001.ts" },
+      locals: { user: { id: "user-1" } },
+    } as never);
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "Remote range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
+    });
+    expect(generationCount).toBe(1);
+
+    const job = await db
+      .selectFrom("playback_session")
+      .select(["status", "error_message"])
+      .where("id", "=", webdavSessionId)
+      .executeTakeFirstOrThrow();
+    expect(job).toEqual({
+      status: "failed",
+      error_message: "Remote range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
     });
   });
 
@@ -4142,7 +4321,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error: "SFTP input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
+      error: "Remote input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
     });
     expect(generationCount).toBe(0);
 
@@ -4153,7 +4332,7 @@ describe("playback-session HLS routes", () => {
       .executeTakeFirstOrThrow();
     expect(job).toEqual({
       status: "failed",
-      error_message: "SFTP input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
+      error_message: "Remote input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
     });
 
     resolveStorage?.({
@@ -4375,7 +4554,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error: "SFTP range read /movies/Movie.Remote.mkv timed out after 5ms.",
+      error: "Remote range read /movies/Movie.Remote.mkv timed out after 5ms.",
     });
     expect(generationCount).toBe(1);
     expect(storageClosed).toBe(true);
@@ -4445,7 +4624,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error: "SFTP range read /movies/Movie.Remote.mkv was cancelled.",
+      error: "Remote range read /movies/Movie.Remote.mkv was cancelled.",
     });
     expect(generationCount).toBe(1);
     expect(storageClosed).toBe(true);
@@ -4588,7 +4767,7 @@ describe("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error: "SFTP range read /movies/Movie.Remote.mkv timed out after 5ms.",
+      error: "Remote range read /movies/Movie.Remote.mkv timed out after 5ms.",
     });
     expect(generationCount).toBe(1);
     expect(streamDestroyed).toBe(true);

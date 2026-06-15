@@ -57,7 +57,7 @@ describe("API keys", () => {
   });
 
   test("requires session headers to create API keys", async () => {
-    await expect(createApiKey({ headers: new Headers() })).rejects.toThrow("Unauthorized");
+    expect(createApiKey({ headers: new Headers() })).rejects.toThrow("Unauthorized");
   });
 
   test("maps Better Auth 401 status to HTTP 401 on mapped errors", async () => {

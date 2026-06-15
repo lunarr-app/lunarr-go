@@ -728,6 +728,116 @@ describe("runScanJob", () => {
     await db.deleteFrom("library").where("id", "=", "sftp-library").execute();
   });
 
+  test("scans remote-like WebDAV paths through the storage adapter", async () => {
+    const now = new Date().toISOString();
+    const remoteRoot = "/media/movies";
+    const remoteDir = "/media/movies/Remote Movie (2026)";
+    const remoteFile = `${remoteDir}/Remote.Movie.2026.mp4`;
+    const remoteSubtitle = `${remoteDir}/Remote.Movie.2026.en.vtt`;
+    await db
+      .insertInto("library")
+      .values({
+        id: "webdav-library",
+        name: "WebDAV Movies",
+        kind: "movie",
+        source: "webdav",
+        path: "webdavs://mediauser@nas.example.test/media/movies",
+        config_json: "{}",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    const storage: LibraryStorage = {
+      source: "webdav",
+      root: remoteRoot,
+      async statFile(filePath) {
+        if (filePath !== remoteFile && filePath !== remoteSubtitle) return null;
+        return {
+          path: filePath,
+          basename: path.posix.basename(filePath),
+          extension: path.posix.extname(filePath),
+          size: filePath === remoteFile ? 1234 : 42,
+          mtimeMs: 1_800_000_000_000,
+        };
+      },
+      async listFiles(directory) {
+        throw new Error(`Expected scanner to reuse the walked directory cache instead of listing ${directory}.`);
+      },
+      async *walkFiles(root) {
+        expect(root).toBe(remoteRoot);
+        yield {
+          kind: "directory",
+          path: remoteDir,
+          files: [
+            {
+              path: remoteFile,
+              basename: path.posix.basename(remoteFile),
+              extension: ".mp4",
+              size: 1234,
+              mtimeMs: 1_800_000_000_000,
+            },
+            {
+              path: remoteSubtitle,
+              basename: path.posix.basename(remoteSubtitle),
+              extension: ".vtt",
+              size: 42,
+              mtimeMs: 1_800_000_000_000,
+            },
+          ],
+        };
+        yield {
+          kind: "file",
+          path: remoteFile,
+          file: {
+            path: remoteFile,
+            basename: path.posix.basename(remoteFile),
+            extension: ".mp4",
+            size: 1234,
+            mtimeMs: 1_800_000_000_000,
+          },
+        };
+      },
+      async createReadStream() {
+        return Readable.from([]);
+      },
+      async close() {
+        return;
+      },
+    };
+
+    const jobId = await createScanJob("webdav-library");
+    await runScanJob(jobId, {
+      storage,
+      metadataMatcher: async () => null,
+      probeBackend: null,
+    });
+
+    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirstOrThrow();
+    expect(job).toMatchObject({
+      status: "completed",
+      files_seen: 1,
+      files_added: 1,
+      errors_count: 0,
+    });
+
+    const file = await db
+      .selectFrom("media_file")
+      .selectAll()
+      .where("library_id", "=", "webdav-library")
+      .executeTakeFirstOrThrow();
+    expect(file).toMatchObject({
+      path: remoteFile,
+      basename: "Remote.Movie.2026.mp4",
+      size_bytes: 1234,
+    });
+    expect(
+      await db.selectFrom("subtitle_track").selectAll().where("media_file_id", "=", file.id).execute(),
+    ).toHaveLength(1);
+
+    await db.deleteFrom("library").where("id", "=", "webdav-library").execute();
+  });
+
   test("keeps existing file rows when a yielded file cannot be processed", async () => {
     const mediaDir = path.join(tempDir, "disappearing-file");
     await mkdir(mediaDir);
@@ -1299,6 +1409,103 @@ describe("runScanJob", () => {
       episode_number: 2,
     });
     expect(file.path).toBe(remoteFile);
+  });
+
+  test("scans TV episodes from remote-like WebDAV paths", async () => {
+    const now = new Date().toISOString();
+    const remoteRoot = "/dav/shows";
+    const remoteDir = "/dav/shows/Stargate SG-1/Season 01";
+    const remoteFile = `${remoteDir}/Stargate SG-1 - S01E02 - Children of the Gods.mkv`;
+    await db
+      .insertInto("library")
+      .values({
+        id: "webdav-tv-library",
+        name: "WebDAV Shows",
+        kind: "tv",
+        source: "webdav",
+        path: "webdavs://mediauser@nas.example.test/media/shows",
+        config_json: "{}",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    const storage: LibraryStorage = {
+      source: "webdav",
+      root: remoteRoot,
+      async statFile(filePath) {
+        if (filePath !== remoteFile) return null;
+        return {
+          path: filePath,
+          basename: path.posix.basename(filePath),
+          extension: ".mkv",
+          size: 1234,
+          mtimeMs: 1_800_000_000_000,
+        };
+      },
+      async listFiles() {
+        return [];
+      },
+      async *walkFiles(root) {
+        expect(root).toBe(remoteRoot);
+        yield {
+          kind: "directory",
+          path: remoteDir,
+          files: [
+            {
+              path: remoteFile,
+              basename: path.posix.basename(remoteFile),
+              extension: ".mkv",
+              size: 1234,
+              mtimeMs: 1_800_000_000_000,
+            },
+          ],
+        };
+        yield {
+          kind: "file",
+          path: remoteFile,
+          file: {
+            path: remoteFile,
+            basename: path.posix.basename(remoteFile),
+            extension: ".mkv",
+            size: 1234,
+            mtimeMs: 1_800_000_000_000,
+          },
+        };
+      },
+      async createReadStream() {
+        return Readable.from([]);
+      },
+      async close() {
+        return;
+      },
+    };
+
+    const jobId = await createScanJob("webdav-tv-library");
+    await runScanJob(jobId, {
+      storage,
+      tvSeasonMetadataMatcher: async () => null,
+      probeBackend: null,
+    });
+
+    const file = await db
+      .selectFrom("media_file")
+      .select(["path", "media_item_id"])
+      .where("library_id", "=", "webdav-tv-library")
+      .executeTakeFirstOrThrow();
+    const episode = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("id", "=", file.media_item_id)
+      .executeTakeFirstOrThrow();
+    expect(episode).toMatchObject({
+      title: "Children of the Gods",
+      season_number: 1,
+      episode_number: 2,
+    });
+    expect(file.path).toBe(remoteFile);
+
+    await db.deleteFrom("library").where("id", "=", "webdav-tv-library").execute();
   });
 
   test("prunes stale TV episode files and orphaned season/show rows", async () => {

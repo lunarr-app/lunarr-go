@@ -116,6 +116,48 @@ describe("createLibrary", () => {
     });
   });
 
+  test("creates a WebDAV movie library after testing the remote root", async () => {
+    const calls: unknown[] = [];
+    const library = await createLibrary(
+      {
+        source: "webdav",
+        name: "",
+        kind: "movie",
+        host: "nas.example.com",
+        port: 443,
+        secure: true,
+        username: "mediauser",
+        password: "secret-password",
+        root: "/media/movies/",
+        walkConcurrency: 6,
+        operationTimeoutMs: 45_000,
+      },
+      {
+        testWebdavConnection: async (config) => {
+          calls.push(config);
+        },
+      },
+    );
+
+    expect(library).toMatchObject({
+      name: "movies",
+      source: "webdav",
+      path: "webdavs://mediauser@nas.example.com/media/movies",
+      watch_enabled: 0,
+      scan_interval_minutes: null,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      host: "nas.example.com",
+      port: 443,
+      secure: true,
+      username: "mediauser",
+      root: "/media/movies",
+      walkConcurrency: 6,
+      operationTimeoutMs: 45_000,
+    });
+  });
+
   test("rejects unsupported library kinds", async () => {
     await expectRejectsToThrow(
       createLibrary({ name: "Music", kind: "music" as "movie", path: tempDir }),
@@ -339,6 +381,72 @@ describe("createLibrary", () => {
       name: "movies",
       source: "sftp",
       path: "sftp://mediauser@sftp.example.com:23/radarr/movies",
+      watch_enabled: 0,
+      scan_interval_minutes: 720,
+    });
+    const config = JSON.parse(updated.config_json ?? "{}");
+    expect(decryptSecret(config.passwordEncrypted)).toBe("original-password");
+    expect(config.walkConcurrency).toBe(7);
+    expect(config.operationTimeoutMs).toBe(75_000);
+  });
+
+  test("updates a WebDAV library and keeps the existing password when blank", async () => {
+    const library = await createLibrary(
+      {
+        source: "webdav",
+        name: "Remote",
+        kind: "movie",
+        host: "nas.example.com",
+        port: 443,
+        secure: true,
+        username: "mediauser",
+        password: "original-password",
+        root: "movies",
+        walkConcurrency: 5,
+        operationTimeoutMs: 60_000,
+      },
+      { testWebdavConnection: async () => undefined },
+    );
+    const calls: unknown[] = [];
+
+    await updateLibrary(
+      library.id,
+      {
+        source: "webdav",
+        name: "",
+        host: "nas.example.com",
+        port: 5006,
+        secure: true,
+        username: "mediauser",
+        password: "",
+        root: "radarr/movies",
+        walkConcurrency: 7,
+        operationTimeoutMs: 75_000,
+        scanIntervalMinutes: 720,
+      },
+      {
+        testWebdavConnection: async (config) => {
+          calls.push(config);
+        },
+      },
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      host: "nas.example.com",
+      port: 5006,
+      secure: true,
+      username: "mediauser",
+      root: "radarr/movies",
+      walkConcurrency: 7,
+      operationTimeoutMs: 75_000,
+    });
+    const db = await getDb();
+    const updated = await db.selectFrom("library").selectAll().where("id", "=", library.id).executeTakeFirstOrThrow();
+    expect(updated).toMatchObject({
+      name: "movies",
+      source: "webdav",
+      path: "webdavs://mediauser@nas.example.com:5006/radarr/movies",
       watch_enabled: 0,
       scan_interval_minutes: 720,
     });

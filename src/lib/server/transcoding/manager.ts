@@ -39,7 +39,8 @@ import type {
 import type { TranscodeMode } from "../db/schema/streaming";
 import { currentDatabasePaths, getDb } from "../db";
 import { getMediaFile } from "../media";
-import { createLibraryStorage, sftpOperationTimeoutMsFromConfig } from "../storage";
+import { createLibraryStorage, remoteOperationTimeoutMsFromConfig } from "../storage";
+import { isRemoteLibrarySource } from "../libraries/source";
 import { getTranscodePolicy } from "./policy";
 import { hasSeekableRemoteSize, nodeAvInputFormat } from "./seekable-input";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
@@ -54,7 +55,8 @@ const TRANSCODE_START_OUTSIDE_DURATION_MESSAGE = "Playback start is outside the 
 const MEDIA_FILE_UNAVAILABLE_MESSAGE = "Media file is no longer available.";
 const REQUEST_DRIVEN_HLS_UNAVAILABLE_MESSAGE = "Request-driven HLS segment generation is not available.";
 const REQUEST_DRIVEN_HLS_REQUIRES_DURATION_MESSAGE = "Request-driven HLS requires known media duration.";
-const SFTP_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE = "SFTP media needs probe metadata before HLS playback can start.";
+const REMOTE_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE =
+  "Remote media needs probe metadata before HLS playback can start.";
 export const TRANSCODING_DISABLED_MESSAGE = "Transcoding is disabled by an administrator.";
 const PREPARING_PLAYBACK_MESSAGE = "Preparing playback. Try again shortly.";
 const TRANSCODE_HEARTBEAT_TIMEOUT_MS = 120_000;
@@ -216,7 +218,7 @@ function canUseRequestDrivenHls(file: NonNullable<Awaited<ReturnType<typeof getM
     return false;
   }
 
-  if (file.source !== "sftp") return true;
+  if (!isRemoteLibrarySource(file.source)) return true;
 
   return nodeAvInputFormat(file) !== null && hasSeekableRemoteSize(file);
 }
@@ -436,11 +438,12 @@ async function createSeekableStorageInputSource(
     start: number;
     buffer: Buffer;
   } | null = null;
-  const timeoutMs = sftpSeekableOperationTimeoutMsForTests ?? sftpOperationTimeoutMsFromConfig(file.config_json);
+  const timeoutMs =
+    sftpSeekableOperationTimeoutMsForTests ?? remoteOperationTimeoutMsFromConfig(file.source, file.config_json);
   const storage = await withOperationTimeout(
     storageFactory(file),
     timeoutMs,
-    `SFTP input setup for ${file.path}`,
+    `Remote input setup for ${file.path}`,
     (lateStorage) => lateStorage.close(),
     setupSignal,
   );
@@ -456,7 +459,7 @@ async function createSeekableStorageInputSource(
         throw new Error(PLAYBACK_CANCELLED_MESSAGE);
       }
       if (readSignal?.aborted) {
-        throw new Error(`SFTP range read ${file.path} was cancelled.`);
+        throw new Error(`Remote range read ${file.path} was cancelled.`);
       }
       if (!Number.isSafeInteger(start) || start < 0) {
         throw new Error("Invalid remote media read offset.");
@@ -485,7 +488,7 @@ async function createSeekableStorageInputSource(
         const stream = await withOperationTimeout(
           storage.createReadStream(file.path, { start, end }, { keepOpen: true }),
           timeoutMs,
-          `SFTP range read ${file.path}`,
+          `Remote range read ${file.path}`,
           (lateStream) => {
             lateStream.on("error", () => undefined);
             lateStream.destroy();
@@ -496,7 +499,7 @@ async function createSeekableStorageInputSource(
           stream,
           signal: readAbort.signal,
           timeoutMs,
-          label: `SFTP range read ${file.path}`,
+          label: `Remote range read ${file.path}`,
         });
       } catch (error) {
         if (
@@ -505,7 +508,7 @@ async function createSeekableStorageInputSource(
           !setupSignal?.aborted &&
           readSignal?.aborted
         ) {
-          throw new Error(`SFTP range read ${file.path} was cancelled.`);
+          throw new Error(`Remote range read ${file.path} was cancelled.`);
         }
         throw error;
       } finally {
@@ -513,7 +516,7 @@ async function createSeekableStorageInputSource(
       }
       if (buffer.length < requestedBytes) {
         throw new Error(
-          `SFTP range read ${file.path} returned ${buffer.length} bytes for a ${requestedBytes} byte request.`,
+          `Remote range read ${file.path} returned ${buffer.length} bytes for a ${requestedBytes} byte request.`,
         );
       }
       if (buffer.length <= SFTP_SEEKABLE_MAX_BUFFER_BYTES) {
@@ -1203,7 +1206,7 @@ async function generateHlsSegmentForRequest(input: {
     await stopSegmentWork();
     throw new Error(MEDIA_FILE_UNAVAILABLE_MESSAGE);
   }
-  if (file.source !== "sftp" && !(await isReadableFile(file.path))) {
+  if (!isRemoteLibrarySource(file.source) && !(await isReadableFile(file.path))) {
     await updateActiveTranscodeSessionStatus(input.sessionId, "failed", MEDIA_FILE_UNAVAILABLE_MESSAGE);
     await removeTranscodeSessionArtifacts(input.sessionId);
     await stopSegmentWork();
@@ -1237,8 +1240,9 @@ async function generateHlsSegmentForRequest(input: {
       lastSegmentIndex: lastWindowSegment.segmentIndex,
     };
     activeRequestDrivenSegmentWindows.set(input.sessionId, activeSegmentWindow);
-    inputSource =
-      file.source === "sftp" ? await createSeekableStorageInputSource(file, segmentSetupController.signal) : undefined;
+    inputSource = isRemoteLibrarySource(file.source)
+      ? await createSeekableStorageInputSource(file, segmentSetupController.signal)
+      : undefined;
     await assertSegmentGenerationStillPlayable({
       sessionId: input.sessionId,
       userId: input.userId,
@@ -1660,7 +1664,7 @@ export async function resolveHlsPlayback(input: {
   }
 
   const requestDrivenEligible = canUseRequestDrivenHls(file, startTimeSeconds);
-  if (file.source !== "sftp" && !(await isReadableFile(file.path))) {
+  if (!isRemoteLibrarySource(file.source) && !(await isReadableFile(file.path))) {
     await updateTranscodeSessionStatus(sessionId, "failed", MEDIA_FILE_UNAVAILABLE_MESSAGE);
     await cleanupTranscodeStartupFailure(sessionId);
     return {
@@ -1672,8 +1676,8 @@ export async function resolveHlsPlayback(input: {
       message: MEDIA_FILE_UNAVAILABLE_MESSAGE,
     };
   }
-  if (file.source === "sftp" && !requestDrivenEligible) {
-    await updateTranscodeSessionStatus(sessionId, "failed", SFTP_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE);
+  if (isRemoteLibrarySource(file.source) && !requestDrivenEligible) {
+    await updateTranscodeSessionStatus(sessionId, "failed", REMOTE_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE);
     await cleanupTranscodeStartupFailure(sessionId);
     return {
       status: "unavailable",
@@ -1681,7 +1685,7 @@ export async function resolveHlsPlayback(input: {
       sessionId,
       streamUrl: null,
       streamStartSeconds: startTimeSeconds,
-      message: SFTP_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE,
+      message: REMOTE_REQUEST_DRIVEN_INPUT_UNAVAILABLE_MESSAGE,
     };
   }
 

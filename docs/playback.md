@@ -1,6 +1,6 @@
 # Playback And Maintenance
 
-Lunarr plays media through authenticated routes. Raw filesystem paths and SFTP locations are resolved only on the server.
+Lunarr plays media through authenticated routes. Raw filesystem paths and remote library locations are resolved only on the server.
 
 ## Playback Modes
 
@@ -14,7 +14,7 @@ Request-driven HLS defaults to MPEG-TS segments for broad compatibility. `LUNARR
 
 HEVC HLS remux compatibility is deliberately narrower than HEVC direct play. The compatibility checks require HEVC, native HLS, fMP4 HLS support, and an fMP4 server segment format before a copied HEVC/AAC HLS stream is considered safe. Other HEVC HLS requests fall back to transcode.
 
-For SFTP libraries, direct playback and HLS generation both read from the remote server through Lunarr. SFTP playback quality depends on server/network range-read performance, known file sizes, and stable remote connectivity.
+For SFTP and WebDAV libraries, direct playback and HLS generation both read from the remote server through Lunarr. Remote playback quality depends on server/network range-read performance, known file sizes, and stable remote connectivity.
 
 Admins can choose an HLS quality preset in Settings. `Auto` preserves the default output behavior. `720p` and `1080p` cap transcode height without upscaling and adjust FFmpeg bitrate/CRF targets. `Original resolution` keeps source height and uses a higher transcode target.
 

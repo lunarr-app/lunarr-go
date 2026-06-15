@@ -2166,6 +2166,68 @@ describe("getPlaybackDecision", () => {
     });
   });
 
+  test("uses HLS instead of direct streaming for WebDAV media in automatic mode", async () => {
+    const now = new Date().toISOString();
+    await db
+      .insertInto("library")
+      .values({
+        id: "webdav-auto-library",
+        name: "Auto WebDAV Movies",
+        kind: "movie",
+        source: "webdav",
+        path: "webdavs://user@example.test/movies",
+        config_json: "{}",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    await db
+      .insertInto("media_file")
+      .values({
+        id: "webdav-auto-file",
+        library_id: "webdav-auto-library",
+        media_item_id: "movie-1",
+        path: "/movies/Movie.Auto.mp4",
+        basename: "Movie.Auto.mp4",
+        extension: ".mp4",
+        size_bytes: 1024,
+        mtime_ms: Date.now(),
+        duration_seconds: 120,
+        video_codec: "h264",
+        audio_codec: "aac",
+        container: "mp4",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    setReadableSftpStorageForTests();
+    setTranscodeBackendForTests({
+      async startCompatibilityHls() {
+        throw new Error("linear HLS should not start for WebDAV auto playback");
+      },
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision("movie-1", "webdav-auto-file", "user-1");
+    const sessionId = decision?.playbackSessionId;
+    expect(decision).toMatchObject({
+      mode: "remux",
+      status: "ready",
+      modeDecision: {
+        mode: "remux",
+        reason: "container_unsupported",
+      },
+      streamUrl: sessionId ? `/media/playback-sessions/${sessionId}/master.m3u8` : null,
+      message: null,
+    });
+  });
+
   test("transcodes SFTP direct-compatible media when HLS remux would be unsafe", async () => {
     const now = new Date().toISOString();
     await db
@@ -2402,7 +2464,7 @@ describe("getPlaybackDecision", () => {
       modeDecision: { mode: "transcode", reason: "user_preference" },
       streamUrl: null,
       streamStartSeconds: 24,
-      message: "SFTP media needs probe metadata before HLS playback can start.",
+      message: "Remote media needs probe metadata before HLS playback can start.",
     });
     expect(storageOpened).toBe(false);
     expect(segmentGenerationCount).toBe(0);
@@ -2418,7 +2480,7 @@ describe("getPlaybackDecision", () => {
     expect(session).toEqual({
       status: "failed",
       pipeline: null,
-      error_message: "SFTP media needs probe metadata before HLS playback can start.",
+      error_message: "Remote media needs probe metadata before HLS playback can start.",
     });
   });
 
@@ -2507,7 +2569,7 @@ describe("getPlaybackDecision", () => {
       modeDecision: { mode: "transcode", reason: "user_preference" },
       streamUrl: null,
       streamStartSeconds: 24,
-      message: "SFTP media needs probe metadata before HLS playback can start.",
+      message: "Remote media needs probe metadata before HLS playback can start.",
     });
     expect(storageOpened).toBe(false);
     expect(segmentGenerationCount).toBe(0);
@@ -2523,7 +2585,7 @@ describe("getPlaybackDecision", () => {
     expect(session).toEqual({
       status: "failed",
       pipeline: null,
-      error_message: "SFTP media needs probe metadata before HLS playback can start.",
+      error_message: "Remote media needs probe metadata before HLS playback can start.",
     });
   });
 
@@ -2608,7 +2670,7 @@ describe("getPlaybackDecision", () => {
       status: "unavailable",
       modeDecision: { mode: "transcode", reason: "user_preference" },
       streamUrl: null,
-      message: "SFTP media needs probe metadata before HLS playback can start.",
+      message: "Remote media needs probe metadata before HLS playback can start.",
     });
     expect(storageOpened).toBe(false);
     expect(segmentGenerationCount).toBe(0);
@@ -2627,7 +2689,7 @@ describe("getPlaybackDecision", () => {
     expect(job).toEqual({
       status: "failed",
       pipeline: null,
-      error_message: "SFTP media needs probe metadata before HLS playback can start.",
+      error_message: "Remote media needs probe metadata before HLS playback can start.",
     });
     const artifacts = await db
       .selectFrom("playback_hls_artifact")

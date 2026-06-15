@@ -1,6 +1,6 @@
 # Libraries
 
-Lunarr supports local and SFTP movie and TV libraries.
+Lunarr supports local, SFTP, and WebDAV movie and TV libraries.
 
 ## Local Libraries
 
@@ -34,6 +34,32 @@ operation timeout: 5000-300000 ms
 
 Increase concurrency only if the server and network handle extra concurrent directory listings well.
 
+## WebDAV Libraries
+
+WebDAV libraries point at a remote root over HTTP or HTTPS. Lunarr stores the connection details and uses them for scans and playback.
+
+WebDAV libraries are not watched live. Use manual scans or scheduled rescans to discover remote file changes.
+
+WebDAV scans list remote directories concurrently while processing media files one at a time. Each remote stat/list/read operation has a timeout so an unresponsive server does not stall work forever.
+
+Default WebDAV tuning matches SFTP:
+
+```text
+walk concurrency: 4
+operation timeout: 30000 ms
+```
+
+Allowed WebDAV tuning:
+
+```text
+walk concurrency: 1-32
+operation timeout: 5000-300000 ms
+```
+
+For Nextcloud and similar servers, you can include the WebDAV path prefix in the host field, such as `cloud.example.com/remote.php/dav/files/username`.
+
+Self-signed TLS certificates are not specially handled in v1. Use a trusted certificate or configure your environment's TLS trust settings if needed.
+
 ## Scans
 
 Scans read/probe existing files and compare them with the current database records. They add new files, update changed files, discover sidecar subtitles, and remove missing files from the library's active media view.
@@ -52,7 +78,7 @@ Long intervals such as 30 days are handled by chaining safe timer windows and re
 
 ## Watchers
 
-Watchers only apply to local libraries with watching enabled. SFTP libraries show watching as unavailable because remote file events are not available through the current SFTP adapter.
+Watchers only apply to local libraries with watching enabled. Remote libraries (SFTP and WebDAV) show watching as unavailable because live remote file events are not available through the current adapters.
 
 Watcher changes are debounced and use write-stability checks before scanning. This avoids scanning while a large file is still being copied.
 

@@ -1263,7 +1263,7 @@ export const openApiDocument = {
         type: "object",
         additionalProperties: true,
         properties: {
-          source: { type: "string", enum: ["local", "sftp"] },
+          source: { type: "string", enum: ["local", "sftp", "webdav"] },
           kind: { type: "string", enum: ["movie", "tv"] },
           name: stringSchema,
           path: stringSchema,
@@ -1272,6 +1272,9 @@ export const openApiDocument = {
           username: stringSchema,
           password: stringSchema,
           root: stringSchema,
+          secure: { type: "boolean" },
+          walkConcurrency: { type: "integer" },
+          operationTimeoutMs: { type: "integer" },
           watchEnabled: { type: "boolean" },
           scanIntervalMinutes: nullableIntegerSchema,
         },

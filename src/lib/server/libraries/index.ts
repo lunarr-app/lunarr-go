@@ -2,17 +2,23 @@ import { access, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { constants } from "node:fs";
 import { getDb } from "../db";
-import type { LibraryAccessMode, LibraryKind } from "../db/schema";
+import type { LibraryAccessMode, LibraryKind, LibrarySource } from "../db/schema";
 import { createId } from "../id";
 import { encryptSecret } from "../secrets";
 import {
   normalizeRemotePath,
   normalizeSftpOperationTimeoutMs,
   normalizeSftpWalkConcurrency,
+  normalizeWebdavOperationTimeoutMs,
+  normalizeWebdavWalkConcurrency,
   parseSftpConfig,
+  parseWebdavConfig,
   sftpDisplayPath,
   testSftpConnection,
+  testWebdavConnection,
+  webdavDisplayPath,
   type SftpLibraryConfig,
+  type WebdavLibraryConfig,
 } from "../storage";
 import { nowIso } from "../time";
 
@@ -77,6 +83,10 @@ export async function listLibrariesWithScanStatus() {
       SftpLibraryConfig,
       "host" | "port" | "username" | "root" | "walkConcurrency" | "operationTimeoutMs"
     > | null = null;
+    let webdavConfig: Pick<
+      WebdavLibraryConfig,
+      "host" | "port" | "secure" | "username" | "root" | "walkConcurrency" | "operationTimeoutMs"
+    > | null = null;
     if (library.source === "sftp") {
       try {
         const config = parseExistingSftpConfig(library.config_json);
@@ -92,9 +102,26 @@ export async function listLibrariesWithScanStatus() {
         sftpConfig = null;
       }
     }
+    if (library.source === "webdav") {
+      try {
+        const config = parseExistingWebdavConfig(library.config_json);
+        webdavConfig = {
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          username: config.username,
+          root: config.root,
+          walkConcurrency: config.walkConcurrency,
+          operationTimeoutMs: config.operationTimeoutMs,
+        };
+      } catch {
+        webdavConfig = null;
+      }
+    }
     return {
       ...library,
       sftpConfig,
+      webdavConfig,
       sharedUserIds: sharedUsersByLibrary.get(library.id) ?? [],
       latestScanJob,
       scanActive: latestScanJob?.status === "queued" || latestScanJob?.status === "running",
@@ -212,10 +239,42 @@ type UpdateSftpLibraryInput = {
   scanIntervalMinutes?: number | null;
 };
 
-export type CreateLibraryInput = CreateLocalLibraryInput | CreateSftpLibraryInput;
-export type UpdateLibraryInput = UpdateLocalLibraryInput | UpdateSftpLibraryInput;
+type CreateWebdavLibraryInput = {
+  source: "webdav";
+  name: string;
+  kind: LibraryKind;
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
+  root: string;
+  walkConcurrency?: number;
+  operationTimeoutMs?: number;
+  watchEnabled?: boolean;
+  scanIntervalMinutes?: number | null;
+};
+
+type UpdateWebdavLibraryInput = {
+  source: "webdav";
+  name: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password?: string;
+  root: string;
+  walkConcurrency?: number;
+  operationTimeoutMs?: number;
+  watchEnabled?: boolean;
+  scanIntervalMinutes?: number | null;
+};
+
+export type CreateLibraryInput = CreateLocalLibraryInput | CreateSftpLibraryInput | CreateWebdavLibraryInput;
+export type UpdateLibraryInput = UpdateLocalLibraryInput | UpdateSftpLibraryInput | UpdateWebdavLibraryInput;
 export type CreateLibraryOptions = {
   testSftpConnection?: typeof testSftpConnection;
+  testWebdavConnection?: typeof testWebdavConnection;
 };
 
 const MIN_SCAN_INTERVAL_MINUTES = 5;
@@ -225,7 +284,7 @@ function assertSupportedLibraryKind(kind: LibraryKind) {
   if (kind !== "movie" && kind !== "tv") throw new Error("Unsupported library kind.");
 }
 
-function normalizeWatchEnabled(source: "local" | "sftp", value: boolean | undefined) {
+function normalizeWatchEnabled(source: LibrarySource, value: boolean | undefined) {
   if (source !== "local") return 0;
   return value === false ? 0 : 1;
 }
@@ -317,6 +376,66 @@ function parseExistingSftpConfig(configJson: string | null) {
   return parseSftpConfig(configJson);
 }
 
+function parseExistingWebdavConfig(configJson: string | null) {
+  return parseWebdavConfig(configJson);
+}
+
+function parseWebdavInput(input: CreateWebdavLibraryInput): WebdavLibraryConfig {
+  const host = input.host.trim();
+  const username = input.username.trim();
+  const root = normalizeRemotePath(input.root);
+  const secure = input.secure !== false;
+  const port = Number(input.port || (secure ? 443 : 80));
+  const password = input.password.trim();
+
+  if (!host) throw new Error("WebDAV host is required.");
+  if (!username) throw new Error("WebDAV username is required.");
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("WebDAV port is invalid.");
+  if (!password) throw new Error("WebDAV password is required.");
+  if (!root || root === ".") throw new Error("WebDAV root path is required.");
+
+  return {
+    host,
+    port,
+    secure,
+    username,
+    root,
+    passwordEncrypted: encryptSecret(password),
+    walkConcurrency: normalizeWebdavWalkConcurrency(input.walkConcurrency),
+    operationTimeoutMs: normalizeWebdavOperationTimeoutMs(input.operationTimeoutMs),
+  };
+}
+
+function parseWebdavUpdateInput(
+  input: UpdateWebdavLibraryInput,
+  existingConfig: WebdavLibraryConfig,
+): WebdavLibraryConfig {
+  const host = input.host.trim();
+  const username = input.username.trim();
+  const root = normalizeRemotePath(input.root);
+  const secure = input.secure !== false;
+  const port = Number(input.port || (secure ? 443 : 80));
+  const password = input.password?.trim() ?? "";
+
+  if (!host) throw new Error("WebDAV host is required.");
+  if (!username) throw new Error("WebDAV username is required.");
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("WebDAV port is invalid.");
+  if (!root || root === ".") throw new Error("WebDAV root path is required.");
+
+  return {
+    host,
+    port,
+    secure,
+    username,
+    root,
+    passwordEncrypted: password ? encryptSecret(password) : existingConfig.passwordEncrypted,
+    walkConcurrency: normalizeWebdavWalkConcurrency(input.walkConcurrency ?? existingConfig.walkConcurrency),
+    operationTimeoutMs: normalizeWebdavOperationTimeoutMs(
+      input.operationTimeoutMs ?? existingConfig.operationTimeoutMs,
+    ),
+  };
+}
+
 function parseSftpUpdateInput(input: UpdateSftpLibraryInput, existingConfig: SftpLibraryConfig): SftpLibraryConfig {
   const host = input.host.trim();
   const username = input.username.trim();
@@ -406,8 +525,66 @@ async function createSftpLibrary(input: CreateSftpLibraryInput, options: CreateL
   return library;
 }
 
+async function createWebdavLibrary(input: CreateWebdavLibraryInput, options: CreateLibraryOptions = {}) {
+  assertSupportedLibraryKind(input.kind);
+  const config = parseWebdavInput(input);
+  await (options.testWebdavConnection ?? testWebdavConnection)(config);
+
+  const displayPath = webdavDisplayPath(config);
+  const cleanName = input.name.trim() || path.posix.basename(config.root) || config.host;
+  const db = await getDb();
+  const existing = await db.selectFrom("library").select("id").where("path", "=", displayPath).executeTakeFirst();
+  if (existing) throw new Error("Library path is already configured.");
+
+  const libraries = await db
+    .selectFrom("library")
+    .select(["source", "path", "config_json"])
+    .where("source", "=", "webdav")
+    .execute();
+  const overlapping = libraries.find((library) => {
+    if (!library.config_json) return false;
+    try {
+      const existingConfig = JSON.parse(library.config_json) as Pick<
+        WebdavLibraryConfig,
+        "host" | "port" | "secure" | "username" | "root"
+      >;
+      return (
+        existingConfig.host === config.host &&
+        Number(existingConfig.port) === config.port &&
+        Boolean(existingConfig.secure) === config.secure &&
+        existingConfig.username === config.username &&
+        (remotePathsOverlap(existingConfig.root, config.root) || remotePathsOverlap(config.root, existingConfig.root))
+      );
+    } catch {
+      return false;
+    }
+  });
+  if (overlapping) throw new Error("Library path overlaps with an existing library.");
+
+  const now = nowIso();
+  const library = {
+    id: createId(),
+    name: cleanName,
+    kind: input.kind,
+    source: "webdav" as const,
+    access_mode: "all" as const,
+    path: displayPath,
+    config_json: JSON.stringify(config),
+    watch_enabled: normalizeWatchEnabled("webdav", input.watchEnabled),
+    scan_interval_minutes: normalizeScanIntervalMinutes(input.scanIntervalMinutes),
+    last_scheduled_scan_at: null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  await db.insertInto("library").values(library).execute();
+  return library;
+}
+
 export async function createLibrary(input: CreateLibraryInput, options: CreateLibraryOptions = {}) {
-  return input.source === "sftp" ? createSftpLibrary(input, options) : createLocalLibrary(input);
+  if (input.source === "sftp") return createSftpLibrary(input, options);
+  if (input.source === "webdav") return createWebdavLibrary(input, options);
+  return createLocalLibrary(input);
 }
 
 export async function updateLibrary(id: string, input: UpdateLibraryInput, options: CreateLibraryOptions = {}) {
@@ -451,6 +628,60 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
         return (
           otherConfig.host === config.host &&
           Number(otherConfig.port) === config.port &&
+          otherConfig.username === config.username &&
+          (remotePathsOverlap(otherConfig.root, config.root) || remotePathsOverlap(config.root, otherConfig.root))
+        );
+      } catch {
+        return false;
+      }
+    });
+    if (overlapping) throw new Error("Library path overlaps with an existing library.");
+
+    const cleanName = input.name.trim() || path.posix.basename(config.root) || config.host;
+    await db
+      .updateTable("library")
+      .set({
+        name: cleanName,
+        path: displayPath,
+        config_json: JSON.stringify(config),
+        watch_enabled: watchEnabled,
+        scan_interval_minutes: scanIntervalMinutes,
+        ...resetScheduledScanAt,
+        updated_at: now,
+      })
+      .where("id", "=", id)
+      .execute();
+    return getLibrary(id);
+  }
+
+  if (existingLibrary.source === "webdav" && input.source === "webdav") {
+    const existingConfig = parseExistingWebdavConfig(existingLibrary.config_json);
+    const config = parseWebdavUpdateInput(input, existingConfig);
+    await (options.testWebdavConnection ?? testWebdavConnection)(config);
+
+    const displayPath = webdavDisplayPath(config);
+    const duplicate = await db
+      .selectFrom("library")
+      .select("id")
+      .where("path", "=", displayPath)
+      .where("id", "!=", id)
+      .executeTakeFirst();
+    if (duplicate) throw new Error("Library path is already configured.");
+
+    const libraries = await db
+      .selectFrom("library")
+      .select(["id", "source", "path", "config_json"])
+      .where("source", "=", "webdav")
+      .where("id", "!=", id)
+      .execute();
+    const overlapping = libraries.find((library) => {
+      if (!library.config_json) return false;
+      try {
+        const otherConfig = parseExistingWebdavConfig(library.config_json);
+        return (
+          otherConfig.host === config.host &&
+          Number(otherConfig.port) === config.port &&
+          otherConfig.secure === config.secure &&
           otherConfig.username === config.username &&
           (remotePathsOverlap(otherConfig.root, config.root) || remotePathsOverlap(config.root, otherConfig.root))
         );

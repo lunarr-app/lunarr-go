@@ -297,7 +297,7 @@ describe("scan job listings", () => {
       })
       .execute();
 
-    await expect(
+    expect(
       cleanupJobHistory({
         maxAgeMs: 24 * 60 * 60 * 1000,
         minRows: 1,
@@ -488,7 +488,7 @@ describe("scan job listings", () => {
       ])
       .execute();
 
-    await expect(
+    expect(
       cleanupJobHistory({
         maxAgeMs: 0,
         minRows: 0,
@@ -569,7 +569,7 @@ describe("scan job listings", () => {
       ])
       .execute();
 
-    await expect(
+    expect(
       cleanupJobHistory({
         maxAgeMs: 24 * 60 * 60 * 1000,
         minRows: 0,

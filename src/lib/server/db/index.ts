@@ -6,9 +6,11 @@ import { mkdir } from "node:fs/promises";
 import { DATA_DIR, DB_FILE } from "../paths";
 import type { Database } from "./schema";
 import migration0001 from "./migrations/0001_initial.sql?raw";
+import migration0002 from "./migrations/0002_webdav_library_source.sql?raw";
 
 const MIGRATION_SOURCES = {
   "0001_initial": migration0001,
+  "0002_webdav_library_source": migration0002,
 } satisfies Record<string, string>;
 
 let sqlite: LibsqlDatabase.Database | undefined;

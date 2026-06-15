@@ -1,12 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import type { FileEntryWithStats } from "ssh2";
 import {
+  DEFAULT_REMOTE_OPERATION_TIMEOUT_MS,
   DEFAULT_SFTP_OPERATION_TIMEOUT_MS,
   DEFAULT_SFTP_WALK_CONCURRENCY,
   normalizeSftpOperationTimeoutMs,
   normalizeSftpWalkConcurrency,
+  normalizeWebdavOperationTimeoutMs,
+  normalizeWebdavWalkConcurrency,
   parseSftpConfig,
+  parseWebdavConfig,
+  walkRemoteFiles,
   walkSftpFiles,
+  webdavDisplayPath,
 } from ".";
 
 function remoteEntry(filename: string, kind: "directory" | "file"): FileEntryWithStats {
@@ -21,7 +27,54 @@ function remoteEntry(filename: string, kind: "directory" | "file"): FileEntryWit
   } as unknown as FileEntryWithStats;
 }
 
-describe("walkSftpFiles", () => {
+describe("parseWebdavConfig", () => {
+  test("uses database defaults when stored tuning fields are missing", () => {
+    const config = parseWebdavConfig(
+      JSON.stringify({
+        host: "nas.example.com",
+        port: 443,
+        secure: true,
+        username: "mediauser",
+        root: "/media",
+        passwordEncrypted: "encrypted",
+      }),
+    );
+
+    expect(config.walkConcurrency).toBe(DEFAULT_SFTP_WALK_CONCURRENCY);
+    expect(config.operationTimeoutMs).toBe(DEFAULT_SFTP_OPERATION_TIMEOUT_MS);
+    expect(config.secure).toBe(true);
+  });
+
+  test("validates WebDAV tuning values", () => {
+    expect(normalizeWebdavWalkConcurrency(8)).toBe(8);
+    expect(normalizeWebdavOperationTimeoutMs(45_000)).toBe(45_000);
+    expect(() => normalizeWebdavWalkConcurrency(0)).toThrow("Remote walk concurrency");
+    expect(() => normalizeWebdavOperationTimeoutMs(1_000)).toThrow("Remote operation timeout");
+  });
+
+  test("builds display paths with and without explicit ports", () => {
+    expect(
+      webdavDisplayPath({
+        host: "nas.example.com",
+        port: 443,
+        secure: true,
+        username: "mediauser",
+        root: "/movies",
+      }),
+    ).toBe("webdavs://mediauser@nas.example.com/movies");
+    expect(
+      webdavDisplayPath({
+        host: "nas.example.com",
+        port: 5006,
+        secure: true,
+        username: "mediauser",
+        root: "movies",
+      }),
+    ).toBe("webdavs://mediauser@nas.example.com:5006/movies");
+  });
+});
+
+describe("walkRemoteFiles", () => {
   test("walks remote directories with bounded concurrency", async () => {
     let activeReads = 0;
     let maxActiveReads = 0;
@@ -42,7 +95,7 @@ describe("walkSftpFiles", () => {
     };
 
     const walkedEntries = [];
-    for await (const entry of walkSftpFiles("/", readDirectory, 2)) {
+    for await (const entry of walkRemoteFiles("/", readDirectory, 2)) {
       walkedEntries.push(entry);
     }
 
@@ -76,7 +129,17 @@ describe("parseSftpConfig", () => {
   test("validates SFTP tuning values", () => {
     expect(normalizeSftpWalkConcurrency(8)).toBe(8);
     expect(normalizeSftpOperationTimeoutMs(45_000)).toBe(45_000);
-    expect(() => normalizeSftpWalkConcurrency(0)).toThrow("SFTP walk concurrency");
-    expect(() => normalizeSftpOperationTimeoutMs(1_000)).toThrow("SFTP operation timeout");
+    expect(() => normalizeSftpWalkConcurrency(0)).toThrow("Remote walk concurrency");
+    expect(() => normalizeSftpOperationTimeoutMs(1_000)).toThrow("Remote operation timeout");
+  });
+
+  test("rejects missing config json", () => {
+    expect(() => parseSftpConfig(null)).toThrow("SFTP library is missing connection config.");
+  });
+
+  test("rejects incomplete config json", () => {
+    expect(() => parseSftpConfig(JSON.stringify({ host: "sftp.example.com" }))).toThrow(
+      "SFTP library config is incomplete.",
+    );
   });
 });

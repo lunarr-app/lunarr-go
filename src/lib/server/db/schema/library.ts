@@ -2,7 +2,7 @@ import type { ColumnType } from "kysely";
 import type { TimestampText } from "./common";
 
 export type LibraryKind = "movie" | "tv";
-export type LibrarySource = "local" | "sftp";
+export type LibrarySource = "local" | "sftp" | "webdav";
 export type LibraryAccessMode = "all" | "shared";
 
 export type LibraryTable = {

@@ -8,6 +8,7 @@ import type { ProbeBackend } from "./backend";
 import { nodeAvBackend } from "./node-av";
 import { mediaFileValuesFromProbe, replaceMediaStreamInfo } from "./probe";
 import { createSeekableInputSourceFromStorage } from "./seekable-input";
+import { isRemoteLibrarySource } from "../libraries/source";
 
 export type MediaProbeRefreshOptions = {
   probeBackend?: ProbeBackend | null;
@@ -171,7 +172,7 @@ async function loadProbeRepairFiles() {
 }
 
 async function probeFile(input: { file: ProbeRepairFile; storage: LibraryStorage; probeBackend: ProbeBackend }) {
-  if (input.file.source !== "sftp") {
+  if (!isRemoteLibrarySource(input.file.source)) {
     return input.probeBackend.probe({
       mediaFileId: input.file.id,
       path: input.file.path,

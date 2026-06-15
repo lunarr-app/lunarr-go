@@ -40,7 +40,10 @@
 
 <svelte:head>
   <title>Libraries - Lunarr</title>
-  <meta name="description" content="Add local and SFTP movie sources, manage configured libraries, and start scans." />
+  <meta
+    name="description"
+    content="Add local, SFTP, and WebDAV movie sources, manage configured libraries, and start scans."
+  />
 </svelte:head>
 
 <header class="ops-page-header">
@@ -72,7 +75,7 @@
     <div class="ops-panel-header">
       <div>
         <h2>Add library</h2>
-        <p class="muted">Create a local or SFTP source.</p>
+        <p class="muted">Create a local, SFTP, or WebDAV source.</p>
       </div>
     </div>
 
@@ -93,6 +96,7 @@
         <select name="source" bind:value={selectedSource}>
           <option value="local">Local folder</option>
           <option value="sftp">SFTP</option>
+          <option value="webdav">WebDAV</option>
         </select>
       </label>
       {#if selectedSource === "sftp"}
@@ -104,6 +108,49 @@
           <label>
             Port
             <input name="port" inputmode="numeric" value={formData.port ?? "22"} placeholder="22" />
+          </label>
+          <label class="wide">
+            Username
+            <input name="username" value={formData.username ?? ""} placeholder="mediauser" />
+          </label>
+          <label class="wide">
+            Password
+            <input name="password" value="" autocomplete="off" />
+          </label>
+          <label>
+            Walk concurrency
+            <input name="walkConcurrency" type="number" min="1" max="32" value={formData.walkConcurrency ?? "4"} />
+          </label>
+          <label>
+            Timeout ms
+            <input
+              name="operationTimeoutMs"
+              type="number"
+              min="5000"
+              max="300000"
+              step="1000"
+              value={formData.operationTimeoutMs ?? "30000"}
+            />
+          </label>
+        </div>
+        <label>
+          Root path
+          <input name="root" value={formData.root ?? ""} placeholder="/media" autocomplete="off" />
+        </label>
+      {:else if selectedSource === "webdav"}
+        <div class="source-grid">
+          <label>
+            Host
+            <input name="host" value={formData.host ?? ""} placeholder="nas.example.com" />
+          </label>
+          <label>
+            Port
+            <input name="port" inputmode="numeric" value={formData.port ?? "443"} placeholder="443" />
+          </label>
+          <label class="wide check subdued">
+            <input type="hidden" name="secure" value="0" />
+            <input type="checkbox" name="secure" value="1" checked={(formData.secure ?? "1") !== "0"} />
+            <span>Use HTTPS</span>
           </label>
           <label class="wide">
             Username
@@ -232,7 +279,7 @@
               fieldName="libraryId"
               fieldValue={library.id}
               title={`Remove ${library.name}?`}
-              message="This removes the library from Lunarr and deletes media records that are not referenced by another library. Files on disk or SFTP are not deleted."
+              message="This removes the library from Lunarr and deletes media records that are not referenced by another library. Files on disk, SFTP, or WebDAV are not deleted."
               confirmLabel="Remove library"
               disabled={library.scanActive}
               buttonClass="secondary danger compact-action"
@@ -300,6 +347,70 @@
                     <input
                       name="root"
                       value={library.sftpConfig?.root ?? ""}
+                      placeholder="media/movies"
+                      autocomplete="off"
+                    />
+                  </label>
+                {:else if library.source === "webdav"}
+                  <div class="source-grid">
+                    <label>
+                      Host
+                      <input name="host" value={library.webdavConfig?.host ?? ""} placeholder="nas.example.com" />
+                    </label>
+                    <label>
+                      Port
+                      <input
+                        name="port"
+                        inputmode="numeric"
+                        value={library.webdavConfig?.port ?? 443}
+                        placeholder="443"
+                      />
+                    </label>
+                    <label class="wide check subdued">
+                      <input type="hidden" name="secure" value="0" />
+                      <input type="checkbox" name="secure" value="1" checked={library.webdavConfig?.secure !== false} />
+                      <span>Use HTTPS</span>
+                    </label>
+                    <label class="wide">
+                      Username
+                      <input name="username" value={library.webdavConfig?.username ?? ""} placeholder="mediauser" />
+                    </label>
+                    <label class="wide">
+                      Password
+                      <input
+                        name="password"
+                        value=""
+                        autocomplete="off"
+                        placeholder="Leave blank to keep current password"
+                      />
+                    </label>
+                    <label>
+                      Walk concurrency
+                      <input
+                        name="walkConcurrency"
+                        type="number"
+                        min="1"
+                        max="32"
+                        value={library.webdavConfig?.walkConcurrency ?? 4}
+                      />
+                    </label>
+                    <label>
+                      Timeout ms
+                      <input
+                        name="operationTimeoutMs"
+                        type="number"
+                        min="5000"
+                        max="300000"
+                        step="1000"
+                        value={library.webdavConfig?.operationTimeoutMs ?? 30000}
+                      />
+                    </label>
+                  </div>
+                  <label>
+                    Root path
+                    <input
+                      name="root"
+                      value={library.webdavConfig?.root ?? ""}
                       placeholder="media/movies"
                       autocomplete="off"
                     />

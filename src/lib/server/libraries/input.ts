@@ -72,6 +72,23 @@ export function parseCreateLibraryInput(input: LibraryInputSource): CreateLibrar
     };
   }
 
+  if (source === "webdav") {
+    return {
+      source: "webdav",
+      name,
+      kind,
+      host: stringValue(input, "host"),
+      port: numberValue(input, "port", 443),
+      secure: booleanValue(input, ["secure", "useHttps", "use_https"], true),
+      username: stringValue(input, "username"),
+      password: rawStringValue(input, "password"),
+      root: stringValue(input, "root"),
+      walkConcurrency: numberValue(input, "walkConcurrency", 4),
+      operationTimeoutMs: numberValue(input, "operationTimeoutMs", 30_000),
+      ...automation,
+    };
+  }
+
   return {
     source: "local",
     name,
@@ -101,6 +118,22 @@ export function parseUpdateLibraryInput(input: LibraryInputSource): UpdateLibrar
     };
   }
 
+  if (source === "webdav") {
+    return {
+      source: "webdav",
+      name,
+      host: stringValue(input, "host"),
+      port: numberValue(input, "port", 443),
+      secure: booleanValue(input, ["secure", "useHttps", "use_https"], true),
+      username: stringValue(input, "username"),
+      password: rawStringValue(input, "password"),
+      root: stringValue(input, "root"),
+      walkConcurrency: numberValue(input, "walkConcurrency", 4),
+      operationTimeoutMs: numberValue(input, "operationTimeoutMs", 30_000),
+      ...automation,
+    };
+  }
+
   return {
     source: "local",
     name,
@@ -117,6 +150,7 @@ export function libraryFormState(input: LibraryInputSource) {
     path: stringValue(input, "path"),
     host: stringValue(input, "host"),
     port: numberValue(input, "port", 22),
+    secure: booleanValue(input, ["secure", "useHttps", "use_https"], true),
     username: stringValue(input, "username"),
     root: stringValue(input, "root"),
     walkConcurrency: numberValue(input, "walkConcurrency", 4),

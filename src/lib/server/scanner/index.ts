@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
 import { getLibrary, listLibraries } from "../libraries";
+import { isRemoteLibrarySource } from "../libraries/source";
 import type { LibraryKind, MediaKind } from "../db/schema";
 import { runMovieMetadataRefreshJob } from "../metadata/movies";
 import {
@@ -199,19 +200,18 @@ async function probeScannedFile(
 
   let inputSource: SeekableTranscodeInputSource | undefined;
   try {
-    inputSource =
-      context.storage.source === "sftp"
-        ? createSeekableInputSourceFromStorage({
-            file: {
-              path: info.path,
-              extension: info.extension,
-              container: fallbackValues.container,
-              sizeBytes: info.size,
-            },
-            storage: context.storage,
-            timeoutMs: context.storage.operationTimeoutMs,
-          })
-        : undefined;
+    inputSource = isRemoteLibrarySource(context.storage.source)
+      ? createSeekableInputSourceFromStorage({
+          file: {
+            path: info.path,
+            extension: info.extension,
+            container: fallbackValues.container,
+            sizeBytes: info.size,
+          },
+          storage: context.storage,
+          timeoutMs: context.storage.operationTimeoutMs,
+        })
+      : undefined;
     const probe = await context.probeBackend.probe({
       mediaFileId,
       path: info.path,
@@ -381,7 +381,7 @@ async function scanMovieFile(
   const skipProbe =
     existing &&
     basicFileMetadataUnchanged(existing, library, info) &&
-    (context.storage.source === "sftp" || existingMediaProbeMetadataPresent(existing));
+    (isRemoteLibrarySource(context.storage.source) || existingMediaProbeMetadataPresent(existing));
   const probed = skipProbe
     ? { probe: null, values: fileValuesFromExisting(existing) }
     : await probeScannedFile(mediaFileId, info, context);
@@ -762,7 +762,7 @@ async function scanTvFile(
   const skipProbe =
     existing &&
     basicFileMetadataUnchanged(existing, library, info) &&
-    (context.storage.source === "sftp" || existingMediaProbeMetadataPresent(existing));
+    (isRemoteLibrarySource(context.storage.source) || existingMediaProbeMetadataPresent(existing));
   const probed = skipProbe
     ? { probe: null, values: fileValuesFromExisting(existing) }
     : await probeScannedFile(mediaFileId, info, context);

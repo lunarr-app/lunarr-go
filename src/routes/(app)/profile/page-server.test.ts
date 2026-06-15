@@ -396,7 +396,7 @@ describe("profile page server", () => {
       "/profile",
     );
 
-    await expect(
+    expect(
       auth.api.signInEmail({
         body: {
           email: "amina@example.com",

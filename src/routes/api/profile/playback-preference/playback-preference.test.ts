@@ -39,8 +39,8 @@ describe("profile playback preference API", () => {
     } as never);
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true });
-    await expect(getTranscodePolicy("user-1")).resolves.toMatchObject({
+    expect(response.json()).resolves.toEqual({ ok: true });
+    expect(getTranscodePolicy("user-1")).resolves.toMatchObject({
       playbackPreference: "prefer_transcode",
       preferredAudioLanguage: "jpn",
       preferredSubtitleLanguage: "eng",
@@ -58,8 +58,8 @@ describe("profile playback preference API", () => {
     } as never);
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true });
-    await expect(getTranscodePolicy("user-1")).resolves.toMatchObject({
+    expect(response.json()).resolves.toEqual({ ok: true });
+    expect(getTranscodePolicy("user-1")).resolves.toMatchObject({
       playbackPreference: "prefer_direct",
       preferredAudioLanguage: "fra",
       preferredSubtitleLanguage: "eng",
@@ -77,8 +77,8 @@ describe("profile playback preference API", () => {
     } as never);
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true });
-    await expect(getTranscodePolicy("user-1")).resolves.toMatchObject({
+    expect(response.json()).resolves.toEqual({ ok: true });
+    expect(getTranscodePolicy("user-1")).resolves.toMatchObject({
       playbackPreference: "prefer_direct",
       preferredAudioLanguage: "jpn",
       preferredSubtitleLanguage: null,

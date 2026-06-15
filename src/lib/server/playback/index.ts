@@ -17,6 +17,7 @@ import {
 } from "../transcoding/manager";
 import { normalizePlaybackSessionMessage } from "../transcoding/messages";
 import { getTranscodePolicy } from "../transcoding/policy";
+import { isRemoteLibrarySource } from "../libraries/source";
 import { sql } from "kysely";
 
 export type SubtitleTrack = {
@@ -186,7 +187,7 @@ export async function getPlaybackDecision(
     target: playbackTarget,
   });
   if (
-    file.source === "sftp" &&
+    isRemoteLibrarySource(file.source) &&
     policy.transcodingEnabled &&
     policy.playbackPreference === "auto" &&
     modeDecision.mode === "direct"
