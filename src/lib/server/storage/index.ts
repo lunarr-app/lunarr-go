@@ -7,16 +7,11 @@ import type { LibrarySource } from "../db/schema";
 import { decryptSecret } from "../secrets";
 import {
   DEFAULT_REMOTE_OPERATION_TIMEOUT_MS,
-  DEFAULT_SFTP_OPERATION_TIMEOUT_MS,
-  DEFAULT_SFTP_WALK_CONCURRENCY,
+  DEFAULT_REMOTE_WALK_CONCURRENCY,
   fileInfoFromRemotePath,
-  MAX_SFTP_OPERATION_TIMEOUT_MS,
-  MAX_SFTP_WALK_CONCURRENCY,
-  MIN_SFTP_OPERATION_TIMEOUT_MS,
-  MIN_SFTP_WALK_CONCURRENCY,
+  normalizeRemoteOperationTimeoutMs,
   normalizeRemotePath,
-  normalizeSftpOperationTimeoutMs,
-  normalizeSftpWalkConcurrency,
+  normalizeRemoteWalkConcurrency,
   remoteErrorMessage,
   walkRemoteFiles,
   withTimeout,
@@ -36,17 +31,14 @@ import {
 export type { StorageFileInfo, StorageWalkEntry, RemoteDirectoryEntry };
 export {
   DEFAULT_REMOTE_OPERATION_TIMEOUT_MS,
-  DEFAULT_SFTP_OPERATION_TIMEOUT_MS,
-  DEFAULT_SFTP_WALK_CONCURRENCY,
-  MAX_SFTP_OPERATION_TIMEOUT_MS,
-  MAX_SFTP_WALK_CONCURRENCY,
-  MIN_SFTP_OPERATION_TIMEOUT_MS,
-  MIN_SFTP_WALK_CONCURRENCY,
+  DEFAULT_REMOTE_WALK_CONCURRENCY,
+  MAX_REMOTE_OPERATION_TIMEOUT_MS,
+  MAX_REMOTE_WALK_CONCURRENCY,
+  MIN_REMOTE_OPERATION_TIMEOUT_MS,
+  MIN_REMOTE_WALK_CONCURRENCY,
+  normalizeRemoteOperationTimeoutMs,
   normalizeRemotePath,
-  normalizeSftpOperationTimeoutMs,
-  normalizeSftpWalkConcurrency,
-  normalizeWebdavOperationTimeoutMs,
-  normalizeWebdavWalkConcurrency,
+  normalizeRemoteWalkConcurrency,
   walkRemoteFiles,
 } from "./remote";
 export {
@@ -182,8 +174,8 @@ export function parseSftpConfig(configJson: string | null): SftpLibraryConfig {
     username: parsed.username,
     root: normalizeRemotePath(parsed.root),
     passwordEncrypted: parsed.passwordEncrypted,
-    walkConcurrency: normalizeSftpWalkConcurrency(parsed.walkConcurrency),
-    operationTimeoutMs: normalizeSftpOperationTimeoutMs(parsed.operationTimeoutMs),
+    walkConcurrency: normalizeRemoteWalkConcurrency(parsed.walkConcurrency),
+    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(parsed.operationTimeoutMs),
   };
 }
 
@@ -191,7 +183,7 @@ export function sftpOperationTimeoutMsFromConfig(configJson: string | null) {
   try {
     return parseSftpConfig(configJson).operationTimeoutMs;
   } catch {
-    return DEFAULT_SFTP_OPERATION_TIMEOUT_MS;
+    return DEFAULT_REMOTE_OPERATION_TIMEOUT_MS;
   }
 }
 
@@ -242,7 +234,7 @@ function sftpConnect(config: SftpLibraryConfig) {
   });
 }
 
-function sftpStat(sftp: SFTPWrapper, filePath: string, timeoutMs = DEFAULT_SFTP_OPERATION_TIMEOUT_MS) {
+function sftpStat(sftp: SFTPWrapper, filePath: string, timeoutMs = DEFAULT_REMOTE_OPERATION_TIMEOUT_MS) {
   return withTimeout(
     new Promise<Stats>((resolve, reject) => {
       sftp.stat(filePath, (error, stats) => {
@@ -258,7 +250,7 @@ function sftpStat(sftp: SFTPWrapper, filePath: string, timeoutMs = DEFAULT_SFTP_
 async function sftpDirectoryExists(
   sftp: SFTPWrapper,
   directory: string,
-  timeoutMs = DEFAULT_SFTP_OPERATION_TIMEOUT_MS,
+  timeoutMs = DEFAULT_REMOTE_OPERATION_TIMEOUT_MS,
 ) {
   try {
     const stats = await sftpStat(sftp, directory, timeoutMs);
@@ -268,7 +260,7 @@ async function sftpDirectoryExists(
   }
 }
 
-function sftpReaddir(sftp: SFTPWrapper, directory: string, timeoutMs = DEFAULT_SFTP_OPERATION_TIMEOUT_MS) {
+function sftpReaddir(sftp: SFTPWrapper, directory: string, timeoutMs = DEFAULT_REMOTE_OPERATION_TIMEOUT_MS) {
   return withTimeout(
     new Promise<FileEntryWithStats[]>((resolve, reject) => {
       sftp.readdir(directory, (error, entries) => {

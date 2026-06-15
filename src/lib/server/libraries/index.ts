@@ -6,11 +6,9 @@ import type { LibraryAccessMode, LibraryKind, LibrarySource } from "../db/schema
 import { createId } from "../id";
 import { encryptSecret } from "../secrets";
 import {
+  normalizeRemoteOperationTimeoutMs,
   normalizeRemotePath,
-  normalizeSftpOperationTimeoutMs,
-  normalizeSftpWalkConcurrency,
-  normalizeWebdavOperationTimeoutMs,
-  normalizeWebdavWalkConcurrency,
+  normalizeRemoteWalkConcurrency,
   parseSftpConfig,
   parseWebdavConfig,
   sftpDisplayPath,
@@ -367,8 +365,8 @@ function parseSftpInput(input: CreateSftpLibraryInput): SftpLibraryConfig {
     username,
     root,
     passwordEncrypted: encryptSecret(password),
-    walkConcurrency: normalizeSftpWalkConcurrency(input.walkConcurrency),
-    operationTimeoutMs: normalizeSftpOperationTimeoutMs(input.operationTimeoutMs),
+    walkConcurrency: normalizeRemoteWalkConcurrency(input.walkConcurrency),
+    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(input.operationTimeoutMs),
   };
 }
 
@@ -393,8 +391,8 @@ function parseWebdavInput(input: CreateWebdavLibraryInput): WebdavLibraryConfig 
     username,
     root,
     passwordEncrypted: encryptSecret(password),
-    walkConcurrency: normalizeWebdavWalkConcurrency(input.walkConcurrency),
-    operationTimeoutMs: normalizeWebdavOperationTimeoutMs(input.operationTimeoutMs),
+    walkConcurrency: normalizeRemoteWalkConcurrency(input.walkConcurrency),
+    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(input.operationTimeoutMs),
   };
 }
 
@@ -421,8 +419,8 @@ function parseWebdavUpdateInput(
     username,
     root,
     passwordEncrypted: password ? encryptSecret(password) : existingConfig.passwordEncrypted,
-    walkConcurrency: normalizeWebdavWalkConcurrency(input.walkConcurrency ?? existingConfig.walkConcurrency),
-    operationTimeoutMs: normalizeWebdavOperationTimeoutMs(
+    walkConcurrency: normalizeRemoteWalkConcurrency(input.walkConcurrency ?? existingConfig.walkConcurrency),
+    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(
       input.operationTimeoutMs ?? existingConfig.operationTimeoutMs,
     ),
   };
@@ -446,8 +444,10 @@ function parseSftpUpdateInput(input: UpdateSftpLibraryInput, existingConfig: Sft
     username,
     root,
     passwordEncrypted: password ? encryptSecret(password) : existingConfig.passwordEncrypted,
-    walkConcurrency: normalizeSftpWalkConcurrency(input.walkConcurrency ?? existingConfig.walkConcurrency),
-    operationTimeoutMs: normalizeSftpOperationTimeoutMs(input.operationTimeoutMs ?? existingConfig.operationTimeoutMs),
+    walkConcurrency: normalizeRemoteWalkConcurrency(input.walkConcurrency ?? existingConfig.walkConcurrency),
+    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(
+      input.operationTimeoutMs ?? existingConfig.operationTimeoutMs,
+    ),
   };
 }
 

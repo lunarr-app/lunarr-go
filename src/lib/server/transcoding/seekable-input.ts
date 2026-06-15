@@ -1,4 +1,4 @@
-import { DEFAULT_SFTP_OPERATION_TIMEOUT_MS, type LibraryStorage } from "../storage";
+import { DEFAULT_REMOTE_OPERATION_TIMEOUT_MS, type LibraryStorage } from "../storage";
 import type { SeekableTranscodeInputSource } from "./backend";
 import type { Readable } from "node:stream";
 
@@ -151,7 +151,7 @@ export function createSeekableInputSourceFromStorage(input: {
   let closed = false;
   let readAhead: { start: number; buffer: Buffer } | null = null;
   const sizeBytes = input.file.sizeBytes;
-  const timeoutMs = input.timeoutMs ?? DEFAULT_SFTP_OPERATION_TIMEOUT_MS;
+  const timeoutMs = input.timeoutMs ?? DEFAULT_REMOTE_OPERATION_TIMEOUT_MS;
 
   return {
     kind: "seekable",

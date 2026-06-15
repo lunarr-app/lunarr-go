@@ -36,13 +36,6 @@ export const MAX_REMOTE_WALK_CONCURRENCY = 32;
 export const MIN_REMOTE_OPERATION_TIMEOUT_MS = 5_000;
 export const MAX_REMOTE_OPERATION_TIMEOUT_MS = 300_000;
 
-export const DEFAULT_SFTP_WALK_CONCURRENCY = DEFAULT_REMOTE_WALK_CONCURRENCY;
-export const DEFAULT_SFTP_OPERATION_TIMEOUT_MS = DEFAULT_REMOTE_OPERATION_TIMEOUT_MS;
-export const MIN_SFTP_WALK_CONCURRENCY = MIN_REMOTE_WALK_CONCURRENCY;
-export const MAX_SFTP_WALK_CONCURRENCY = MAX_REMOTE_WALK_CONCURRENCY;
-export const MIN_SFTP_OPERATION_TIMEOUT_MS = MIN_REMOTE_OPERATION_TIMEOUT_MS;
-export const MAX_SFTP_OPERATION_TIMEOUT_MS = MAX_REMOTE_OPERATION_TIMEOUT_MS;
-
 export function normalizeRemoteWalkConcurrency(value: unknown) {
   const numeric =
     value === null || value === undefined || value === "" ? DEFAULT_REMOTE_WALK_CONCURRENCY : Number(value);
@@ -67,22 +60,6 @@ export function normalizeRemoteOperationTimeoutMs(value: unknown) {
     );
   }
   return numeric;
-}
-
-export function normalizeSftpWalkConcurrency(value: unknown) {
-  return normalizeRemoteWalkConcurrency(value);
-}
-
-export function normalizeSftpOperationTimeoutMs(value: unknown) {
-  return normalizeRemoteOperationTimeoutMs(value);
-}
-
-export function normalizeWebdavWalkConcurrency(value: unknown) {
-  return normalizeRemoteWalkConcurrency(value);
-}
-
-export function normalizeWebdavOperationTimeoutMs(value: unknown) {
-  return normalizeRemoteOperationTimeoutMs(value);
 }
 
 export function normalizeRemotePath(value: string) {
