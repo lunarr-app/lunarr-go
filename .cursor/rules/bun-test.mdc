@@ -1,0 +1,19 @@
+---
+description: Run Bun tests after behavior or test file changes
+globs: "src/**/*.{ts,svelte}"
+alwaysApply: false
+---
+
+# Bun test
+
+When you change behavior, add tests, or edit files with matching `*.test.ts`:
+
+```bash
+bun test
+```
+
+Prefer a scoped run for localized changes:
+
+```bash
+bun test src/path/to/changed.test.ts
+```

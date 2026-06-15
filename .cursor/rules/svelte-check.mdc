@@ -1,0 +1,15 @@
+---
+description: Run svelte-check after TypeScript or Svelte changes
+globs: "**/*.{ts,svelte}"
+alwaysApply: false
+---
+
+# Svelte check
+
+When you touch `.ts`, `.svelte`, server routes, or shared lib code:
+
+```bash
+bun run check
+```
+
+Fix reported errors in files you changed before finishing.
