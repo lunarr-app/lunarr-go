@@ -126,6 +126,24 @@ describe("scan job listings", () => {
     expect(await listScanErrorsForJobIds([])).toEqual([]);
   });
 
+  test("returns scan errors per job instead of one shared global cap", async () => {
+    const now = new Date().toISOString();
+    const errorRows = Array.from({ length: 30 }, (_, index) => ({
+      scan_job_id: "job-1",
+      path: `job-1-${index}.mkv`,
+      message: `error ${index}`,
+      created_at: new Date(Date.now() - index * 1000).toISOString(),
+    }));
+    await db.insertInto("scan_job_error").values(errorRows).execute();
+
+    const errors = await listScanErrorsForJobIds(["job-1", "job-2"]);
+    const jobOneErrors = errors.filter((error) => error.scan_job_id === "job-1");
+
+    expect(jobOneErrors).toHaveLength(25);
+    expect(jobOneErrors[0]?.path).toBe("job-1-0.mkv");
+    expect(errors.some((error) => error.scan_job_id === "job-2")).toBe(false);
+  });
+
   test("summarizes scan job status counts and recorded errors", async () => {
     expect(await getScanJobSummary()).toEqual({
       total: 4,

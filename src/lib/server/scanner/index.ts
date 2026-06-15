@@ -29,7 +29,7 @@ import { nodeAvBackend } from "../transcoding/node-av";
 import { mediaFileValuesFromProbe, replaceMediaStreamInfo } from "../transcoding/probe";
 import { runMediaProbeRefreshJob } from "../transcoding/probe-jobs";
 import { createSeekableInputSourceFromStorage } from "../transcoding/seekable-input";
-import { movieLookupCandidates } from "../metadata/movie-lookup";
+import { movieLookupCandidates, type ParsedMovieLookup } from "../metadata/movie-lookup";
 import {
   lookupMovieMetadataFromCandidates,
   lookupTvSeasonMetadata,
@@ -279,6 +279,29 @@ async function loadExistingLibraryFiles(libraryId: string) {
   return new Map(files.map((file) => [file.path, file]));
 }
 
+async function findLocalMovieItem(candidate: ParsedMovieLookup, options: { requireUnmatched?: boolean } = {}) {
+  const db = await getDb();
+  return db
+    .selectFrom("media_item")
+    .selectAll()
+    .where("kind", "=", "movie")
+    .where("title", "=", candidate.title)
+    .where((eb) => (candidate.year === null ? eb("year", "is", null) : eb("year", "=", candidate.year)))
+    .$if(Boolean(options.requireUnmatched), (qb) => qb.where("provider", "is", null))
+    .executeTakeFirst();
+}
+
+async function findLocalMovieItemForCandidates(
+  candidates: ParsedMovieLookup[],
+  options: { requireUnmatched?: boolean } = {},
+) {
+  for (const candidate of candidates) {
+    const existing = await findLocalMovieItem(candidate, options);
+    if (existing) return existing;
+  }
+  return null;
+}
+
 async function findOrCreateMovieItem(
   libraryRoot: string,
   filePath: string,
@@ -288,10 +311,11 @@ async function findOrCreateMovieItem(
   const db = await getDb();
   const candidates = movieLookupCandidates(filePath, undefined, { libraryRoot });
   const parsed = candidates[0] ?? { title: "", year: null };
-  const metadata = await lookupMovieMetadataFromCandidates(candidates, {
+  const lookup = await lookupMovieMetadataFromCandidates(candidates, {
     onError: onMetadataError,
     matcher: metadataMatcher,
   });
+  const metadata = lookup?.metadata ?? null;
   const now = nowIso();
 
   if (metadata) {
@@ -316,14 +340,7 @@ async function findOrCreateMovieItem(
       return existing.id;
     }
 
-    const localExisting = await db
-      .selectFrom("media_item")
-      .selectAll()
-      .where("kind", "=", "movie")
-      .where("provider", "is", null)
-      .where("title", "=", parsed.title)
-      .where((eb) => (parsed.year === null ? eb("year", "is", null) : eb("year", "=", parsed.year)))
-      .executeTakeFirst();
+    const localExisting = await findLocalMovieItemForCandidates(candidates, { requireUnmatched: true });
 
     if (localExisting) {
       await db.updateTable("media_item").set(values).where("id", "=", localExisting.id).execute();
@@ -340,13 +357,7 @@ async function findOrCreateMovieItem(
     return id;
   }
 
-  const existing = await db
-    .selectFrom("media_item")
-    .selectAll()
-    .where("kind", "=", "movie")
-    .where("title", "=", parsed.title)
-    .where((eb) => (parsed.year === null ? eb("year", "is", null) : eb("year", "=", parsed.year)))
-    .executeTakeFirst();
+  const existing = await findLocalMovieItemForCandidates(candidates);
   if (existing) return existing.id;
 
   const id = createId();

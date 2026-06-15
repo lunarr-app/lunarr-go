@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { lookupMovieMetadata } from "./matching";
+import { lookupMovieMetadata, lookupMovieMetadataFromCandidates } from "./matching";
+import type { MatchedMovieMetadata } from "./tmdb";
 
 describe("lookupMovieMetadata", () => {
   test("returns metadata from the configured matcher", async () => {
@@ -42,5 +43,56 @@ describe("lookupMovieMetadata", () => {
     expect(result).toBeNull();
     expect(errors).toHaveLength(1);
     expect(errors[0]).toBeInstanceOf(Error);
+  });
+});
+
+describe("lookupMovieMetadataFromCandidates", () => {
+  test("prefers the strongest candidate match instead of stopping at the first weak match", async () => {
+    const matcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
+      if (title === "Disney's Snow White" && year === 2025) {
+        return {
+          provider: "tmdb",
+          providerId: "wrong",
+          title: "Snow White and the Seven Dwarfs",
+          year: 1937,
+          overview: null,
+          runtimeSeconds: null,
+          posterPath: null,
+          backdropPath: null,
+          releaseDate: "1937-12-21",
+          popularity: null,
+          voteAverage: null,
+        };
+      }
+
+      if (title === "Snow White" && year === 2025) {
+        return {
+          provider: "tmdb",
+          providerId: "correct",
+          title: "Snow White",
+          year: 2025,
+          overview: null,
+          runtimeSeconds: null,
+          posterPath: null,
+          backdropPath: null,
+          releaseDate: "2025-03-21",
+          popularity: null,
+          voteAverage: null,
+        };
+      }
+
+      return null;
+    };
+
+    const result = await lookupMovieMetadataFromCandidates(
+      [
+        { title: "Disney's Snow White", year: 2025 },
+        { title: "Snow White", year: 2025 },
+      ],
+      { matcher },
+    );
+
+    expect(result?.metadata.providerId).toBe("correct");
+    expect(result?.candidate).toEqual({ title: "Snow White", year: 2025 });
   });
 });

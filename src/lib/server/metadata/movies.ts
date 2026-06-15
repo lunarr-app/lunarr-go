@@ -103,7 +103,7 @@ export async function refreshMovieMetadataResult(
   if (!movie) return { status: "missing", mediaItemId: null };
 
   const metadataMatcher = options.metadataMatcher ?? matchMovieMetadata;
-  const metadata =
+  const lookup =
     (await lookupMovieMetadataFromPath(movie.path ?? movie.basename ?? "", {
       libraryRoot: movie.library_path,
       fallback: {
@@ -112,7 +112,9 @@ export async function refreshMovieMetadataResult(
       },
       matcher: metadataMatcher,
     })) ?? null;
-  if (!metadata) return { status: "unmatched", mediaItemId };
+  if (!lookup) return { status: "unmatched", mediaItemId };
+
+  const { metadata } = lookup;
 
   const now = nowIso();
   const values = {

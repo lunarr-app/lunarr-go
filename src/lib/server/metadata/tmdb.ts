@@ -410,25 +410,52 @@ function canUsePhraseMatch(needle: string) {
   return words.length >= 2 || needle.length >= 10;
 }
 
-function titlePhraseMatches(result: TmdbSearchResult, title: string) {
-  const query = normalizeTitle(title);
+function exactTitleMatches(queryTitle: string, resultTitle: string) {
+  const query = normalizeTitle(queryTitle);
+  const result = normalizeTitle(resultTitle);
+  return Boolean(query && result && query === result);
+}
+
+function phraseTitleMatches(queryTitle: string, resultTitle: string) {
+  const query = normalizeTitle(queryTitle);
   if (!canUsePhraseMatch(query)) return false;
 
   const queryWords = query.split(" ").filter(Boolean);
-  const candidates = [normalizeTitle(result.title), normalizeTitle(result.original_title)].filter(Boolean);
-  return candidates.some((candidate) => {
-    const candidateWords = candidate.split(" ").filter(Boolean);
-    return wordSequenceEndsWith(candidateWords, queryWords) || wordSequenceEndsWith(queryWords, candidateWords);
-  });
+  const candidateWords = normalizeTitle(resultTitle).split(" ").filter(Boolean);
+  return wordSequenceEndsWith(candidateWords, queryWords) || wordSequenceEndsWith(queryWords, candidateWords);
+}
+
+function titlePhraseMatches(result: TmdbSearchResult, title: string) {
+  return (
+    phraseTitleMatches(title, result.title ?? "") || phraseTitleMatches(title, result.original_title ?? "")
+  );
 }
 
 function titleMatches(result: TmdbSearchResult, title: string) {
-  const normalizedTitle = normalizeTitle(title);
   return (
-    normalizeTitle(result.title) === normalizedTitle ||
-    normalizeTitle(result.original_title) === normalizedTitle ||
+    exactTitleMatches(title, result.title ?? "") ||
+    exactTitleMatches(title, result.original_title ?? "") ||
     titlePhraseMatches(result, title)
   );
+}
+
+export function movieMetadataMatchScore(
+  queryTitle: string,
+  queryYear: number | null,
+  metadataTitle: string,
+  metadataYear: number | null,
+) {
+  let score = 0;
+  if (exactTitleMatches(queryTitle, metadataTitle)) {
+    score += 100;
+  } else if (phraseTitleMatches(queryTitle, metadataTitle)) {
+    score += 40;
+  } else {
+    return 0;
+  }
+
+  if (queryYear !== null && metadataYear === queryYear) score += 10;
+  return score;
 }
 
 function tvTitleMatches(result: TmdbTvSearchResult, title: string) {

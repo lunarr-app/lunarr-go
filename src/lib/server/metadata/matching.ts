@@ -1,6 +1,7 @@
 import {
   matchMovieMetadata,
   matchTvSeasonMetadata,
+  movieMetadataMatchScore,
   type MatchedMovieMetadata,
   type MatchedTvSeasonLookup,
 } from "./tmdb";
@@ -13,6 +14,11 @@ export type TvSeasonMetadataMatcher = (
   year: number | null,
   seasonNumber: number,
 ) => Promise<MatchedTvSeasonLookup | null>;
+
+export type MovieMetadataLookupResult = {
+  metadata: MatchedMovieMetadata;
+  candidate: ParsedMovieLookup;
+};
 
 export async function lookupMovieMetadata(
   title: string,
@@ -34,12 +40,29 @@ export async function lookupMovieMetadataFromCandidates(
     onError?: (error: unknown) => Promise<void>;
     matcher?: MovieMetadataMatcher;
   } = {},
-) {
+): Promise<MovieMetadataLookupResult | null> {
+  let best: MovieMetadataLookupResult & { score: number } | null = null;
+
   for (const candidate of candidates) {
     const metadata = await lookupMovieMetadata(candidate.title, candidate.year, options.onError, options.matcher);
-    if (metadata) return metadata;
+    if (!metadata) continue;
+
+    const score = movieMetadataMatchScore(
+      candidate.title,
+      candidate.year,
+      metadata.title,
+      metadata.year,
+    );
+    if (score === 0) continue;
+
+    if (!best || score > best.score) {
+      best = { metadata, candidate, score };
+      if (score >= 110) break;
+    }
   }
-  return null;
+
+  if (!best) return null;
+  return { metadata: best.metadata, candidate: best.candidate };
 }
 
 export async function lookupMovieMetadataFromPath(
