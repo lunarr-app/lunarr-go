@@ -1041,6 +1041,19 @@ async function warmInitialRequestDrivenHlsSegment(input: {
   return session.mode;
 }
 
+async function cancelSupersededHlsPlaybackSessions(
+  mediaFileId: string,
+  userId: string,
+  mode: TranscodeMode,
+  replacementSessionId: string,
+) {
+  const supersededSessions = await listActiveHlsPlaybackSessionsForMedia(mediaFileId, userId, mode);
+  for (const session of supersededSessions) {
+    if (session.sessionId === replacementSessionId) continue;
+    await cancelPlaybackSession(session.sessionId, PLAYBACK_SESSION_REPLACED_MESSAGE);
+  }
+}
+
 export async function cancelPlaybackSession(
   sessionId: string,
   message = PLAYBACK_CANCELLED_MESSAGE,
@@ -1628,11 +1641,6 @@ export async function resolveHlsPlayback(input: {
     };
   }
 
-  const supersededSessions = await listActiveHlsPlaybackSessionsForMedia(input.mediaFileId, input.userId, mode);
-  for (const session of supersededSessions) {
-    await cancelPlaybackSession(session.sessionId, PLAYBACK_SESSION_REPLACED_MESSAGE);
-  }
-
   const sessionId = await createTranscodeSession({
     mediaFileId: input.mediaFileId,
     userId: input.userId,
@@ -1739,6 +1747,7 @@ export async function resolveHlsPlayback(input: {
         userId: input.userId,
         segmentFormat,
       });
+      await cancelSupersededHlsPlaybackSessions(input.mediaFileId, input.userId, mode, sessionId);
       return {
         status: "ready",
         mode: effectiveMode,

@@ -1979,6 +1979,66 @@ describe("getPlaybackDecision", () => {
     });
   });
 
+  test("keeps the previous playback session when replacement startup fails", async () => {
+    await setUserPlaybackPreference("user-1", "prefer_transcode");
+    const oldSessionId = await createTranscodeSession({
+      mediaFileId: "file-b",
+      userId: "user-1",
+    });
+    const oldArtifactDir = path.join(tempDir, "playback-sessions", oldSessionId);
+    await mkdir(oldArtifactDir, { recursive: true });
+    await writeFile(path.join(oldArtifactDir, "master.m3u8"), "#EXTM3U\n");
+    await registerTranscodeHlsArtifact({
+      sessionId: oldSessionId,
+      mediaFileId: "file-b",
+      path: path.join(oldArtifactDir, "master.m3u8"),
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(oldSessionId, "running");
+    await updateTranscodeSessionPipeline(oldSessionId, "request_driven");
+
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(input): Promise<RunningTranscode> {
+        return {
+          sessionId: input.sessionId,
+          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
+          completion: new Promise<void>(() => undefined),
+          async cancel() {
+            return;
+          },
+        };
+      },
+      async generateHlsSegmentWindow(input) {
+        if (input.sessionId !== oldSessionId) {
+          throw new Error("replacement startup failed");
+        }
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1");
+    expect(decision).toMatchObject({
+      mode: "unavailable",
+      status: "unavailable",
+      streamUrl: null,
+      message: "replacement startup failed",
+    });
+    expect(decision?.playbackSessionId).not.toBe(oldSessionId);
+
+    const oldSession = await db
+      .selectFrom("playback_session")
+      .select(["status", "error_message"])
+      .where("id", "=", oldSessionId)
+      .executeTakeFirst();
+    expect(oldSession).toMatchObject({
+      status: "running",
+      error_message: null,
+    });
+  });
+
   test("does not cancel another user's active playback session for the same file", async () => {
     const nowMs = Date.now();
     await db
