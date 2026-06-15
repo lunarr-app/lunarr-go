@@ -109,7 +109,8 @@
     if (job.job_kind === "movie_metadata_refresh") return "All movies";
     if (job.job_kind === "tv_metadata_refresh") return "All TV shows";
     if (job.job_kind === "media_probe_refresh") return "All media files";
-    return job.library_id ? "Deleted library" : "Library scan";
+    if (job.job_kind === "library_scan" && !job.library_id) return "Deleted library";
+    return "Library scan";
   }
 
   function mediaHref(job: Pick<PlaybackSession, "media_item_id" | "media_item_kind">) {
