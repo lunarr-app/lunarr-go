@@ -6,6 +6,7 @@ import {
   findRecentFailedHlsPlayback,
   getTranscodeSession,
   isTranscodeSessionActive,
+  listActiveHlsPlaybackSessionsForMedia,
   listActiveTranscodeSessions,
   listIdleReadyHlsTranscodeSessions,
   listMismatchedActiveHlsArtifacts,
@@ -48,6 +49,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 
 const PLAYBACK_CANCELLED_MESSAGE = "Playback session was cancelled.";
+const PLAYBACK_SESSION_REPLACED_MESSAGE = "Playback session was replaced.";
 const PLAYBACK_HEARTBEAT_EXPIRED_MESSAGE = "Playback session expired because playback stopped.";
 const PLAYBACK_SEGMENT_IDLE_EXPIRED_MESSAGE = "Playback session expired because playback stopped requesting segments.";
 const PLAYBACK_SESSION_INACTIVE_MESSAGE = "Playback session is no longer active.";
@@ -1624,6 +1626,11 @@ export async function resolveHlsPlayback(input: {
       streamStartSeconds: existing.startTimeSeconds,
       message: PREPARING_PLAYBACK_MESSAGE,
     };
+  }
+
+  const supersededSessions = await listActiveHlsPlaybackSessionsForMedia(input.mediaFileId, input.userId, mode);
+  for (const session of supersededSessions) {
+    await cancelPlaybackSession(session.sessionId, PLAYBACK_SESSION_REPLACED_MESSAGE);
   }
 
   const sessionId = await createTranscodeSession({

@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { inlineContentDisposition, parseRange, streamFileHeadResponse, streamFileResponse } from "./stream";
+import { createLocalStorage } from "../storage";
 
 describe("parseRange", () => {
   test("parses explicit byte ranges", () => {
@@ -168,6 +169,26 @@ describe("streamFileResponse", () => {
       expect(response.status).toBe(416);
       expect(response.headers.get("content-range")).toBe("bytes */10");
       expect(response.headers.get("accept-ranges")).toBe("bytes");
+      expect(response.body).toBeNull();
+    });
+  });
+
+  test("returns 499 when the client disconnects before streaming starts", async () => {
+    await withMediaFile(async (file) => {
+      const signal = AbortSignal.abort();
+      const response = await streamFileResponse(file, "bytes=2-5", createLocalStorage(), signal);
+
+      expect(response.status).toBe(499);
+      expect(response.body).toBeNull();
+    });
+  });
+
+  test("returns 499 for full-file streams aborted before streaming starts", async () => {
+    await withMediaFile(async (file) => {
+      const signal = AbortSignal.abort();
+      const response = await streamFileResponse(file, null, createLocalStorage(), signal);
+
+      expect(response.status).toBe(499);
       expect(response.body).toBeNull();
     });
   });

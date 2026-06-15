@@ -23,6 +23,7 @@ import {
 import {
   createTranscodeSession,
   registerTranscodeHlsArtifact,
+  updateTranscodeSessionPipeline,
   updateTranscodeSessionStatus,
 } from "../transcoding/sessions";
 import {
@@ -1052,22 +1053,24 @@ describe("getPlaybackDecision", () => {
 
     const sessions = await db
       .selectFrom("playback_session")
-      .select(["id", "status", "pipeline", "start_time_seconds"])
+      .select(["id", "status", "pipeline", "start_time_seconds", "error_message"])
       .where("media_file_id", "=", "file-b")
       .orderBy("created_at", "asc")
       .execute();
     expect(sessions).toEqual([
       {
         id: firstSessionId,
-        status: "running",
+        status: "cancelled",
         pipeline: "request_driven",
         start_time_seconds: 20,
+        error_message: "Playback session was replaced.",
       },
       {
         id: secondSessionId,
         status: "running",
         pipeline: "request_driven",
         start_time_seconds: 20,
+        error_message: null,
       },
     ]);
   });
@@ -1918,6 +1921,163 @@ describe("getPlaybackDecision", () => {
     });
     expect(decision?.streamUrl).toMatch(/^\/media\/playback-sessions\/.+\/master\.m3u8$/);
     expect(decision?.playbackSessionId).not.toBe(sessionId);
+  });
+
+  test("cancels an active playback session when the same user starts the same file again", async () => {
+    await setUserPlaybackPreference("user-1", "prefer_transcode");
+    const oldSessionId = await createTranscodeSession({
+      mediaFileId: "file-b",
+      userId: "user-1",
+    });
+    const oldArtifactDir = path.join(tempDir, "playback-sessions", oldSessionId);
+    await mkdir(oldArtifactDir, { recursive: true });
+    await writeFile(path.join(oldArtifactDir, "master.m3u8"), "#EXTM3U\n");
+    await registerTranscodeHlsArtifact({
+      sessionId: oldSessionId,
+      mediaFileId: "file-b",
+      path: path.join(oldArtifactDir, "master.m3u8"),
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(oldSessionId, "running");
+    await updateTranscodeSessionPipeline(oldSessionId, "request_driven");
+
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(input): Promise<RunningTranscode> {
+        return {
+          sessionId: input.sessionId,
+          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
+          completion: new Promise<void>(() => undefined),
+          async cancel() {
+            return;
+          },
+        };
+      },
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1");
+    expect(decision).toMatchObject({
+      mode: "transcode",
+      status: "ready",
+      message: null,
+    });
+    expect(decision?.playbackSessionId).not.toBe(oldSessionId);
+
+    const oldSession = await db
+      .selectFrom("playback_session")
+      .select(["status", "error_message"])
+      .where("id", "=", oldSessionId)
+      .executeTakeFirst();
+    expect(oldSession).toMatchObject({
+      status: "cancelled",
+      error_message: "Playback session was replaced.",
+    });
+  });
+
+  test("does not cancel another user's active playback session for the same file", async () => {
+    const nowMs = Date.now();
+    await db
+      .insertInto("user")
+      .values({
+        id: "user-2",
+        name: "Other User",
+        email: "other@example.com",
+        role: "user",
+        email_verified: 0,
+        image: null,
+        created_at: nowMs,
+        updated_at: nowMs,
+      })
+      .execute();
+
+    await setUserPlaybackPreference("user-1", "prefer_transcode");
+    await setUserPlaybackPreference("user-2", "prefer_transcode");
+
+    const user1SessionId = await createTranscodeSession({
+      mediaFileId: "file-b",
+      userId: "user-1",
+    });
+    const user1ArtifactDir = path.join(tempDir, "playback-sessions", user1SessionId);
+    await mkdir(user1ArtifactDir, { recursive: true });
+    await writeFile(path.join(user1ArtifactDir, "master.m3u8"), "#EXTM3U\n");
+    await registerTranscodeHlsArtifact({
+      sessionId: user1SessionId,
+      mediaFileId: "file-b",
+      path: path.join(user1ArtifactDir, "master.m3u8"),
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(user1SessionId, "running");
+    await updateTranscodeSessionPipeline(user1SessionId, "request_driven");
+
+    const user2SessionId = await createTranscodeSession({
+      mediaFileId: "file-b",
+      userId: "user-2",
+    });
+    const user2ArtifactDir = path.join(tempDir, "playback-sessions", user2SessionId);
+    await mkdir(user2ArtifactDir, { recursive: true });
+    await writeFile(path.join(user2ArtifactDir, "master.m3u8"), "#EXTM3U\n");
+    await registerTranscodeHlsArtifact({
+      sessionId: user2SessionId,
+      mediaFileId: "file-b",
+      path: path.join(user2ArtifactDir, "master.m3u8"),
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(user2SessionId, "running");
+    await updateTranscodeSessionPipeline(user2SessionId, "request_driven");
+
+    setTranscodeBackendForTests({
+      async startCompatibilityHls(input): Promise<RunningTranscode> {
+        return {
+          sessionId: input.sessionId,
+          playlistPath: path.join(input.artifactDirectory, "master.m3u8"),
+          completion: new Promise<void>(() => undefined),
+          async cancel() {
+            return;
+          },
+        };
+      },
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision("movie-1", "file-b", "user-1");
+    expect(decision?.playbackSessionId).not.toBe(user1SessionId);
+
+    const sessions = await db
+      .selectFrom("playback_session")
+      .select(["id", "user_id", "status", "error_message"])
+      .where("media_file_id", "=", "file-b")
+      .orderBy("created_at", "asc")
+      .execute();
+    expect(sessions).toEqual([
+      {
+        id: user1SessionId,
+        user_id: "user-1",
+        status: "cancelled",
+        error_message: "Playback session was replaced.",
+      },
+      {
+        id: user2SessionId,
+        user_id: "user-2",
+        status: "running",
+        error_message: null,
+      },
+      expect.objectContaining({
+        user_id: "user-1",
+        status: "running",
+        error_message: null,
+      }),
+    ]);
+    expect(decision?.playbackSessionId).not.toBe(user2SessionId);
   });
 
   test("does not reuse HLS artifacts from a different playback start offset", async () => {

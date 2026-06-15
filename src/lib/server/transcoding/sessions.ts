@@ -737,6 +737,58 @@ export async function findRecentFailedHlsPlayback(
     : null;
 }
 
+export async function listActiveHlsPlaybackSessionsForMedia(
+  mediaFileId: string,
+  userId: string,
+  mode: TranscodeMode,
+): Promise<ActiveHlsArtifact[]> {
+  const db = await getDb();
+  const rows = await db
+    .selectFrom("playback_session")
+    .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
+    .leftJoin("playback_hls_artifact", (join) =>
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+    )
+    .select([
+      "playback_session.id as sessionId",
+      "playback_session.media_file_id as mediaFileId",
+      "playback_session.user_id as userId",
+      "playback_session.mode as mode",
+      "playback_session.pipeline as pipeline",
+      "playback_session.status as status",
+      "playback_session.error_message as errorMessage",
+      "playback_hls_artifact.path as playlistPath",
+      "playback_session.start_time_seconds as startTimeSeconds",
+      "media_file.duration_seconds as durationSeconds",
+      "playback_session.created_at as createdAt",
+      "playback_session.updated_at as updatedAt",
+      "playback_session.last_heartbeat_at as lastHeartbeatAt",
+      "playback_session.last_segment_request_at as lastSegmentRequestAt",
+    ])
+    .where("playback_session.media_file_id", "=", mediaFileId)
+    .where("playback_session.user_id", "=", userId)
+    .where("playback_session.mode", "=", mode)
+    .where("playback_session.status", "in", ["queued", "running"])
+    .orderBy("playback_session.updated_at", "desc")
+    .execute();
+
+  return rows.map((row) => ({
+    sessionId: row.sessionId,
+    mediaFileId: row.mediaFileId,
+    userId: row.userId,
+    mode: row.mode,
+    pipeline: row.pipeline,
+    status: row.status,
+    errorMessage: row.errorMessage,
+    playlistPath: row.playlistPath,
+    startTimeSeconds: row.startTimeSeconds,
+    durationSeconds: row.durationSeconds,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    lastSegmentRequestAt: row.lastSegmentRequestAt,
+  }));
+}
+
 export async function listMismatchedActiveHlsArtifacts(
   mediaFileId: string,
   userId: string,

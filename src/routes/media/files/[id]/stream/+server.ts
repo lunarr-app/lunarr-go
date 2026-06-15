@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ params, request, locals, url }) => {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const response = await mediaStreamResponse(params.id, auth.userId, request.headers.get("range"));
+  const response = await mediaStreamResponse(params.id, auth.userId, request.headers.get("range"), request.signal);
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 

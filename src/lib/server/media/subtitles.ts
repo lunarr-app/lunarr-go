@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import { getDb } from "../db";
 import { createLibraryStorage } from "../storage";
-import { inlineContentDisposition } from "./stream";
+import { attachStreamAbortCleanup, inlineContentDisposition } from "./stream";
 import { sql } from "kysely";
 
 export async function getExternalMovieSubtitleTrack(id: string, userId: string) {
@@ -39,7 +39,12 @@ export async function getExternalMovieSubtitleTrack(id: string, userId: string) 
     .executeTakeFirst();
 }
 
-export async function externalMovieSubtitleResponse(id: string, userId: string, includeBody = true) {
+export async function externalMovieSubtitleResponse(
+  id: string,
+  userId: string,
+  includeBody = true,
+  signal?: AbortSignal | null,
+) {
   const track = await getExternalMovieSubtitleTrack(id, userId);
   if (!track?.path || !track.source) return new Response(includeBody ? "Not found" : null, { status: 404 });
 
@@ -61,12 +66,21 @@ export async function externalMovieSubtitleResponse(id: string, userId: string, 
     return new Response(null, { headers });
   }
 
+  if (signal?.aborted) {
+    await storage.close();
+    return new Response(null, { status: 499 });
+  }
+
   let stream: Readable;
   try {
     stream = await storage.createReadStream(track.path);
   } catch (error) {
     await storage.close();
     throw error;
+  }
+  attachStreamAbortCleanup(stream, storage, signal);
+  if (signal?.aborted) {
+    return new Response(null, { status: 499 });
   }
   return new Response(Readable.toWeb(stream) as unknown as BodyInit, {
     headers,

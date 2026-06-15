@@ -197,6 +197,14 @@ describe("getExternalMovieSubtitleTrack", () => {
     expect(staleResponse.body).toBeNull();
   });
 
+  test("returns 499 when the client disconnects before subtitle streaming starts", async () => {
+    const signal = AbortSignal.abort();
+    const response = await externalMovieSubtitleResponse("movie-subtitle", "user-1", true, signal);
+
+    expect(response.status).toBe(499);
+    expect(response.body).toBeNull();
+  });
+
   test("returns not found for subtitle paths that are not regular files", async () => {
     await rm(path.join(tempDir, "Movie.en.vtt"));
     await mkdir(path.join(tempDir, "Movie.en.vtt"));

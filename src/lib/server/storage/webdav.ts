@@ -137,6 +137,7 @@ export async function createWebdavStorage(configJson: string | null) {
   const config = parseWebdavConfig(configJson);
   const client = webdavConnect(config);
   const operationTimeoutMs = config.operationTimeoutMs;
+  const activeStreams = new Set<Readable>();
 
   return {
     source: "webdav" as const,
@@ -181,20 +182,22 @@ export async function createWebdavStorage(configJson: string | null) {
     async createReadStream(filePath: string, range?: { start: number; end: number }, options?: { keepOpen?: boolean }) {
       const stream = client.createReadStream(webdavPath(filePath), {
         range: range ? { start: range.start, end: range.end } : undefined,
-      });
-      if (options?.keepOpen) return stream as Readable;
+      }) as Readable;
+      if (options?.keepOpen) return stream;
 
-      let closed = false;
-      const close = () => {
-        if (closed) return;
-        closed = true;
+      activeStreams.add(stream);
+      const release = () => {
+        activeStreams.delete(stream);
       };
-      stream.once("close", close);
-      stream.once("error", close);
-      return stream as Readable;
+      stream.once("close", release);
+      stream.once("error", release);
+      return stream;
     },
     async close() {
-      return;
+      for (const stream of activeStreams) {
+        if (!stream.destroyed) stream.destroy();
+      }
+      activeStreams.clear();
     },
   };
 }

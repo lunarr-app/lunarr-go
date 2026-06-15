@@ -17,7 +17,7 @@ function authorizedUserId(input: { localsUserId?: string; subtitleTrackId: strin
   return payload ? { userId: payload.userId, signed: true } : null;
 }
 
-export const GET: RequestHandler = async ({ params, locals, url }) => {
+export const GET: RequestHandler = async ({ params, locals, request, url }) => {
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     subtitleTrackId: params.id,
@@ -27,11 +27,11 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const response = await externalMovieSubtitleResponse(params.id, auth.userId);
+  const response = await externalMovieSubtitleResponse(params.id, auth.userId, true, request?.signal);
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 
-export const HEAD: RequestHandler = async ({ params, locals, url }) => {
+export const HEAD: RequestHandler = async ({ params, locals, request, url }) => {
   const auth = authorizedUserId({
     localsUserId: locals.user?.id,
     subtitleTrackId: params.id,
@@ -41,7 +41,7 @@ export const HEAD: RequestHandler = async ({ params, locals, url }) => {
     return new Response(null, { status: 401 });
   }
 
-  const response = await externalMovieSubtitleResponse(params.id, auth.userId, false);
+  const response = await externalMovieSubtitleResponse(params.id, auth.userId, false, request?.signal);
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 

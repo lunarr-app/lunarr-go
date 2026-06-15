@@ -17,6 +17,43 @@ type StreamableMediaFile = {
   config_json?: string | null;
 };
 
+export function attachStreamAbortCleanup(nodeStream: Readable, storage: LibraryStorage, signal?: AbortSignal | null) {
+  if (!signal) return;
+
+  const cleanup = () => {
+    if (!nodeStream.destroyed) nodeStream.destroy();
+    void storage.close();
+  };
+
+  if (signal.aborted) {
+    cleanup();
+    return;
+  }
+
+  const onAbort = () => cleanup();
+  signal.addEventListener("abort", onAbort, { once: true });
+  const detach = () => signal.removeEventListener("abort", onAbort);
+  nodeStream.once("close", detach);
+  nodeStream.once("error", detach);
+}
+
+function streamResponseFromNodeStream(
+  nodeStream: Readable,
+  storage: LibraryStorage,
+  prepared: PreparedStream,
+  signal?: AbortSignal | null,
+) {
+  attachStreamAbortCleanup(nodeStream, storage, signal);
+  if (signal?.aborted) {
+    return new Response(null, { status: 499 });
+  }
+
+  return new Response(Readable.toWeb(nodeStream) as unknown as BodyInit, {
+    status: prepared.status,
+    headers: prepared.headers,
+  });
+}
+
 export function parseRange(rangeHeader: string | null, size: number): ByteRange | null {
   if (!rangeHeader) return null;
   if (size <= 0) return null;
@@ -120,6 +157,7 @@ export async function streamFileResponse(
   file: StreamableMediaFile,
   rangeHeader: string | null,
   storage: LibraryStorage = createLocalStorage(),
+  signal?: AbortSignal | null,
 ) {
   const prepared = await prepareStream(file, rangeHeader, storage);
   if (prepared.errorBody) {
@@ -130,6 +168,11 @@ export async function streamFileResponse(
     });
   }
 
+  if (signal?.aborted) {
+    await storage.close();
+    return new Response(null, { status: 499 });
+  }
+
   if (!prepared.range) {
     let nodeStream: Readable;
     try {
@@ -138,10 +181,7 @@ export async function streamFileResponse(
       await storage.close();
       throw error;
     }
-    return new Response(Readable.toWeb(nodeStream) as unknown as BodyInit, {
-      status: prepared.status,
-      headers: prepared.headers,
-    });
+    return streamResponseFromNodeStream(nodeStream, storage, prepared, signal);
   }
 
   const range = prepared.range;
@@ -155,10 +195,7 @@ export async function streamFileResponse(
     await storage.close();
     throw error;
   }
-  return new Response(Readable.toWeb(nodeStream) as unknown as BodyInit, {
-    status: prepared.status,
-    headers: prepared.headers,
-  });
+  return streamResponseFromNodeStream(nodeStream, storage, prepared, signal);
 }
 
 export async function streamFileHeadResponse(
@@ -175,11 +212,16 @@ export async function streamFileHeadResponse(
   });
 }
 
-export async function mediaStreamResponse(fileId: string, userId: string, rangeHeader: string | null) {
+export async function mediaStreamResponse(
+  fileId: string,
+  userId: string,
+  rangeHeader: string | null,
+  signal?: AbortSignal | null,
+) {
   const file = await getMediaFile(fileId, userId);
   if (!file) return new Response("Not found", { status: 404 });
   const storage = await createLibraryStorage(file);
-  return streamFileResponse(file, rangeHeader, storage);
+  return streamFileResponse(file, rangeHeader, storage, signal);
 }
 
 export async function mediaStreamHeadResponse(fileId: string, userId: string, rangeHeader: string | null) {
