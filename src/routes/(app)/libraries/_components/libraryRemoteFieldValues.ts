@@ -1,5 +1,14 @@
 import type { PageData } from "../$types";
-import type { RemoteLibraryFieldValues } from "./RemoteLibraryFields.svelte";
+
+export type RemoteLibraryFieldValues = {
+  host?: string;
+  port?: string | number;
+  username?: string;
+  walkConcurrency?: string | number;
+  operationTimeoutMs?: string | number;
+  root?: string;
+  secure?: boolean;
+};
 
 type Library = PageData["libraries"][number];
 

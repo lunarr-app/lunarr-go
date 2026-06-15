@@ -3,7 +3,8 @@
   import LibraryAutomationFields from "./_components/LibraryAutomationFields.svelte";
   import LibraryEditModal from "./_components/LibraryEditModal.svelte";
   import LibrarySharingModal from "./_components/LibrarySharingModal.svelte";
-  import RemoteLibraryFields, { type RemoteLibraryFieldValues } from "./_components/RemoteLibraryFields.svelte";
+  import RemoteLibraryFields from "./_components/RemoteLibraryFields.svelte";
+  import type { RemoteLibraryFieldValues } from "./_components/libraryRemoteFieldValues";
   import { CirclePlus, Settings, TriangleAlert } from "@lucide/svelte";
   import type { PageData } from "./$types";
 

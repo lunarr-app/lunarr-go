@@ -1,13 +1,5 @@
 <script lang="ts">
-  export type RemoteLibraryFieldValues = {
-    host?: string;
-    port?: string | number;
-    username?: string;
-    walkConcurrency?: string | number;
-    operationTimeoutMs?: string | number;
-    root?: string;
-    secure?: boolean;
-  };
+  import type { RemoteLibraryFieldValues } from "./libraryRemoteFieldValues";
 
   let {
     protocol,
