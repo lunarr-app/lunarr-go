@@ -198,6 +198,7 @@ describe("request-driven HLS manager", () => {
       sessionId,
       userId: "user-1",
       segment: "segment-00001.ts",
+      fromLookahead: true,
     });
 
     await new Promise((resolve) => setTimeout(resolve, 25));
@@ -205,6 +206,75 @@ describe("request-driven HLS manager", () => {
 
     expect(await farGeneration).toBe(true);
     void lookaheadGeneration.catch(() => undefined);
+  });
+
+  test("aborts far-ahead segment generation when a near playhead segment is requested", async () => {
+    let releaseFarSegment: (() => void) | undefined;
+    const farSegmentGate = new Promise<void>((resolve) => {
+      releaseFarSegment = resolve;
+    });
+    let farBackendStarted = false;
+    let farBackendAborted = false;
+
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input: HlsSegmentWindowTranscodeInput) {
+        const segment = input.segments[0]?.segment;
+        if (!segment) throw new Error("Expected a requested HLS window segment.");
+
+        if (segment === "segment-00030.ts") {
+          farBackendStarted = true;
+          await new Promise<void>((resolve, reject) => {
+            input.signal?.addEventListener(
+              "abort",
+              () => {
+                farBackendAborted = true;
+                reject(new Error("stale far-ahead encode aborted"));
+              },
+              { once: true },
+            );
+            void farSegmentGate.then(resolve);
+          });
+          await mkdir(input.artifactDirectory, { recursive: true });
+          await writeFile(path.join(input.artifactDirectory, segment), segment);
+          return { completion: Promise.resolve() };
+        }
+
+        await mkdir(input.artifactDirectory, { recursive: true });
+        for (const windowSegment of input.segments) {
+          await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
+        }
+        return { completion: Promise.resolve() };
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    await db
+      .updateTable("playback_session")
+      .set({ last_segment_index: 10 })
+      .where("id", "=", sessionId)
+      .execute();
+
+    const farGeneration = ensureHlsSegmentForRequest({
+      sessionId,
+      userId: "user-1",
+      segment: "segment-00030.ts",
+    });
+
+    await waitFor(() => farBackendStarted);
+
+    const nearGeneration = ensureHlsSegmentForRequest({
+      sessionId,
+      userId: "user-1",
+      segment: "segment-00011.ts",
+    });
+
+    await waitFor(() => farBackendAborted);
+
+    expect(await nearGeneration).toBe(true);
+    releaseFarSegment?.();
+    void farGeneration.catch(() => undefined);
   });
 
   test("ensureHlsLookaheadForSegment reads ahead from the shared encode directory", async () => {

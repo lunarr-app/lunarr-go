@@ -657,7 +657,11 @@ function isSegmentIndexNearTarget(segmentIndex: number, targetSegmentIndex: numb
   return Math.abs(segmentIndex - targetSegmentIndex) <= REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT;
 }
 
-async function replaceStaleRequestDrivenSegmentWork(sessionId: string, targetSegmentIndex: number) {
+async function replaceStaleRequestDrivenSegmentWork(
+  sessionId: string,
+  targetSegmentIndex: number,
+  options: { fromLookahead?: boolean } = {},
+) {
   const session = await getTranscodeSession(sessionId);
   const playheadSegmentIndex = session?.lastSegmentIndex ?? -1;
   const activeWindow = activeRequestDrivenSegmentWindows.get(sessionId);
@@ -666,7 +670,10 @@ async function replaceStaleRequestDrivenSegmentWork(sessionId: string, targetSeg
     targetSegmentIndex < activeWindow.firstSegmentIndex &&
     activeWindow.firstSegmentIndex > playheadSegmentIndex + REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT;
 
-  if (preserveFarSeekEncode) {
+  if (
+    preserveFarSeekEncode &&
+    (options.fromLookahead || !isSegmentIndexNearTarget(targetSegmentIndex, playheadSegmentIndex))
+  ) {
     return;
   }
 
@@ -679,6 +686,7 @@ async function replaceStaleRequestDrivenSegmentWork(sessionId: string, targetSeg
       continue;
     }
     if (
+      options.fromLookahead &&
       segmentIndex > targetSegmentIndex + REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT &&
       targetSegmentIndex >= playheadSegmentIndex - REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT
     ) {
@@ -780,6 +788,12 @@ function encodeLockKey(cacheId: string | null, encodeDirectory: string) {
 }
 
 class SegmentGenerationAbortedError extends Error {}
+
+class RemuxTranscodeFallbackRequestedError extends Error {
+  constructor() {
+    super("Remux segment generation failed; transcode fallback requested.");
+  }
+}
 
 function removePendingSegmentGenerationWaiter(
   pending: PendingSegmentGeneration,
@@ -1185,7 +1199,11 @@ async function generateHlsSegmentForRequest(input: {
 
   const activeCacheId = (await getPlaybackCacheBindingForSession(input.sessionId)).cacheId ?? session.cacheId ?? null;
 
-  return runQueuedGeneration(cacheEncodeQueues, encodeLockKey(activeCacheId, resolvedEncodeDirectory), async () => {
+  let transcodeFallbackRunner: (() => Promise<boolean>) | undefined;
+  let pendingTranscodeFallback = false;
+
+  try {
+    return await runQueuedGeneration(cacheEncodeQueues, encodeLockKey(activeCacheId, resolvedEncodeDirectory), async () => {
     const cacheBinding = await getPlaybackCacheBindingForSession(input.sessionId);
     let workingEncodeDirectory = cacheBinding.encodeArtifactDirectory ?? resolvedEncodeDirectory;
     let workingCacheId = cacheBinding.cacheId ?? activeCacheId;
@@ -1318,67 +1336,122 @@ async function generateHlsSegmentForRequest(input: {
             mode: "transcode",
             preferredAudioLanguage: policy.preferredAudioLanguage,
           });
-          const { cacheId: transcodeCacheId, encodeArtifactDirectory: transcodeEncodeDirectory } =
-            await switchPlaybackCacheForSession({
-              sessionId: input.sessionId,
-              mediaFileId: session.mediaFileId,
-              fileSizeBytes: file.size_bytes,
-              fileMtimeMs: file.mtime_ms,
-              mode: "transcode",
-              policy,
-              segmentFormat,
-              audioStreamIndex: transcodeAudioStreamIndex,
-            });
-          workingEncodeDirectory = transcodeEncodeDirectory;
-          workingCacheId = transcodeCacheId;
-          segmentWindowInput.artifactDirectory = transcodeEncodeDirectory;
-          segmentWindowInput.mode = "transcode";
-          segmentWindowInput.audioStreamIndex = transcodeAudioStreamIndex;
-          segmentWindowGeneration = await runQueuedGeneration(
-            cacheEncodeQueues,
-            encodeLockKey(transcodeCacheId, transcodeEncodeDirectory),
-            async () => {
-              if (await hlsSegmentFileExists(playlistPath, input.segment, transcodeEncodeDirectory)) {
-                return { completion: Promise.resolve() };
+          transcodeFallbackRunner = async () => {
+            const { cacheId: transcodeCacheId, encodeArtifactDirectory: transcodeEncodeDirectory } =
+              await switchPlaybackCacheForSession({
+                sessionId: input.sessionId,
+                mediaFileId: session.mediaFileId,
+                fileSizeBytes: file.size_bytes,
+                fileMtimeMs: file.mtime_ms,
+                mode: "transcode",
+                policy,
+                segmentFormat,
+                audioStreamIndex: transcodeAudioStreamIndex,
+              });
+            workingEncodeDirectory = transcodeEncodeDirectory;
+            workingCacheId = transcodeCacheId;
+            segmentWindowInput.artifactDirectory = transcodeEncodeDirectory;
+            segmentWindowInput.mode = "transcode";
+            segmentWindowInput.audioStreamIndex = transcodeAudioStreamIndex;
+            try {
+              return await runQueuedGeneration(
+                cacheEncodeQueues,
+                encodeLockKey(transcodeCacheId, transcodeEncodeDirectory),
+                async () => {
+                  if (await hlsSegmentFileExists(playlistPath, input.segment, transcodeEncodeDirectory)) {
+                    return true;
+                  }
+                  segmentWindowGeneration = await generateRequestedSegment("transcode");
+                  if (input.signal?.aborted) {
+                    await stopSegmentWork();
+                    await removeGeneratedSegmentFiles(playlistPath, segmentWindow, transcodeEncodeDirectory);
+                    return false;
+                  }
+                  if (!(await hlsSegmentFileExists(playlistPath, input.segment, transcodeEncodeDirectory))) {
+                    throw new Error(missingGeneratedSegmentMessage(input.segment));
+                  }
+                  await assertSegmentGenerationStillPlayable({
+                    sessionId: input.sessionId,
+                    userId: input.userId,
+                    playlistPath,
+                    stopSegmentWork,
+                  });
+                  trackPendingLookaheadSegments({
+                    sessionId: input.sessionId,
+                    userId: input.userId,
+                    playlistPath,
+                    encodeArtifactDirectory: transcodeEncodeDirectory,
+                    segments: segmentWindow,
+                    completion: segmentWindowGeneration.completion,
+                  });
+                  if (!(await updateTranscodeSessionMode(input.sessionId, "transcode"))) {
+                    throw new SegmentGenerationAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
+                  }
+                  if (transcodeCacheId) {
+                    await updatePlaybackCacheStats(transcodeCacheId, lastWindowSegment.segmentIndex);
+                  }
+                  return true;
+                },
+              );
+            } catch (fallbackError) {
+              const latestPolicy = await getTranscodePolicy(input.userId);
+              const fallbackMessage = !latestPolicy.transcodingEnabled
+                ? TRANSCODING_DISABLED_MESSAGE
+                : fallbackError instanceof Error
+                  ? fallbackError.message
+                  : "Request-driven HLS segment generation failed.";
+              await stopSegmentWork();
+              await removeGeneratedSegmentFiles(playlistPath, segmentWindow, workingEncodeDirectory);
+              if (!latestPolicy.transcodingEnabled) {
+                await updateActiveTranscodeSessionStatus(input.sessionId, "failed", fallbackMessage);
+                await removeTranscodeSessionArtifacts(input.sessionId);
+                throw new SegmentGenerationAbortedError(fallbackMessage);
               }
-              return generateRequestedSegment("transcode");
-            },
-          );
-          if (input.signal?.aborted) {
-            await stopSegmentWork();
-            await removeGeneratedSegmentFiles(playlistPath, segmentWindow, transcodeEncodeDirectory);
-            return false;
+              const message = `Remux segment generation failed; full transcode fallback failed: ${fallbackMessage}`;
+              await updateActiveTranscodeSessionStatus(input.sessionId, "failed", message);
+              await removeTranscodeSessionArtifacts(input.sessionId);
+              throw new Error(message);
+            } finally {
+              pendingTranscodeFallback = false;
+              const generationCompletion = segmentWindowGeneration?.completion;
+              if (activeSegmentWindow) {
+                if (generationCompletion) {
+                  void generationCompletion
+                    .finally(() => {
+                      if (activeRequestDrivenSegmentWindows.get(input.sessionId) === activeSegmentWindow) {
+                        activeRequestDrivenSegmentWindows.delete(input.sessionId);
+                      }
+                    })
+                    .catch(() => undefined);
+                } else if (activeRequestDrivenSegmentWindows.get(input.sessionId) === activeSegmentWindow) {
+                  activeRequestDrivenSegmentWindows.delete(input.sessionId);
+                }
+              }
+              input.signal?.removeEventListener("abort", abortSegmentSetupFromRequest);
+              cleanupSegmentSetup();
+              if (
+                inputSource &&
+                segmentWindowGeneration &&
+                segmentWindowGeneration.inputSourceDisposition !== "backend"
+              ) {
+                const source = inputSource;
+                void segmentWindowGeneration.completion.finally(() => source.close()).catch(() => undefined);
+              } else if (!segmentWindowGeneration) {
+                await inputSource?.close().catch(() => undefined);
+              }
+            }
+          };
+          pendingTranscodeFallback = true;
+          throw new RemuxTranscodeFallbackRequestedError();
+        } catch (fallbackSetupError) {
+          if (fallbackSetupError instanceof RemuxTranscodeFallbackRequestedError) {
+            throw fallbackSetupError;
           }
-          if (!(await hlsSegmentFileExists(playlistPath, input.segment, transcodeEncodeDirectory))) {
-            throw new Error(missingGeneratedSegmentMessage(input.segment));
-          }
-          await assertSegmentGenerationStillPlayable({
-            sessionId: input.sessionId,
-            userId: input.userId,
-            playlistPath,
-            stopSegmentWork,
-          });
-          trackPendingLookaheadSegments({
-            sessionId: input.sessionId,
-            userId: input.userId,
-            playlistPath,
-            encodeArtifactDirectory: transcodeEncodeDirectory,
-            segments: segmentWindow,
-            completion: segmentWindowGeneration.completion,
-          });
-          if (!(await updateTranscodeSessionMode(input.sessionId, "transcode"))) {
-            throw new SegmentGenerationAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
-          }
-          if (transcodeCacheId) {
-            await updatePlaybackCacheStats(transcodeCacheId, lastWindowSegment.segmentIndex);
-          }
-          return true;
-        } catch (fallbackError) {
           const latestPolicy = await getTranscodePolicy(input.userId);
           const fallbackMessage = !latestPolicy.transcodingEnabled
             ? TRANSCODING_DISABLED_MESSAGE
-            : fallbackError instanceof Error
-              ? fallbackError.message
+            : fallbackSetupError instanceof Error
+              ? fallbackSetupError.message
               : "Request-driven HLS segment generation failed.";
           await stopSegmentWork();
           await removeGeneratedSegmentFiles(playlistPath, segmentWindow, workingEncodeDirectory);
@@ -1411,32 +1484,40 @@ async function generateHlsSegmentForRequest(input: {
       }
       throw error;
     } finally {
-      const generationCompletion = segmentWindowGeneration?.completion;
-      if (activeSegmentWindow) {
-        if (generationCompletion) {
-          void generationCompletion
-            .finally(() => {
-              if (activeRequestDrivenSegmentWindows.get(input.sessionId) === activeSegmentWindow) {
-                activeRequestDrivenSegmentWindows.delete(input.sessionId);
-              }
-            })
-            .catch(() => undefined);
-        } else if (activeRequestDrivenSegmentWindows.get(input.sessionId) === activeSegmentWindow) {
-          activeRequestDrivenSegmentWindows.delete(input.sessionId);
+      if (!pendingTranscodeFallback) {
+        const generationCompletion = segmentWindowGeneration?.completion;
+        if (activeSegmentWindow) {
+          if (generationCompletion) {
+            void generationCompletion
+              .finally(() => {
+                if (activeRequestDrivenSegmentWindows.get(input.sessionId) === activeSegmentWindow) {
+                  activeRequestDrivenSegmentWindows.delete(input.sessionId);
+                }
+              })
+              .catch(() => undefined);
+          } else if (activeRequestDrivenSegmentWindows.get(input.sessionId) === activeSegmentWindow) {
+            activeRequestDrivenSegmentWindows.delete(input.sessionId);
+          }
         }
-      }
-      input.signal?.removeEventListener("abort", abortSegmentSetupFromRequest);
-      cleanupSegmentSetup();
-      if (inputSource && segmentWindowGeneration && segmentWindowGeneration.inputSourceDisposition !== "backend") {
-        const source = inputSource;
-        void segmentWindowGeneration.completion.finally(() => source.close()).catch(() => undefined);
-      } else if (!segmentWindowGeneration) {
-        await inputSource?.close().catch(() => undefined);
+        input.signal?.removeEventListener("abort", abortSegmentSetupFromRequest);
+        cleanupSegmentSetup();
+        if (inputSource && segmentWindowGeneration && segmentWindowGeneration.inputSourceDisposition !== "backend") {
+          const source = inputSource;
+          void segmentWindowGeneration.completion.finally(() => source.close()).catch(() => undefined);
+        } else if (!segmentWindowGeneration) {
+          await inputSource?.close().catch(() => undefined);
+        }
       }
     }
 
     return true;
   });
+  } catch (error) {
+    if (error instanceof RemuxTranscodeFallbackRequestedError && transcodeFallbackRunner) {
+      return transcodeFallbackRunner();
+    }
+    throw error;
+  }
 }
 
 export async function ensureHlsSegmentForRequest(input: {
@@ -1444,6 +1525,7 @@ export async function ensureHlsSegmentForRequest(input: {
   userId: string;
   segment: string;
   signal?: AbortSignal;
+  fromLookahead?: boolean;
 }) {
   if (input.signal?.aborted) return false;
   const key = segmentGenerationKey(input.sessionId, input.segment);
@@ -1454,7 +1536,9 @@ export async function ensureHlsSegmentForRequest(input: {
     segmentIndex !== null &&
     input.segment === hlsSegmentName(segmentIndex, requestDrivenHlsSegmentFormat({ segment: input.segment }))
   ) {
-    await replaceStaleRequestDrivenSegmentWork(input.sessionId, segmentIndex);
+    await replaceStaleRequestDrivenSegmentWork(input.sessionId, segmentIndex, {
+      fromLookahead: input.fromLookahead,
+    });
   }
   const pendingAfterStaleReplacement = pendingSegmentGenerations.get(key);
   if (pendingAfterStaleReplacement) {
@@ -1551,6 +1635,7 @@ export async function ensureHlsLookaheadForSegment(input: {
       userId: input.userId,
       segment: candidateSegment,
       signal: input.signal,
+      fromLookahead: true,
     });
     if (!ready) return false;
   }
