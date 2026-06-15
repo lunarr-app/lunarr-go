@@ -250,11 +250,7 @@ describe("request-driven HLS manager", () => {
       },
     });
 
-    await db
-      .updateTable("playback_session")
-      .set({ last_segment_index: 10 })
-      .where("id", "=", sessionId)
-      .execute();
+    await db.updateTable("playback_session").set({ last_segment_index: 10 }).where("id", "=", sessionId).execute();
 
     const farGeneration = ensureHlsSegmentForRequest({
       sessionId,
