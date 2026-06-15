@@ -5,7 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
-import { cleanupJobHistory, getScanJobSummary, listScanErrorsForJobIds } from ".";
+import { cleanupJobHistory, getScanJobSummary, listScanErrorsForJob } from ".";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 
 describe("scan job listings", () => {
@@ -104,7 +104,7 @@ describe("scan job listings", () => {
   });
 
   test("includes scan job and library context for recent errors", async () => {
-    const errors = await listScanErrorsForJobIds(["job-1", "job-2", "job-3", "job-4"]);
+    const errors = await listScanErrorsForJob("job-1");
 
     expect(errors).toHaveLength(1);
     expect(errors[0]).toMatchObject({
@@ -116,32 +116,28 @@ describe("scan job listings", () => {
     });
   });
 
-  test("limits scan errors to the requested job ids", async () => {
-    const errors = await listScanErrorsForJobIds(["job-1"]);
+  test("returns only errors for the requested job", async () => {
+    const errors = await listScanErrorsForJob("job-1");
 
     expect(errors).toHaveLength(1);
     expect(errors[0]?.scan_job_id).toBe("job-1");
 
-    expect(await listScanErrorsForJobIds(["missing-job"])).toEqual([]);
-    expect(await listScanErrorsForJobIds([])).toEqual([]);
+    expect(await listScanErrorsForJob("missing-job")).toEqual([]);
   });
 
-  test("returns scan errors per job instead of one shared global cap", async () => {
-    const now = new Date().toISOString();
-    const errorRows = Array.from({ length: 30 }, (_, index) => ({
-      scan_job_id: "job-1",
-      path: `job-1-${index}.mkv`,
+  test("caps scan errors at the per-job limit", async () => {
+    const errorRows = Array.from({ length: 105 }, (_, index) => ({
+      scan_job_id: "job-2",
+      path: `job-2-${index}.mkv`,
       message: `error ${index}`,
       created_at: new Date(Date.now() - index * 1000).toISOString(),
     }));
     await db.insertInto("scan_job_error").values(errorRows).execute();
 
-    const errors = await listScanErrorsForJobIds(["job-1", "job-2"]);
-    const jobOneErrors = errors.filter((error) => error.scan_job_id === "job-1");
+    const errors = await listScanErrorsForJob("job-2");
 
-    expect(jobOneErrors).toHaveLength(25);
-    expect(jobOneErrors[0]?.path).toBe("job-1-0.mkv");
-    expect(errors.some((error) => error.scan_job_id === "job-2")).toBe(false);
+    expect(errors).toHaveLength(100);
+    expect(errors[0]?.path).toBe("job-2-0.mkv");
   });
 
   test("summarizes scan job status counts and recorded errors", async () => {

@@ -3,7 +3,6 @@ import {
   getPlaybackSessionSummary,
   getScanJobSummary,
   listPlaybackSessions,
-  listScanErrorsForJobIds,
   listScanJobs,
 } from "$lib/server/jobs";
 import { json } from "@sveltejs/kit";
@@ -26,6 +25,5 @@ export const GET: RequestHandler = async ({ locals }) => {
     playbackSessionSummary: await getPlaybackSessionSummary(),
     playbackSessions,
     jobs,
-    errors: await listScanErrorsForJobIds(jobs.map((job) => job.id)),
   });
 };

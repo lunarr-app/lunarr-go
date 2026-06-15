@@ -2,7 +2,6 @@ import { requireAdmin } from "$lib/server/auth/users";
 import {
   getScanJobSummary,
   getPlaybackSessionSummary,
-  listScanErrorsForJobIds,
   listScanJobs,
   listPlaybackSessions,
   PLAYBACK_SESSION_LIST_LIMIT,
@@ -24,7 +23,6 @@ export const load: PageServerLoad = async ({ locals }) => {
     playbackSessionSummary: await getPlaybackSessionSummary(),
     jobs,
     playbackSessions,
-    errors: await listScanErrorsForJobIds(jobs.map((job) => job.id)),
     scanJobListLimit: SCAN_JOB_LIST_LIMIT,
     playbackSessionListLimit: PLAYBACK_SESSION_LIST_LIMIT,
   };

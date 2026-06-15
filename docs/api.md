@@ -155,6 +155,7 @@ Admin endpoints require an admin user or an API key created by an admin.
 
 ```http
 GET /api/jobs
+GET /api/jobs/:id/errors
 POST /api/jobs/:id/cancel
 POST /api/playback-sessions/:sessionId/admin-cancel
 GET /api/libraries
@@ -171,6 +172,37 @@ PUT /api/settings/transcoding
 POST /api/settings/actions
 POST /api/movies/:id/metadata/refresh
 ```
+
+`GET /api/jobs` returns recent scan jobs, playback sessions, and summary counts. Each scan job row includes `errors_count`, but error rows are not embedded in that response.
+
+Load scan error details on demand:
+
+```http
+GET /api/jobs/:id/errors
+```
+
+Response:
+
+```json
+{
+  "errors": [
+    {
+      "id": 1,
+      "scan_job_id": "job-id",
+      "path": "/media/movies/Broken.Movie.2024.mkv",
+      "message": "Could not read file.",
+      "created_at": "2026-01-05T00:00:00.000Z",
+      "job_status": "completed",
+      "job_kind": "library_scan",
+      "library_id": "library-id",
+      "library_name": "Movies"
+    }
+  ],
+  "limit": 100
+}
+```
+
+The server returns at most the newest 100 errors for that job. Use `errors_count` on the job row when you need the full total from the scan run.
 
 Library create/update bodies use the same shape as the web form. Local libraries use `path`, SFTP and WebDAV libraries use remote connection fields:
 

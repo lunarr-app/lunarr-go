@@ -7,6 +7,7 @@ import { setTranscodingEnabled } from "$lib/server/transcoding/policy";
 import { registerTranscodeHlsArtifact, setTranscodeTouchDelayForTests } from "$lib/server/transcoding/sessions";
 import { verifySignedPlaybackToken } from "$lib/server/playback/signed-token";
 import { GET as jobsGet } from "./jobs/+server";
+import { GET as jobErrorsGet } from "./jobs/[id]/errors/+server";
 import { GET as playbackGet, POST as playbackPost } from "./playback/[id]/+server";
 import { POST as cancelPlaybackSessionPost } from "./playback-sessions/[sessionId]/cancel/+server";
 import { POST as heartbeatPlaybackSessionPost } from "./playback-sessions/[sessionId]/heartbeat/+server";
@@ -1104,7 +1105,17 @@ describe("authenticated API route boundaries", () => {
         library_name: "Movies",
         status: "running",
       });
-      expect(body.errors[0]).toMatchObject({
+      expect(body).not.toHaveProperty("errors");
+
+      const errorsResponse = await jobErrorsGet({
+        params: { id: "completed-job" },
+        locals: { user: { id: "admin-1", role: "admin" } },
+      } as never);
+      const errorsBody = await errorsResponse.json();
+
+      expect(errorsResponse.status).toBe(200);
+      expect(errorsBody.limit).toBe(100);
+      expect(errorsBody.errors[0]).toMatchObject({
         scan_job_id: "completed-job",
         library_name: "Movies",
         message: "Could not read file.",

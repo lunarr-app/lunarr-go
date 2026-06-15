@@ -315,6 +315,8 @@ export const openApiDocument = {
       get: {
         tags: ["Admin"],
         summary: "List scan jobs, playback sessions, and job summaries.",
+        description:
+          "Returns the latest scan jobs and playback sessions with summary counts. Scan error details are loaded separately from GET /api/jobs/{id}/errors.",
         operationId: "getJobs",
         responses: {
           "200": jsonResponse({ $ref: "#/components/schemas/JobsResponse" }),
@@ -335,6 +337,21 @@ export const openApiDocument = {
           "401": errorResponse,
           "403": errorResponse,
           "404": errorResponse,
+        },
+      },
+    },
+    "/api/jobs/{id}/errors": {
+      get: {
+        tags: ["Admin"],
+        summary: "List recent scan errors for a job.",
+        description:
+          "Returns the newest scan errors for the given scan job, up to 100 rows. Job rows from GET /api/jobs include errors_count for the total recorded during the run.",
+        operationId: "getJobErrors",
+        parameters: [pathIdParameter()],
+        responses: {
+          "200": jsonResponse({ $ref: "#/components/schemas/JobErrorsResponse" }),
+          "401": errorResponse,
+          "403": errorResponse,
         },
       },
     },
@@ -1216,7 +1233,7 @@ export const openApiDocument = {
       },
       JobsResponse: {
         type: "object",
-        required: ["summary", "playbackSessionSummary", "playbackSessions", "jobs", "errors"],
+        required: ["summary", "playbackSessionSummary", "playbackSessions", "jobs"],
         properties: {
           summary: { $ref: "#/components/schemas/JobSummary" },
           playbackSessionSummary: { $ref: "#/components/schemas/JobSummary" },
@@ -1225,7 +1242,14 @@ export const openApiDocument = {
             items: objectSchema("Playback session job row."),
           },
           jobs: { type: "array", items: objectSchema("Scan job row.") },
+        },
+      },
+      JobErrorsResponse: {
+        type: "object",
+        required: ["errors", "limit"],
+        properties: {
           errors: { type: "array", items: objectSchema("Scan error row.") },
+          limit: { type: "integer", minimum: 1 },
         },
       },
       Library: objectSchema("Configured library with source-specific fields."),

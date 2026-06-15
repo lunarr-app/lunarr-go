@@ -11,7 +11,7 @@ const ACTIVE_JOB_STATUSES = ["queued", "running"] as const;
 
 export const SCAN_JOB_LIST_LIMIT = 25;
 export const PLAYBACK_SESSION_LIST_LIMIT = 25;
-export const SCAN_ERROR_PER_JOB_LIMIT = 25;
+export const SCAN_ERROR_PER_JOB_LIMIT = 100;
 
 type CleanupJobHistoryOptions = {
   maxAgeMs?: number;
@@ -171,21 +171,13 @@ function scanErrorsQuery(db: Awaited<ReturnType<typeof getDb>>) {
     ]);
 }
 
-export async function listScanErrorsForJobIds(jobIds: string[], limitPerJob = SCAN_ERROR_PER_JOB_LIMIT) {
-  if (jobIds.length === 0) return [];
-
+export async function listScanErrorsForJob(jobId: string, limit = SCAN_ERROR_PER_JOB_LIMIT) {
   const db = await getDb();
-  const errors = await Promise.all(
-    jobIds.map((jobId) =>
-      scanErrorsQuery(db)
-        .where("scan_job_error.scan_job_id", "=", jobId)
-        .orderBy("scan_job_error.created_at", "desc")
-        .limit(limitPerJob)
-        .execute(),
-    ),
-  );
-
-  return errors.flat().sort((left, right) => right.created_at.localeCompare(left.created_at));
+  return scanErrorsQuery(db)
+    .where("scan_job_error.scan_job_id", "=", jobId)
+    .orderBy("scan_job_error.created_at", "desc")
+    .limit(limit)
+    .execute();
 }
 
 export async function cleanupJobHistory(options: CleanupJobHistoryOptions = {}) {

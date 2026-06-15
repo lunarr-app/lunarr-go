@@ -42,11 +42,8 @@ type JobsLoadResult = {
     last_segment_index: number | null;
     error_message: string | null;
   }>;
-  errors: Array<{
-    scan_job_id: string;
-    library_name: string | null;
-    message: string;
-  }>;
+  scanJobListLimit: number;
+  playbackSessionListLimit: number;
 };
 
 async function expectRedirect(operation: unknown, location: string) {
@@ -238,7 +235,7 @@ describe("jobs page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("loads scan job summary, recent jobs, and recent errors for admins", async () => {
+  test("loads scan job summary and recent jobs for admins", async () => {
     const result = (await load({
       locals: { user: { id: "admin-1", role: "admin" } },
     } as never)) as JobsLoadResult;
@@ -294,12 +291,7 @@ describe("jobs page server", () => {
       status: "failed",
       library_name: "Movies",
     });
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatchObject({
-      scan_job_id: "completed-job",
-      library_name: "Movies",
-      message: "Could not read file.",
-    });
+    expect(result).not.toHaveProperty("errors");
   });
 
   test("rejects non-admin jobs page loads", async () => {

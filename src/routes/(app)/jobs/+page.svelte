@@ -1,7 +1,8 @@
 <script lang="ts">
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
+  import ScanJobErrors from "./_components/ScanJobErrors.svelte";
   import { invalidateAll } from "$app/navigation";
-  import { Activity, FileWarning, XCircle } from "@lucide/svelte";
+  import { Activity, XCircle } from "@lucide/svelte";
   import { onMount } from "svelte";
 
   let { data, form } = $props();
@@ -15,14 +16,6 @@
     data.jobs.some((job) => job.status === "queued" || job.status === "running") ||
       data.playbackSessions.some((job) => job.status === "queued" || job.status === "running"),
   );
-  const errorsByJob = $derived.by(() => {
-    const grouped = new Map<string, typeof data.errors>();
-    for (const item of data.errors) {
-      grouped.set(item.scan_job_id, [...(grouped.get(item.scan_job_id) ?? []), item]);
-    }
-    return grouped;
-  });
-
   const scanKindLabel: Record<Job["job_kind"], string> = {
     library_scan: "Library scan",
     movie_metadata_refresh: "Movie metadata",
@@ -241,8 +234,7 @@
     </div>
 
     <div class="ops-table">
-      {#each data.jobs as job}
-        {@const jobErrors = errorsByJob.get(job.id) ?? []}
+      {#each data.jobs as job (job.id)}
         <article class="job-row ops-row">
           <div class="job-main">
             <div class="job-title">
@@ -288,23 +280,7 @@
             {/if}
           </div>
 
-          {#if jobErrors.length}
-            <details class="job-errors">
-              <summary>
-                <FileWarning size={15} aria-hidden="true" />
-                {jobErrors.length}
-                {jobErrors.length === 1 ? "error" : "errors"}
-              </summary>
-              <div>
-                {#each jobErrors as item}
-                  <p>
-                    <strong>{item.path}</strong>
-                    <span>{item.message}</span>
-                  </p>
-                {/each}
-              </div>
-            </details>
-          {/if}
+          <ScanJobErrors jobId={job.id} errorCount={Number(job.errors_count ?? 0)} />
         </article>
       {:else}
         <p class="empty-state muted">
@@ -545,33 +521,6 @@
     font-size: 0.82rem;
   }
 
-  .job-errors {
-    grid-column: 1 / -1;
-    color: var(--color-subtle);
-  }
-
-  .job-errors summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    color: var(--ops-warning);
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 800;
-  }
-
-  .job-errors div {
-    display: grid;
-    gap: 0.5rem;
-    margin-top: 0.6rem;
-  }
-
-  .job-errors p {
-    display: grid;
-    gap: 0.2rem;
-    margin: 0;
-  }
-
   .empty-state {
     margin: 0;
     padding: 0.85rem;
@@ -590,6 +539,10 @@
 
     .job-actions {
       justify-content: flex-start;
+    }
+
+    .job-row :global(.job-errors) {
+      order: 4;
     }
   }
 
