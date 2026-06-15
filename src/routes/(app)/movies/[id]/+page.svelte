@@ -8,7 +8,6 @@
     Check,
     CirclePlay,
     Clock3,
-    Database,
     ExternalLink,
     HardDrive,
     RefreshCw,
@@ -159,6 +158,14 @@
     return `${(value / 1024 / 1024).toFixed(1)} MB`;
   }
 
+  function formatDateTime(value: string | null | undefined) {
+    if (!value) return "Unknown";
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  }
+
   function fileDetails(file: (typeof data.files)[number]) {
     const parts = [
       file.container?.toUpperCase() ?? file.extension.replace(/^\./, "").toUpperCase(),
@@ -255,8 +262,8 @@
             <div class="file-copy">
               <div class="file-title">
                 <strong>{file.basename}</strong>
-                {#if primaryFile?.id === file.id}
-                  <span>Selected</span>
+                {#if data.files.length > 1 && primaryFile?.id === file.id}
+                  <span>Primary</span>
                 {/if}
               </div>
               <div class="file-meta">
@@ -334,6 +341,18 @@
   <aside class="metadata" aria-labelledby="metadata-heading">
     <div class="section-heading">
       <h2 id="metadata-heading">Metadata</h2>
+      {#if data.canManageMetadata}
+        <form class="metadata-refresh" method="POST" action="?/refreshMetadata">
+          <button
+            class="text-button"
+            disabled={!data.tmdbConfigured}
+            title={data.tmdbConfigured ? "Refresh metadata from TMDb" : "TMDb credentials are not configured"}
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+            Refresh
+          </button>
+        </form>
+      {/if}
     </div>
     {#if form?.metadataError}
       <p class="error">{form.metadataError}</p>
@@ -389,6 +408,10 @@
             <dt>Provider ID</dt>
             <dd>{data.movie.provider_id ?? "None"}</dd>
           </div>
+          <div>
+            <dt>Last updated</dt>
+            <dd>{formatDateTime(data.movie.updated_at)}</dd>
+          </div>
         </dl>
       </section>
       {#if data.movie.collection_name || data.productionCompanies.length}
@@ -419,22 +442,6 @@
         </div>
       </section>
     {/if}
-    {#if data.canManageMetadata}
-      <form class="inline-action" method="POST" action="?/refreshMetadata">
-        <button class="secondary" disabled={!data.tmdbConfigured}>
-          <RefreshCw size={16} aria-hidden="true" />
-          Refresh metadata
-        </button>
-      </form>
-    {/if}
-    <div class="source-note">
-      <Database size={16} aria-hidden="true" />
-      <span
-        >{data.movie.provider
-          ? "Matched metadata is stored locally after scan."
-          : "This title is using local filename metadata."}</span
-      >
-    </div>
   </aside>
 </div>
 
@@ -656,6 +663,16 @@
     padding-left: clamp(1rem, 2vw, 1.4rem);
   }
 
+  .metadata .section-heading {
+    align-items: center;
+    margin-bottom: 0;
+  }
+
+  .metadata-refresh {
+    margin: 0;
+    flex-shrink: 0;
+  }
+
   dl {
     display: grid;
     gap: 0.5rem;
@@ -681,12 +698,26 @@
     text-align: right;
   }
 
-  .source-note {
-    display: flex;
-    gap: 0.55rem;
+  .text-button {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--color-muted);
-    font-size: 0.9rem;
-    line-height: 1.45;
+    font-size: 0.86rem;
+    font-weight: 650;
+    justify-content: flex-start;
+    gap: 0.35rem;
+  }
+
+  .text-button:hover:not(:disabled) {
+    color: var(--color-accent);
+  }
+
+  .text-button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   .metadata-score {

@@ -186,12 +186,12 @@ describe("movie detail page server", () => {
       id: "movie-1",
       title: "Movie",
     });
+    expect(result.movie.updated_at).toEqual(expect.any(String));
     expect(result.movie.poster_path).toBeUndefined();
     expect(result.movie.backdrop_path).toBeUndefined();
     expect(result.movie.sort_title).toBeUndefined();
     expect(result.movie.parent_id).toBeUndefined();
     expect(result.movie.created_at).toBeUndefined();
-    expect(result.movie.updated_at).toBeUndefined();
     expect(result.files).toHaveLength(1);
     expect(result.files[0]).toMatchObject({
       id: "file-1",

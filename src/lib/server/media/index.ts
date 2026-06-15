@@ -1004,6 +1004,7 @@ export async function getMovieDetail(id: string, userId: string) {
       "provider",
       "provider_id",
       "vote_average",
+      "updated_at",
     ])
     .where("id", "=", id)
     .where("kind", "=", "movie")
