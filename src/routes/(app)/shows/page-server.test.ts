@@ -144,7 +144,7 @@ describe("shows page server", () => {
       query: "exp",
       sort: "latest",
       rows: {
-        allShows: [
+        all: [
           {
             id: "show-1",
             title: "The Expanse",
@@ -185,19 +185,19 @@ describe("shows page server", () => {
             progressSeconds: 120,
           },
         ],
-        recentlyAiredShows: [
+        latest: [
           {
             id: "show-1",
             title: "The Expanse",
           },
         ],
-        popularShows: [
+        popular: [
           {
             id: "show-1",
             title: "The Expanse",
           },
         ],
-        allShows: [
+        all: [
           {
             id: "show-1",
             title: "The Expanse",

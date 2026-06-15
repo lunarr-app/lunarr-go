@@ -8,33 +8,65 @@
   let { data } = $props();
   let searchForm: HTMLFormElement | null = $state(null);
   let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
+
   const hasActiveSearch = $derived(data.query.trim().length > 0);
+  const episodeSections = $derived(
+    hasActiveSearch
+      ? []
+      : [
+          {
+            key: "continue",
+            title: "Continue watching",
+            episodes: data.rows.continueWatching,
+            href: "/continue",
+          },
+          {
+            key: "next-up",
+            title: "Next up",
+            episodes: data.rows.nextUp,
+          },
+        ].filter((section) => section.episodes.length > 0),
+  );
   const showSections = $derived([
     {
-      key: "continue",
-      title: "Continue watching",
-      episodes: data.rows.continueWatching,
+      key: "all",
+      title: hasActiveSearch ? "Matching shows" : "All shows",
+      shows: data.rows.all,
+      href: allShowsHref(),
     },
     {
-      key: "next-up",
-      title: "Next up",
-      episodes: data.rows.nextUp,
+      key: "recent",
+      title: "Recently added",
+      shows: data.rows.recent,
+      href: "/shows/recent",
+    },
+    {
+      key: "latest",
+      title: "Recently aired",
+      shows: data.rows.latest,
+      href: "/shows/latest",
+    },
+    {
+      key: "popular",
+      title: "Popular",
+      shows: data.rows.popular,
+      href: "/shows/popular",
     },
   ]);
-  const visibleEpisodeSections = $derived(
-    hasActiveSearch ? [] : showSections.filter((section) => section.episodes.length > 0),
-  );
-  const recentlyAiredShows = $derived(hasActiveSearch ? [] : data.rows.recentlyAiredShows);
-  const popularShows = $derived(hasActiveSearch ? [] : data.rows.popularShows);
-  const allShows = $derived(data.rows.allShows);
   const hasContent = $derived(
-    allShows.length > 0 ||
-      visibleEpisodeSections.length > 0 ||
-      recentlyAiredShows.length > 0 ||
-      popularShows.length > 0,
+    episodeSections.length > 0 || showSections.some((section) => section.shows.length > 0),
   );
   const TWO_ROW_EPISODE_RAIL_COUNT = 5;
   const TWO_ROW_SHOW_RAIL_COUNT = 9;
+
+  function allShowsHref() {
+    const params = new URLSearchParams();
+    const query = data.query.trim();
+    if (query.length > 0) params.set("q", query);
+    if (data.sort !== "title") params.set("sort", data.sort);
+    const search = params.toString();
+    return search ? `/shows/all?${search}` : "/shows/all";
+  }
 
   function submitSearchNow() {
     if (searchSubmitTimer) {
@@ -76,7 +108,7 @@
 
 {#if !hasContent}
   <section class="empty">
-    {#if data.query.trim().length}
+    {#if hasActiveSearch}
       <h2>No matching shows</h2>
       <p class="muted">Adjust the search to broaden the results.</p>
       <a class="button secondary" href="/shows">
@@ -93,12 +125,12 @@
     {/if}
   </section>
 {:else}
-  {#each visibleEpisodeSections as section}
+  {#each episodeSections as section}
     <section class="media-section">
       <div class="section-heading">
         <h2>{section.title}</h2>
-        {#if section.key === "continue"}
-          <a class="view-all" href="/continue">
+        {#if section.href}
+          <a class="view-all" href={section.href}>
             <span>View all</span>
             <ChevronRight size={16} aria-hidden="true" />
           </a>
@@ -112,44 +144,24 @@
     </section>
   {/each}
 
-  {#if recentlyAiredShows.length}
-    <section class="media-section">
-      <div class="section-heading">
-        <h2>Recently aired</h2>
-      </div>
-      <div class="show-rail" class:two-row={recentlyAiredShows.length >= TWO_ROW_SHOW_RAIL_COUNT}>
-        {#each twoRowRailOrder(recentlyAiredShows, TWO_ROW_SHOW_RAIL_COUNT) as show}
-          <ShowCard {show} />
-        {/each}
-      </div>
-    </section>
-  {/if}
-
-  {#if popularShows.length}
-    <section class="media-section">
-      <div class="section-heading">
-        <h2>Popular shows</h2>
-      </div>
-      <div class="show-rail" class:two-row={popularShows.length >= TWO_ROW_SHOW_RAIL_COUNT}>
-        {#each twoRowRailOrder(popularShows, TWO_ROW_SHOW_RAIL_COUNT) as show}
-          <ShowCard {show} />
-        {/each}
-      </div>
-    </section>
-  {/if}
-
-  {#if allShows.length}
-    <section class="media-section">
-      <div class="section-heading">
-        <h2>{hasActiveSearch ? "Matching shows" : "All shows"}</h2>
-      </div>
-      <div class="show-grid">
-        {#each allShows as show}
-          <ShowCard {show} />
-        {/each}
-      </div>
-    </section>
-  {/if}
+  {#each showSections as section}
+    {#if section.shows.length}
+      <section class="media-section">
+        <div class="section-heading">
+          <h2>{section.title}</h2>
+          <a class="view-all" href={section.href}>
+            <span>View all</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </a>
+        </div>
+        <div class="show-rail" class:two-row={section.shows.length >= TWO_ROW_SHOW_RAIL_COUNT}>
+          {#each twoRowRailOrder(section.shows, TWO_ROW_SHOW_RAIL_COUNT) as show}
+            <ShowCard {show} />
+          {/each}
+        </div>
+      </section>
+    {/if}
+  {/each}
 {/if}
 
 <style>
@@ -257,12 +269,6 @@
     background: var(--color-scrollbar-hover);
   }
 
-  .show-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(8.8rem, 1fr));
-    gap: 1.35rem 1.1rem;
-  }
-
   .empty {
     display: grid;
     justify-items: start;
@@ -286,8 +292,9 @@
       grid-template-columns: 1fr;
     }
 
-    .show-grid {
-      grid-template-columns: repeat(auto-fill, minmax(8.25rem, 1fr));
+    .section-heading {
+      display: flex;
+      flex-wrap: wrap;
     }
 
     .episode-rail {

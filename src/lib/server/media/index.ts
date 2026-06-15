@@ -6,6 +6,7 @@ import { TV_SHOW_CREATOR_JOBS } from "../metadata/show-creators";
 export const MOVIE_STATUS_FILTERS = ["all", "watched", "unwatched"] as const;
 export const MOVIE_SORTS = ["title", "recent", "year_desc", "rating", "release_date"] as const;
 export const MOVIE_PAGE_SIZE = 36;
+export const SHOW_PAGE_SIZE = 36;
 export const SHOW_SORTS = ["title", "recent", "latest", "popular"] as const;
 
 export type MovieStatusFilter = (typeof MOVIE_STATUS_FILTERS)[number];
@@ -24,7 +25,7 @@ export function normalizeShowSort(value: string | null | undefined): ShowSort {
   return SHOW_SORTS.includes(value as ShowSort) ? (value as ShowSort) : "title";
 }
 
-export function normalizeMoviePage(value: string | number | null | undefined) {
+export function normalizePage(value: string | number | null | undefined) {
   const page = Number(value ?? 1);
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
@@ -178,7 +179,7 @@ export async function movieRows(
 ) {
   const db = await getDb();
   const searchPattern = search.trim();
-  const page = normalizeMoviePage(pageInput);
+  const page = normalizePage(pageInput);
   const cleanPageSize = Math.max(1, Math.min(Math.floor(pageSize), 200));
 
   const filteredMovies = () =>
@@ -438,10 +439,10 @@ function publicEpisodeSummary(episode: EpisodeBrowseRow, progress: ReturnType<ty
   };
 }
 
-export async function showRows(userId: string, search = "", sort: ShowSort = "title") {
+async function filteredShows(userId: string, search = "") {
   const db = await getDb();
   const searchPattern = search.trim();
-  const query = db
+  return db
     .selectFrom("media_item as show")
     .innerJoin("media_item as season", "season.parent_id", "show.id")
     .innerJoin("media_item as episode", "episode.parent_id", "season.id")
@@ -452,7 +453,11 @@ export async function showRows(userId: string, search = "", sort: ShowSort = "ti
     .where(accessibleLibrarySql(userId))
     .$if(searchPattern.length > 0, (qb) =>
       qb.where(sql<boolean>`show.title like ${`%${escapeLikePattern(searchPattern)}%`} escape '\\'`),
-    )
+    );
+}
+
+function showBrowseSelect(filtered: Awaited<ReturnType<typeof filteredShows>>) {
+  return filtered
     .select([
       "show.id",
       "show.title",
@@ -470,20 +475,85 @@ export async function showRows(userId: string, search = "", sort: ShowSort = "ti
       sql<string | null>`max(episode.release_date)`.as("latest_episode_release_date"),
     ])
     .groupBy("show.id");
+}
 
-  const ordered =
-    sort === "recent"
-      ? query.orderBy(sql<string | null>`max(media_file.created_at)`, "desc").orderBy("show.sort_title", "asc")
-      : sort === "latest"
-        ? query.orderBy(sql<string | null>`max(episode.release_date)`, "desc").orderBy("show.sort_title", "asc")
-        : sort === "popular"
-          ? query
-              .orderBy("show.popularity", "desc")
-              .orderBy("show.vote_average", "desc")
-              .orderBy("show.sort_title", "asc")
-          : query.orderBy("show.sort_title", "asc").orderBy("show.title", "asc");
+function orderShowBrowseQuery(query: ReturnType<typeof showBrowseSelect>, sort: ShowSort) {
+  if (sort === "recent") {
+    return query.orderBy(sql<string | null>`max(media_file.created_at)`, "desc").orderBy("show.sort_title", "asc");
+  }
+  if (sort === "latest") {
+    return query.orderBy(sql<string | null>`max(episode.release_date)`, "desc").orderBy("show.sort_title", "asc");
+  }
+  if (sort === "popular") {
+    return query
+      .orderBy("show.popularity", "desc")
+      .orderBy("show.vote_average", "desc")
+      .orderBy("show.sort_title", "asc");
+  }
+  return query.orderBy("show.sort_title", "asc").orderBy("show.title", "asc");
+}
 
-  return (await ordered.execute()).map(publicShowSummary);
+export async function showRows(userId: string, search = "", sort: ShowSort = "title") {
+  const filtered = await filteredShows(userId, search);
+  return (await orderShowBrowseQuery(showBrowseSelect(filtered), sort).execute()).map(publicShowSummary);
+}
+
+export async function showBrowseRows(
+  userId: string,
+  search = "",
+  sort: ShowSort = "title",
+  pageInput = 1,
+  pageSize = SHOW_PAGE_SIZE,
+) {
+  const page = normalizePage(pageInput);
+  const cleanPageSize = Math.max(1, Math.min(Math.floor(pageSize), 200));
+  const filtered = await filteredShows(userId, search);
+
+  const totalRow = await filtered
+    .select(sql<number>`count(distinct show.id)`.as("total"))
+    .executeTakeFirst();
+  const total = Number(totalRow?.total ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / cleanPageSize));
+  const currentPage = Math.min(page, totalPages);
+  const offset = (currentPage - 1) * cleanPageSize;
+
+  const [allRows, recentRows, latestRows, popularRows] = await Promise.all([
+    orderShowBrowseQuery(showBrowseSelect(filtered), sort).limit(cleanPageSize).offset(offset).execute(),
+    orderShowBrowseQuery(showBrowseSelect(filtered), "recent").limit(24).execute(),
+    orderShowBrowseQuery(showBrowseSelect(filtered), "latest").limit(24).execute(),
+    orderShowBrowseQuery(showBrowseSelect(filtered), "popular").limit(24).execute(),
+  ]);
+
+  const mapShow = (show: ShowBrowseRow) => publicShowSummary(show);
+
+  return {
+    all: allRows.map(mapShow),
+    allPage: {
+      page: currentPage,
+      pageSize: cleanPageSize,
+      total,
+      totalPages,
+      hasPrevious: currentPage > 1,
+      hasNext: currentPage < totalPages,
+    },
+    recent: recentRows.map(mapShow),
+    latest: latestRows.map(mapShow),
+    popular: popularRows.map(mapShow),
+  };
+}
+
+export async function showListRows(
+  userId: string,
+  search = "",
+  sort: ShowSort = "title",
+  pageInput = 1,
+  pageSize = SHOW_PAGE_SIZE,
+) {
+  const rows = await showBrowseRows(userId, search, sort, pageInput, pageSize);
+  return {
+    shows: rows.all,
+    page: rows.allPage,
+  };
 }
 
 async function tvEpisodeProgress(userId: string, episodeIds: string[]) {
@@ -628,13 +698,17 @@ async function nextUpEpisodeRows(userId: string, limit = 24) {
   return nextRows.slice(0, limit);
 }
 
-export async function tvRows(userId: string, search = "", sort: ShowSort = "title") {
-  const [allShows, continueEpisodeRows, nextRows, recentlyAiredShows, popularShows] = await Promise.all([
-    showRows(userId, search, sort),
+export async function tvRows(
+  userId: string,
+  search = "",
+  sort: ShowSort = "title",
+  pageInput = 1,
+  pageSize = SHOW_PAGE_SIZE,
+) {
+  const [browse, continueEpisodeRows, nextRows] = await Promise.all([
+    showBrowseRows(userId, search, sort, pageInput, pageSize),
     tvEpisodeRows(userId, "continue"),
     nextUpEpisodeRows(userId),
-    showRows(userId, "", "latest"),
-    showRows(userId, "", "popular"),
   ]);
   const episodeIds = [...new Set([...continueEpisodeRows, ...nextRows].map((episode) => episode.id))];
   const progress = await tvEpisodeProgress(userId, episodeIds);
@@ -643,9 +717,11 @@ export async function tvRows(userId: string, search = "", sort: ShowSort = "titl
   return {
     continueWatching: continueEpisodeRows.map(mapEpisode),
     nextUp: nextRows.map(mapEpisode),
-    recentlyAiredShows: recentlyAiredShows.slice(0, 24),
-    popularShows: popularShows.slice(0, 24),
-    allShows,
+    all: browse.all,
+    allPage: browse.allPage,
+    recent: browse.recent,
+    latest: browse.latest,
+    popular: browse.popular,
   };
 }
 

@@ -271,7 +271,7 @@ export const openApiDocument = {
     "/api/shows": {
       get: {
         tags: ["Catalog"],
-        summary: "Browse shows, next-up episodes, and show rails.",
+        summary: "Browse show rails and paged show results.",
         operationId: "getShows",
         parameters: [
           searchParameter,
@@ -283,6 +283,12 @@ export const openApiDocument = {
               type: "string",
               enum: ["title", "recent", "latest", "popular"],
             },
+          },
+          {
+            name: "page",
+            in: "query",
+            required: false,
+            schema: { type: "integer", minimum: 1 },
           },
         ],
         responses: {
@@ -1212,7 +1218,7 @@ export const openApiDocument = {
       },
       ShowRowsResponse: {
         type: "object",
-        required: ["continueWatching", "nextUp", "recentlyAiredShows", "popularShows", "allShows"],
+        required: ["continueWatching", "nextUp", "all", "allPage", "recent", "latest", "popular"],
         properties: {
           continueWatching: {
             type: "array",
@@ -1222,15 +1228,20 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },
           },
-          recentlyAiredShows: {
+          all: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
-          popularShows: {
+          allPage: { $ref: "#/components/schemas/PageMetadata" },
+          recent: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
-          allShows: {
+          latest: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          popular: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },

@@ -8,7 +8,7 @@ import {
   getMovieDetail,
   getShowDetail,
   movieRows,
-  normalizeMoviePage,
+  normalizePage,
   normalizeMovieSort,
   normalizeMovieStatusFilter,
   normalizeShowSort,
@@ -45,13 +45,13 @@ describe("movie browse parameters", () => {
   });
 
   test("normalizes page numbers", () => {
-    expect(normalizeMoviePage("2")).toBe(2);
-    expect(normalizeMoviePage(3)).toBe(3);
-    expect(normalizeMoviePage("0")).toBe(1);
-    expect(normalizeMoviePage("-1")).toBe(1);
-    expect(normalizeMoviePage("1.5")).toBe(1);
-    expect(normalizeMoviePage("bad")).toBe(1);
-    expect(normalizeMoviePage(null)).toBe(1);
+    expect(normalizePage("2")).toBe(2);
+    expect(normalizePage(3)).toBe(3);
+    expect(normalizePage("0")).toBe(1);
+    expect(normalizePage("-1")).toBe(1);
+    expect(normalizePage("1.5")).toBe(1);
+    expect(normalizePage("bad")).toBe(1);
+    expect(normalizePage(null)).toBe(1);
   });
 });
 
@@ -404,15 +404,15 @@ describe("showRows", () => {
       progressSeconds: 120,
     });
     expect(rows.nextUp.map((episode) => episode.id)).toEqual(["episode-3"]);
-    expect(rows.recentlyAiredShows[0]).toMatchObject({
+    expect(rows.latest[0]).toMatchObject({
       id: "show-1",
       latestEpisodeReleaseDate: "2015-12-16",
     });
-    expect(rows.popularShows[0]).toMatchObject({
+    expect(rows.popular[0]).toMatchObject({
       id: "show-1",
       popularity: 42,
     });
-    expect(rows.allShows[0]).toMatchObject({ id: "show-1", episodeCount: 3 });
+    expect(rows.all[0]).toMatchObject({ id: "show-1", episodeCount: 3 });
   });
 });
 

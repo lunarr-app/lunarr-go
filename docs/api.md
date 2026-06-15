@@ -98,6 +98,7 @@ Show query parameters:
 ```text
 search
 sort=title|recent|latest|popular
+page
 ```
 
 ## Playback
