@@ -1,7 +1,7 @@
 <script lang="ts">
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
   import { invalidateAll } from "$app/navigation";
-  import { Activity, Clock3, FileWarning, XCircle } from "@lucide/svelte";
+  import { Activity, FileWarning, XCircle } from "@lucide/svelte";
   import { onMount } from "svelte";
 
   let { data, form } = $props();
@@ -22,6 +22,13 @@
     }
     return grouped;
   });
+
+  const scanKindLabel: Record<Job["job_kind"], string> = {
+    library_scan: "Library scan",
+    movie_metadata_refresh: "Movie metadata",
+    tv_metadata_refresh: "TV metadata",
+    media_probe_refresh: "Probe repair",
+  };
 
   const scanStatusLabel: Record<Job["status"], string> = {
     queued: "Queued",
@@ -78,16 +85,38 @@
     return `${hours}h ${minutes % 60}m`;
   }
 
-  function totalChanges(job: Job) {
-    return Number(job.files_added ?? 0) + Number(job.files_updated ?? 0) + Number(job.files_removed ?? 0);
+  function jobMetricsSummary(job: Job) {
+    const parts: string[] = [];
+    const seen = Number(job.files_seen ?? 0);
+    const added = Number(job.files_added ?? 0);
+    const updated = Number(job.files_updated ?? 0);
+    const removed = Number(job.files_removed ?? 0);
+    const errors = Number(job.errors_count ?? 0);
+
+    if (seen > 0) parts.push(`${seen} seen`);
+    if (added > 0) parts.push(`${added} added`);
+    if (updated > 0) parts.push(`${updated} updated`);
+    if (removed > 0) parts.push(`${removed} removed`);
+    if (errors > 0) parts.push(`${errors} errors`);
+
+    if (parts.length > 0) return parts.join(" · ");
+    if (job.job_kind === "library_scan") return "No file changes";
+    return "No files processed";
   }
 
   function jobName(job: Pick<Job, "job_kind" | "library_id" | "library_name">) {
     if (job.library_name) return job.library_name;
-    if (job.job_kind === "movie_metadata_refresh") return "Movie metadata refresh";
-    if (job.job_kind === "tv_metadata_refresh") return "TV metadata refresh";
-    if (job.job_kind === "media_probe_refresh") return "Media probe repair";
+    if (job.job_kind === "movie_metadata_refresh") return "All movies";
+    if (job.job_kind === "tv_metadata_refresh") return "All TV shows";
+    if (job.job_kind === "media_probe_refresh") return "All media files";
     return job.library_id ? "Deleted library" : "Library scan";
+  }
+
+  function mediaHref(job: Pick<PlaybackSession, "media_item_id" | "media_item_kind">) {
+    if (!job.media_item_id) return null;
+    if (job.media_item_kind === "movie") return `/movies/${job.media_item_id}`;
+    if (job.media_item_kind === "episode") return `/episodes/${job.media_item_id}`;
+    return null;
   }
 
   function playbackSessionName(job: PlaybackSession) {
@@ -127,7 +156,7 @@
 
 <svelte:head>
   <title>Jobs - Lunarr</title>
-  <meta name="description" content="Review Lunarr scan jobs, playback sessions, and recent processing errors." />
+  <meta name="description" content="Review scan jobs and playback sessions." />
 </svelte:head>
 
 <div class="ops-page-header">
@@ -146,9 +175,9 @@
 
 <section class="overview ops-stat-grid" aria-label="Jobs overview">
   <article class="ops-stat-card">
-    <div class="overview-heading">
-      <Activity size={18} aria-hidden="true" />
+    <div class="overview-copy">
       <h2>Scans</h2>
+      <p class="muted">Library scans, metadata refresh, and probe repair.</p>
     </div>
     <dl>
       <div>
@@ -175,9 +204,9 @@
   </article>
 
   <article class="ops-stat-card">
-    <div class="overview-heading">
-      <Clock3 size={18} aria-hidden="true" />
+    <div class="overview-copy">
       <h2>Playback</h2>
+      <p class="muted">Temporary HLS transcode sessions.</p>
     </div>
     <dl>
       <div>
@@ -204,175 +233,150 @@
   </article>
 </section>
 
-<div class="content-grid">
-  <div class="primary-stack">
-    <section class="ops-panel">
-      <div class="ops-panel-header">
-        <div>
-          <h2>Scan jobs</h2>
-          <p class="muted">
-            Latest {data.jobs.length} scans and metadata refreshes.
-          </p>
-        </div>
-      </div>
-
-      <div class="ops-table">
-        {#each data.jobs as job}
-          {@const jobErrors = errorsByJob.get(job.id) ?? []}
-          <article class="job-row ops-row">
-            <div class="job-main">
-              <div class="job-title">
-                <strong>{jobName(job)}</strong>
-                <span class={`status-badge ${statusClass(job)}`}>{displayStatus(job)}</span>
-              </div>
-              <div class="job-meta">
-                <span>{formatRelativeTime(job.updated_at ?? job.created_at)}</span>
-                <span>{formatDuration(job.started_at, job.finished_at, job.status)}</span>
-                {#if job.cancel_requested_at}
-                  <span>Cancel requested {formatRelativeTime(job.cancel_requested_at)}</span>
-                {:else}
-                  <span>Started {formatTime(job.started_at)}</span>
-                {/if}
-              </div>
-              {#if jobErrors.length}
-                <details class="job-errors">
-                  <summary
-                    ><FileWarning size={15} aria-hidden="true" />
-                    {jobErrors.length} recent {jobErrors.length === 1 ? "error" : "errors"}</summary
-                  >
-                  <div>
-                    {#each jobErrors.slice(0, 3) as item}
-                      <p>
-                        <strong>{item.path}</strong><span>{item.message}</span>
-                      </p>
-                    {/each}
-                  </div>
-                </details>
-              {/if}
-            </div>
-
-            <div class="metrics" aria-label="Job file counts">
-              <span><strong>{job.files_seen}</strong> seen</span>
-              <span><strong>{totalChanges(job)}</strong> changed</span>
-              <span><strong>{job.files_added}</strong> added</span>
-              <span><strong>{job.files_removed}</strong> removed</span>
-              <span class:error-count={Number(job.errors_count) > 0}><strong>{job.errors_count}</strong> errors</span>
-            </div>
-
-            <div class="job-actions">
-              {#if job.status === "running" && job.cancel_requested_at}
-                <span class="muted">Stopping</span>
-              {:else if job.status === "queued" || job.status === "running"}
-                <ConfirmAction
-                  action="?/cancel"
-                  fieldName="jobId"
-                  fieldValue={job.id}
-                  title="Cancel job?"
-                  message={`This will ${job.status === "queued" ? "cancel the queued job before it starts" : "request cancellation for the running job after the current item finishes"}.`}
-                  confirmLabel="Cancel job"
-                  buttonClass="secondary compact"
-                >
-                  <XCircle size={15} aria-hidden="true" />
-                  Cancel
-                </ConfirmAction>
-              {:else}
-                <span class="muted">Done</span>
-              {/if}
-            </div>
-          </article>
-        {:else}
-          <p class="muted">No scan jobs yet.</p>
-        {/each}
-      </div>
-    </section>
-
-    <section class="ops-panel">
-      <div class="ops-panel-header">
-        <div>
-          <h2>Playback sessions</h2>
-          <p class="muted">
-            Latest {data.playbackSessions.length} HLS playback sessions.
-          </p>
-        </div>
-      </div>
-
-      <div class="ops-table">
-        {#each data.playbackSessions as job}
-          <article class="job-row ops-row">
-            <div class="job-main">
-              <div class="job-title">
-                <strong>{playbackSessionName(job)}</strong>
-                <span class={`status-badge ${job.status}`}>{playbackStatusLabel[job.status]}</span>
-              </div>
-              <div class="job-meta">
-                <span>{formatRelativeTime(job.updated_at ?? job.created_at)}</span>
-                <span>{formatDuration(job.started_at, job.finished_at, job.status)}</span>
-                <span>{job.mode} · {playbackPipelineLabel(job)}</span>
-                {#if job.user_email}
-                  <span>{job.user_email}</span>
-                {/if}
-              </div>
-              {#if job.error_message}
-                <p class="playback-session-error">{job.error_message}</p>
-              {/if}
-            </div>
-
-            <div class="metrics playback-metrics" aria-label="Playback session details">
-              <span><strong>{formatStartOffset(job.start_time_seconds)}</strong> start</span>
-              <span><strong>{playbackSessionActivity(job)}</strong></span>
-              <span><strong>{job.last_segment_name ?? "No segment"}</strong></span>
-              <span><strong>{job.file_basename ?? "Missing file"}</strong></span>
-            </div>
-
-            <div class="job-actions">
-              {#if job.status === "queued" || job.status === "running"}
-                <ConfirmAction
-                  action="?/cancelPlaybackSession"
-                  fieldName="sessionId"
-                  fieldValue={job.playback_session_id}
-                  title="Cancel playback session?"
-                  message="This stops the active playback session and removes temporary HLS artifacts."
-                  confirmLabel="Cancel session"
-                  buttonClass="secondary compact"
-                >
-                  <XCircle size={15} aria-hidden="true" />
-                  Cancel
-                </ConfirmAction>
-              {:else}
-                <span class="muted">Done</span>
-              {/if}
-            </div>
-          </article>
-        {:else}
-          <p class="muted">No playback sessions yet.</p>
-        {/each}
-      </div>
-    </section>
-  </div>
-
-  <aside class="recent-errors ops-panel" aria-labelledby="recent-errors-heading">
+<div class="job-panels ops-stat-grid">
+  <section class="ops-panel">
     <div class="ops-panel-header">
-      <div>
-        <h2 id="recent-errors-heading">Recent errors</h2>
-        <p class="muted">Latest {data.errors.length} scan errors.</p>
-      </div>
+      <h2>Scan jobs</h2>
     </div>
-    <div class="errors ops-table">
-      {#each data.errors as item}
-        <article class="ops-row">
-          <div class="error-meta">
-            <span>{jobName(item)}</span>
-            <span>{scanStatusLabel[item.job_status]}</span>
-            <span>{formatRelativeTime(item.created_at)}</span>
+
+    <div class="ops-table">
+      {#each data.jobs as job}
+        {@const jobErrors = errorsByJob.get(job.id) ?? []}
+        <article class="job-row ops-row">
+          <div class="job-main">
+            <div class="job-title">
+              {#if job.library_id && job.library_name}
+                <a class="job-link" href="/libraries"><strong>{jobName(job)}</strong></a>
+              {:else}
+                <strong>{jobName(job)}</strong>
+              {/if}
+              <span class={`status-badge ${statusClass(job)}`}>{displayStatus(job)}</span>
+            </div>
+            <div class="job-meta">
+              <span>{scanKindLabel[job.job_kind]}</span>
+              <span>{formatRelativeTime(job.updated_at ?? job.created_at)}</span>
+              <span>{formatDuration(job.started_at, job.finished_at, job.status)}</span>
+              {#if job.cancel_requested_at}
+                <span>Cancel requested {formatRelativeTime(job.cancel_requested_at)}</span>
+              {:else}
+                <span>Started {formatTime(job.started_at)}</span>
+              {/if}
+            </div>
           </div>
-          <strong>{item.path}</strong>
-          <span class="error">{item.message}</span>
+
+          <p class="metrics" class:metrics-errors={Number(job.errors_count) > 0} aria-label="Job file counts">
+            {jobMetricsSummary(job)}
+          </p>
+
+          <div class="job-actions">
+            {#if job.status === "running" && job.cancel_requested_at}
+              <span class="muted">Stopping</span>
+            {:else if job.status === "queued" || job.status === "running"}
+              <ConfirmAction
+                action="?/cancel"
+                fieldName="jobId"
+                fieldValue={job.id}
+                title="Cancel job?"
+                message={`This will ${job.status === "queued" ? "cancel the queued job before it starts" : "request cancellation for the running job after the current item finishes"}.`}
+                confirmLabel="Cancel job"
+                buttonClass="secondary compact"
+              >
+                <XCircle size={15} aria-hidden="true" />
+                Cancel
+              </ConfirmAction>
+            {/if}
+          </div>
+
+          {#if jobErrors.length}
+            <details class="job-errors">
+              <summary>
+                <FileWarning size={15} aria-hidden="true" />
+                {jobErrors.length}
+                {jobErrors.length === 1 ? "error" : "errors"}
+              </summary>
+              <div>
+                {#each jobErrors as item}
+                  <p>
+                    <strong>{item.path}</strong>
+                    <span>{item.message}</span>
+                  </p>
+                {/each}
+              </div>
+            </details>
+          {/if}
         </article>
       {:else}
-        <p class="muted">No scan errors recorded.</p>
+        <p class="empty-state muted">
+          No scan jobs yet. Library scans from Libraries, plus metadata refresh and probe repair from Settings, appear
+          here. The latest {data.scanJobListLimit} jobs are shown.
+        </p>
       {/each}
     </div>
-  </aside>
+  </section>
+
+  <section class="ops-panel">
+    <div class="ops-panel-header">
+      <h2>Playback sessions</h2>
+    </div>
+
+    <div class="ops-table">
+      {#each data.playbackSessions as job}
+        {@const titleHref = mediaHref(job)}
+        <article class="job-row ops-row">
+          <div class="job-main">
+            <div class="job-title">
+              {#if titleHref}
+                <a class="job-link" href={titleHref}><strong>{playbackSessionName(job)}</strong></a>
+              {:else}
+                <strong>{playbackSessionName(job)}</strong>
+              {/if}
+              <span class={`status-badge ${job.status}`}>{playbackStatusLabel[job.status]}</span>
+            </div>
+            <div class="job-meta">
+              <span>{formatRelativeTime(job.updated_at ?? job.created_at)}</span>
+              <span>{formatDuration(job.started_at, job.finished_at, job.status)}</span>
+              <span>{job.mode} · {playbackPipelineLabel(job)}</span>
+              {#if job.user_email}
+                <span>{job.user_email}</span>
+              {/if}
+            </div>
+            {#if job.error_message}
+              <p class="playback-session-error">{job.error_message}</p>
+            {/if}
+          </div>
+
+          <div class="metrics playback-metrics" aria-label="Playback session details">
+            <span><strong>{formatStartOffset(job.start_time_seconds)}</strong> start</span>
+            <span><strong>{playbackSessionActivity(job)}</strong></span>
+            <span><strong>{job.last_segment_name ?? "No segment"}</strong></span>
+            <span><strong>{job.file_basename ?? "Missing file"}</strong></span>
+          </div>
+
+          <div class="job-actions">
+            {#if job.status === "queued" || job.status === "running"}
+              <ConfirmAction
+                action="?/cancelPlaybackSession"
+                fieldName="sessionId"
+                fieldValue={job.playback_session_id}
+                title="Cancel playback session?"
+                message="This stops the active playback session and removes temporary HLS artifacts."
+                confirmLabel="Cancel session"
+                buttonClass="secondary compact"
+              >
+                <XCircle size={15} aria-hidden="true" />
+                Cancel
+              </ConfirmAction>
+            {/if}
+          </div>
+        </article>
+      {:else}
+        <p class="empty-state muted">
+          No playback sessions yet. Temporary HLS transcode sessions appear here while media is playing in a browser or
+          on a receiver. The latest {data.playbackSessionListLimit} sessions are shown.
+        </p>
+      {/each}
+    </div>
+  </section>
 </div>
 
 <style>
@@ -395,15 +399,17 @@
     margin-top: 1rem;
   }
 
-  .overview-heading {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
+  .overview-copy {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
     margin-bottom: 0.65rem;
   }
 
-  .overview-heading :global(svg) {
-    color: var(--ops-muted);
+  .overview-copy p {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.35;
   }
 
   h2 {
@@ -426,8 +432,7 @@
 
   dt,
   .job-meta,
-  .metrics,
-  .error-meta {
+  .metrics {
     color: var(--ops-muted);
     font-size: 0.82rem;
   }
@@ -446,23 +451,14 @@
     line-height: 1;
   }
 
-  .content-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 23rem);
-    gap: 1rem;
-    align-items: start;
+  .job-panels {
     margin-top: 1rem;
-  }
-
-  .primary-stack {
-    display: grid;
-    gap: 1rem;
-    min-width: 0;
+    align-items: start;
   }
 
   .job-row {
     display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(18rem, 0.9fr) auto;
+    grid-template-columns: minmax(14rem, 1fr) minmax(10rem, 14rem) auto;
     gap: 0.85rem;
     align-items: center;
     padding: 0.72rem 0.85rem;
@@ -486,6 +482,15 @@
     line-height: 1.2;
   }
 
+  .job-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .job-link:hover strong {
+    color: var(--color-accent);
+  }
+
   .job-meta {
     display: flex;
     flex-wrap: wrap;
@@ -493,23 +498,15 @@
   }
 
   .metrics {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.65rem;
+    margin: 0;
     min-width: 0;
-    line-height: 1.3;
+    color: var(--ops-muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
   }
 
-  .metrics span {
-    min-width: 0;
-  }
-
-  .metrics strong {
-    color: var(--ops-text);
-    font-size: 0.9rem;
-  }
-
-  .metrics .error-count {
+  .metrics-errors {
     color: var(--color-error-strong);
   }
 
@@ -518,8 +515,14 @@
     gap: 0.25rem;
   }
 
+  .playback-metrics span {
+    min-width: 0;
+  }
+
   .playback-metrics strong {
     overflow-wrap: anywhere;
+    color: var(--ops-text);
+    font-size: 0.9rem;
   }
 
   .playback-session-error {
@@ -542,6 +545,7 @@
   }
 
   .job-errors {
+    grid-column: 1 / -1;
     color: var(--color-subtle);
   }
 
@@ -567,42 +571,13 @@
     margin: 0;
   }
 
-  .errors article {
-    display: grid;
-    gap: 0.25rem;
-    padding: 0.65rem 0.85rem;
-  }
-
-  .errors strong {
-    overflow-wrap: anywhere;
-  }
-
-  .recent-errors {
-    position: sticky;
-    top: 1rem;
-  }
-
-  .error-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .error-meta span:not(:last-child)::after {
-    content: "/";
-    margin-left: 0.5rem;
-    color: var(--color-muted);
+  .empty-state {
+    margin: 0;
+    padding: 0.85rem;
+    line-height: 1.45;
   }
 
   @media (max-width: 1080px) {
-    .content-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .recent-errors {
-      position: static;
-    }
-
     .job-row {
       grid-template-columns: minmax(0, 1fr) auto;
     }

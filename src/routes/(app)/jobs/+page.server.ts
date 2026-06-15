@@ -5,6 +5,8 @@ import {
   listScanErrors,
   listScanJobs,
   listPlaybackSessions,
+  PLAYBACK_SESSION_LIST_LIMIT,
+  SCAN_JOB_LIST_LIMIT,
 } from "$lib/server/jobs";
 import { cancelScanJob } from "$lib/server/scanner";
 import { cancelPlaybackSession as stopPlaybackSession } from "$lib/server/transcoding/manager";
@@ -20,6 +22,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     jobs: await listScanJobs(),
     playbackSessions: await listPlaybackSessions(),
     errors: await listScanErrors(),
+    scanJobListLimit: SCAN_JOB_LIST_LIMIT,
+    playbackSessionListLimit: PLAYBACK_SESSION_LIST_LIMIT,
   };
 };
 

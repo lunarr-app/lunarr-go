@@ -9,6 +9,10 @@ const COMPLETED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 const FAILED_PLAYBACK_SESSION_HISTORY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const ACTIVE_JOB_STATUSES = ["queued", "running"] as const;
 
+export const SCAN_JOB_LIST_LIMIT = 25;
+export const PLAYBACK_SESSION_LIST_LIMIT = 25;
+export const SCAN_ERROR_LIST_LIMIT = 100;
+
 type CleanupJobHistoryOptions = {
   maxAgeMs?: number;
   minRows?: number;
@@ -82,7 +86,7 @@ export async function getPlaybackSessionSummary() {
   }, emptyJobSummary());
 }
 
-export async function listScanJobs(limit = 50) {
+export async function listScanJobs(limit = SCAN_JOB_LIST_LIMIT) {
   const db = await getDb();
   return db
     .selectFrom("scan_job")
@@ -109,7 +113,7 @@ export async function listScanJobs(limit = 50) {
     .execute();
 }
 
-export async function listPlaybackSessions(limit = 25) {
+export async function listPlaybackSessions(limit = PLAYBACK_SESSION_LIST_LIMIT) {
   const db = await getDb();
   const sessions = await db
     .selectFrom("playback_session")
@@ -134,6 +138,8 @@ export async function listPlaybackSessions(limit = 25) {
       "playback_session.created_at",
       "playback_session.updated_at",
       "media_item.title as media_title",
+      "media_item.id as media_item_id",
+      "media_item.kind as media_item_kind",
       "media_file.basename as file_basename",
       "user.email as user_email",
     ])
@@ -147,7 +153,7 @@ export async function listPlaybackSessions(limit = 25) {
   }));
 }
 
-export async function listScanErrors(limit = 100) {
+export async function listScanErrors(limit = SCAN_ERROR_LIST_LIMIT) {
   const db = await getDb();
   return db
     .selectFrom("scan_job_error")
