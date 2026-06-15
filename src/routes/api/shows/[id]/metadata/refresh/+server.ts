@@ -14,6 +14,9 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 
   const result = await refreshTvShowMetadataResult(params.id);
   if (result.status === "missing") return json({ error: "Show not found." }, { status: 404 });
+  if (result.status === "no_seasons") {
+    return json({ error: "This show has no seasons to refresh." }, { status: 400 });
+  }
   if (result.status === "unmatched") return json({ error: "No TMDb match was found for this show." }, { status: 400 });
 
   return json(result);

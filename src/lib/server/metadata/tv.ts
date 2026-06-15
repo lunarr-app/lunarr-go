@@ -27,7 +27,7 @@ export type RefreshTvMetadataOptions = {
 };
 
 type RefreshTvSeasonMetadataResult =
-  | { status: "matched"; addedEpisodes: number }
+  | { status: "matched"; addedEpisodes: number; showId: string }
   | { status: "unmatched"; addedEpisodes: 0 }
   | { status: "missing"; addedEpisodes: 0 };
 
@@ -40,6 +40,7 @@ export type RefreshTvShowMetadataResult =
       addedEpisodes: number;
     }
   | { status: "unmatched"; mediaItemId: string }
+  | { status: "no_seasons"; mediaItemId: string }
   | { status: "missing"; mediaItemId: null };
 
 const runningTvMetadataJobs = new Set<string>();
@@ -268,7 +269,7 @@ export async function refreshTvSeasonMetadataResult(
     if (result.created) addedEpisodes += 1;
   }
 
-  return { status: "matched", addedEpisodes };
+  return { status: "matched", addedEpisodes, showId };
 }
 
 export async function refreshTvShowMetadataResult(
@@ -294,7 +295,7 @@ export async function refreshTvShowMetadataResult(
     .orderBy("season_number", "asc")
     .execute();
 
-  if (seasons.length === 0) return { status: "unmatched", mediaItemId: showId };
+  if (seasons.length === 0) return { status: "no_seasons", mediaItemId: showId };
 
   let mediaItemId = showId;
   let matchedSeasons = 0;
@@ -306,12 +307,7 @@ export async function refreshTvShowMetadataResult(
     if (result.status === "matched") {
       matchedSeasons += 1;
       addedEpisodes += result.addedEpisodes;
-      const parent = await db
-        .selectFrom("media_item")
-        .select("parent_id")
-        .where("id", "=", season.id)
-        .executeTakeFirst();
-      if (parent?.parent_id) mediaItemId = parent.parent_id;
+      mediaItemId = result.showId;
     } else if (result.status === "unmatched") {
       unmatchedSeasons += 1;
     }

@@ -73,7 +73,7 @@ describe("refreshTvShowMetadata", () => {
     });
   });
 
-  test("returns unmatched when a show has no seasons", async () => {
+  test("returns no_seasons when a show has no seasons", async () => {
     const now = new Date().toISOString();
     await db
       .insertInto("media_item")
@@ -92,9 +92,116 @@ describe("refreshTvShowMetadata", () => {
       .execute();
 
     await expect(refreshTvShowMetadataResult("show-empty")).resolves.toEqual({
-      status: "unmatched",
+      status: "no_seasons",
       mediaItemId: "show-empty",
     });
+  });
+
+  test("returns the surviving show id after provider merge", async () => {
+    const now = new Date().toISOString();
+    await db
+      .insertInto("media_item")
+      .values([
+        {
+          id: "show-provider",
+          kind: "show",
+          title: "Merged Show",
+          sort_title: "merged show",
+          year: 2015,
+          parent_id: null,
+          provider: "tmdb",
+          provider_id: "63639",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "show-local",
+          kind: "show",
+          title: "Merged Show",
+          sort_title: "merged show",
+          year: 2015,
+          parent_id: null,
+          provider: null,
+          provider_id: null,
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "season-local",
+          kind: "season",
+          title: "Season 1",
+          sort_title: "0001",
+          season_number: 1,
+          parent_id: "show-local",
+          provider: null,
+          provider_id: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .execute();
+
+    const metadata = {
+      show: {
+        provider: "tmdb" as const,
+        providerId: "63639",
+        title: "Merged Show",
+        year: 2015,
+        originalTitle: null,
+        overview: "Merged overview.",
+        tagline: null,
+        posterPath: "/merged.jpg",
+        backdropPath: null,
+        firstAirDate: "2015-12-14",
+        status: "Ended",
+        homepage: null,
+        originalLanguage: "en",
+        imdbId: null,
+        popularity: 1,
+        voteAverage: 8,
+        voteCount: 10,
+        certification: null,
+        trailer: null,
+        genres: [],
+        cast: [],
+        crew: [],
+        videos: [],
+        keywords: [],
+        productionCompanies: [],
+        productionCountries: [],
+        spokenLanguages: [],
+      },
+      season: {
+        provider: "tmdb" as const,
+        providerId: "60001",
+        title: "Season 1",
+        seasonNumber: 1,
+        overview: null,
+        posterPath: null,
+        airDate: "2015-12-14",
+        voteAverage: null,
+      },
+      episodes: [],
+    };
+
+    await expect(
+      refreshTvShowMetadataResult("show-local", {
+        metadataMatcher: async () => metadata,
+      }),
+    ).resolves.toEqual({
+      status: "matched",
+      mediaItemId: "show-provider",
+      matchedSeasons: 1,
+      unmatchedSeasons: 0,
+      addedEpisodes: 0,
+    });
+
+    await expect(
+      db.selectFrom("media_item").select("id").where("id", "=", "show-local").executeTakeFirst(),
+    ).resolves.toBeUndefined();
+    await expect(
+      db.selectFrom("media_item").select("id").where("id", "=", "show-provider").executeTakeFirst(),
+    ).resolves.toMatchObject({ id: "show-provider" });
   });
 
   test("refreshes all seasons for a show", async () => {

@@ -400,7 +400,9 @@ describe("shows page server", () => {
       params: { id: "show-1" },
       locals: { user: { id: "user-1", role: "admin" } },
     } as never);
-    expect(adminResult.canManageMetadata).toBe(true);
+    expect(adminResult).toMatchObject({
+      canManageMetadata: true,
+    });
   });
 
   test("keeps show detail metadata refresh admin-only", async () => {
