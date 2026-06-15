@@ -180,7 +180,7 @@ async function probeFile(input: { file: ProbeRepairFile; storage: LibraryStorage
   }
 
   const fallbackValues = mediaFileValuesFromProbe({ extension: input.file.extension }, null);
-  const inputSource = createSeekableInputSourceFromStorage({
+  const inputSource = await createSeekableInputSourceFromStorage({
     file: {
       path: input.file.path,
       extension: input.file.extension,

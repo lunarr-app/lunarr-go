@@ -201,7 +201,7 @@ async function probeScannedFile(
   let inputSource: SeekableTranscodeInputSource | undefined;
   try {
     inputSource = isRemoteLibrarySource(context.storage.source)
-      ? createSeekableInputSourceFromStorage({
+      ? await createSeekableInputSourceFromStorage({
           file: {
             path: info.path,
             extension: info.extension,

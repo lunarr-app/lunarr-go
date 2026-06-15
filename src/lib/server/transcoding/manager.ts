@@ -43,10 +43,14 @@ import { getMediaFile } from "../media";
 import { createLibraryStorage, remoteOperationTimeoutMsFromConfig } from "../storage";
 import { isRemoteLibrarySource } from "../libraries/source";
 import { getTranscodePolicy } from "./policy";
-import { hasSeekableRemoteSize, nodeAvInputFormat } from "./seekable-input";
+import {
+  hasSeekableRemoteSize,
+  createSeekableInputSourceFromStorage,
+  REMOTE_READ_CANCELLED_MESSAGE,
+} from "./seekable-input";
+import { nodeAvInputFormat, remoteContainerSniffNeeded } from "./container-format";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
 
 const PLAYBACK_CANCELLED_MESSAGE = "Playback session was cancelled.";
 const PLAYBACK_SESSION_REPLACED_MESSAGE = "Playback session was replaced.";
@@ -71,8 +75,6 @@ const REQUEST_DRIVEN_SEGMENT_WINDOW_COUNT = 8;
 const REQUEST_DRIVEN_LOOKAHEAD_WAIT_MS = REQUEST_DRIVEN_SEGMENT_TIMEOUT_MS;
 const REQUEST_DRIVEN_LOOKAHEAD_FILE_POLL_MS = 25;
 const REQUEST_DRIVEN_LOOKAHEAD_STATE_POLL_MS = 100;
-const SFTP_SEEKABLE_READ_AHEAD_BYTES = 2 * 1024 * 1024;
-const SFTP_SEEKABLE_MAX_BUFFER_BYTES = 4 * 1024 * 1024;
 
 function configuredRequestDrivenHlsSegmentFormat() {
   const value = process.env.LUNARR_HLS_SEGMENT_FORMAT?.trim().toLowerCase();
@@ -320,23 +322,6 @@ async function isReadableFile(filePath: string) {
   }
 }
 
-async function streamToBuffer(stream: Readable, signal?: AbortSignal) {
-  if (signal?.aborted) throw new Error(PLAYBACK_CANCELLED_MESSAGE);
-  const chunks: Buffer[] = [];
-  const abort = () => stream.destroy(new Error(PLAYBACK_CANCELLED_MESSAGE));
-  stream.on("error", () => undefined);
-  signal?.addEventListener("abort", abort, { once: true });
-  try {
-    for await (const chunk of stream) {
-      if (signal?.aborted) throw new Error(PLAYBACK_CANCELLED_MESSAGE);
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-  } finally {
-    signal?.removeEventListener("abort", abort);
-  }
-  return Buffer.concat(chunks);
-}
-
 function withOperationTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -380,66 +365,14 @@ function withOperationTimeout<T>(
   });
 }
 
-function linkedAbortSignals(...signals: Array<AbortSignal | undefined>) {
-  const activeSignals = signals.filter((item): item is AbortSignal => Boolean(item));
-  if (activeSignals.length <= 1) {
-    return {
-      signal: activeSignals[0],
-      cleanup: () => undefined,
-    };
-  }
-
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-  for (const signal of activeSignals) {
-    if (signal.aborted) {
-      controller.abort();
-    } else {
-      signal.addEventListener("abort", abort, { once: true });
-    }
-  }
-
-  return {
-    signal: controller.signal,
-    cleanup: () => {
-      for (const signal of activeSignals) {
-        signal.removeEventListener("abort", abort);
-      }
-    },
-  };
-}
-
-async function readStreamToBufferWithTimeout(input: {
-  stream: Readable;
-  signal?: AbortSignal;
-  timeoutMs: number;
-  label: string;
-}) {
-  try {
-    return await withOperationTimeout(streamToBuffer(input.stream, input.signal), input.timeoutMs, input.label);
-  } catch (error) {
-    input.stream.destroy(error instanceof Error ? error : new Error(String(error)));
-    throw error;
-  }
-}
-
 async function createSeekableStorageInputSource(
   file: NonNullable<Awaited<ReturnType<typeof getMediaFile>>>,
   setupSignal?: AbortSignal,
 ) {
-  const format = nodeAvInputFormat(file);
-  if (!format) {
-    throw new Error("Remote media format is not known enough for seekable transcoding.");
-  }
   if (!hasSeekableRemoteSize(file)) {
     throw new Error("Remote media size is not known enough for seekable transcoding.");
   }
 
-  let closed = false;
-  let readAhead: {
-    start: number;
-    buffer: Buffer;
-  } | null = null;
   const timeoutMs =
     sftpSeekableOperationTimeoutMsForTests ?? remoteOperationTimeoutMsFromConfig(file.source, file.config_json);
   const storage = await withOperationTimeout(
@@ -449,88 +382,45 @@ async function createSeekableStorageInputSource(
     (lateStorage) => lateStorage.close(),
     setupSignal,
   );
+  const inputSource = await createSeekableInputSourceFromStorage({
+    file: {
+      path: file.path,
+      extension: file.extension,
+      container: file.container,
+      sizeBytes: file.size_bytes,
+    },
+    storage,
+    timeoutMs,
+    setupSignal,
+    sniff: remoteContainerSniffNeeded(file),
+  });
 
   return {
-    kind: "seekable" as const,
-    label: file.path,
-    sizeBytes: file.size_bytes,
-    format,
+    kind: inputSource.kind,
+    label: inputSource.label,
+    sizeBytes: inputSource.sizeBytes,
+    format: inputSource.format,
     async read(start: number, length: number, readSignal?: AbortSignal) {
-      if (closed) throw new Error("Remote media input is already closed.");
       if (setupSignal?.aborted) {
         throw new Error(PLAYBACK_CANCELLED_MESSAGE);
       }
-      if (readSignal?.aborted) {
-        throw new Error(`Remote range read ${file.path} was cancelled.`);
-      }
-      if (!Number.isSafeInteger(start) || start < 0) {
-        throw new Error("Invalid remote media read offset.");
-      }
-      if (!Number.isSafeInteger(length) || length <= 0) {
-        return Buffer.alloc(0);
-      }
-      if (start >= file.size_bytes) return Buffer.alloc(0);
-      if (readAhead && start >= readAhead.start && start + length <= readAhead.start + readAhead.buffer.length) {
-        return readAhead.buffer.subarray(start - readAhead.start, start - readAhead.start + length);
-      }
-
-      const requestedBytes = Math.min(file.size_bytes - start, length);
-      const readAheadBytes =
-        length <= SFTP_SEEKABLE_MAX_BUFFER_BYTES
-          ? Math.min(
-              file.size_bytes - start,
-              Math.max(length, SFTP_SEEKABLE_READ_AHEAD_BYTES),
-              SFTP_SEEKABLE_MAX_BUFFER_BYTES,
-            )
-          : requestedBytes;
-      const end = start + readAheadBytes - 1;
-      const readAbort = linkedAbortSignals(setupSignal, readSignal);
-      let buffer: Buffer;
       try {
-        const stream = await withOperationTimeout(
-          storage.createReadStream(file.path, { start, end }, { keepOpen: true }),
-          timeoutMs,
-          `Remote range read ${file.path}`,
-          (lateStream) => {
-            lateStream.on("error", () => undefined);
-            lateStream.destroy();
-          },
-          readAbort.signal,
-        );
-        buffer = await readStreamToBufferWithTimeout({
-          stream,
-          signal: readAbort.signal,
-          timeoutMs,
-          label: `Remote range read ${file.path}`,
-        });
+        return await inputSource.read(start, length, readSignal);
       } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message === PLAYBACK_CANCELLED_MESSAGE &&
-          !setupSignal?.aborted &&
-          readSignal?.aborted
-        ) {
+        if (!(error instanceof Error) || error.message !== REMOTE_READ_CANCELLED_MESSAGE) {
+          throw error;
+        }
+        if (setupSignal?.aborted) {
+          throw new Error(PLAYBACK_CANCELLED_MESSAGE);
+        }
+        if (readSignal?.aborted) {
           throw new Error(`Remote range read ${file.path} was cancelled.`);
         }
         throw error;
-      } finally {
-        readAbort.cleanup();
       }
-      if (buffer.length < requestedBytes) {
-        throw new Error(
-          `Remote range read ${file.path} returned ${buffer.length} bytes for a ${requestedBytes} byte request.`,
-        );
-      }
-      if (buffer.length <= SFTP_SEEKABLE_MAX_BUFFER_BYTES) {
-        readAhead = { start, buffer };
-      } else {
-        readAhead = null;
-      }
-      return buffer.subarray(0, requestedBytes);
     },
     async close() {
-      if (closed) return;
-      closed = true;
+      await inputSource.close();
       await storage.close();
     },
   };

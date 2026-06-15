@@ -1,10 +1,12 @@
 import { DEFAULT_REMOTE_OPERATION_TIMEOUT_MS, type LibraryStorage } from "../storage";
 import type { SeekableTranscodeInputSource } from "./backend";
+import { detectContainerFromMagic, resolveNodeAvInputFormat } from "./container-format";
 import type { Readable } from "node:stream";
 
-const REMOTE_READ_CANCELLED_MESSAGE = "Remote media read was cancelled.";
+export const REMOTE_READ_CANCELLED_MESSAGE = "Remote media read was cancelled.";
 const SEEKABLE_READ_AHEAD_BYTES = 2 * 1024 * 1024;
 const SEEKABLE_MAX_BUFFER_BYTES = 4 * 1024 * 1024;
+const MAGIC_SNIFF_BYTES = 64;
 
 export type SeekableStorageFile = {
   path: string;
@@ -13,35 +15,18 @@ export type SeekableStorageFile = {
   sizeBytes: number;
 };
 
-export function nodeAvInputFormat(file: { container: string | null; extension: string | null }) {
-  const values = [file.container, file.extension]
-    .filter((value): value is string => Boolean(value))
-    .map((value) => value.toLowerCase().replace(/^\./, ""));
-
-  if (values.some((value) => value === "matroska" || value === "mkv")) {
-    return "matroska";
-  }
-  if (values.some((value) => value === "mp4" || value === "m4v" || value === "mov")) {
-    return "mp4";
-  }
-  if (values.includes("webm")) return "webm";
-  if (values.includes("avi")) return "avi";
-  if (values.includes("mpegts") || values.includes("ts")) return "mpegts";
-  return null;
-}
-
 export function hasSeekableRemoteSize(file: { size_bytes?: number; sizeBytes?: number }) {
   const size = file.size_bytes ?? file.sizeBytes;
   return Number.isSafeInteger(size) && Number(size) > 0;
 }
 
-function withOperationTimeout<T>(
+async function withOperationTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
   label: string,
   onLateResolve?: (value: T) => Promise<void> | void,
   signal?: AbortSignal,
-) {
+): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
   let abortHandler: (() => void) | undefined;
@@ -70,10 +55,12 @@ function withOperationTimeout<T>(
     })
     .catch(() => undefined);
 
-  return Promise.race([promise, timeoutPromise, abortPromise]).finally(() => {
+  try {
+    return await Promise.race([promise, timeoutPromise, abortPromise]);
+  } finally {
     if (timeout) clearTimeout(timeout);
     if (signal && abortHandler) signal.removeEventListener("abort", abortHandler);
-  });
+  }
 }
 
 function linkedAbortSignals(...signals: Array<AbortSignal | undefined>) {
@@ -134,24 +121,86 @@ async function readStreamToBufferWithTimeout(input: {
   }
 }
 
-export function createSeekableInputSourceFromStorage(input: {
+export async function sniffContainerFromStorage(input: {
+  filePath: string;
+  storage: LibraryStorage;
+  sizeBytes: number;
+  timeoutMs?: number;
+  setupSignal?: AbortSignal;
+}): Promise<{ container: string | null; head: Buffer | null }> {
+  if (!Number.isSafeInteger(input.sizeBytes) || input.sizeBytes <= 0) {
+    return { container: null, head: null };
+  }
+
+  const timeoutMs = input.timeoutMs ?? DEFAULT_REMOTE_OPERATION_TIMEOUT_MS;
+  const end = Math.min(input.sizeBytes - 1, MAGIC_SNIFF_BYTES - 1);
+  const readAbort = linkedAbortSignals(input.setupSignal);
+  try {
+    const stream = await withOperationTimeout(
+      input.storage.createReadStream(input.filePath, { start: 0, end }, { keepOpen: true }),
+      timeoutMs,
+      `Remote magic sniff ${input.filePath}`,
+      (lateStream) => {
+        lateStream.on("error", () => undefined);
+        lateStream.destroy();
+      },
+      readAbort.signal,
+    );
+    const head = await readStreamToBufferWithTimeout({
+      stream,
+      signal: readAbort.signal,
+      timeoutMs,
+      label: `Remote magic sniff ${input.filePath}`,
+    });
+    return {
+      container: detectContainerFromMagic(head),
+      head,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.message === REMOTE_READ_CANCELLED_MESSAGE) {
+      throw error;
+    }
+    return { container: null, head: null };
+  } finally {
+    readAbort.cleanup();
+  }
+}
+
+export async function createSeekableInputSourceFromStorage(input: {
   file: SeekableStorageFile;
   storage: LibraryStorage;
   timeoutMs?: number;
   setupSignal?: AbortSignal;
-}): SeekableTranscodeInputSource {
-  const format = nodeAvInputFormat(input.file);
-  if (!format) {
-    throw new Error("Remote media format is not known enough for seekable reads.");
-  }
+  sniff?: boolean;
+}): Promise<SeekableTranscodeInputSource> {
   if (!hasSeekableRemoteSize(input.file)) {
     throw new Error("Remote media size is not known enough for seekable reads.");
   }
 
-  let closed = false;
-  let readAhead: { start: number; buffer: Buffer } | null = null;
-  const sizeBytes = input.file.sizeBytes;
   const timeoutMs = input.timeoutMs ?? DEFAULT_REMOTE_OPERATION_TIMEOUT_MS;
+  const { container: sniffedContainer, head: prefixBuffer } =
+    input.sniff === false
+      ? { container: null, head: null }
+      : await sniffContainerFromStorage({
+          filePath: input.file.path,
+          storage: input.storage,
+          sizeBytes: input.file.sizeBytes,
+          timeoutMs,
+          setupSignal: input.setupSignal,
+        });
+  const format = resolveNodeAvInputFormat({
+    sniffedContainer,
+    container: input.file.container,
+    extension: input.file.extension,
+  });
+  if (!format) {
+    throw new Error("Remote media format is not known enough for seekable reads.");
+  }
+
+  let closed = false;
+  let readAhead: { start: number; buffer: Buffer } | null =
+    prefixBuffer && prefixBuffer.length > 0 ? { start: 0, buffer: prefixBuffer } : null;
+  const sizeBytes = input.file.sizeBytes;
 
   return {
     kind: "seekable",
