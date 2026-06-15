@@ -9,8 +9,6 @@ import {
   API_KEY_MAX_EXPIRES_IN_DAYS,
   API_KEY_MAX_NAME_LENGTH,
   API_KEY_PREFIX,
-  API_KEY_RATE_LIMIT_MAX_REQUESTS,
-  API_KEY_RATE_LIMIT_TIME_WINDOW_MS,
 } from "./api-key-config";
 import { roleForNewUser, signupAllowed } from "./users";
 
@@ -76,6 +74,10 @@ export async function createAuth() {
       autoSignIn: true,
       minPasswordLength: 8,
     },
+    rateLimit: {
+      window: 60,
+      max: 100,
+    },
     databaseHooks: {
       user: {
         create: {
@@ -103,9 +105,7 @@ export async function createAuth() {
           minExpiresIn: 0,
         },
         rateLimit: {
-          enabled: true,
-          timeWindow: API_KEY_RATE_LIMIT_TIME_WINDOW_MS,
-          maxRequests: API_KEY_RATE_LIMIT_MAX_REQUESTS,
+          enabled: false,
         },
         enableSessionForAPIKeys: true,
         schema: {
