@@ -11,7 +11,6 @@ import {
   parseSftpConfig,
   parseWebdavConfig,
   walkRemoteFiles,
-  walkSftpFiles,
   webdavDisplayPath,
 } from ".";
 

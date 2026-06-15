@@ -51,17 +51,21 @@ function fileStatToRemoteEntry(entry: FileStat): RemoteDirectoryEntry {
   };
 }
 
+function normalizeFileStat(result: FileStat | { data: FileStat }): FileStat {
+  return "data" in result ? result.data : result;
+}
+
 function webdavConnect(config: WebdavLibraryConfig): WebDAVClient {
   return createClient(webdavClientUrl(config), {
     username: config.username,
     password: decryptSecret(config.passwordEncrypted),
-    maxRedirects: 3,
   });
 }
 
 async function webdavStat(client: WebDAVClient, filePath: string, timeoutMs: number, options?: { raw?: boolean }) {
   const target = options?.raw ? filePath : webdavPath(filePath);
-  return withTimeout(client.stat(target), timeoutMs, `WebDAV stat ${filePath}`);
+  const result = await withTimeout(client.stat(target), timeoutMs, `WebDAV stat ${filePath}`);
+  return normalizeFileStat(result);
 }
 
 async function webdavDirectoryExists(
@@ -203,7 +207,10 @@ export async function testWebdavConnection(config: WebdavLibraryConfig) {
     stats = await webdavStat(client, config.root, operationTimeoutMs);
   } catch (error) {
     const withoutLeadingSlash = config.root.startsWith("/") ? config.root.slice(1) : "";
-      if (withoutLeadingSlash && (await webdavDirectoryExists(client, withoutLeadingSlash, operationTimeoutMs, { raw: true }))) {
+    if (
+      withoutLeadingSlash &&
+      (await webdavDirectoryExists(client, withoutLeadingSlash, operationTimeoutMs, { raw: true }))
+    ) {
       throw new Error(`WebDAV root was not found. Try "${withoutLeadingSlash}" without the leading slash.`);
     }
     throw new Error(`WebDAV root was not found: ${remoteErrorMessage(error)}`);

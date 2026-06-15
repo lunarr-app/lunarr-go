@@ -183,5 +183,3 @@ export async function* walkRemoteFiles(
     fillQueue();
   }
 }
-
-export const walkSftpFiles = walkRemoteFiles;

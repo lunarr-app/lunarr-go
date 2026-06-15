@@ -19,7 +19,6 @@ import {
   normalizeSftpWalkConcurrency,
   remoteErrorMessage,
   walkRemoteFiles,
-  walkSftpFiles,
   withTimeout,
   type RemoteDirectoryEntry,
   type StorageFileInfo,
@@ -36,6 +35,7 @@ import {
 
 export type { StorageFileInfo, StorageWalkEntry, RemoteDirectoryEntry };
 export {
+  DEFAULT_REMOTE_OPERATION_TIMEOUT_MS,
   DEFAULT_SFTP_OPERATION_TIMEOUT_MS,
   DEFAULT_SFTP_WALK_CONCURRENCY,
   MAX_SFTP_OPERATION_TIMEOUT_MS,
@@ -48,7 +48,6 @@ export {
   normalizeWebdavOperationTimeoutMs,
   normalizeWebdavWalkConcurrency,
   walkRemoteFiles,
-  walkSftpFiles,
 } from "./remote";
 export {
   createWebdavStorage,
