@@ -184,22 +184,22 @@
     inset: 0;
     z-index: 100;
     display: grid;
-    place-items: center;
-    background: rgba(0, 0, 0, 0.72);
-    padding: clamp(0.65rem, 2vw, 1.5rem);
+    background: #000;
+    padding: 0;
   }
 
   .modal {
-    width: min(100%, 80rem);
-    max-height: calc(100dvh - 2rem);
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
     display: grid;
     grid-template-rows: minmax(0, 1fr);
     border: 0;
-    border-radius: 8px;
-    background: transparent;
+    border-radius: 0;
+    background: #000;
     box-shadow: none;
     padding: 0;
-    overflow: visible;
+    overflow: hidden;
   }
 
   p,
@@ -210,11 +210,32 @@
   .player-frame {
     min-width: 0;
     min-height: 0;
+    height: 100%;
     display: grid;
-    gap: 0.6rem;
+    gap: 0;
+  }
+
+  .player-frame :global(.video-shell) {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+
+  .player-frame :global(.placeholder-shell) {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+    aspect-ratio: auto;
   }
 
   .message {
+    align-self: center;
+    justify-self: center;
+    width: min(100% - 2rem, 36rem);
     display: grid;
     gap: 0.35rem;
     border: 1px solid var(--color-warning-border);
@@ -223,24 +244,17 @@
     padding: 1rem;
   }
 
+  .player-frame :global(.playback-message) {
+    align-self: center;
+    justify-self: center;
+    width: min(100% - 2rem, 36rem);
+  }
+
   .message h2 {
     font-size: 1.05rem;
   }
 
   .message p {
     color: var(--color-subtle);
-  }
-
-  @media (max-width: 720px) {
-    .overlay {
-      align-items: center;
-      padding: 0;
-    }
-
-    .modal {
-      width: 100%;
-      max-height: 100dvh;
-      border-radius: 0;
-    }
   }
 </style>
