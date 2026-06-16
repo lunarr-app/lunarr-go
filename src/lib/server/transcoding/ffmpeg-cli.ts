@@ -9,7 +9,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { ffmpegPath } from "node-av/ffmpeg";
-import { encodeEventPlaylistPath, encodeJobId } from "./encode-coordinator";
+import { encodeEventPlaylistPath, encodeFmp4InitFileName, encodeJobId } from "./encode-coordinator";
 import { hlsEventPlaylistHasSegment, ENCODE_AHEAD_SEGMENT_COUNT, type HlsSegmentFormat } from "./hls";
 
 const STDERR_MAX_BYTES = 32 * 1024;
@@ -348,7 +348,11 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
     input.mode === "remux" ? "temp_file" : "independent_segments+temp_file",
   );
   if (segmentFormat === "fmp4") {
-    args.push("-hls_segment_type", "fmp4", "-hls_fmp4_init_filename", "init.mp4");
+    const initFileName =
+      startSegmentNumber !== undefined && Number.isSafeInteger(startSegmentNumber) && input.sessionId
+        ? encodeFmp4InitFileName(input.sessionId, startSegmentNumber)
+        : "init.mp4";
+    args.push("-hls_segment_type", "fmp4", "-hls_fmp4_init_filename", initFileName);
   }
   if (Number.isSafeInteger(startSegmentNumber)) {
     args.push("-start_number", String(startSegmentNumber));

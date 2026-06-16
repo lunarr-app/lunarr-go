@@ -12,6 +12,8 @@ export type ActiveEncodeJob = {
   lastSegmentIndex: number;
   completion: Promise<void>;
   abort: () => void;
+  cancelledBySessionSeek?: boolean;
+  cancelledForSegmentIndex?: number;
 };
 
 export type EncodeJobHandle = {
@@ -34,12 +36,27 @@ export function encodeEventPlaylistPath(artifactDirectory: string, sessionId: st
   return path.join(artifactDirectory, `encode-${encodeJobId(sessionId, startSegmentIndex).replace(/\0/g, "-")}.m3u8`);
 }
 
+export function encodeFmp4InitFileName(sessionId: string, startSegmentIndex: number) {
+  return `encode-${encodeJobId(sessionId, startSegmentIndex).replace(/\0/g, "-")}-init.mp4`;
+}
+
 export function jobCovers(job: Pick<ActiveEncodeJob, "firstSegmentIndex" | "lastSegmentIndex">, segmentIndex: number) {
   return segmentIndex >= job.firstSegmentIndex && segmentIndex <= job.lastSegmentIndex;
 }
 
 function ensureKey(cacheKey: string, segment: string) {
   return `${cacheKey}\0${segment}`;
+}
+
+function shouldGiveUpAfterSessionSeekCancel(
+  ensuringSegmentIndex: number,
+  job: Pick<ActiveEncodeJob, "cancelledBySessionSeek" | "cancelledForSegmentIndex">,
+) {
+  return (
+    job.cancelledBySessionSeek === true &&
+    job.cancelledForSegmentIndex !== undefined &&
+    ensuringSegmentIndex > job.cancelledForSegmentIndex
+  );
 }
 
 class EncodeReservationReleasedError extends Error {
@@ -218,6 +235,8 @@ export class EncodeCoordinator {
     for (const job of [...this.jobs]) {
       if (job.sessionId !== sessionId) continue;
       if (jobCovers(job, segmentIndex)) continue;
+      job.cancelledBySessionSeek = true;
+      job.cancelledForSegmentIndex = segmentIndex;
       job.abort();
     }
   }
@@ -338,7 +357,14 @@ export class EncodeCoordinator {
           await delay(SEGMENT_POLL_MS);
         }
       }
-      if (completionAborted || input.signal?.aborted) return false;
+      if (input.signal?.aborted) return false;
+      if (completionAborted) {
+        if (covering.cancelledBySessionSeek && covering.sessionId === input.sessionId) {
+          return false;
+        }
+        this.removeJob(covering.jobId);
+        break;
+      }
       if (completionFailed) {
         covering.abort();
         this.removeJob(covering.jobId);
@@ -405,8 +431,20 @@ export class EncodeCoordinator {
       }
       if (!started) {
         releaseReservation(new EncodeReservationReleasedError());
+        const seekCancel = {
+          cancelledBySessionSeek: reservedJob.cancelledBySessionSeek,
+          cancelledForSegmentIndex: reservedJob.cancelledForSegmentIndex,
+        };
         this.removeJob(reservedJob.jobId);
-        if (jobController.signal.aborted) continue;
+        if (jobController.signal.aborted) {
+          if (
+            shouldGiveUpAfterSessionSeekCancel(input.segmentIndex, seekCancel) &&
+            reservedJob.sessionId === input.sessionId
+          ) {
+            return false;
+          }
+          continue;
+        }
         return false;
       }
 
@@ -434,6 +472,10 @@ export class EncodeCoordinator {
         return false;
       }
       if (!ready || !(await input.segmentExists(input.segment))) {
+        const seekCancel = {
+          cancelledBySessionSeek: reservedJob.cancelledBySessionSeek,
+          cancelledForSegmentIndex: reservedJob.cancelledForSegmentIndex,
+        };
         let completionAborted = false;
         try {
           await started.completion;
@@ -448,7 +490,13 @@ export class EncodeCoordinator {
           await input.assertPlayable();
           return true;
         }
-        if (completionAborted || input.signal?.aborted) return false;
+        if (input.signal?.aborted) return false;
+        if (completionAborted) {
+          if (seekCancel.cancelledBySessionSeek && reservedJob.sessionId === input.sessionId) {
+            return false;
+          }
+          continue;
+        }
         throw new Error(`Request-driven HLS segment generation completed without publishing ${input.segment}.`);
       }
       await input.assertPlayable();

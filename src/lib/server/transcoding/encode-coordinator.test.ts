@@ -231,6 +231,61 @@ describe("encode-coordinator", () => {
     expect(await waiting).toBe(true);
   });
 
+  test("ensureSegment starts a new job after a covering job is aborted", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-encode-coordinator-"));
+    const coordinator = new EncodeCoordinator("cache-1");
+    let startCount = 0;
+
+    const abortedCompletion = new Promise<void>((_resolve, reject) => {
+      reject(new Error("stale encode aborted"));
+    });
+    abortedCompletion.catch(() => undefined);
+
+    coordinator.registerJob({
+      jobId: encodeJobId("session-1", 10),
+      sessionId: "session-1",
+      cacheKey: "cache-1",
+      firstSegmentIndex: 10,
+      lastSegmentIndex: 13,
+      completion: abortedCompletion,
+      abort: () => undefined,
+    });
+
+    const segmentExists = async (name: string) => {
+      try {
+        await access(path.join(tempDir, name));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const result = await coordinator.ensureSegment({
+      sessionId: "session-1",
+      segment: "segment-00011.ts",
+      segmentIndex: 11,
+      encodeAheadSegmentCount: 4,
+      segmentTimeoutMs: 500,
+      segmentExists,
+      assertPlayable: async () => undefined,
+      startJob: async (segmentIndex, _signal): Promise<EncodeJobHandle> => {
+        startCount += 1;
+        await mkdir(tempDir, { recursive: true });
+        await writeFile(path.join(tempDir, `segment-${String(segmentIndex).padStart(5, "0")}.ts`), "encoded");
+        return {
+          jobId: encodeJobId("session-1", segmentIndex),
+          firstSegmentIndex: segmentIndex,
+          lastSegmentIndex: segmentIndex + 3,
+          completion: Promise.resolve(),
+          abort: () => undefined,
+        };
+      },
+    });
+
+    expect(result).toBe(true);
+    expect(startCount).toBe(1);
+  });
+
   test("ensureSegment starts a new job when a covering job completes without the requested segment", async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-encode-coordinator-"));
     const coordinator = new EncodeCoordinator("cache-1");
