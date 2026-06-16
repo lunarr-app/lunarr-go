@@ -320,6 +320,35 @@ export async function createLibraryStorage(library: StoredLibrary): Promise<Libr
   return createLocalStorage();
 }
 
+function createTestRemoteLibraryStorage(source: Exclude<LibrarySource, "local">): LibraryStorage {
+  return {
+    source,
+    async statFile() {
+      return null;
+    },
+    async listFiles() {
+      return null;
+    },
+    async *walkFiles() {
+      return;
+    },
+    async createReadStream(_filePath, range) {
+      if (!range) throw new Error("Expected a range read.");
+      return Readable.from(Buffer.alloc(range.end - range.start + 1, 0));
+    },
+    async close() {
+      return;
+    },
+  };
+}
+
+export async function createDefaultLibraryStorageForTests(library: StoredLibrary): Promise<LibraryStorage> {
+  if (library.source === "sftp" || library.source === "webdav") {
+    return createTestRemoteLibraryStorage(library.source);
+  }
+  return createLibraryStorage(library);
+}
+
 export async function testSftpConnection(config: SftpLibraryConfig) {
   const { client, sftp } = await sftpConnect(config);
   const operationTimeoutMs = config.operationTimeoutMs;

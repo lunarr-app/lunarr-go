@@ -7,7 +7,7 @@ import {
   normalizeRemoteWalkConcurrency,
   walkRemoteFiles,
 } from "./remote";
-import { parseSftpConfig, parseWebdavConfig, webdavDisplayPath } from ".";
+import { parseSftpConfig, parseWebdavConfig, webdavDisplayPath, createDefaultLibraryStorageForTests } from ".";
 
 function remoteEntry(filename: string, kind: "directory" | "file"): FileEntryWithStats {
   return {
@@ -130,5 +130,21 @@ describe("parseSftpConfig", () => {
     expect(() => parseSftpConfig(JSON.stringify({ host: "sftp.example.com" }))).toThrow(
       "SFTP library config is incomplete.",
     );
+  });
+});
+
+describe("createDefaultLibraryStorageForTests", () => {
+  test("returns in-memory remote storage without parsing library config", async () => {
+    const storage = await createDefaultLibraryStorageForTests({
+      source: "sftp",
+      config_json: "{}",
+    });
+    const stream = await storage.createReadStream("/movies/file.mkv", { start: 0, end: 3 });
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    expect(Buffer.concat(chunks)).toHaveLength(4);
+    await storage.close();
   });
 });

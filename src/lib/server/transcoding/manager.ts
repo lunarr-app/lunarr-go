@@ -43,7 +43,11 @@ import type { TranscodeBackend } from "./backend";
 import type { TranscodeMode } from "../db/schema/streaming";
 import { currentDatabasePaths, getDb } from "../db";
 import { getMediaFile } from "../media";
-import { createLibraryStorage, remoteOperationTimeoutMsFromConfig } from "../storage";
+import {
+  createDefaultLibraryStorageForTests,
+  createLibraryStorage,
+  remoteOperationTimeoutMsFromConfig,
+} from "../storage";
 import { isRemoteLibrarySource } from "../libraries/source";
 import { getTranscodePolicy } from "./policy";
 import {
@@ -440,10 +444,11 @@ export function setTranscodeBackendForTests(backend: TranscodeBackend | null) {
 }
 
 export function setTranscodeStorageFactoryForTests(factory: typeof createLibraryStorage | null) {
-  storageFactory = factory ?? createLibraryStorage;
   if (factory === null) {
     sftpSeekableOperationTimeoutMsForTests = null;
+    resetEncodeCoordinatorsForTests();
   }
+  storageFactory = factory ?? createDefaultLibraryStorageForTests;
 }
 
 export function setSftpSeekableOperationTimeoutForTests(timeoutMs: number | null) {
