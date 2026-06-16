@@ -49,6 +49,7 @@ async function findOrCreateMovieItem(
   filePath: string,
   onMetadataError?: (error: unknown) => Promise<void>,
   metadataMatcher?: MovieMetadataMatcher,
+  fileRuntimeSeconds?: number | null,
 ) {
   const db = await getDb();
   const candidates = movieLookupCandidates(filePath, undefined, { libraryRoot });
@@ -56,6 +57,7 @@ async function findOrCreateMovieItem(
   const lookup = await lookupMovieMetadataFromCandidates(candidates, {
     onError: onMetadataError,
     matcher: metadataMatcher,
+    fileRuntimeSeconds,
   });
   const metadata = lookup?.metadata ?? null;
   const now = nowIso();
@@ -166,7 +168,13 @@ export async function scanMovieFile(
       return "unchanged" as const;
     }
 
-    const mediaItemId = await findOrCreateMovieItem(library.path, filePath, onMetadataError, metadataMatcher);
+    const mediaItemId = await findOrCreateMovieItem(
+      library.path,
+      filePath,
+      onMetadataError,
+      metadataMatcher,
+      fileValues.duration_seconds,
+    );
     const values = {
       ...fileValues,
       media_item_id: mediaItemId,
@@ -189,7 +197,13 @@ export async function scanMovieFile(
     return "updated" as const;
   }
 
-  const mediaItemId = await findOrCreateMovieItem(library.path, filePath, onMetadataError, metadataMatcher);
+  const mediaItemId = await findOrCreateMovieItem(
+    library.path,
+    filePath,
+    onMetadataError,
+    metadataMatcher,
+    fileValues.duration_seconds,
+  );
   const values = {
     ...fileValues,
     media_item_id: mediaItemId,

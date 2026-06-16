@@ -93,6 +93,7 @@ export async function refreshMovieMetadataResult(
       "media_item.year",
       "media_file.basename as basename",
       "media_file.path as path",
+      "media_file.duration_seconds as duration_seconds",
       "library.path as library_path",
     ])
     .where("media_item.id", "=", mediaItemId)
@@ -106,6 +107,7 @@ export async function refreshMovieMetadataResult(
   const lookup =
     (await lookupMovieMetadataFromPath(movie.path ?? movie.basename ?? "", {
       libraryRoot: movie.library_path,
+      fileRuntimeSeconds: movie.duration_seconds,
       fallback: {
         title: movie.title,
         year: movie.year,

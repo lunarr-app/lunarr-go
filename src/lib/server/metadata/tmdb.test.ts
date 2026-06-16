@@ -4,7 +4,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "../db";
 import { setSetting } from "../settings";
-import { matchMovieMetadata, matchTvSeasonMetadata, testTmdbConnection, tmdbCredentialsConfigured } from "./tmdb";
+import {
+  matchMovieMetadata,
+  matchTvSeasonMetadata,
+  movieMetadataMatchAccepts,
+  movieMetadataRuntimesCompatible,
+  testTmdbConnection,
+  tmdbCredentialsConfigured,
+} from "./tmdb";
 
 describe("matchMovieMetadata", () => {
   test("reports whether TMDb credentials are configured", async () => {
@@ -326,6 +333,54 @@ describe("matchMovieMetadata", () => {
     expect(metadata?.providerId).toBe("603");
   });
 
+  test("retries adjacent and unscoped searches when the requested release year has no results", async () => {
+    const searchCalls: string[] = [];
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/movie")) {
+        searchCalls.push(url);
+        if (url.includes("primary_release_year=2013")) {
+          return Response.json({ results: [] });
+        }
+        if (url.includes("primary_release_year=2014")) {
+          return Response.json({
+            results: [
+              {
+                id: 208284,
+                title: "The Strange Color of Your Body's Tears",
+                release_date: "2014-03-12",
+              },
+            ],
+          });
+        }
+        return Response.json({ results: [] });
+      }
+
+      detailCalls.push(url);
+      return Response.json({
+        id: 208284,
+        title: "The Strange Color of Your Body's Tears",
+        release_date: "2014-03-12",
+        runtime: 102,
+      });
+    };
+
+    const metadata = await matchMovieMetadata("The Strange Color of Your Body's Tears", 2013, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(searchCalls.some((url) => url.includes("primary_release_year=2013"))).toBe(true);
+    expect(searchCalls.some((url) => url.includes("primary_release_year=2014"))).toBe(true);
+    expect(detailCalls).toHaveLength(1);
+    expect(metadata).toMatchObject({
+      providerId: "208284",
+      year: 2014,
+      runtimeSeconds: 6120,
+    });
+  });
+
   test("does not accept unrelated same-year movie results", async () => {
     const detailCalls: string[] = [];
     const mockedFetch = async (input: URL | RequestInfo) => {
@@ -497,6 +552,62 @@ describe("matchMovieMetadata", () => {
       ok: false,
       message: "TMDb credentials are missing or no test movie was returned.",
     });
+  });
+});
+
+describe("movie metadata acceptance", () => {
+  test("accepts adjacent release years when runtimes agree within tolerance", () => {
+    expect(
+      movieMetadataMatchAccepts({
+        queryTitle: "The Strange Color of Your Body's Tears",
+        queryYear: 2013,
+        metadataTitle: "The Strange Color of Your Body's Tears",
+        metadataYear: 2014,
+        fileRuntimeSeconds: 6120,
+        metadataRuntimeSeconds: 6120,
+      }),
+    ).toBe(true);
+    expect(movieMetadataRuntimesCompatible(6120, 6300, 300)).toBe(true);
+    expect(movieMetadataRuntimesCompatible(6120, 6600, 300)).toBe(false);
+  });
+
+  test("accepts adjacent release years when either runtime is unknown", () => {
+    expect(
+      movieMetadataMatchAccepts({
+        queryTitle: "The Strange Color of Your Body's Tears",
+        queryYear: 2013,
+        metadataTitle: "The Strange Color of Your Body's Tears",
+        metadataYear: 2014,
+        fileRuntimeSeconds: null,
+        metadataRuntimeSeconds: 6120,
+      }),
+    ).toBe(true);
+  });
+
+  test("rejects adjacent release years when runtimes disagree", () => {
+    expect(
+      movieMetadataMatchAccepts({
+        queryTitle: "The Strange Color of Your Body's Tears",
+        queryYear: 2013,
+        metadataTitle: "The Strange Color of Your Body's Tears",
+        metadataYear: 2014,
+        fileRuntimeSeconds: 5400,
+        metadataRuntimeSeconds: 6120,
+      }),
+    ).toBe(false);
+  });
+
+  test("rejects matches more than one year apart", () => {
+    expect(
+      movieMetadataMatchAccepts({
+        queryTitle: "The Matrix",
+        queryYear: 2002,
+        metadataTitle: "The Matrix",
+        metadataYear: 1999,
+        fileRuntimeSeconds: 8160,
+        metadataRuntimeSeconds: 8160,
+      }),
+    ).toBe(false);
   });
 });
 

@@ -95,4 +95,36 @@ describe("lookupMovieMetadataFromCandidates", () => {
     expect(result?.metadata.providerId).toBe("correct");
     expect(result?.candidate).toEqual({ title: "Snow White", year: 2025 });
   });
+
+  test("accepts adjacent release years when file and TMDb runtimes agree", async () => {
+    const matcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
+      if (title === "The Strange Color of Your Body's Tears" && year === 2013) {
+        return {
+          provider: "tmdb",
+          providerId: "208284",
+          title: "The Strange Color of Your Body's Tears",
+          year: 2014,
+          overview: null,
+          runtimeSeconds: 6120,
+          posterPath: null,
+          backdropPath: null,
+          releaseDate: "2014-03-12",
+          popularity: null,
+          voteAverage: null,
+        };
+      }
+      return null;
+    };
+
+    const result = await lookupMovieMetadataFromCandidates(
+      [{ title: "The Strange Color of Your Body's Tears", year: 2013 }],
+      {
+        matcher,
+        fileRuntimeSeconds: 6120,
+      },
+    );
+
+    expect(result?.metadata.providerId).toBe("208284");
+    expect(result?.candidate).toEqual({ title: "The Strange Color of Your Body's Tears", year: 2013 });
+  });
 });

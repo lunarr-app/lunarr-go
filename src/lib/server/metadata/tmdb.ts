@@ -445,6 +445,29 @@ function titleMatches(result: TmdbSearchResult, title: string) {
   );
 }
 
+export const MOVIE_METADATA_RUNTIME_TOLERANCE_SECONDS = 300;
+
+function normalizedRuntimeSeconds(value: number | null | undefined) {
+  if (!Number.isFinite(value) || Number(value) <= 0) return null;
+  return Math.round(Number(value));
+}
+
+export function movieMetadataRuntimesCompatible(
+  fileRuntimeSeconds: number | null | undefined,
+  metadataRuntimeSeconds: number | null | undefined,
+  toleranceSeconds = MOVIE_METADATA_RUNTIME_TOLERANCE_SECONDS,
+) {
+  const fileRuntime = normalizedRuntimeSeconds(fileRuntimeSeconds);
+  const metadataRuntime = normalizedRuntimeSeconds(metadataRuntimeSeconds);
+  if (fileRuntime === null || metadataRuntime === null) return true;
+  return Math.abs(fileRuntime - metadataRuntime) <= Math.max(0, toleranceSeconds);
+}
+
+export function movieMetadataYearDelta(queryYear: number | null, metadataYear: number | null) {
+  if (queryYear === null || metadataYear === null) return null;
+  return Math.abs(queryYear - metadataYear);
+}
+
 export function movieMetadataMatchScore(
   queryTitle: string,
   queryYear: number | null,
@@ -460,8 +483,31 @@ export function movieMetadataMatchScore(
     return 0;
   }
 
-  if (queryYear !== null && metadataYear === queryYear) score += 10;
+  const yearDelta = movieMetadataYearDelta(queryYear, metadataYear);
+  if (yearDelta === 0) score += 10;
+  else if (yearDelta === 1) score += 5;
   return score;
+}
+
+export function movieMetadataMatchAccepts(input: {
+  queryTitle: string;
+  queryYear: number | null;
+  metadataTitle: string;
+  metadataYear: number | null;
+  fileRuntimeSeconds?: number | null;
+  metadataRuntimeSeconds?: number | null;
+}) {
+  const score = movieMetadataMatchScore(input.queryTitle, input.queryYear, input.metadataTitle, input.metadataYear);
+  if (score === 0) return false;
+  if (input.queryYear === null) return score >= 100;
+
+  const yearDelta = movieMetadataYearDelta(input.queryYear, input.metadataYear);
+  if (yearDelta === null) return score >= 100;
+  if (yearDelta === 0) return true;
+  if (yearDelta > 1) return false;
+
+  if (score < 100) return false;
+  return movieMetadataRuntimesCompatible(input.fileRuntimeSeconds, input.metadataRuntimeSeconds);
 }
 
 function tvTitleMatches(result: TmdbTvSearchResult, title: string) {
@@ -682,21 +728,22 @@ function mapTvEpisodeMetadata(
   };
 }
 
-export async function matchMovieMetadata(
+async function matchMovieMetadataForSearchYear(
   title: string,
-  year: number | null,
+  searchYear: number | null,
+  resultYear: number | null,
   options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
 ) {
   const searchUrl = new URL("https://api.themoviedb.org/3/search/movie");
   searchUrl.searchParams.set("query", title);
-  if (year) {
-    searchUrl.searchParams.set("year", String(year));
-    searchUrl.searchParams.set("primary_release_year", String(year));
+  if (searchYear !== null) {
+    searchUrl.searchParams.set("year", String(searchYear));
+    searchUrl.searchParams.set("primary_release_year", String(searchYear));
   }
   searchUrl.searchParams.set("include_adult", "false");
 
   const search = await tmdbFetch<{ results: TmdbSearchResult[] }>(searchUrl, options.credentials, options.fetch);
-  const first = bestSearchResult(search?.results, title, year);
+  const first = bestSearchResult(search?.results, title, resultYear);
   if (!first) return null;
 
   const detailUrl = new URL(`https://api.themoviedb.org/3/movie/${first.id}`);
@@ -807,6 +854,28 @@ export async function matchMovieMetadata(
         name: language.name,
       })),
   } satisfies MatchedMovieMetadata;
+}
+
+function movieMetadataSearchYears(queryYear: number | null) {
+  if (queryYear === null) return [null];
+  return [queryYear, queryYear - 1, queryYear + 1, null];
+}
+
+export async function matchMovieMetadata(
+  title: string,
+  year: number | null,
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+) {
+  const seenProviderIds = new Set<string>();
+
+  for (const searchYear of movieMetadataSearchYears(year)) {
+    const metadata = await matchMovieMetadataForSearchYear(title, searchYear, searchYear ?? year, options);
+    if (!metadata || seenProviderIds.has(metadata.providerId)) continue;
+    seenProviderIds.add(metadata.providerId);
+    return metadata;
+  }
+
+  return null;
 }
 
 export async function matchTvSeasonMetadata(

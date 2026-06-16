@@ -1,6 +1,7 @@
 import {
   matchMovieMetadata,
   matchTvSeasonMetadata,
+  movieMetadataMatchAccepts,
   movieMetadataMatchScore,
   type MatchedMovieMetadata,
   type MatchedTvSeasonLookup,
@@ -37,6 +38,7 @@ export async function lookupMovieMetadata(
 export async function lookupMovieMetadataFromCandidates(
   candidates: ParsedMovieLookup[],
   options: {
+    fileRuntimeSeconds?: number | null;
     onError?: (error: unknown) => Promise<void>;
     matcher?: MovieMetadataMatcher;
   } = {},
@@ -46,6 +48,19 @@ export async function lookupMovieMetadataFromCandidates(
   for (const candidate of candidates) {
     const metadata = await lookupMovieMetadata(candidate.title, candidate.year, options.onError, options.matcher);
     if (!metadata) continue;
+
+    if (
+      !movieMetadataMatchAccepts({
+        queryTitle: candidate.title,
+        queryYear: candidate.year,
+        metadataTitle: metadata.title,
+        metadataYear: metadata.year,
+        fileRuntimeSeconds: options.fileRuntimeSeconds,
+        metadataRuntimeSeconds: metadata.runtimeSeconds,
+      })
+    ) {
+      continue;
+    }
 
     const score = movieMetadataMatchScore(candidate.title, candidate.year, metadata.title, metadata.year);
     if (score === 0) continue;
@@ -63,6 +78,7 @@ export async function lookupMovieMetadataFromCandidates(
 export async function lookupMovieMetadataFromPath(
   filePath: string,
   options: {
+    fileRuntimeSeconds?: number | null;
     libraryRoot?: string | null;
     fallback?: ParsedMovieLookup;
     onError?: (error: unknown) => Promise<void>;
