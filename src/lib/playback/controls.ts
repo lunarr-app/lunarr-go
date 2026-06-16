@@ -496,29 +496,6 @@ export function nextControlsActivityTick(currentTick: number) {
   return Number.isFinite(currentTick) ? currentTick + 1 : 1;
 }
 
-export function playerSurfaceClickState(input: {
-  uiState: PlayerControlUiState;
-  controlsVisible: boolean;
-  subtitleMenuOpen: boolean;
-}) {
-  if (input.subtitleMenuOpen) {
-    return {
-      controlsVisible: true,
-      subtitleMenuOpen: false,
-    };
-  }
-  if (input.uiState !== "playing") {
-    return {
-      controlsVisible: true,
-      subtitleMenuOpen: false,
-    };
-  }
-  return {
-    controlsVisible: !input.controlsVisible,
-    subtitleMenuOpen: false,
-  };
-}
-
 export type PlayerSurfaceClickAction = "seek-backward" | "toggle-playback" | "seek-forward";
 
 export function playerSurfaceClickAction(input: {

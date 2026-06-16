@@ -551,17 +551,6 @@ try {
         message: `Expected pointer movement to refresh visible controls without revealing hidden playing controls, got ${JSON.stringify({ hiddenPlayingPointerMove, visiblePlayingPointerMove })}.`,
       };
     }
-    const surfaceClickWithSubtitleMenu = controls.playerSurfaceClickState({
-      uiState: "playing",
-      controlsVisible: true,
-      subtitleMenuOpen: true,
-    });
-    if (!surfaceClickWithSubtitleMenu.controlsVisible || surfaceClickWithSubtitleMenu.subtitleMenuOpen) {
-      return {
-        ok: false,
-        message: `Expected surface click to close subtitle menu before hiding controls, got ${JSON.stringify(surfaceClickWithSubtitleMenu)}.`,
-      };
-    }
     const surfaceActions = {
       left: controls.playerSurfaceClickAction({
         clientX: 5,

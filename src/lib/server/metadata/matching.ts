@@ -63,7 +63,6 @@ export async function lookupMovieMetadataFromCandidates(
     }
 
     const score = movieMetadataMatchScore(candidate.title, candidate.year, metadata.title, metadata.year);
-    if (score === 0) continue;
 
     if (!best || score > best.score) {
       best = { metadata, candidate, score };

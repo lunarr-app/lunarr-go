@@ -29,7 +29,6 @@ import {
   playbackSeekAction,
   playbackTimeRangeText,
   playerSurfaceClickAction,
-  playerSurfaceClickState,
   playerStatusOverlayState,
   releaseCastOwnedPlaybackSession,
   shouldAutoHideControls,
@@ -944,47 +943,7 @@ describe("custom player controls", () => {
     expect(nextControlsActivityTick(Number.NaN)).toBe(1);
   });
 
-  test("maps video surface double-click zones and subtitle menu single-click state", () => {
-    expect(
-      playerSurfaceClickState({
-        uiState: "playing",
-        controlsVisible: true,
-        subtitleMenuOpen: false,
-      }),
-    ).toEqual({
-      controlsVisible: false,
-      subtitleMenuOpen: false,
-    });
-    expect(
-      playerSurfaceClickState({
-        uiState: "playing",
-        controlsVisible: false,
-        subtitleMenuOpen: false,
-      }),
-    ).toEqual({
-      controlsVisible: true,
-      subtitleMenuOpen: false,
-    });
-    expect(
-      playerSurfaceClickState({
-        uiState: "paused",
-        controlsVisible: false,
-        subtitleMenuOpen: false,
-      }),
-    ).toEqual({
-      controlsVisible: true,
-      subtitleMenuOpen: false,
-    });
-    expect(
-      playerSurfaceClickState({
-        uiState: "playing",
-        controlsVisible: true,
-        subtitleMenuOpen: true,
-      }),
-    ).toEqual({
-      controlsVisible: true,
-      subtitleMenuOpen: false,
-    });
+  test("maps video surface double-click zones", () => {
     expect(
       playerSurfaceClickAction({
         clientX: 10,
