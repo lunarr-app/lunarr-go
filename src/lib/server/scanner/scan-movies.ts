@@ -3,8 +3,8 @@ import { createId } from "../id";
 import { nowIso } from "../time";
 import { isRemoteLibrarySource } from "../libraries/source";
 import { emptyMovieMetadataValues, movieMetadataValues, syncMovieMetadataRelations } from "../metadata/store";
-import { movieLookupCandidates, movieLookupFromPath, type ParsedMovieLookup } from "../metadata/movie-lookup";
-import { lookupMovieMetadataFromPath, type MovieMetadataMatcher } from "../metadata/matching";
+import { movieLookupCandidates, type ParsedMovieLookup } from "../metadata/movie-lookup";
+import { lookupMovieMetadataFromCandidates, type MovieMetadataMatcher } from "../metadata/matching";
 import type { StorageFileInfo } from "../storage";
 import { replaceMediaStreamInfo } from "../transcoding/probe";
 import {
@@ -53,9 +53,8 @@ async function findOrCreateMovieItem(
 ) {
   const db = await getDb();
   const candidates = movieLookupCandidates(filePath, undefined, { libraryRoot });
-  const parsed = movieLookupFromPath(filePath, undefined, { libraryRoot });
-  const lookup = await lookupMovieMetadataFromPath(filePath, {
-    libraryRoot,
+  const parsed = candidates[0] ?? { title: "", year: null };
+  const lookup = await lookupMovieMetadataFromCandidates(candidates, {
     onError: onMetadataError,
     matcher: metadataMatcher,
     fileRuntimeSeconds,

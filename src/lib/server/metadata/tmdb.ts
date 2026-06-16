@@ -471,12 +471,14 @@ function queryMatchesMovieTitles(
   originalTitle: string | null | undefined,
   alternativeTitles: string[],
 ) {
-  const candidates = [metadataTitle, originalTitle, ...alternativeTitles].filter((value): value is string =>
-    Boolean(value?.trim()),
-  );
-
-  return candidates.some(
-    (candidate) => exactTitleMatches(queryTitle, candidate) || phraseTitleMatches(queryTitle, candidate),
+  return (
+    movieMetadataTitleMatchScore(
+      queryTitle,
+      metadataTitleCandidates(metadataTitle, {
+        metadataOriginalTitle: originalTitle,
+        metadataAlternativeTitles: alternativeTitles,
+      }),
+    ) > 0
   );
 }
 
@@ -916,11 +918,29 @@ function mapMatchedMovieMetadata(
 
 const MOVIE_DETAIL_CANDIDATE_LIMIT = 5;
 
+type MovieMetadataMatchOptions = {
+  credentials?: TmdbCredentials;
+  fetch?: TmdbFetch;
+  detailCache?: Map<string, TmdbMovieDetails>;
+};
+
+async function fetchMovieDetail(movieId: number, options: MovieMetadataMatchOptions = {}) {
+  const cacheKey = String(movieId);
+  const cached = options.detailCache?.get(cacheKey);
+  if (cached) return cached;
+
+  const detailUrl = new URL(`https://api.themoviedb.org/3/movie/${movieId}`);
+  detailUrl.searchParams.set("append_to_response", "credits,videos,keywords,release_dates,alternative_titles");
+  const detail = await tmdbFetch<TmdbMovieDetails>(detailUrl, options.credentials, options.fetch);
+  if (detail) options.detailCache?.set(cacheKey, detail);
+  return detail;
+}
+
 async function matchMovieMetadataForSearchYear(
   title: string,
   searchYear: number | null,
   resultYear: number | null,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+  options: MovieMetadataMatchOptions = {},
 ) {
   const searchUrl = new URL("https://api.themoviedb.org/3/search/movie");
   searchUrl.searchParams.set("query", title);
@@ -934,9 +954,7 @@ async function matchMovieMetadataForSearchYear(
   const candidates = searchResultCandidates(search?.results, title, resultYear);
 
   for (const candidate of candidates.slice(0, MOVIE_DETAIL_CANDIDATE_LIMIT)) {
-    const detailUrl = new URL(`https://api.themoviedb.org/3/movie/${candidate.id}`);
-    detailUrl.searchParams.set("append_to_response", "credits,videos,keywords,release_dates,alternative_titles");
-    const detail = await tmdbFetch<TmdbMovieDetails>(detailUrl, options.credentials, options.fetch);
+    const detail = await fetchMovieDetail(candidate.id, options);
     if (!detail) continue;
 
     const metadataTitle = detail.title || detail.original_title || candidate.title || title;
@@ -960,9 +978,13 @@ export async function matchMovieMetadata(
   options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
 ) {
   const seenProviderIds = new Set<string>();
+  const detailCache = new Map<string, TmdbMovieDetails>();
 
   for (const searchYear of movieMetadataSearchYears(year)) {
-    const metadata = await matchMovieMetadataForSearchYear(title, searchYear, searchYear ?? year, options);
+    const metadata = await matchMovieMetadataForSearchYear(title, searchYear, searchYear ?? year, {
+      ...options,
+      detailCache,
+    });
     if (!metadata || seenProviderIds.has(metadata.providerId)) continue;
     seenProviderIds.add(metadata.providerId);
     return metadata;
