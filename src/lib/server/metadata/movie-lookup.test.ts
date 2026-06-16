@@ -43,8 +43,27 @@ describe("movieLookupCandidates", () => {
     expect(
       movieLookupCandidates("radarr/movies/Disney's Snow White (2025)/Snow White (2025) 720p WEBRip-LAMA.mp4"),
     ).toEqual([
-      { title: "Disney's Snow White", year: 2025 },
       { title: "Snow White", year: 2025 },
+      { title: "Disney's Snow White", year: 2025 },
+    ]);
+  });
+
+  test("keeps folder first when the filename only adds release-group noise", () => {
+    expect(
+      movieLookupCandidates("radarr/movies/Pathaan (2023)/TheMoviesBoss - Pathaan.(2023).720p.AMZN.WebRip.mkv"),
+    ).toEqual([
+      { title: "Pathaan", year: 2023 },
+      { title: "TheMoviesBoss - Pathaan", year: 2023 },
+    ]);
+  });
+
+  test("prefers filename title over a mismatched parent folder", () => {
+    expect(
+      movieLookupCandidates("radarr/movies/Three (2006)/Survival Island (2005) [720p] [WEBRip] [YTS.MX].mp4"),
+    ).toEqual([
+      { title: "Survival Island", year: 2005 },
+      { title: "Three", year: 2006 },
+      { title: "Three", year: 2005 },
     ]);
   });
 

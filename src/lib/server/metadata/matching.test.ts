@@ -160,4 +160,55 @@ describe("lookupMovieMetadataFromCandidates", () => {
     expect(result?.metadata.providerId).toBe("27328");
     expect(result?.candidate).toEqual({ title: "The Last House on Dead End Street", year: 1977 });
   });
+
+  test("prefers filename title over a mismatched Radarr folder name", async () => {
+    const matcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
+      if (title === "Survival Island" && year === 2005) {
+        return {
+          provider: "tmdb",
+          providerId: "9753",
+          title: "Three",
+          year: 2005,
+          overview: null,
+          runtimeSeconds: 5700,
+          posterPath: null,
+          backdropPath: null,
+          releaseDate: "2005-05-05",
+          popularity: null,
+          voteAverage: null,
+          alternativeTitles: ["Survival Island"],
+        };
+      }
+
+      if (title === "Three" && year === 2006) {
+        return {
+          provider: "tmdb",
+          providerId: "1489252",
+          title: "Three",
+          year: 2006,
+          overview: null,
+          runtimeSeconds: 4680,
+          posterPath: null,
+          backdropPath: null,
+          releaseDate: "2006-01-01",
+          popularity: null,
+          voteAverage: null,
+        };
+      }
+
+      return null;
+    };
+
+    const result = await lookupMovieMetadataFromCandidates(
+      [
+        { title: "Survival Island", year: 2005 },
+        { title: "Three", year: 2006 },
+        { title: "Three", year: 2005 },
+      ],
+      { matcher },
+    );
+
+    expect(result?.metadata.providerId).toBe("9753");
+    expect(result?.candidate).toEqual({ title: "Survival Island", year: 2005 });
+  });
 });

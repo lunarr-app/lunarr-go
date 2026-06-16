@@ -30,6 +30,12 @@ function comparableTitle(value: string) {
   return sanitizeLookupTitle(value).toLowerCase();
 }
 
+function folderTitleAppearsInFileTitle(folderTitle: string, fileTitle: string) {
+  const folderWords = comparableTitle(folderTitle).split(" ").filter(Boolean);
+  const fileWords = new Set(comparableTitle(fileTitle).split(" ").filter(Boolean));
+  return folderWords.length > 0 && folderWords.every((word) => fileWords.has(word));
+}
+
 function parseTitleYearName(value: string): ParsedMovieLookup | null {
   const match = value.match(/^(?<title>.+?)\s*[[(](?<year>\d{4})[\])](?:\s|$)/);
   const title = sanitizeLookupTitle(match?.groups?.title ?? "");
@@ -87,12 +93,29 @@ export function movieLookupCandidates(
   const seen = new Set<string>();
 
   if (folder) {
+    const fileCandidate = {
+      title: file.title || fallback?.title || "",
+      year: file.year ?? fallback?.year ?? null,
+    };
+    const titlesDiffer =
+      Boolean(fileCandidate.title) && comparableTitle(fileCandidate.title) !== comparableTitle(folder.title);
+    const preferFileFirst = titlesDiffer && !folderTitleAppearsInFileTitle(folder.title, fileCandidate.title);
+
+    if (preferFileFirst) {
+      pushCandidate(candidates, seen, fileCandidate);
+      pushCandidate(candidates, seen, folder);
+      if (file.year !== null && file.year !== folder.year) {
+        pushCandidate(candidates, seen, { title: folder.title, year: file.year });
+      }
+      return candidates;
+    }
+
     pushCandidate(candidates, seen, folder);
     if (file.year !== null && file.year !== folder.year) {
       pushCandidate(candidates, seen, { title: folder.title, year: file.year });
     }
-    if (file.title && comparableTitle(file.title) !== comparableTitle(folder.title)) {
-      pushCandidate(candidates, seen, file);
+    if (titlesDiffer) {
+      pushCandidate(candidates, seen, fileCandidate);
     }
     return candidates;
   }
