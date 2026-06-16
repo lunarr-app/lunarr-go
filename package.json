@@ -46,7 +46,7 @@
     "@types/ssh2": "1.15.5",
     "playwright-core": "^1.60.0",
     "prettier": "3.8.4",
-    "prettier-plugin-svelte": "4.1.0",
+    "prettier-plugin-svelte": "4.1.1",
     "svelte": "5.56.3",
     "svelte-check": "4.6.0",
     "typescript": "6.0.3",
