@@ -12,6 +12,15 @@ import {
   type EncodeJobHandle,
 } from "./encode-coordinator";
 
+async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 2_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() <= deadline) {
+    if (await predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error("waitFor timed out");
+}
+
 describe("encode-coordinator", () => {
   let tempDir: string;
 
@@ -290,9 +299,9 @@ describe("encode-coordinator", () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-encode-coordinator-"));
     const coordinator = new EncodeCoordinator("cache-1");
     let startCount = 0;
-    let failLookahead: () => void = () => undefined;
-    const lookaheadFailure = new Promise<void>((_, reject) => {
-      failLookahead = () => reject(new Error("lookahead failed"));
+    let releaseFirstJobCompletion: (() => void) | undefined;
+    const firstJobCompletionGate = new Promise<void>((resolve) => {
+      releaseFirstJobCompletion = resolve;
     });
 
     const segmentExists = async (name: string) => {
@@ -305,14 +314,14 @@ describe("encode-coordinator", () => {
     };
 
     const startJob = async (segmentIndex: number, _signal: AbortSignal): Promise<EncodeJobHandle> => {
-      startCount += 1;
+      const jobNumber = ++startCount;
       const controller = new AbortController();
       const segment = `segment-${String(segmentIndex).padStart(5, "0")}.ts`;
       const completion = (async () => {
-        if (startCount === 1) {
-          await mkdir(tempDir, { recursive: true });
+        await mkdir(tempDir, { recursive: true });
+        if (jobNumber === 1) {
           await writeFile(path.join(tempDir, "segment-00010.ts"), "requested");
-          await lookaheadFailure;
+          await firstJobCompletionGate;
           return;
         }
         await writeFile(path.join(tempDir, segment), "retried");
@@ -337,9 +346,8 @@ describe("encode-coordinator", () => {
       startJob: (segmentIndex, _signal) => startJob(segmentIndex, _signal),
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    await waitFor(async () => startCount === 1 && (await segmentExists("segment-00010.ts")));
     expect(startCount).toBe(1);
-    expect(await segmentExists("segment-00010.ts")).toBe(true);
 
     const secondPromise = coordinator.ensureSegment({
       sessionId: "session-1",
@@ -352,7 +360,7 @@ describe("encode-coordinator", () => {
       startJob: (segmentIndex, _signal) => startJob(segmentIndex, _signal),
     });
 
-    failLookahead();
+    releaseFirstJobCompletion?.();
     expect(await first).toBe(true);
     expect(await secondPromise).toBe(true);
     expect(startCount).toBe(2);
