@@ -16,15 +16,15 @@ function valueFromAny(input: LibraryInputSource, keys: string[]) {
   return null;
 }
 
-export function stringValue(input: LibraryInputSource, key: string, fallback = "") {
+function stringValue(input: LibraryInputSource, key: string, fallback = "") {
   return String(valueFrom(input, key) ?? fallback).trim();
 }
 
-export function rawStringValue(input: LibraryInputSource, key: string, fallback = "") {
+function rawStringValue(input: LibraryInputSource, key: string, fallback = "") {
   return String(valueFrom(input, key) ?? fallback);
 }
 
-export function numberValue(input: LibraryInputSource, key: string, fallback: number) {
+function numberValue(input: LibraryInputSource, key: string, fallback: number) {
   return Number(valueFrom(input, key) || fallback);
 }
 

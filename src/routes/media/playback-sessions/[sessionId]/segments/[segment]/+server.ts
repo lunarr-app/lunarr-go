@@ -175,11 +175,13 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         }
         if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
 
-        void ensureHlsLookaheadForSegment({
-          sessionId: params.sessionId,
-          userId: auth.userId,
-          segment: params.segment,
-        }).catch(() => undefined);
+        setTimeout(() => {
+          void ensureHlsLookaheadForSegment({
+            sessionId: params.sessionId,
+            userId: auth.userId,
+            segment: params.segment,
+          }).catch(() => undefined);
+        }, 0);
         void pruneHlsSegmentsBehind(artifact.playlistPath, params.segment).catch(() => undefined);
       }
     }

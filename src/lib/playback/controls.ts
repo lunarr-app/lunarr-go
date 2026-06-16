@@ -64,7 +64,7 @@ export type PlaybackVolumeState = {
   muted: boolean;
 };
 
-export function clampVolumeLevel(value: number) {
+function clampVolumeLevel(value: number) {
   return Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 1;
 }
 

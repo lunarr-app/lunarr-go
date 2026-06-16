@@ -234,7 +234,7 @@ async function upsertEpisodeMetadata(seasonId: string, metadata: MatchedTvEpisod
   return { id, created: true };
 }
 
-export async function refreshTvSeasonMetadataResult(
+async function refreshTvSeasonMetadataResult(
   seasonId: string,
   options: RefreshTvMetadataOptions = {},
 ): Promise<RefreshTvSeasonMetadataResult> {

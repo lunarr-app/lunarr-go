@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { appEnv } from "$lib/server/config/env";
 
 export const SIGNED_PLAYBACK_TOKEN_QUERY_PARAM = "remoteToken";
-export const SIGNED_PLAYBACK_TOKEN_TTL_SECONDS = 8 * 60 * 60;
+const SIGNED_PLAYBACK_TOKEN_TTL_SECONDS = 8 * 60 * 60;
 
 export type SignedPlaybackRoute = "direct" | "hls" | "subtitle";
 
@@ -114,7 +114,7 @@ export function signedPlaybackSegmentQuery(token: string | null | undefined) {
   return token ? `?${SIGNED_PLAYBACK_TOKEN_QUERY_PARAM}=${encodeURIComponent(token)}` : "";
 }
 
-export function signedPlaybackCorsHeaders() {
+function signedPlaybackCorsHeaders() {
   return {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, HEAD, OPTIONS",

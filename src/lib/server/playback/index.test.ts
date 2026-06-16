@@ -1436,7 +1436,7 @@ describe("getPlaybackDecision", () => {
     await setUserPlaybackPreference("user-1", "prefer_transcode");
     let resolveCompletion: (() => void) | undefined;
     let cancelledSessionId: string | null = null;
-    const completion = new Promise<void>((resolve) => {
+    new Promise<void>((resolve) => {
       resolveCompletion = resolve;
     });
     setTranscodeBackendForTests({

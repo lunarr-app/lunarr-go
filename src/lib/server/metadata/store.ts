@@ -190,7 +190,7 @@ export function tvEpisodeMetadataValues(metadata: MatchedTvEpisodeMetadata, upda
   };
 }
 
-export async function clearMovieMetadataRelations(db: Kysely<Database>, mediaItemId: string) {
+async function clearMovieMetadataRelations(db: Kysely<Database>, mediaItemId: string) {
   await db.deleteFrom("media_item_genre").where("media_item_id", "=", mediaItemId).execute();
   await db.deleteFrom("media_item_credit").where("media_item_id", "=", mediaItemId).execute();
   await db.deleteFrom("media_item_video").where("media_item_id", "=", mediaItemId).execute();

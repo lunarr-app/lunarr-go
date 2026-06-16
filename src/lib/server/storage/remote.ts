@@ -31,10 +31,10 @@ type RemoteDirectoryReadResult = {
 
 export const DEFAULT_REMOTE_WALK_CONCURRENCY = 4;
 export const DEFAULT_REMOTE_OPERATION_TIMEOUT_MS = 30_000;
-export const MIN_REMOTE_WALK_CONCURRENCY = 1;
-export const MAX_REMOTE_WALK_CONCURRENCY = 32;
-export const MIN_REMOTE_OPERATION_TIMEOUT_MS = 5_000;
-export const MAX_REMOTE_OPERATION_TIMEOUT_MS = 300_000;
+const MIN_REMOTE_WALK_CONCURRENCY = 1;
+const MAX_REMOTE_WALK_CONCURRENCY = 32;
+const MIN_REMOTE_OPERATION_TIMEOUT_MS = 5_000;
+const MAX_REMOTE_OPERATION_TIMEOUT_MS = 300_000;
 
 export function normalizeRemoteWalkConcurrency(value: unknown) {
   const numeric =

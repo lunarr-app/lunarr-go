@@ -8,7 +8,6 @@ const SEGMENT_ROUTE_PREFIX = "segments/";
 const DEFAULT_SEGMENT_KEEP_BEHIND = 12;
 export const DEFAULT_HLS_SEGMENT_SECONDS = 16;
 export const ENCODE_AHEAD_SEGMENT_COUNT = 4;
-export const DEFAULT_ENCODE_AHEAD_SEGMENT_COUNT = ENCODE_AHEAD_SEGMENT_COUNT;
 export type HlsSegmentFormat = "mpegts" | "fmp4";
 
 type HlsSegmentPayload = {

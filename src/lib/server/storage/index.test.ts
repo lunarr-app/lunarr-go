@@ -5,11 +5,9 @@ import {
   DEFAULT_REMOTE_WALK_CONCURRENCY,
   normalizeRemoteOperationTimeoutMs,
   normalizeRemoteWalkConcurrency,
-  parseSftpConfig,
-  parseWebdavConfig,
   walkRemoteFiles,
-  webdavDisplayPath,
-} from ".";
+} from "./remote";
+import { parseSftpConfig, parseWebdavConfig, webdavDisplayPath } from ".";
 
 function remoteEntry(filename: string, kind: "directory" | "file"): FileEntryWithStats {
   return {

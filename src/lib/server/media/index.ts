@@ -3,11 +3,11 @@ import { getDb } from "../db";
 import { tmdbImageUrl } from "$lib/media/images";
 import { TV_SHOW_CREATOR_JOBS } from "../metadata/show-creators";
 
-export const MOVIE_STATUS_FILTERS = ["all", "watched", "unwatched"] as const;
-export const MOVIE_SORTS = ["title", "recent", "year_desc", "rating", "release_date"] as const;
-export const MOVIE_PAGE_SIZE = 36;
-export const SHOW_PAGE_SIZE = 36;
-export const SHOW_SORTS = ["title", "recent", "latest", "popular"] as const;
+const MOVIE_STATUS_FILTERS = ["all", "watched", "unwatched"] as const;
+const MOVIE_SORTS = ["title", "recent", "year_desc", "rating", "release_date"] as const;
+const MOVIE_PAGE_SIZE = 36;
+const SHOW_PAGE_SIZE = 36;
+const SHOW_SORTS = ["title", "recent", "latest", "popular"] as const;
 
 export type MovieStatusFilter = (typeof MOVIE_STATUS_FILTERS)[number];
 export type MovieSort = (typeof MOVIE_SORTS)[number];
@@ -498,7 +498,7 @@ export async function showRows(userId: string, search = "", sort: ShowSort = "ti
   return (await orderShowBrowseQuery(showBrowseSelect(filtered), sort).execute()).map(publicShowSummary);
 }
 
-export async function showBrowseRows(
+async function showBrowseRows(
   userId: string,
   search = "",
   sort: ShowSort = "title",

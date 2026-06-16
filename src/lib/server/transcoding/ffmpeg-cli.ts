@@ -9,6 +9,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { ffmpegPath } from "node-av/ffmpeg";
+import { encodeEventPlaylistPath, encodeJobId } from "./encode-coordinator";
 import { hlsEventPlaylistHasSegment, ENCODE_AHEAD_SEGMENT_COUNT, type HlsSegmentFormat } from "./hls";
 
 const STDERR_MAX_BYTES = 32 * 1024;
@@ -32,6 +33,7 @@ type FfmpegHlsOptions = {
 type ActiveHlsStream = {
   active: ActiveFfmpeg;
   artifactDirectory: string;
+  eventPlaylistPath: string;
   inputPath: string;
   inputSourceKey: string | null;
   mode: HlsTranscodeInput["mode"];
@@ -283,7 +285,11 @@ function softwareVideoArgs(input: { gopSize: number; segmentSeconds: number; crf
 export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptions) {
   const segmentSeconds = Math.max(1, input.segmentSeconds);
   const segmentFormat = hlsSegmentFormat(input);
-  const playlistPath = hlsPlaylistPath(input.artifactDirectory);
+  const startSegmentNumber = options?.startSegmentNumber;
+  const playlistPath =
+    startSegmentNumber !== undefined && Number.isSafeInteger(startSegmentNumber) && input.sessionId
+      ? encodeEventPlaylistPath(input.artifactDirectory, input.sessionId, startSegmentNumber)
+      : hlsPlaylistPath(input.artifactDirectory);
   const args = ["-hide_banner", "-y"];
   const hardwareMode = effectiveHardwareMode(input);
   if (hardwareMode) args.push(...hardwareInputArgs(hardwareMode));
@@ -344,7 +350,6 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
   if (segmentFormat === "fmp4") {
     args.push("-hls_segment_type", "fmp4", "-hls_fmp4_init_filename", "init.mp4");
   }
-  const startSegmentNumber = options?.startSegmentNumber;
   if (Number.isSafeInteger(startSegmentNumber)) {
     args.push("-start_number", String(startSegmentNumber));
   }
@@ -535,24 +540,24 @@ function inputSourceKey(input: HlsSegmentWindowTranscodeInput) {
 }
 
 function reusableHlsStream(input: HlsSegmentWindowTranscodeInput, firstSegment: { segmentIndex: number }) {
-  const stream = activeHlsStreams.get(input.sessionId);
-  if (!stream) return null;
-  if (stream.artifactDirectory !== input.artifactDirectory) return null;
-  if (stream.inputPath !== input.inputPath) return null;
-  if (stream.inputSourceKey !== inputSourceKey(input)) return null;
-  if (stream.mode !== input.mode) return null;
-  if (stream.segmentSeconds !== input.segmentSeconds) return null;
-  if (stream.hardwareAcceleration !== input.hardwareAcceleration) return null;
-  if (stream.hardwareAccelerationRequired !== input.hardwareAccelerationRequired) return null;
-  if (stream.transcodeQualityKey !== transcodeQualityKey(input)) return null;
-  if (stream.hlsSegmentFormat !== hlsSegmentFormat(input)) return null;
-  if (firstSegment.segmentIndex < stream.startSegmentIndex) return null;
-  if (
-    firstSegment.segmentIndex >=
-    stream.startSegmentIndex + (input.encodeAheadSegmentCount ?? ENCODE_AHEAD_SEGMENT_COUNT)
-  )
-    return null;
-  return stream;
+  const ahead = input.encodeAheadSegmentCount ?? ENCODE_AHEAD_SEGMENT_COUNT;
+  const prefix = `${input.sessionId}\0`;
+  for (const [jobKey, stream] of activeHlsStreams) {
+    if (!jobKey.startsWith(prefix)) continue;
+    if (stream.artifactDirectory !== input.artifactDirectory) continue;
+    if (stream.inputPath !== input.inputPath) continue;
+    if (stream.inputSourceKey !== inputSourceKey(input)) continue;
+    if (stream.mode !== input.mode) continue;
+    if (stream.segmentSeconds !== input.segmentSeconds) continue;
+    if (stream.hardwareAcceleration !== input.hardwareAcceleration) continue;
+    if (stream.hardwareAccelerationRequired !== input.hardwareAccelerationRequired) continue;
+    if (stream.transcodeQualityKey !== transcodeQualityKey(input)) continue;
+    if (stream.hlsSegmentFormat !== hlsSegmentFormat(input)) continue;
+    if (firstSegment.segmentIndex < stream.startSegmentIndex) continue;
+    if (firstSegment.segmentIndex >= stream.startSegmentIndex + ahead) continue;
+    return stream;
+  }
+  return null;
 }
 
 async function startHlsStream(
@@ -573,6 +578,7 @@ async function startHlsStream(
   const stream: ActiveHlsStream = {
     active,
     artifactDirectory: input.artifactDirectory,
+    eventPlaylistPath: encodeEventPlaylistPath(input.artifactDirectory, input.sessionId, firstSegment.segmentIndex),
     inputPath: input.inputPath,
     inputSourceKey: inputSourceKey(input),
     mode: input.mode,
@@ -583,11 +589,12 @@ async function startHlsStream(
     hlsSegmentFormat: hlsSegmentFormat(input),
     startSegmentIndex: firstSegment.segmentIndex,
   };
-  activeHlsStreams.set(input.sessionId, stream);
+  const jobKey = encodeJobId(input.sessionId, firstSegment.segmentIndex);
+  activeHlsStreams.set(jobKey, stream);
   active.completion
     .finally(() => {
-      if (activeHlsStreams.get(input.sessionId) === stream) {
-        activeHlsStreams.delete(input.sessionId);
+      if (activeHlsStreams.get(jobKey) === stream) {
+        activeHlsStreams.delete(jobKey);
       }
     })
     .catch(() => undefined);
@@ -617,7 +624,7 @@ async function generateStreamingFfmpegWindow(
     timeoutMs: input.segmentGenerationTimeoutMs,
   });
   await waitForEventPlaylistSegment({
-    playlistPath: hlsPlaylistPath(input.artifactDirectory),
+    playlistPath: stream.eventPlaylistPath,
     segment: firstSegment.segment,
     completion: stream.active.completion,
     signal: input.signal,
@@ -631,7 +638,7 @@ async function generateStreamingFfmpegWindow(
 }
 
 export const ffmpegCliBackend: TranscodeBackend = {
-  validateHlsSegmentGenerationPolicy(input) {
+  validateHlsSegmentGenerationPolicy(_input) {
     if (!isFfmpegCliAvailable()) throw new FfmpegBackendError(ffmpegUnavailableMessage());
   },
 
@@ -639,8 +646,22 @@ export const ffmpegCliBackend: TranscodeBackend = {
     return generateStreamingFfmpegWindow(input);
   },
 
+  async cancelJob(sessionId: string, startSegmentIndex: number) {
+    const jobKey = encodeJobId(sessionId, startSegmentIndex);
+    const stream = activeHlsStreams.get(jobKey);
+    activeHlsStreams.delete(jobKey);
+    if (stream) {
+      await terminateActiveFfmpeg(stream.active);
+    }
+  },
+
   async cancel(sessionId: string) {
-    activeHlsStreams.delete(sessionId);
+    const prefix = `${sessionId}\0`;
+    for (const [jobKey, stream] of [...activeHlsStreams.entries()]) {
+      if (!jobKey.startsWith(prefix)) continue;
+      activeHlsStreams.delete(jobKey);
+      await terminateActiveFfmpeg(stream.active);
+    }
     const entries = [...(activeFfmpeg.get(sessionId) ?? [])];
     await Promise.all(entries.map((entry) => terminateActiveFfmpeg(entry)));
   },

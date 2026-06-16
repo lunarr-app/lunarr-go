@@ -26,7 +26,7 @@ function valueFrom(input: InputSource, key: string) {
   return input instanceof FormData ? input.get(key) : input[key];
 }
 
-export function booleanInput(input: InputSource, key: string) {
+function booleanInput(input: InputSource, key: string) {
   const value = valueFrom(input, key);
   return value === true || value === "true" || value === "on";
 }

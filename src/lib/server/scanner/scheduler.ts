@@ -113,9 +113,3 @@ export async function syncScheduledLibraryScans() {
 
   return syncPromise;
 }
-
-export function closeScheduledLibraryScans() {
-  for (const libraryId of scheduledScanTimers.keys()) {
-    clearScheduledScanTimer(libraryId);
-  }
-}

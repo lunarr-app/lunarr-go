@@ -13,6 +13,7 @@ import {
   setEncodeAheadSegmentCount,
 } from "./cache";
 import {
+  cancelPlaybackSession,
   cleanupTranscodeStartupFailure,
   ensureHlsLookaheadForSegment,
   ensureHlsSegmentForRequest,
@@ -36,7 +37,7 @@ async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 
   throw new Error("Timed out waiting for test condition.");
 }
 
-describe("request-driven HLS manager", () => {
+describe.serial("request-driven HLS manager", () => {
   let tempDir: string;
   let db: Kysely<Database>;
   let sessionId: string;
@@ -139,76 +140,13 @@ describe("request-driven HLS manager", () => {
 
   afterEach(async () => {
     setTranscodeBackendForTests(null);
+    await cancelPlaybackSession(sessionId).catch(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 25));
     await closeDatabaseForTests();
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("does not abort far-ahead segment generation when stale forward lookahead is requested", async () => {
-    let releaseFarSegment: (() => void) | undefined;
-    const farSegmentGate = new Promise<void>((resolve) => {
-      releaseFarSegment = resolve;
-    });
-    let farBackendStarted = false;
-
-    setTranscodeBackendForTests({
-      async generateHlsSegmentWindow(input: HlsSegmentWindowTranscodeInput) {
-        const segment = input.segments[0]?.segment;
-        if (!segment) throw new Error("Expected a requested HLS window segment.");
-
-        if (segment === "segment-00016.ts") {
-          farBackendStarted = true;
-          await farSegmentGate;
-          await mkdir(input.artifactDirectory, { recursive: true });
-          await writeFile(path.join(input.artifactDirectory, segment), segment);
-          return { completion: Promise.resolve() };
-        }
-
-        if (segment === "segment-00001.ts") {
-          return new Promise((_resolve, reject) => {
-            input.signal?.addEventListener(
-              "abort",
-              () => {
-                reject(new Error("stale lookahead aborted"));
-              },
-              { once: true },
-            );
-          });
-        }
-
-        await mkdir(input.artifactDirectory, { recursive: true });
-        for (const windowSegment of input.segments) {
-          await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
-        }
-        return { completion: Promise.resolve() };
-      },
-      async cancel() {
-        return;
-      },
-    });
-
-    const farGeneration = ensureHlsSegmentForRequest({
-      sessionId,
-      userId: "user-1",
-      segment: "segment-00016.ts",
-    });
-
-    await waitFor(() => farBackendStarted);
-
-    const lookaheadGeneration = ensureHlsSegmentForRequest({
-      sessionId,
-      userId: "user-1",
-      segment: "segment-00001.ts",
-      fromLookahead: true,
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    releaseFarSegment?.();
-
-    expect(await farGeneration).toBe(true);
-    void lookaheadGeneration.catch(() => undefined);
-  });
-
-  test("aborts far-ahead segment generation when a near playhead segment is requested", async () => {
+  test("cancels far-ahead encode when a near playhead segment is requested", async () => {
     let releaseFarSegment: (() => void) | undefined;
     const farSegmentGate = new Promise<void>((resolve) => {
       releaseFarSegment = resolve;
@@ -270,7 +208,155 @@ describe("request-driven HLS manager", () => {
 
     expect(await nearGeneration).toBe(true);
     releaseFarSegment?.();
-    void farGeneration.catch(() => undefined);
+    await expect(farGeneration).resolves.toBe(false);
+  });
+
+  test("aborted HTTP segment request does not session-cancel background lookahead encode", async () => {
+    let lookaheadEncodeStarted = false;
+    let mainEncodeStarted = false;
+    let sessionCancelCalls = 0;
+    let releaseLookahead: (() => void) | undefined;
+    const lookaheadGate = new Promise<void>((resolve) => {
+      releaseLookahead = resolve;
+    });
+
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input: HlsSegmentWindowTranscodeInput) {
+        const segment = input.segments[0]?.segment;
+        if (!segment) throw new Error("Expected a requested HLS window segment.");
+
+        if (segment === "segment-00001.ts") {
+          lookaheadEncodeStarted = true;
+          await lookaheadGate;
+          await mkdir(input.artifactDirectory, { recursive: true });
+          for (const windowSegment of input.segments) {
+            await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
+          }
+          return { completion: Promise.resolve() };
+        }
+
+        if (segment === "segment-00010.ts") {
+          mainEncodeStarted = true;
+          await new Promise<void>((_, reject) => {
+            input.signal?.addEventListener("abort", () => reject(new Error("main encode aborted")), { once: true });
+          });
+          return { completion: Promise.resolve() };
+        }
+
+        await mkdir(input.artifactDirectory, { recursive: true });
+        for (const windowSegment of input.segments) {
+          await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
+        }
+        return { completion: Promise.resolve() };
+      },
+      async cancel() {
+        sessionCancelCalls += 1;
+      },
+    });
+
+    await db
+      .updateTable("playback_session")
+      .set({
+        last_segment_index: 0,
+        last_segment_name: "segment-00000.ts",
+      })
+      .where("id", "=", sessionId)
+      .execute();
+
+    const lookaheadPromise = ensureHlsLookaheadForSegment({
+      sessionId,
+      userId: "user-1",
+      segment: "segment-00000.ts",
+    });
+    await waitFor(() => lookaheadEncodeStarted);
+
+    const controller = new AbortController();
+    const mainRequest = ensureHlsSegmentForRequest({
+      sessionId,
+      userId: "user-1",
+      segment: "segment-00010.ts",
+      signal: controller.signal,
+    });
+    await waitFor(() => mainEncodeStarted);
+
+    controller.abort();
+    expect(await mainRequest).toBe(false);
+    expect(sessionCancelCalls).toBe(0);
+
+    releaseLookahead?.();
+    expect(await lookaheadPromise).toBe(true);
+  });
+
+  test("stale job abort cancels only the targeted encode window", async () => {
+    let releaseFarSegment: (() => void) | undefined;
+    const farSegmentGate = new Promise<void>((resolve) => {
+      releaseFarSegment = resolve;
+    });
+    let farBackendStarted = false;
+    let farBackendAborted = false;
+    let cancelJobCalls = 0;
+    let sessionCancelCalls = 0;
+
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input: HlsSegmentWindowTranscodeInput) {
+        const segment = input.segments[0]?.segment;
+        if (!segment) throw new Error("Expected a requested HLS window segment.");
+
+        if (segment === "segment-00030.ts") {
+          farBackendStarted = true;
+          await new Promise<void>((resolve, reject) => {
+            input.signal?.addEventListener(
+              "abort",
+              () => {
+                farBackendAborted = true;
+                reject(new Error("stale far-ahead encode aborted"));
+              },
+              { once: true },
+            );
+            void farSegmentGate.then(resolve);
+          });
+          await mkdir(input.artifactDirectory, { recursive: true });
+          await writeFile(path.join(input.artifactDirectory, segment), segment);
+          return { completion: Promise.resolve() };
+        }
+
+        await mkdir(input.artifactDirectory, { recursive: true });
+        for (const windowSegment of input.segments) {
+          await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
+        }
+        return { completion: Promise.resolve() };
+      },
+      async cancelJob() {
+        cancelJobCalls += 1;
+      },
+      async cancel() {
+        sessionCancelCalls += 1;
+      },
+    });
+
+    await db.updateTable("playback_session").set({ last_segment_index: 10 }).where("id", "=", sessionId).execute();
+
+    const farGeneration = ensureHlsSegmentForRequest({
+      sessionId,
+      userId: "user-1",
+      segment: "segment-00030.ts",
+    });
+
+    await waitFor(() => farBackendStarted);
+
+    const nearGeneration = ensureHlsSegmentForRequest({
+      sessionId,
+      userId: "user-1",
+      segment: "segment-00011.ts",
+    });
+
+    await waitFor(() => farBackendAborted);
+
+    expect(await nearGeneration).toBe(true);
+    expect(cancelJobCalls).toBeGreaterThan(0);
+    expect(sessionCancelCalls).toBe(0);
+    releaseFarSegment?.();
+    await expect(farGeneration).resolves.toBe(false);
   });
 
   test("ensureHlsLookaheadForSegment reads ahead from the shared encode directory", async () => {
@@ -384,7 +470,7 @@ describe("request-driven HLS manager", () => {
 
     await waitFor(() => forwardEncodeAborted);
     expect(await backwardGeneration).toBe(true);
-    void forwardGeneration.catch(() => undefined);
+    await expect(forwardGeneration).resolves.toBe(false);
   });
 
   test("releases cache refs when segment generation fails", async () => {
@@ -511,6 +597,120 @@ describe("request-driven HLS manager", () => {
       }),
     });
     expect(session.cacheId).toBe(transcodeCacheId);
+  });
+
+  test("remux fallback does not tear down a shared remux cache while another session is active", async () => {
+    const samplePolicy = {
+      transcodingEnabled: true,
+      playbackPreference: "auto" as const,
+      preferredAudioLanguage: null,
+      preferredSubtitleLanguage: null,
+      hardwareAcceleration: "off" as const,
+      hardwareAccelerationRequired: false,
+      transcodeQualityPreset: "auto" as const,
+      transcodeQuality: transcodeQualityTarget("auto"),
+    };
+    const sessionB = await createTranscodeSession({ mediaFileId: "file-1", userId: "user-1" });
+    await updateTranscodeSessionPipeline(sessionB, "request_driven");
+    const artifactDirB = path.join(tempDir, "playback-sessions", sessionB);
+    await mkdir(artifactDirB, { recursive: true });
+    const playlistPathB = path.join(artifactDirB, "master.m3u8");
+    await writeFile(playlistPathB, "#EXTM3U\n");
+    await registerTranscodeHlsArtifact({
+      sessionId: sessionB,
+      mediaFileId: "file-1",
+      path: playlistPathB,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionB, "running");
+
+    await acquirePlaybackCache({
+      sessionId,
+      mediaFileId: "file-1",
+      fileSizeBytes: 100,
+      fileMtimeMs: nowMs,
+      mode: "remux",
+      policy: samplePolicy,
+      segmentFormat: "mpegts",
+      audioStreamIndex: null,
+    });
+    await acquirePlaybackCache({
+      sessionId: sessionB,
+      mediaFileId: "file-1",
+      fileSizeBytes: 100,
+      fileMtimeMs: nowMs,
+      mode: "remux",
+      policy: samplePolicy,
+      segmentFormat: "mpegts",
+      audioStreamIndex: null,
+    });
+
+    let releaseSessionBEncode: (() => void) | undefined;
+    const sessionBEncodeGate = new Promise<void>((resolve) => {
+      releaseSessionBEncode = resolve;
+    });
+    let sessionBEncodeStarted = false;
+    let sessionBEncodeAborted = false;
+
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input: HlsSegmentWindowTranscodeInput) {
+        if (input.sessionId === sessionB) {
+          sessionBEncodeStarted = true;
+          await new Promise<void>((resolve, reject) => {
+            input.signal?.addEventListener(
+              "abort",
+              () => {
+                sessionBEncodeAborted = true;
+                reject(new Error("shared remux encode aborted"));
+              },
+              { once: true },
+            );
+            void sessionBEncodeGate.then(resolve);
+          });
+          await mkdir(input.artifactDirectory, { recursive: true });
+          for (const windowSegment of input.segments) {
+            await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
+          }
+          return { completion: Promise.resolve() };
+        }
+
+        if (input.mode === "remux") {
+          throw new Error("remux failed");
+        }
+        await mkdir(input.artifactDirectory, { recursive: true });
+        for (const windowSegment of input.segments) {
+          await writeFile(path.join(input.artifactDirectory, windowSegment.segment), windowSegment.segment);
+        }
+        return { completion: Promise.resolve() };
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    await db.updateTable("playback_session").set({ mode: "remux" }).where("id", "=", sessionId).execute();
+    await db.updateTable("playback_session").set({ mode: "remux" }).where("id", "=", sessionB).execute();
+
+    const sessionBGeneration = ensureHlsSegmentForRequest({
+      sessionId: sessionB,
+      userId: "user-1",
+      segment: "segment-00005.ts",
+    });
+    await waitFor(() => sessionBEncodeStarted);
+
+    expect(
+      await ensureHlsSegmentForRequest({
+        sessionId,
+        userId: "user-1",
+        segment: "segment-00000.ts",
+      }),
+    ).toBe(true);
+    expect(sessionBEncodeAborted).toBe(false);
+
+    releaseSessionBEncode?.();
+    expect(await sessionBGeneration).toBe(true);
+
+    await cancelPlaybackSession(sessionB).catch(() => undefined);
   });
 
   test("cleanupTranscodeStartupFailure releases only the failed session cache ref", async () => {
@@ -651,7 +851,7 @@ describe("request-driven HLS manager", () => {
     await setTranscodingEnabled(true);
   });
 
-  test("serializes encode work for sessions sharing the same cache entry", async () => {
+  test("allows parallel encode jobs for uncovered segment ranges on the same cache", async () => {
     const samplePolicy = {
       transcodingEnabled: true,
       playbackPreference: "auto" as const,
@@ -747,13 +947,13 @@ describe("request-driven HLS manager", () => {
       segment: "segment-00030.ts",
     });
     await new Promise((resolve) => setTimeout(resolve, 25));
-    expect(sessionBEncodeStarted).toBe(false);
+    expect(sessionBEncodeStarted).toBe(true);
+    expect(maxConcurrentEncodes).toBe(2);
 
     releaseSessionA?.();
     await sessionAGeneration;
     await sessionBGeneration;
     expect(sessionBEncodeStarted).toBe(true);
-    expect(maxConcurrentEncodes).toBe(1);
   });
 
   test("removes failed partial segments but preserves unrelated shared cache segments when ref_count > 1", async () => {

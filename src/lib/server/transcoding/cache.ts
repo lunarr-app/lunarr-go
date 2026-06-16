@@ -9,7 +9,8 @@ import { nowIso } from "../time";
 import type { TranscodeMode } from "../db/schema/streaming";
 import type { TranscodePolicy } from "./policy";
 import type { HlsSegmentFormat } from "./hls";
-import { DEFAULT_ENCODE_AHEAD_SEGMENT_COUNT } from "./hls";
+import { ENCODE_AHEAD_SEGMENT_COUNT } from "./hls";
+import { onEncodeCacheIdle } from "./encode-coordinator";
 
 const PLAYBACK_CACHE_ROOT_NAME = "playback-cache";
 const PLAYBACK_CACHE_TTL_MS_KEY = "playback_cache_ttl_ms";
@@ -61,7 +62,7 @@ export function computePlaybackCacheId(input: {
 export async function getEncodeAheadSegmentCount() {
   const raw = await getSetting(ENCODE_AHEAD_SEGMENT_COUNT_KEY);
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_ENCODE_AHEAD_SEGMENT_COUNT;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : ENCODE_AHEAD_SEGMENT_COUNT;
 }
 
 export async function setEncodeAheadSegmentCount(value: number) {
@@ -232,6 +233,15 @@ export async function releasePlaybackCacheForSession(sessionId: string) {
     })
     .where("id", "=", cacheId)
     .execute();
+
+  const cache = await db
+    .selectFrom("playback_hls_cache")
+    .select(["ref_count"])
+    .where("id", "=", cacheId)
+    .executeTakeFirst();
+  if ((cache?.ref_count ?? 0) === 0) {
+    onEncodeCacheIdle(cacheId);
+  }
 }
 
 export async function touchPlaybackCacheForSession(sessionId: string) {

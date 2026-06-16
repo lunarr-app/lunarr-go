@@ -1636,20 +1636,6 @@ export async function startAllMovieScans(options: ScanOptions = {}) {
   };
 }
 
-export async function startAllTvScans(options: ScanOptions = {}) {
-  const libraries = (await listLibraries()).filter((library) => library.kind === "tv");
-  const jobIds: string[] = [];
-
-  for (const library of libraries) {
-    jobIds.push(await startScan(library.id, options));
-  }
-
-  return {
-    libraries: libraries.length,
-    jobIds,
-  };
-}
-
 export async function startAllLibraryScans(options: ScanOptions = {}) {
   const libraries = (await listLibraries()).filter((library) => Boolean(LIBRARY_SCAN_HANDLERS[library.kind]));
   const jobIds: string[] = [];

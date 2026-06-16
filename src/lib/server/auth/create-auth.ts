@@ -12,7 +12,7 @@ import {
 } from "./api-key-config";
 import { roleForNewUser, signupAllowed } from "./users";
 
-export async function createAuth() {
+async function createAuth() {
   return betterAuth({
     appName: "Lunarr",
     baseURL: appEnv.ORIGIN,

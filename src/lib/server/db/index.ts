@@ -26,7 +26,7 @@ function splitSqlStatements(source: string) {
     .filter(Boolean);
 }
 
-export async function getSqlite() {
+async function getSqlite() {
   if (sqlite) return sqlite;
 
   const dbFile = databaseFileOverride ?? DB_FILE;

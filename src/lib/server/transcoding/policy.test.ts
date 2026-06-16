@@ -8,7 +8,6 @@ import {
   normalizeHardwareAccelerationMode,
   normalizePlaybackPreference,
   normalizePreferredAudioLanguage,
-  normalizePreferredSubtitleLanguage,
   normalizeTranscodeQualityPreset,
   setHardwareAccelerationMode,
   setHardwareAccelerationRequired,
@@ -56,8 +55,7 @@ describe("transcode policy", () => {
     expect(normalizePlaybackPreference("bad")).toBe("auto");
     expect(normalizePreferredAudioLanguage(" ENG ")).toBe("eng");
     expect(normalizePreferredAudioLanguage("")).toBe(null);
-    expect(normalizePreferredSubtitleLanguage(" JPN ")).toBe("jpn");
-    expect(normalizePreferredSubtitleLanguage("")).toBe(null);
+    expect(normalizePreferredAudioLanguage(" JPN ")).toBe("jpn");
     expect(normalizeHardwareAccelerationMode("videotoolbox")).toBe("videotoolbox");
     expect(normalizeHardwareAccelerationMode("bad")).toBe("off");
     expect(normalizeTranscodeQualityPreset("720p")).toBe("720p");

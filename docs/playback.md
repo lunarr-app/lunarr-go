@@ -16,7 +16,20 @@ HEVC HLS remux compatibility is deliberately narrower than HEVC direct play. The
 
 For SFTP and WebDAV libraries, browser-compatible files direct-play through authenticated range reads when automatic mode selects direct playback. HLS is used only when remux or transcode is required. Remote HLS and direct playback both read from the remote server through Lunarr. Remote playback quality depends on server/network range-read performance, known file sizes, and stable remote connectivity.
 
-Request-driven HLS encodes only a bounded window ahead of the current playhead. FFmpeg is limited to a configurable number of segments beyond the requested segment (default 4, about 64 seconds at 16-second segments) instead of running to end-of-file. When the viewer stops or seeks ahead, remote reads stop once the encode-ahead buffer is satisfied.
+Request-driven HLS encodes only a bounded window ahead of the current playhead. FFmpeg is limited to a configurable number of segments beyond the requested segment (default 4, about 64 seconds at 16-second segments) instead of running to end-of-file. The same encode-ahead value controls both the FFmpeg window and post-segment prefetch depth.
+
+### Encode coordinator mental model
+
+Segment generation follows a small state machine per shared cache entry:
+
+1. **Disk hit** — If the requested segment already exists in the shared encode directory, serve it immediately and kick off background prefetch for the next missing segments in the ahead range.
+2. **Active job covers the segment** — If another FFmpeg job is already encoding a window that includes the requested segment index, wait for the file to appear (with timeout) instead of starting duplicate work.
+3. **Seek outside the window** — When a session requests a segment outside its own active encode window, cancel that session's stale job and start a new FFmpeg window at the requested index.
+4. **Coalesced waiters** — Concurrent requests for the same segment on the same cache share one ensure operation.
+5. **Parallel windows** — Different sessions on the same shared cache may encode non-overlapping segment ranges in parallel (for example one viewer at segment 10 and another at segment 50). Within a single session, a seek outside the active encode window cancels that session's stale job before starting a new window; distant parallel encodes for the same session are not kept alive.
+6. **Idle cleanup** — When playback cache `ref_count` reaches zero or a session ends, active encode jobs for that cache are aborted.
+
+When the viewer stops or seeks ahead, remote reads stop once the encode-ahead buffer is satisfied.
 
 Encoded HLS segments are stored in a server-wide cache keyed by media file identity, encode mode, and transcode policy. Multiple playback sessions and users can reuse the same cached segments. Per-session virtual playlists remain under `playback-sessions/`, and shared segment payloads live under `playback-cache/`.
 
@@ -105,7 +118,7 @@ The default combined temporary playback storage limit is 20 GiB. Admins can choo
 
 Admins can also configure encode-ahead segment count (default 4) and shared cache TTL (default 24 hours). Cache entries invalidate when the source file size or modification time changes.
 
-Active playback keeps needed cache entries alive through reference counting (`ref_count` on each cache entry) while sessions are running. FFmpeg segment writes for the same cache entry are serialized so concurrent sessions sharing cached segments do not race on disk. Completed or cancelled sessions decrement cache references, and unreferenced cache entries become eligible for TTL eviction (idle longer than the configured TTL) and LRU eviction (oldest idle entries removed first when combined playback storage exceeds the configured limit).
+Active playback keeps needed cache entries alive through reference counting (`ref_count` on each cache entry) while sessions are running. Each FFmpeg encode job writes segment files and its own per-job event playlist under the shared cache directory; non-overlapping windows from different sessions can run in parallel without clobbering each other's playlist state. Completed or cancelled sessions decrement cache references, and unreferenced cache entries become eligible for TTL eviction (idle longer than the configured TTL) and LRU eviction (oldest idle entries removed first when combined playback storage exceeds the configured limit).
 
 Admins can inspect shared cache size, entry counts, idle entries, and configured limits in **Settings → Server status**, and trigger the same cleanup path manually from **Settings → Maintenance → HLS playback cache**. Manual cleanup preserves entries with active playback references.
 

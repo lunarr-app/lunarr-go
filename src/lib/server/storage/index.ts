@@ -7,7 +7,6 @@ import type { LibrarySource } from "../db/schema";
 import { decryptSecret } from "../secrets";
 import {
   DEFAULT_REMOTE_OPERATION_TIMEOUT_MS,
-  DEFAULT_REMOTE_WALK_CONCURRENCY,
   fileInfoFromRemotePath,
   normalizeRemoteOperationTimeoutMs,
   normalizeRemotePath,
@@ -19,36 +18,16 @@ import {
   type StorageFileInfo,
   type StorageWalkEntry,
 } from "./remote";
-import {
-  createWebdavStorage,
-  parseWebdavConfig,
-  testWebdavConnection,
-  webdavDisplayPath,
-  webdavOperationTimeoutMsFromConfig,
-  type WebdavLibraryConfig,
-} from "./webdav";
+import { createWebdavStorage, webdavOperationTimeoutMsFromConfig } from "./webdav";
 
-export type { StorageFileInfo, StorageWalkEntry, RemoteDirectoryEntry };
+export type { StorageFileInfo, StorageWalkEntry };
 export {
   DEFAULT_REMOTE_OPERATION_TIMEOUT_MS,
-  DEFAULT_REMOTE_WALK_CONCURRENCY,
-  MAX_REMOTE_OPERATION_TIMEOUT_MS,
-  MAX_REMOTE_WALK_CONCURRENCY,
-  MIN_REMOTE_OPERATION_TIMEOUT_MS,
-  MIN_REMOTE_WALK_CONCURRENCY,
   normalizeRemoteOperationTimeoutMs,
   normalizeRemotePath,
   normalizeRemoteWalkConcurrency,
-  walkRemoteFiles,
 } from "./remote";
-export {
-  createWebdavStorage,
-  parseWebdavConfig,
-  testWebdavConnection,
-  webdavDisplayPath,
-  webdavOperationTimeoutMsFromConfig,
-  type WebdavLibraryConfig,
-} from "./webdav";
+export { parseWebdavConfig, testWebdavConnection, webdavDisplayPath, type WebdavLibraryConfig } from "./webdav";
 
 export type LibraryStorage = {
   source: LibrarySource;
@@ -179,7 +158,7 @@ export function parseSftpConfig(configJson: string | null): SftpLibraryConfig {
   };
 }
 
-export function sftpOperationTimeoutMsFromConfig(configJson: string | null) {
+function sftpOperationTimeoutMsFromConfig(configJson: string | null) {
   try {
     return parseSftpConfig(configJson).operationTimeoutMs;
   } catch {
@@ -280,7 +259,7 @@ function sftpEntryToRemoteEntry(entry: FileEntryWithStats): RemoteDirectoryEntry
   };
 }
 
-export async function createSftpStorage(configJson: string | null): Promise<LibraryStorage> {
+async function createSftpStorage(configJson: string | null): Promise<LibraryStorage> {
   const config = parseSftpConfig(configJson);
   const { client, sftp } = await sftpConnect(config);
   const operationTimeoutMs = config.operationTimeoutMs;

@@ -93,5 +93,6 @@ export type ProbeBackend = {
 export type TranscodeBackend = {
   validateHlsSegmentGenerationPolicy?(input: HlsSegmentGenerationPolicyInput): Promise<void> | void;
   generateHlsSegmentWindow?(input: HlsSegmentWindowTranscodeInput): Promise<HlsSegmentWindowGeneration>;
+  cancelJob?(sessionId: string, startSegmentIndex: number): Promise<void>;
   cancel(sessionId: string): Promise<void>;
 };

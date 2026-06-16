@@ -52,8 +52,6 @@ export function normalizePreferredAudioLanguage(value: string | null | undefined
   return normalized.length > 0 ? normalized.slice(0, 32) : null;
 }
 
-export const normalizePreferredSubtitleLanguage = normalizePreferredAudioLanguage;
-
 export function normalizeHardwareAccelerationMode(value: string | null | undefined): HardwareAccelerationMode {
   return HARDWARE_ACCELERATION_MODES.includes(value as HardwareAccelerationMode)
     ? (value as HardwareAccelerationMode)
@@ -111,7 +109,7 @@ export async function getUserPreferredAudioLanguage(userId: string | null | unde
 
 export async function getUserPreferredSubtitleLanguage(userId: string | null | undefined) {
   if (!userId) return null;
-  return normalizePreferredSubtitleLanguage(await getSetting(userPreferredSubtitleLanguageKey(userId)));
+  return normalizePreferredAudioLanguage(await getSetting(userPreferredSubtitleLanguageKey(userId)));
 }
 
 export async function setUserPlaybackPreference(userId: string, value: PlaybackPreference) {
@@ -123,7 +121,7 @@ export async function setUserPreferredAudioLanguage(userId: string, value: strin
 }
 
 export async function setUserPreferredSubtitleLanguage(userId: string, value: string | null | undefined) {
-  await setSetting(userPreferredSubtitleLanguageKey(userId), normalizePreferredSubtitleLanguage(value) ?? "");
+  await setSetting(userPreferredSubtitleLanguageKey(userId), normalizePreferredAudioLanguage(value) ?? "");
 }
 
 export async function getTranscodePolicy(userId?: string | null): Promise<TranscodePolicy> {

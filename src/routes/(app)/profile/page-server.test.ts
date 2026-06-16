@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { auth } from "$lib/server/auth";
-import { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
+import { listApiKeys } from "$lib/server/auth/api-keys";
 import { createApiKeyForUser, resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
 

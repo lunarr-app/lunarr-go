@@ -7,7 +7,7 @@ import {
 } from "./seekable-input";
 import type { LibraryStorage } from "../storage";
 
-function storageFromHead(head: Buffer, sizeBytes = head.length): LibraryStorage {
+function storageFromHead(head: Buffer, _sizeBytes = head.length): LibraryStorage {
   return {
     source: "webdav",
     root: "media",

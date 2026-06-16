@@ -111,8 +111,3 @@ export async function syncLibraryWatchers() {
 
   return syncPromise;
 }
-
-export async function closeLibraryWatchers() {
-  const ids = [...watchedLibraries.keys()];
-  await Promise.all(ids.map((id) => closeWatchedLibrary(id)));
-}

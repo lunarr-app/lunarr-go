@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { hlsPlaylistSegmentEntries } from "./hls";
+import { encodeEventPlaylistPath } from "./encode-coordinator";
 
 let tempDir = "";
 
@@ -265,6 +266,12 @@ describe("FFmpeg HLS playback backend", () => {
       "/tmp/lunarr-hls/segment-%05d.ts",
       "/tmp/lunarr-hls/master.m3u8",
     ]);
+  });
+
+  test("uses a per-job event playlist when startSegmentNumber is set", () => {
+    const artifactDirectory = "/tmp/lunarr-hls";
+    const args = ffmpegHlsArgs(input({ artifactDirectory }), { startSegmentNumber: 5 });
+    expect(args.at(-1)).toBe(path.join(artifactDirectory, "encode-session-1-5.m3u8"));
   });
 
   test("builds a remux HLS command without re-encoding", () => {
@@ -587,8 +594,9 @@ describe("FFmpeg HLS playback backend", () => {
     );
     await generation?.completion;
     expect((await expectGeneratedSegment(artifactDirectory)).length).toBeGreaterThan(0);
-    const eventPlaylist = await readFile(path.join(artifactDirectory, "master.m3u8"), "utf8");
-    expect(hlsPlaylistSegmentEntries(eventPlaylist, path.join(artifactDirectory, "master.m3u8"))).toEqual(
+    const eventPlaylistPath = encodeEventPlaylistPath(artifactDirectory, "session-playlist-split-smoke", 0);
+    const eventPlaylist = await readFile(eventPlaylistPath, "utf8");
+    expect(hlsPlaylistSegmentEntries(eventPlaylist, eventPlaylistPath)).toEqual(
       expect.arrayContaining([expect.objectContaining({ segment: "segment-00000.ts" })]),
     );
   });
@@ -599,22 +607,22 @@ describe("FFmpeg HLS playback backend", () => {
     await generateSmokeInput(sourcePath);
 
     const artifactDirectory = path.join(directory, "remux-hls");
-    const playlistPath = path.join(artifactDirectory, "master.m3u8");
+    const eventPlaylistPath = encodeEventPlaylistPath(artifactDirectory, "remux-smoke", 0);
     await mkdir(artifactDirectory, { recursive: true });
     const generation = await ffmpegCliBackend.generateHlsSegmentWindow?.(
       smokeWindowInput({
         sessionId: "remux-smoke",
         inputPath: sourcePath,
         artifactDirectory,
-        playlistPath,
+        playlistPath: eventPlaylistPath,
         mode: "remux",
       }),
     );
     await generation?.completion;
 
     expect((await expectGeneratedSegment(artifactDirectory, "segment-00000.ts")).length).toBeGreaterThan(0);
-    const playlist = await readFile(playlistPath, "utf8");
-    const entries = hlsPlaylistSegmentEntries(playlist, playlistPath);
+    const playlist = await readFile(eventPlaylistPath, "utf8");
+    const entries = hlsPlaylistSegmentEntries(playlist, eventPlaylistPath);
     expect(playlist).toContain("#EXT-X-PLAYLIST-TYPE:EVENT");
     expect(entries[0]).toMatchObject({
       segment: "segment-00000.ts",
@@ -652,7 +660,8 @@ describe("FFmpeg HLS playback backend", () => {
 
     expect((await expectGeneratedSegment(artifactDirectory, "init.mp4")).length).toBeGreaterThan(0);
     expect((await expectGeneratedSegment(artifactDirectory, "segment-00000.m4s")).length).toBeGreaterThan(0);
-    expect(await readFile(path.join(artifactDirectory, "master.m3u8"), "utf8")).toContain('#EXT-X-MAP:URI="init.mp4"');
+    const eventPlaylistPath = encodeEventPlaylistPath(artifactDirectory, "fmp4-smoke", 0);
+    expect(await readFile(eventPlaylistPath, "utf8")).toContain('#EXT-X-MAP:URI="init.mp4"');
   });
 
   smokeTest(

@@ -34,16 +34,6 @@ type ProbeDemuxInput = {
   signal?: AbortSignal;
 };
 
-export type NodeAvBackendStatus =
-  | {
-      available: true;
-      message: null;
-    }
-  | {
-      available: false;
-      message: string;
-    };
-
 export class NodeAvBackendError extends Error {
   constructor(message: string) {
     super(message);
@@ -233,6 +223,16 @@ function mapStream(stream: NodeAvStream, modules: NodeAvModules): MediaProbeStre
     },
   };
 }
+
+export type NodeAvBackendStatus =
+  | {
+      available: true;
+      message: null;
+    }
+  | {
+      available: false;
+      message: string;
+    };
 
 export async function getNodeAvBackendStatus(signal?: AbortSignal): Promise<NodeAvBackendStatus> {
   try {
