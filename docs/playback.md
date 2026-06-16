@@ -39,6 +39,67 @@ Users can set a preferred audio language in Profile. Temporary HLS transcoding p
 
 Users can also set a preferred subtitle language in Profile. Lunarr still returns applicable external subtitle tracks for the selected file, but marks the matching language as the default track when available.
 
+## Web Player Controls
+
+The Lunarr web player uses a custom control bar over the video. Controls can be hidden during ordinary local playback so the video stays unobstructed, while still allowing quick surface and keyboard actions.
+
+### When the control bar is visible
+
+The bar is shown when any of these is true:
+
+- Playback has not settled into ordinary local **playing** yet (for example starting, buffering, seeking, paused, autoplay blocked, or error).
+- The viewer is **casting** to Chromecast.
+- The **subtitle menu** is open.
+- A control has **keyboard focus** (tabbing through buttons, slider, or subtitle options).
+- The pointer is **hovering** the control bar.
+- The bar was explicitly revealed and not yet auto-hidden (see below).
+
+During normal **playing** with none of the conditions above, the bar auto-hides after **3.5 seconds** without control activity.
+
+Activity that resets the 3.5 second timer includes:
+
+- Moving the pointer over the player while controls are already eligible to show (refreshed at most every **250 ms** so small movements do not spam timers).
+- Clicking the video surface or any control.
+- Using player keyboard shortcuts while focus is on the player shell.
+- Focusing a control.
+
+While hidden during playback, moving the pointer over the player does **not** reveal the bar; only a click or keyboard use does.
+
+### Video surface clicks
+
+Clicks on the video (not on the control bar) behave differently depending on whether the bar is currently shown.
+
+| Bar state | Single click                                                                             | Double click                                   |
+| --------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Hidden    | Show the control bar (after a **300 ms** delay so a fast double-click can be recognized) | **Seek / play** by horizontal zone (see below) |
+| Visible   | **Seek / play** by horizontal zone                                                       | No extra action                                |
+
+Horizontal zones are measured across the full video width:
+
+- **Left third** — seek back **10 seconds**
+- **Center third** — toggle play / pause
+- **Right third** — seek forward **30 seconds**
+
+A brief on-screen icon confirms seek and play/pause feedback.
+
+If the subtitle menu is open, a single click on the video closes the menu instead of seeking or toggling playback. Double-clicks are ignored while the menu is open.
+
+### Keyboard shortcuts
+
+Focus the player (click the video surface or tab to the player region) to use:
+
+| Key            | Action                                              |
+| -------------- | --------------------------------------------------- |
+| `Space` or `K` | Play / pause                                        |
+| `←`            | Seek back 10 seconds                                |
+| `→`            | Seek forward 30 seconds                             |
+| `F`            | Toggle fullscreen                                   |
+| `M`            | Toggle mute                                         |
+| `C`            | Open or close subtitles (when tracks are available) |
+| `Escape`       | Close the subtitle menu when it is open             |
+
+Shortcuts are ignored while typing in buttons or other interactive controls outside the player shell.
+
 ## Chromecast And AirPlay
 
 Chromecast and AirPlay receivers load media from Lunarr directly. The app must be reachable from the receiver device by its configured public origin, not only from the browser that opened the player. Use HTTPS for production deployments, Chrome and Edge rely on Google's Cast Web Sender SDK, and secure origins are required for reliable Cast discovery and launch behavior.

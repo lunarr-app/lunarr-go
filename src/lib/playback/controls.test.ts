@@ -29,6 +29,8 @@ import {
   playbackSeekAction,
   playbackTimeRangeText,
   playerSurfaceClickAction,
+  playerSurfaceDoubleClickIntent,
+  playerSurfaceSingleClickIntent,
   playerStatusOverlayState,
   releaseCastOwnedPlaybackSession,
   shouldAutoHideControls,
@@ -972,6 +974,69 @@ describe("custom player controls", () => {
         width: 0,
       }),
     ).toBe("toggle-playback");
+  });
+
+  test("routes surface single and double clicks based on control visibility", () => {
+    expect(
+      playerSurfaceSingleClickIntent({
+        controlsVisible: false,
+        subtitleMenuOpen: false,
+      }),
+    ).toBe("show-controls");
+    expect(
+      playerSurfaceSingleClickIntent({
+        controlsVisible: true,
+        subtitleMenuOpen: false,
+      }),
+    ).toBe("surface-control");
+    expect(
+      playerSurfaceSingleClickIntent({
+        controlsVisible: true,
+        subtitleMenuOpen: true,
+      }),
+    ).toBe("close-subtitle-menu");
+    expect(
+      playerSurfaceDoubleClickIntent({
+        controlsVisible: false,
+        subtitleMenuOpen: false,
+      }),
+    ).toBe("surface-control");
+    expect(
+      playerSurfaceDoubleClickIntent({
+        controlsVisible: true,
+        subtitleMenuOpen: false,
+      }),
+    ).toBe("none");
+    expect(
+      playerSurfaceDoubleClickIntent({
+        controlsVisible: false,
+        subtitleMenuOpen: true,
+      }),
+    ).toBe("none");
+  });
+
+  test("surface click intent follows on-screen bar visibility not auto-hide flag alone", () => {
+    const barVisibleWhilePaused = shouldShowCustomControls({
+      controlsVisible: false,
+      uiState: "paused",
+      casting: false,
+      subtitleMenuOpen: false,
+      controlsFocused: false,
+      controlsHovered: false,
+    });
+    expect(barVisibleWhilePaused).toBe(true);
+    expect(
+      playerSurfaceSingleClickIntent({
+        controlsVisible: barVisibleWhilePaused,
+        subtitleMenuOpen: false,
+      }),
+    ).toBe("surface-control");
+    expect(
+      playerSurfaceSingleClickIntent({
+        controlsVisible: false,
+        subtitleMenuOpen: false,
+      }),
+    ).toBe("show-controls");
   });
 
   test("selects the default subtitle track id or off", () => {

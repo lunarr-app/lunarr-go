@@ -512,6 +512,28 @@ export function playerSurfaceClickAction(input: {
   return "toggle-playback";
 }
 
+export type PlayerSurfaceInteractionIntent = "close-subtitle-menu" | "show-controls" | "surface-control" | "none";
+
+export function playerSurfaceSingleClickIntent(input: {
+  /** Whether the control bar is rendered on screen (`shouldShowCustomControls`), not just `playerControlsVisible`. */
+  controlsVisible: boolean;
+  subtitleMenuOpen: boolean;
+}): PlayerSurfaceInteractionIntent {
+  if (input.subtitleMenuOpen) return "close-subtitle-menu";
+  if (input.controlsVisible) return "surface-control";
+  return "show-controls";
+}
+
+export function playerSurfaceDoubleClickIntent(input: {
+  /** Whether the control bar is rendered on screen (`shouldShowCustomControls`), not just `playerControlsVisible`. */
+  controlsVisible: boolean;
+  subtitleMenuOpen: boolean;
+}): PlayerSurfaceInteractionIntent {
+  if (input.subtitleMenuOpen) return "none";
+  if (input.controlsVisible) return "none";
+  return "surface-control";
+}
+
 export type PlaybackSubtitleTrack = {
   id: string;
   default?: boolean | null;

@@ -37,6 +37,8 @@
     playbackSeekAction,
     playbackTimeRangeText,
     playerSurfaceClickAction,
+    playerSurfaceDoubleClickIntent,
+    playerSurfaceSingleClickIntent,
     playerStatusOverlayState,
     primaryPlaybackButtonState,
     shouldAutoHideControls,
@@ -73,6 +75,8 @@
 
   type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
   const POINTER_CONTROLS_REFRESH_INTERVAL_MS = 250;
+  const SURFACE_SINGLE_CLICK_DELAY_MS = 300;
+  const CONTROLS_AUTO_HIDE_MS = 3500;
 
   let {
     data,
@@ -111,6 +115,7 @@
   let playerControlsHovered = $state(false);
   let surfaceFeedback = $state<SurfaceFeedback | null>(null);
   let surfaceFeedbackTimeout: number | null = null;
+  let surfaceSingleClickTimeout: number | null = null;
   let playerControlsActivityTick = $state(0);
   let currentPlaybackSeconds = $state(0);
   let durationSeconds = $state<number | null>(null);
@@ -310,17 +315,14 @@
     }, 620);
   }
 
-  function handleSurfaceClick() {
-    if (subtitleMenuOpen) {
-      void closeSubtitleMenu();
-    } else if (!playerControlsVisible) {
-      showControls();
+  function clearSurfaceSingleClickTimeout() {
+    if (surfaceSingleClickTimeout !== null) {
+      window.clearTimeout(surfaceSingleClickTimeout);
+      surfaceSingleClickTimeout = null;
     }
   }
 
-  function handleSurfaceDoubleClick(event: MouseEvent) {
-    if (subtitleMenuOpen) return;
-
+  function applySurfaceControl(event: MouseEvent) {
     const target = event.currentTarget;
     if (!(target instanceof HTMLElement)) return;
     const rect = target.getBoundingClientRect();
@@ -339,6 +341,37 @@
     } else {
       showSurfaceFeedback(playbackButtonState.action);
       void toggleLocalPlayback();
+    }
+  }
+
+  function handleSurfaceClick(event: MouseEvent) {
+    const intent = playerSurfaceSingleClickIntent({
+      controlsVisible: customControlsVisible,
+      subtitleMenuOpen,
+    });
+    if (intent === "close-subtitle-menu") {
+      void closeSubtitleMenu();
+      return;
+    }
+    if (intent === "surface-control") {
+      applySurfaceControl(event);
+      return;
+    }
+    clearSurfaceSingleClickTimeout();
+    surfaceSingleClickTimeout = window.setTimeout(() => {
+      surfaceSingleClickTimeout = null;
+      showControls();
+    }, SURFACE_SINGLE_CLICK_DELAY_MS);
+  }
+
+  function handleSurfaceDoubleClick(event: MouseEvent) {
+    clearSurfaceSingleClickTimeout();
+    const intent = playerSurfaceDoubleClickIntent({
+      controlsVisible: customControlsVisible,
+      subtitleMenuOpen,
+    });
+    if (intent === "surface-control") {
+      applySurfaceControl(event);
     }
   }
 
@@ -796,7 +829,7 @@
     ) {
       const timeout = window.setTimeout(() => {
         playerControlsVisible = false;
-      }, 3200);
+      }, CONTROLS_AUTO_HIDE_MS);
       return () => window.clearTimeout(timeout);
     }
   });
@@ -898,6 +931,7 @@
       window.clearTimeout(surfaceFeedbackTimeout);
       surfaceFeedbackTimeout = null;
     }
+    clearSurfaceSingleClickTimeout();
     clearSignedPlaybackNotice();
     releaseScreenWakeLock();
     session.flushProgress(data);
