@@ -149,7 +149,7 @@ describe("matchMovieMetadata", () => {
     expect(calls[0]).toContain("year=1999");
     expect(calls[0]).toContain("primary_release_year=1999");
     expect(calls[1]).toContain("/movie/603");
-    expect(calls[1]).toContain("append_to_response=credits%2Cvideos%2Ckeywords%2Crelease_dates");
+    expect(calls[1]).toContain("append_to_response=credits%2Cvideos%2Ckeywords%2Crelease_dates%2Calternative_titles");
     expect(metadata).toMatchObject({
       provider: "tmdb",
       providerId: "603",
@@ -429,6 +429,51 @@ describe("matchMovieMetadata", () => {
     });
   });
 
+  test("matches alternate TMDb release titles from movie details", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/movie")) {
+        return Response.json({
+          results: [
+            {
+              id: 27328,
+              title: "The Fun House",
+              release_date: "1977-05-06",
+            },
+          ],
+        });
+      }
+
+      detailCalls.push(url);
+      return Response.json({
+        id: 27328,
+        title: "The Fun House",
+        original_title: "The Fun House",
+        release_date: "1977-05-06",
+        runtime: 78,
+        alternative_titles: {
+          titles: [{ iso_3166_1: "US", title: "Last House on Dead End Street", type: "1979 Re-Release Title" }],
+        },
+      });
+    };
+
+    const metadata = await matchMovieMetadata("The Last House on Dead End Street", 1977, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(detailCalls).toHaveLength(1);
+    expect(detailCalls[0]).toContain("/movie/27328");
+    expect(metadata).toMatchObject({
+      providerId: "27328",
+      title: "The Fun House",
+      year: 1977,
+      runtimeSeconds: 4680,
+      alternativeTitles: ["Last House on Dead End Street"],
+    });
+  });
+
   test("does not accept unrelated same-year movie results", async () => {
     const detailCalls: string[] = [];
     const mockedFetch = async (input: URL | RequestInfo) => {
@@ -460,7 +505,7 @@ describe("matchMovieMetadata", () => {
     });
 
     expect(metadata).toBeNull();
-    expect(detailCalls).toEqual([]);
+    expect(detailCalls.length).toBeGreaterThan(0);
   });
 
   test("matches a shorter title contained in the TMDb result title", async () => {
@@ -628,6 +673,20 @@ describe("movie metadata acceptance", () => {
         metadataYear: 2014,
         fileRuntimeSeconds: null,
         metadataRuntimeSeconds: 6120,
+      }),
+    ).toBe(true);
+  });
+
+  test("accepts alternate release titles against the stored primary title", () => {
+    expect(
+      movieMetadataMatchAccepts({
+        queryTitle: "The Last House on Dead End Street",
+        queryYear: 1977,
+        metadataTitle: "The Fun House",
+        metadataYear: 1977,
+        metadataAlternativeTitles: ["Last House on Dead End Street"],
+        fileRuntimeSeconds: 4680,
+        metadataRuntimeSeconds: 4680,
       }),
     ).toBe(true);
   });

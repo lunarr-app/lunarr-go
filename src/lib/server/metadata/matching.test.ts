@@ -127,4 +127,37 @@ describe("lookupMovieMetadataFromCandidates", () => {
     expect(result?.metadata.providerId).toBe("208284");
     expect(result?.candidate).toEqual({ title: "The Strange Color of Your Body's Tears", year: 2013 });
   });
+
+  test("accepts metadata matched through alternate release titles", async () => {
+    const matcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
+      if (title === "The Last House on Dead End Street" && year === 1977) {
+        return {
+          provider: "tmdb",
+          providerId: "27328",
+          title: "The Fun House",
+          year: 1977,
+          overview: null,
+          runtimeSeconds: 4680,
+          posterPath: null,
+          backdropPath: null,
+          releaseDate: "1977-05-06",
+          popularity: null,
+          voteAverage: null,
+          alternativeTitles: ["Last House on Dead End Street"],
+        };
+      }
+      return null;
+    };
+
+    const result = await lookupMovieMetadataFromCandidates(
+      [{ title: "The Last House on Dead End Street", year: 1977 }],
+      {
+        matcher,
+        fileRuntimeSeconds: 4680,
+      },
+    );
+
+    expect(result?.metadata.providerId).toBe("27328");
+    expect(result?.candidate).toEqual({ title: "The Last House on Dead End Street", year: 1977 });
+  });
 });

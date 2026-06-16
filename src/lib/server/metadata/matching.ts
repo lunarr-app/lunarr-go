@@ -55,6 +55,8 @@ export async function lookupMovieMetadataFromCandidates(
         queryYear: candidate.year,
         metadataTitle: metadata.title,
         metadataYear: metadata.year,
+        metadataAlternativeTitles: metadata.alternativeTitles,
+        metadataOriginalTitle: metadata.originalTitle,
         fileRuntimeSeconds: options.fileRuntimeSeconds,
         metadataRuntimeSeconds: metadata.runtimeSeconds,
       })
@@ -62,7 +64,10 @@ export async function lookupMovieMetadataFromCandidates(
       continue;
     }
 
-    const score = movieMetadataMatchScore(candidate.title, candidate.year, metadata.title, metadata.year);
+    const score = movieMetadataMatchScore(candidate.title, candidate.year, metadata.title, metadata.year, {
+      metadataAlternativeTitles: metadata.alternativeTitles,
+      metadataOriginalTitle: metadata.originalTitle,
+    });
 
     if (!best || score > best.score) {
       best = { metadata, candidate, score };
