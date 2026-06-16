@@ -944,7 +944,7 @@ describe("custom player controls", () => {
     expect(nextControlsActivityTick(Number.NaN)).toBe(1);
   });
 
-  test("maps video surface clicks to controls and subtitle menu state", () => {
+  test("maps video surface double-click zones and subtitle menu single-click state", () => {
     expect(
       playerSurfaceClickState({
         uiState: "playing",

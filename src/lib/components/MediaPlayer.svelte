@@ -410,11 +410,14 @@
     }, 620);
   }
 
-  function handleSurfaceClick(event: MouseEvent) {
+  function handleSurfaceClick() {
     if (subtitleMenuOpen) {
       toggleControls();
-      return;
     }
+  }
+
+  function handleSurfaceDoubleClick(event: MouseEvent) {
+    if (subtitleMenuOpen) return;
 
     const target = event.currentTarget;
     if (!(target instanceof HTMLElement)) return;
@@ -1837,6 +1840,7 @@
       aria-hidden="true"
       onpointerdown={focusPlayerShell}
       onclick={handleSurfaceClick}
+      ondblclick={handleSurfaceDoubleClick}
     ></div>
 
     {#if surfaceFeedback}
@@ -2164,6 +2168,7 @@
     background: transparent;
     cursor: default;
     touch-action: manipulation;
+    user-select: none;
   }
 
   .surface-feedback {
