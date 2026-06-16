@@ -224,30 +224,6 @@ function mapStream(stream: NodeAvStream, modules: NodeAvModules): MediaProbeStre
   };
 }
 
-export type NodeAvBackendStatus =
-  | {
-      available: true;
-      message: null;
-    }
-  | {
-      available: false;
-      message: string;
-    };
-
-export async function getNodeAvBackendStatus(signal?: AbortSignal): Promise<NodeAvBackendStatus> {
-  try {
-    await loadNodeAvModules(signal);
-    return { available: true, message: null };
-  } catch (error) {
-    return { available: false, message: errorMessage(error) };
-  }
-}
-
-export function setNodeAvModuleLoaderForTests(loader: NodeAvModuleLoader | null) {
-  moduleLoader = loader ?? defaultNodeAvModuleLoader;
-  modulesPromise = null;
-}
-
 export const nodeAvBackend: ProbeBackend = {
   async probe(input: ProbeInput): Promise<MediaProbe> {
     const modules = await loadNodeAvModules(input.signal);

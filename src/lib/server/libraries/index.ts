@@ -1,24 +1,14 @@
-import { access, realpath, stat } from "node:fs/promises";
-import path from "node:path";
-import { constants } from "node:fs";
 import { getDb } from "../db";
-import type { LibraryAccessMode, LibraryKind, LibrarySource } from "../db/schema";
-import { createId } from "../id";
-import { encryptSecret } from "../secrets";
-import {
-  normalizeRemoteOperationTimeoutMs,
-  normalizeRemotePath,
-  normalizeRemoteWalkConcurrency,
-  parseSftpConfig,
-  parseWebdavConfig,
-  sftpDisplayPath,
-  testSftpConnection,
-  testWebdavConnection,
-  webdavDisplayPath,
-  type SftpLibraryConfig,
-  type WebdavLibraryConfig,
-} from "../storage";
+import type { LibraryAccessMode } from "../db/schema";
+import { parseSftpConfig, parseWebdavConfig, type SftpLibraryConfig, type WebdavLibraryConfig } from "../storage";
 import { nowIso } from "../time";
+import { createLocalLibrary, updateLocalLibrary } from "./local";
+import { createSftpLibrary, updateSftpLibrary } from "./sftp";
+import { activeScanExists, normalizeScanIntervalMinutes, normalizeWatchEnabled } from "./shared";
+import type { CreateLibraryInput, CreateLibraryOptions, UpdateLibraryInput, UpdateLocalLibraryInput } from "./types";
+import { createWebdavLibrary, updateWebdavLibrary } from "./webdav";
+
+export type { CreateLibraryInput, CreateLibraryOptions, UpdateLibraryInput } from "./types";
 
 export async function listLibraries() {
   const db = await getDb();
@@ -181,398 +171,6 @@ export async function getLibrary(id: string) {
   return db.selectFrom("library").selectAll().where("id", "=", id).executeTakeFirst();
 }
 
-function pathsOverlap(left: string, right: string) {
-  const relative = path.relative(left, right);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
-}
-
-function remotePathsOverlap(left: string, right: string) {
-  const relative = path.posix.relative(left, right);
-  return relative === "" || (!relative.startsWith("..") && !path.posix.isAbsolute(relative));
-}
-
-type CreateLocalLibraryInput = {
-  source?: "local";
-  name: string;
-  kind: LibraryKind;
-  path: string;
-  watchEnabled?: boolean;
-  scanIntervalMinutes?: number | null;
-};
-
-type CreateSftpLibraryInput = {
-  source: "sftp";
-  name: string;
-  kind: LibraryKind;
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  root: string;
-  walkConcurrency?: number;
-  operationTimeoutMs?: number;
-  watchEnabled?: boolean;
-  scanIntervalMinutes?: number | null;
-};
-
-type UpdateLocalLibraryInput = {
-  source?: "local";
-  name: string;
-  path: string;
-  watchEnabled?: boolean;
-  scanIntervalMinutes?: number | null;
-};
-
-type UpdateSftpLibraryInput = {
-  source: "sftp";
-  name: string;
-  host: string;
-  port: number;
-  username: string;
-  password?: string;
-  root: string;
-  walkConcurrency?: number;
-  operationTimeoutMs?: number;
-  watchEnabled?: boolean;
-  scanIntervalMinutes?: number | null;
-};
-
-type CreateWebdavLibraryInput = {
-  source: "webdav";
-  name: string;
-  kind: LibraryKind;
-  host: string;
-  port: number;
-  secure: boolean;
-  username: string;
-  password: string;
-  root: string;
-  walkConcurrency?: number;
-  operationTimeoutMs?: number;
-  watchEnabled?: boolean;
-  scanIntervalMinutes?: number | null;
-};
-
-type UpdateWebdavLibraryInput = {
-  source: "webdav";
-  name: string;
-  host: string;
-  port: number;
-  secure: boolean;
-  username: string;
-  password?: string;
-  root: string;
-  walkConcurrency?: number;
-  operationTimeoutMs?: number;
-  watchEnabled?: boolean;
-  scanIntervalMinutes?: number | null;
-};
-
-export type CreateLibraryInput = CreateLocalLibraryInput | CreateSftpLibraryInput | CreateWebdavLibraryInput;
-export type UpdateLibraryInput = UpdateLocalLibraryInput | UpdateSftpLibraryInput | UpdateWebdavLibraryInput;
-export type CreateLibraryOptions = {
-  testSftpConnection?: typeof testSftpConnection;
-  testWebdavConnection?: typeof testWebdavConnection;
-};
-
-const MIN_SCAN_INTERVAL_MINUTES = 5;
-const MAX_SCAN_INTERVAL_MINUTES = 43_200;
-
-function assertSupportedLibraryKind(kind: LibraryKind) {
-  if (kind !== "movie" && kind !== "tv") throw new Error("Unsupported library kind.");
-}
-
-function normalizeWatchEnabled(source: LibrarySource, value: boolean | undefined) {
-  if (source !== "local") return 0;
-  return value === false ? 0 : 1;
-}
-
-function normalizeScanIntervalMinutes(value: number | null | undefined) {
-  if (value === null || value === undefined || value === 0) return null;
-  if (!Number.isInteger(value) || value < MIN_SCAN_INTERVAL_MINUTES || value > MAX_SCAN_INTERVAL_MINUTES) {
-    throw new Error(`Scheduled scan interval must be between ${MIN_SCAN_INTERVAL_MINUTES} minutes and 30 days.`);
-  }
-  return value;
-}
-
-async function createLocalLibrary(input: CreateLocalLibraryInput) {
-  const cleanPath = input.path.trim();
-  const cleanName = input.name.trim() || path.basename(cleanPath);
-  if (!cleanPath) throw new Error("Library path is required.");
-  assertSupportedLibraryKind(input.kind);
-
-  let resolved: string;
-  try {
-    resolved = await realpath(cleanPath);
-  } catch {
-    throw new Error("Library path does not exist.");
-  }
-
-  const info = await stat(resolved);
-  if (!info.isDirectory()) throw new Error("Library path must be a directory.");
-  try {
-    await access(resolved, constants.R_OK);
-  } catch {
-    throw new Error("Library path is not readable.");
-  }
-
-  const db = await getDb();
-  const existing = await db.selectFrom("library").select("id").where("path", "=", resolved).executeTakeFirst();
-  if (existing) throw new Error("Library path is already configured.");
-
-  const libraries = await db.selectFrom("library").select(["path"]).execute();
-  const overlapping = libraries.find(
-    (library) => pathsOverlap(library.path, resolved) || pathsOverlap(resolved, library.path),
-  );
-  if (overlapping) throw new Error("Library path overlaps with an existing library.");
-
-  const now = nowIso();
-  const library = {
-    id: createId(),
-    name: cleanName,
-    kind: input.kind,
-    source: "local" as const,
-    access_mode: "all" as const,
-    path: resolved,
-    config_json: null,
-    watch_enabled: normalizeWatchEnabled("local", input.watchEnabled),
-    scan_interval_minutes: normalizeScanIntervalMinutes(input.scanIntervalMinutes),
-    last_scheduled_scan_at: null,
-    created_at: now,
-    updated_at: now,
-  };
-
-  await db.insertInto("library").values(library).execute();
-  return library;
-}
-
-function parseSftpInput(input: CreateSftpLibraryInput): SftpLibraryConfig {
-  const host = input.host.trim();
-  const username = input.username.trim();
-  const root = normalizeRemotePath(input.root);
-  const port = Number(input.port || 22);
-  const password = input.password.trim();
-
-  if (!host) throw new Error("SFTP host is required.");
-  if (!username) throw new Error("SFTP username is required.");
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("SFTP port is invalid.");
-  if (!password) throw new Error("SFTP password is required.");
-  if (!root || root === ".") throw new Error("SFTP root path is required.");
-
-  return {
-    host,
-    port,
-    username,
-    root,
-    passwordEncrypted: encryptSecret(password),
-    walkConcurrency: normalizeRemoteWalkConcurrency(input.walkConcurrency),
-    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(input.operationTimeoutMs),
-  };
-}
-
-function parseWebdavInput(input: CreateWebdavLibraryInput): WebdavLibraryConfig {
-  const host = input.host.trim();
-  const username = input.username.trim();
-  const root = normalizeRemotePath(input.root);
-  const secure = input.secure !== false;
-  const port = Number(input.port || (secure ? 443 : 80));
-  const password = input.password.trim();
-
-  if (!host) throw new Error("WebDAV host is required.");
-  if (!username) throw new Error("WebDAV username is required.");
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("WebDAV port is invalid.");
-  if (!password) throw new Error("WebDAV password is required.");
-  if (!root || root === ".") throw new Error("WebDAV root path is required.");
-
-  return {
-    host,
-    port,
-    secure,
-    username,
-    root,
-    passwordEncrypted: encryptSecret(password),
-    walkConcurrency: normalizeRemoteWalkConcurrency(input.walkConcurrency),
-    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(input.operationTimeoutMs),
-  };
-}
-
-function parseWebdavUpdateInput(
-  input: UpdateWebdavLibraryInput,
-  existingConfig: WebdavLibraryConfig,
-): WebdavLibraryConfig {
-  const host = input.host.trim();
-  const username = input.username.trim();
-  const root = normalizeRemotePath(input.root);
-  const secure = input.secure !== false;
-  const port = Number(input.port || (secure ? 443 : 80));
-  const password = input.password?.trim() ?? "";
-
-  if (!host) throw new Error("WebDAV host is required.");
-  if (!username) throw new Error("WebDAV username is required.");
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("WebDAV port is invalid.");
-  if (!root || root === ".") throw new Error("WebDAV root path is required.");
-
-  return {
-    host,
-    port,
-    secure,
-    username,
-    root,
-    passwordEncrypted: password ? encryptSecret(password) : existingConfig.passwordEncrypted,
-    walkConcurrency: normalizeRemoteWalkConcurrency(input.walkConcurrency ?? existingConfig.walkConcurrency),
-    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(
-      input.operationTimeoutMs ?? existingConfig.operationTimeoutMs,
-    ),
-  };
-}
-
-function parseSftpUpdateInput(input: UpdateSftpLibraryInput, existingConfig: SftpLibraryConfig): SftpLibraryConfig {
-  const host = input.host.trim();
-  const username = input.username.trim();
-  const root = normalizeRemotePath(input.root);
-  const port = Number(input.port || 22);
-  const password = input.password?.trim() ?? "";
-
-  if (!host) throw new Error("SFTP host is required.");
-  if (!username) throw new Error("SFTP username is required.");
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("SFTP port is invalid.");
-  if (!root || root === ".") throw new Error("SFTP root path is required.");
-
-  return {
-    host,
-    port,
-    username,
-    root,
-    passwordEncrypted: password ? encryptSecret(password) : existingConfig.passwordEncrypted,
-    walkConcurrency: normalizeRemoteWalkConcurrency(input.walkConcurrency ?? existingConfig.walkConcurrency),
-    operationTimeoutMs: normalizeRemoteOperationTimeoutMs(
-      input.operationTimeoutMs ?? existingConfig.operationTimeoutMs,
-    ),
-  };
-}
-
-async function activeScanExists(libraryId: string) {
-  const db = await getDb();
-  const activeScan = await db
-    .selectFrom("scan_job")
-    .select("id")
-    .where("library_id", "=", libraryId)
-    .where("status", "in", ["queued", "running"])
-    .executeTakeFirst();
-  return Boolean(activeScan);
-}
-
-async function createSftpLibrary(input: CreateSftpLibraryInput, options: CreateLibraryOptions = {}) {
-  assertSupportedLibraryKind(input.kind);
-  const config = parseSftpInput(input);
-  await (options.testSftpConnection ?? testSftpConnection)(config);
-
-  const displayPath = sftpDisplayPath(config);
-  const cleanName = input.name.trim() || path.posix.basename(config.root) || config.host;
-  const db = await getDb();
-  const existing = await db.selectFrom("library").select("id").where("path", "=", displayPath).executeTakeFirst();
-  if (existing) throw new Error("Library path is already configured.");
-
-  const libraries = await db
-    .selectFrom("library")
-    .select(["source", "path", "config_json"])
-    .where("source", "=", "sftp")
-    .execute();
-  const overlapping = libraries.find((library) => {
-    if (!library.config_json) return false;
-    try {
-      const existingConfig = JSON.parse(library.config_json) as Pick<
-        SftpLibraryConfig,
-        "host" | "port" | "username" | "root"
-      >;
-      return (
-        existingConfig.host === config.host &&
-        Number(existingConfig.port) === config.port &&
-        existingConfig.username === config.username &&
-        (remotePathsOverlap(existingConfig.root, config.root) || remotePathsOverlap(config.root, existingConfig.root))
-      );
-    } catch {
-      return false;
-    }
-  });
-  if (overlapping) throw new Error("Library path overlaps with an existing library.");
-
-  const now = nowIso();
-  const library = {
-    id: createId(),
-    name: cleanName,
-    kind: input.kind,
-    source: "sftp" as const,
-    access_mode: "all" as const,
-    path: displayPath,
-    config_json: JSON.stringify(config),
-    watch_enabled: normalizeWatchEnabled("sftp", input.watchEnabled),
-    scan_interval_minutes: normalizeScanIntervalMinutes(input.scanIntervalMinutes),
-    last_scheduled_scan_at: null,
-    created_at: now,
-    updated_at: now,
-  };
-
-  await db.insertInto("library").values(library).execute();
-  return library;
-}
-
-async function createWebdavLibrary(input: CreateWebdavLibraryInput, options: CreateLibraryOptions = {}) {
-  assertSupportedLibraryKind(input.kind);
-  const config = parseWebdavInput(input);
-  await (options.testWebdavConnection ?? testWebdavConnection)(config);
-
-  const displayPath = webdavDisplayPath(config);
-  const cleanName = input.name.trim() || path.posix.basename(config.root) || config.host;
-  const db = await getDb();
-  const existing = await db.selectFrom("library").select("id").where("path", "=", displayPath).executeTakeFirst();
-  if (existing) throw new Error("Library path is already configured.");
-
-  const libraries = await db
-    .selectFrom("library")
-    .select(["source", "path", "config_json"])
-    .where("source", "=", "webdav")
-    .execute();
-  const overlapping = libraries.find((library) => {
-    if (!library.config_json) return false;
-    try {
-      const existingConfig = JSON.parse(library.config_json) as Pick<
-        WebdavLibraryConfig,
-        "host" | "port" | "secure" | "username" | "root"
-      >;
-      return (
-        existingConfig.host === config.host &&
-        Number(existingConfig.port) === config.port &&
-        Boolean(existingConfig.secure) === config.secure &&
-        existingConfig.username === config.username &&
-        (remotePathsOverlap(existingConfig.root, config.root) || remotePathsOverlap(config.root, existingConfig.root))
-      );
-    } catch {
-      return false;
-    }
-  });
-  if (overlapping) throw new Error("Library path overlaps with an existing library.");
-
-  const now = nowIso();
-  const library = {
-    id: createId(),
-    name: cleanName,
-    kind: input.kind,
-    source: "webdav" as const,
-    access_mode: "all" as const,
-    path: displayPath,
-    config_json: JSON.stringify(config),
-    watch_enabled: normalizeWatchEnabled("webdav", input.watchEnabled),
-    scan_interval_minutes: normalizeScanIntervalMinutes(input.scanIntervalMinutes),
-    last_scheduled_scan_at: null,
-    created_at: now,
-    updated_at: now,
-  };
-
-  await db.insertInto("library").values(library).execute();
-  return library;
-}
-
 export async function createLibrary(input: CreateLibraryInput, options: CreateLibraryOptions = {}) {
   if (input.source === "sftp") return createSftpLibrary(input, options);
   if (input.source === "webdav") return createWebdavLibrary(input, options);
@@ -592,161 +190,39 @@ export async function updateLibrary(id: string, input: UpdateLibraryInput, optio
   const resetScheduledScanAt =
     scanIntervalMinutes !== existingLibrary.scan_interval_minutes ? { last_scheduled_scan_at: null } : {};
 
-  const now = nowIso();
   if (existingLibrary.source === "sftp" && input.source === "sftp") {
-    const existingConfig = parseSftpConfig(existingLibrary.config_json);
-    const config = parseSftpUpdateInput(input, existingConfig);
-    await (options.testSftpConnection ?? testSftpConnection)(config);
-
-    const displayPath = sftpDisplayPath(config);
-    const duplicate = await db
-      .selectFrom("library")
-      .select("id")
-      .where("path", "=", displayPath)
-      .where("id", "!=", id)
-      .executeTakeFirst();
-    if (duplicate) throw new Error("Library path is already configured.");
-
-    const libraries = await db
-      .selectFrom("library")
-      .select(["id", "source", "path", "config_json"])
-      .where("source", "=", "sftp")
-      .where("id", "!=", id)
-      .execute();
-    const overlapping = libraries.find((library) => {
-      if (!library.config_json) return false;
-      try {
-        const otherConfig = parseSftpConfig(library.config_json);
-        return (
-          otherConfig.host === config.host &&
-          Number(otherConfig.port) === config.port &&
-          otherConfig.username === config.username &&
-          (remotePathsOverlap(otherConfig.root, config.root) || remotePathsOverlap(config.root, otherConfig.root))
-        );
-      } catch {
-        return false;
-      }
+    await updateSftpLibrary({
+      id,
+      input,
+      existingConfigJson: existingLibrary.config_json,
+      watchEnabled,
+      scanIntervalMinutes,
+      resetScheduledScanAt,
+      options,
     });
-    if (overlapping) throw new Error("Library path overlaps with an existing library.");
-
-    const cleanName = input.name.trim() || path.posix.basename(config.root) || config.host;
-    await db
-      .updateTable("library")
-      .set({
-        name: cleanName,
-        path: displayPath,
-        config_json: JSON.stringify(config),
-        watch_enabled: watchEnabled,
-        scan_interval_minutes: scanIntervalMinutes,
-        ...resetScheduledScanAt,
-        updated_at: now,
-      })
-      .where("id", "=", id)
-      .execute();
     return getLibrary(id);
   }
 
   if (existingLibrary.source === "webdav" && input.source === "webdav") {
-    const existingConfig = parseWebdavConfig(existingLibrary.config_json);
-    const config = parseWebdavUpdateInput(input, existingConfig);
-    await (options.testWebdavConnection ?? testWebdavConnection)(config);
-
-    const displayPath = webdavDisplayPath(config);
-    const duplicate = await db
-      .selectFrom("library")
-      .select("id")
-      .where("path", "=", displayPath)
-      .where("id", "!=", id)
-      .executeTakeFirst();
-    if (duplicate) throw new Error("Library path is already configured.");
-
-    const libraries = await db
-      .selectFrom("library")
-      .select(["id", "source", "path", "config_json"])
-      .where("source", "=", "webdav")
-      .where("id", "!=", id)
-      .execute();
-    const overlapping = libraries.find((library) => {
-      if (!library.config_json) return false;
-      try {
-        const otherConfig = parseWebdavConfig(library.config_json);
-        return (
-          otherConfig.host === config.host &&
-          Number(otherConfig.port) === config.port &&
-          otherConfig.secure === config.secure &&
-          otherConfig.username === config.username &&
-          (remotePathsOverlap(otherConfig.root, config.root) || remotePathsOverlap(config.root, otherConfig.root))
-        );
-      } catch {
-        return false;
-      }
+    await updateWebdavLibrary({
+      id,
+      input,
+      existingConfigJson: existingLibrary.config_json,
+      watchEnabled,
+      scanIntervalMinutes,
+      resetScheduledScanAt,
+      options,
     });
-    if (overlapping) throw new Error("Library path overlaps with an existing library.");
-
-    const cleanName = input.name.trim() || path.posix.basename(config.root) || config.host;
-    await db
-      .updateTable("library")
-      .set({
-        name: cleanName,
-        path: displayPath,
-        config_json: JSON.stringify(config),
-        watch_enabled: watchEnabled,
-        scan_interval_minutes: scanIntervalMinutes,
-        ...resetScheduledScanAt,
-        updated_at: now,
-      })
-      .where("id", "=", id)
-      .execute();
     return getLibrary(id);
   }
 
-  const localInput = input as UpdateLocalLibraryInput;
-  const cleanPath = localInput.path.trim();
-  const cleanName = localInput.name.trim() || path.basename(cleanPath);
-  if (!cleanPath) throw new Error("Library path is required.");
-
-  let resolved: string;
-  try {
-    resolved = await realpath(cleanPath);
-  } catch {
-    throw new Error("Library path does not exist.");
-  }
-
-  const info = await stat(resolved);
-  if (!info.isDirectory()) throw new Error("Library path must be a directory.");
-  try {
-    await access(resolved, constants.R_OK);
-  } catch {
-    throw new Error("Library path is not readable.");
-  }
-
-  const duplicate = await db
-    .selectFrom("library")
-    .select("id")
-    .where("path", "=", resolved)
-    .where("id", "!=", id)
-    .executeTakeFirst();
-  if (duplicate) throw new Error("Library path is already configured.");
-
-  const libraries = await db.selectFrom("library").select(["id", "path"]).where("id", "!=", id).execute();
-  const overlapping = libraries.find(
-    (library) => pathsOverlap(library.path, resolved) || pathsOverlap(resolved, library.path),
-  );
-  if (overlapping) throw new Error("Library path overlaps with an existing library.");
-
-  await db
-    .updateTable("library")
-    .set({
-      name: cleanName,
-      path: resolved,
-      config_json: null,
-      watch_enabled: watchEnabled,
-      scan_interval_minutes: scanIntervalMinutes,
-      ...resetScheduledScanAt,
-      updated_at: now,
-    })
-    .where("id", "=", id)
-    .execute();
+  await updateLocalLibrary({
+    id,
+    input: input as UpdateLocalLibraryInput,
+    watchEnabled,
+    scanIntervalMinutes,
+    resetScheduledScanAt,
+  });
   return getLibrary(id);
 }
 

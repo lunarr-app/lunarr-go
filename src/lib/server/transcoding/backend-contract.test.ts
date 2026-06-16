@@ -13,6 +13,7 @@ const allowedFfmpegFiles = new Set([
   "scripts/verify-nodeav-probe.mjs",
   "scripts/verify-runtime.mjs",
   "src/lib/server/transcoding/ffmpeg-cli.ts",
+  "src/lib/server/transcoding/playback-backend.ts",
   "src/lib/server/transcoding/input-proxy.ts",
   "src/lib/server/transcoding/manager.ts",
   "src/routes/(app)/settings/+page.svelte",

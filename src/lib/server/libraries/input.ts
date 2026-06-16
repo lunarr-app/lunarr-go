@@ -1,4 +1,4 @@
-import type { CreateLibraryInput, UpdateLibraryInput } from "./index";
+import type { CreateLibraryInput, UpdateLibraryInput } from "./types";
 
 type LibraryInputSource = Record<string, unknown> | FormData;
 
