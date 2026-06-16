@@ -740,7 +740,7 @@ async function matchMovieMetadataForSearchYear(
     searchUrl.searchParams.set("year", String(searchYear));
     searchUrl.searchParams.set("primary_release_year", String(searchYear));
   }
-  searchUrl.searchParams.set("include_adult", "false");
+  searchUrl.searchParams.set("include_adult", "true");
 
   const search = await tmdbFetch<{ results: TmdbSearchResult[] }>(searchUrl, options.credentials, options.fetch);
   const first = bestSearchResult(search?.results, title, resultYear);

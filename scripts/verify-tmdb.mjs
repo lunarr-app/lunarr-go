@@ -85,7 +85,7 @@ export async function verifyTmdb({ cwd = process.cwd(), env = process.env, fetch
   searchUrl.searchParams.set("query", "The Matrix");
   searchUrl.searchParams.set("year", "1999");
   searchUrl.searchParams.set("primary_release_year", "1999");
-  searchUrl.searchParams.set("include_adult", "false");
+  searchUrl.searchParams.set("include_adult", "true");
   const search = await tmdbJson(searchUrl, credentials, fetcher);
   const match = Array.isArray(search.results) ? search.results.find((item) => item?.id) : undefined;
   if (!match) {

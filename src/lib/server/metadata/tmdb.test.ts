@@ -381,6 +381,54 @@ describe("matchMovieMetadata", () => {
     });
   });
 
+  test("includes adult-catalog titles in movie search requests", async () => {
+    const searchCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/movie")) {
+        searchCalls.push(url);
+        if (!url.includes("include_adult=true")) {
+          return Response.json({ results: [] });
+        }
+        if (url.includes("primary_release_year=1992")) {
+          return Response.json({
+            results: [
+              {
+                id: 37265,
+                title: "All Ladies Do It",
+                original_title: "Così fan tutte",
+                release_date: "1992-02-21",
+              },
+            ],
+          });
+        }
+        return Response.json({
+          results: [{ id: 849920, title: "All Ladies Do It", release_date: "2020-10-13" }],
+        });
+      }
+
+      return Response.json({
+        id: 37265,
+        title: "All Ladies Do It",
+        original_title: "Così fan tutte",
+        release_date: "1992-02-21",
+        runtime: 93,
+      });
+    };
+
+    const metadata = await matchMovieMetadata("All Ladies Do It", 1992, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(searchCalls.every((url) => url.includes("include_adult=true"))).toBe(true);
+    expect(metadata).toMatchObject({
+      providerId: "37265",
+      year: 1992,
+      runtimeSeconds: 5580,
+    });
+  });
+
   test("does not accept unrelated same-year movie results", async () => {
     const detailCalls: string[] = [];
     const mockedFetch = async (input: URL | RequestInfo) => {
