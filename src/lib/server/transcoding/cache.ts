@@ -349,6 +349,7 @@ export async function sumPlaybackCacheBytes() {
 export async function cleanupPlaybackHlsCache(
   maxBytes: number,
   maxIdleMs: number,
+  options?: { forceIdle?: boolean },
 ): Promise<PlaybackCacheCleanupResult> {
   const db = await getDb();
   const idleCutoff = new Date(Date.now() - Math.max(0, maxIdleMs)).toISOString();
@@ -356,6 +357,15 @@ export async function cleanupPlaybackHlsCache(
 
   const invalidated = await invalidateStalePlaybackCacheEntries();
   removed += invalidated.removed;
+
+  if (options?.forceIdle) {
+    const idle = await db.selectFrom("playback_hls_cache").selectAll().where("ref_count", "=", 0).execute();
+    for (const entry of idle) {
+      await removePlaybackCacheEntry(entry.id);
+      removed += 1;
+    }
+    return { removed };
+  }
 
   const stale = await db
     .selectFrom("playback_hls_cache")

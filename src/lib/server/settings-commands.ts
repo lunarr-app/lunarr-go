@@ -104,7 +104,7 @@ export async function runSettingsAction(action: string) {
   }
 
   if (action === "cleanupPlaybackArtifacts") {
-    const result = await cleanupConfiguredPlaybackSessionArtifacts();
+    const result = await cleanupConfiguredPlaybackSessionArtifacts(undefined, { forceIdleCache: true });
     return {
       ...result,
       message: formatPlaybackArtifactsCleanupMessage(result),

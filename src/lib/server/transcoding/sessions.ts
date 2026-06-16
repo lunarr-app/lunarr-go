@@ -1085,9 +1085,12 @@ export function formatPlaybackArtifactsCleanupMessage(result: PlaybackArtifactsC
 
 export async function cleanupConfiguredPlaybackSessionArtifacts(
   maxAgeMs = DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_AGE_MS,
+  options?: { forceIdleCache?: boolean },
 ): Promise<PlaybackArtifactsCleanupResult> {
   const maxBytes = await getPlaybackSessionArtifactMaxBytes();
-  const cacheResult = await cleanupPlaybackHlsCache(maxBytes, await getPlaybackCacheTtlMs());
+  const cacheResult = await cleanupPlaybackHlsCache(maxBytes, await getPlaybackCacheTtlMs(), {
+    forceIdle: options?.forceIdleCache,
+  });
   const cacheBytes = await sumPlaybackCacheBytes();
   const sessionResult = await cleanupExpiredPlaybackSessionArtifacts(maxAgeMs, Math.max(0, maxBytes - cacheBytes));
   return {

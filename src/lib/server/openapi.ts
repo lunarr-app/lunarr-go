@@ -1525,7 +1525,7 @@ export const openApiDocument = {
       PlaybackArtifactsCleanupResponse: {
         type: "object",
         required: ["cacheRemoved", "sessionsRemoved", "sessionArtifactsRemoved", "message"],
-        description: "Result of `cleanupPlaybackArtifacts`.",
+        description: "Result of `cleanupPlaybackArtifacts` force cleanup.",
         properties: {
           cacheRemoved: {
             type: "integer",

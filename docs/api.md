@@ -280,7 +280,7 @@ testTmdb
 cleanupPlaybackArtifacts
 ```
 
-`cleanupPlaybackArtifacts` runs the same idle HLS cache and session artifact cleanup used on startup. It returns **200** with counts and a human-readable `message`. Active playback refs are preserved.
+`cleanupPlaybackArtifacts` force-clears all idle HLS cache entries immediately, ignoring TTL and storage limits, and runs the routine session-artifact cleanup path. It returns **200** with counts and a human-readable `message`. Active playback refs are preserved.
 
 Example response:
 

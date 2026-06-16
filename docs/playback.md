@@ -120,7 +120,7 @@ Admins can also configure encode-ahead segment count (default 4) and shared cach
 
 Active playback keeps needed cache entries alive through reference counting (`ref_count` on each cache entry) while sessions are running. Each FFmpeg encode job writes segment files and its own per-job event playlist under the shared cache directory; non-overlapping windows from different sessions can run in parallel without clobbering each other's playlist state. Completed or cancelled sessions decrement cache references, and unreferenced cache entries become eligible for TTL eviction (idle longer than the configured TTL) and LRU eviction (oldest idle entries removed first when combined playback storage exceeds the configured limit).
 
-Admins can inspect shared cache size, entry counts, idle entries, and configured limits in **Settings → Server status**, and trigger the same cleanup path manually from **Settings → Maintenance → HLS playback cache**. Manual cleanup preserves entries with active playback references.
+Admins can inspect shared cache size, entry counts, idle entries, and configured limits in **Settings → Server status**, and force-clear idle cache entries from **Settings → Transcoding → Force cleanup**. Force cleanup removes all unreferenced cache entries immediately, ignoring TTL and storage limits, and also runs the routine session-artifact cleanup path. Active playback references are preserved.
 
 ## Playback Cleanup
 

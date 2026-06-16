@@ -88,7 +88,7 @@
       </div>
     </form>
 
-    <form class="ops-panel" method="POST" action="?/saveTranscoding" bind:this={transcodingForm}>
+    <section class="ops-panel" aria-label="Transcoding settings">
       <div class="ops-panel-header">
         <div>
           <h2>Transcoding</h2>
@@ -96,106 +96,132 @@
         </div>
       </div>
 
-      <div class="ops-panel-body">
-        <label class="switch-row">
-          <span>
-            <strong>Allow transcoding</strong>
-            <small>{transcodingEnabled ? "Unsupported files can use HLS playback" : "Direct play only"}</small>
-          </span>
-          <span class="switch">
+      <form method="POST" action="?/saveTranscoding" bind:this={transcodingForm}>
+        <div class="ops-panel-body">
+          <label class="switch-row">
+            <span>
+              <strong>Allow transcoding</strong>
+              <small>{transcodingEnabled ? "Unsupported files can use HLS playback" : "Direct play only"}</small>
+            </span>
+            <span class="switch">
+              <input
+                type="checkbox"
+                name="transcodingEnabled"
+                bind:checked={transcodingEnabled}
+                onchange={submitTranscoding}
+              />
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </label>
+
+          <label>
+            Hardware acceleration
+            <select name="hardwareAcceleration" bind:value={hardwareAcceleration} onchange={submitTranscoding}>
+              <option value="off">Off</option>
+              <option value="auto">Auto</option>
+              <option value="videotoolbox">VideoToolbox</option>
+              <option value="vaapi">VAAPI</option>
+              <option value="qsv">Intel Quick Sync</option>
+              <option value="nvenc">NVIDIA NVENC</option>
+              <option value="amf">AMD AMF</option>
+            </select>
+          </label>
+
+          <label>
+            HLS quality
+            <select name="transcodeQualityPreset" bind:value={transcodeQualityPreset} onchange={submitTranscoding}>
+              <option value="auto">Auto</option>
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
+              <option value="original">Original resolution</option>
+            </select>
+          </label>
+
+          <label>
+            Temporary transcode storage
+            <select name="playbackSessionArtifactMaxBytes" onchange={submitTranscoding}>
+              {#each data.playbackSessionArtifactMaxBytesOptions as bytes}
+                <option value={bytes} selected={bytes === data.playbackSessionArtifactMaxBytes}>
+                  {formatGibibytes(bytes)}
+                </option>
+              {/each}
+            </select>
+          </label>
+
+          <label>
+            Encode-ahead segments
             <input
-              type="checkbox"
-              name="transcodingEnabled"
-              bind:checked={transcodingEnabled}
+              type="number"
+              name="encodeAheadSegmentCount"
+              min="1"
+              max="16"
+              bind:value={encodeAheadSegmentCount}
               onchange={submitTranscoding}
             />
-            <span class="switch-track" aria-hidden="true"></span>
-          </span>
-        </label>
+          </label>
 
-        <label>
-          Hardware acceleration
-          <select name="hardwareAcceleration" bind:value={hardwareAcceleration} onchange={submitTranscoding}>
-            <option value="off">Off</option>
-            <option value="auto">Auto</option>
-            <option value="videotoolbox">VideoToolbox</option>
-            <option value="vaapi">VAAPI</option>
-            <option value="qsv">Intel Quick Sync</option>
-            <option value="nvenc">NVIDIA NVENC</option>
-            <option value="amf">AMD AMF</option>
-          </select>
-        </label>
+          <label>
+            Shared HLS cache TTL (hours)
+            <input
+              type="number"
+              name="playbackCacheTtlHours"
+              min="1"
+              step="1"
+              bind:value={playbackCacheTtlHours}
+              onchange={submitTranscoding}
+            />
+          </label>
 
-        <label>
-          HLS quality
-          <select name="transcodeQualityPreset" bind:value={transcodeQualityPreset} onchange={submitTranscoding}>
-            <option value="auto">Auto</option>
-            <option value="720p">720p</option>
-            <option value="1080p">1080p</option>
-            <option value="original">Original resolution</option>
-          </select>
-        </label>
+          <label class="check subdued">
+            <input
+              type="checkbox"
+              name="hardwareAccelerationRequired"
+              bind:checked={hardwareAccelerationRequired}
+              disabled={hardwareAcceleration === "off"}
+              onchange={submitTranscoding}
+            />
+            <span>Require hardware acceleration, fail if not available.</span>
+          </label>
 
-        <label>
-          Temporary transcode storage
-          <select name="playbackSessionArtifactMaxBytes" onchange={submitTranscoding}>
-            {#each data.playbackSessionArtifactMaxBytesOptions as bytes}
-              <option value={bytes} selected={bytes === data.playbackSessionArtifactMaxBytes}>
-                {formatGibibytes(bytes)}
-              </option>
-            {/each}
-          </select>
-        </label>
+          <p class="muted detail-copy">
+            Direct play stays first. Transcoding uses temporary FFmpeg HLS sessions when the browser cannot play a file
+            directly or the user prefers HLS. HLS quality controls FFmpeg transcode resolution and bitrate, and Auto
+            keeps the current server default. Encoded HLS segments are cached under LUNARR_DATA_DIR/playback-cache and
+            reused across sessions, and per-session playlists live under playback-sessions. Encode-ahead limits how many
+            segments FFmpeg may generate beyond the current playhead. Hardware acceleration is best-effort unless
+            required, and playback fails if FFmpeg cannot use the selected device or H.264 encoder.
+          </p>
 
-        <label>
-          Encode-ahead segments
-          <input
-            type="number"
-            name="encodeAheadSegmentCount"
-            min="1"
-            max="16"
-            bind:value={encodeAheadSegmentCount}
-            onchange={submitTranscoding}
-          />
-        </label>
+          {#if form?.transcodingError}
+            <p class="error">{form.transcodingError}</p>
+          {/if}
+        </div>
+      </form>
 
-        <label>
-          Shared HLS cache TTL (hours)
-          <input
-            type="number"
-            name="playbackCacheTtlHours"
-            min="1"
-            step="1"
-            bind:value={playbackCacheTtlHours}
-            onchange={submitTranscoding}
-          />
-        </label>
-
-        <label class="check subdued">
-          <input
-            type="checkbox"
-            name="hardwareAccelerationRequired"
-            bind:checked={hardwareAccelerationRequired}
-            disabled={hardwareAcceleration === "off"}
-            onchange={submitTranscoding}
-          />
-          <span>Require hardware acceleration, fail if not available.</span>
-        </label>
-
-        <p class="muted detail-copy">
-          Direct play stays first. Transcoding uses temporary FFmpeg HLS sessions when the browser cannot play a file
-          directly or the user prefers HLS. HLS quality controls FFmpeg transcode resolution and bitrate, and Auto keeps
-          the current server default. Encoded HLS segments are cached under LUNARR_DATA_DIR/playback-cache and reused
-          across sessions, and per-session playlists live under playback-sessions. Encode-ahead limits how many segments
-          FFmpeg may generate beyond the current playhead. Hardware acceleration is best-effort unless required, and
-          playback fails if FFmpeg cannot use the selected device or H.264 encoder.
-        </p>
-
-        {#if form?.transcodingError}
-          <p class="error">{form.transcodingError}</p>
-        {/if}
+      <div class="ops-panel-body transcoding-cleanup">
+        <div class="action-row transcoding-action-row">
+          <div class="action-copy">
+            <h3>Force cleanup</h3>
+            <p class="muted">
+              Clear idle shared HLS segments and expired session artifacts immediately, ignoring cache TTL and storage
+              limits. Active playback is preserved.
+            </p>
+            {#if form?.playbackCleanupError}
+              <p class="error">{form.playbackCleanupError}</p>
+            {/if}
+            {#if form?.playbackCleanupMessage}
+              <p>{form.playbackCleanupMessage}</p>
+            {/if}
+          </div>
+          <form method="POST" action="?/cleanupPlaybackArtifacts">
+            <button type="submit" class="secondary compact-action">
+              <Trash2 size={16} aria-hidden="true" />
+              Force cleanup
+            </button>
+          </form>
+        </div>
       </div>
-    </form>
+    </section>
 
     <form class="ops-panel" method="POST" action="?/saveMetadata">
       <div class="ops-panel-header">
@@ -362,25 +388,6 @@
           <button class="secondary compact-action">
             <Wrench size={16} aria-hidden="true" />
             Repair
-          </button>
-        </form>
-      </div>
-
-      <div class="action-row">
-        <div class="action-copy">
-          <h3>HLS playback cache</h3>
-          <p class="muted">Remove idle shared segments and expired session artifacts. Active playback is preserved.</p>
-          {#if form?.playbackCleanupError}
-            <p class="error">{form.playbackCleanupError}</p>
-          {/if}
-          {#if form?.playbackCleanupMessage}
-            <p>{form.playbackCleanupMessage}</p>
-          {/if}
-        </div>
-        <form method="POST" action="?/cleanupPlaybackArtifacts">
-          <button class="secondary compact-action">
-            <Trash2 size={16} aria-hidden="true" />
-            Clean up
           </button>
         </form>
       </div>

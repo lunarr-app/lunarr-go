@@ -323,6 +323,19 @@ describe("playback HLS cache", () => {
     expect(await exists(encodeArtifactDirectory)).toBe(false);
   });
 
+  test("cleanupPlaybackHlsCache forceIdle removes idle entries regardless of TTL and byte limits", async () => {
+    const sessionId = await createTranscodeSession({ mediaFileId: "file-1", userId: "user-1" });
+    const { encodeArtifactDirectory } = await acquireForSession(sessionId);
+    await releasePlaybackCacheForSession(sessionId);
+
+    expect(await cleanupPlaybackHlsCache(Number.MAX_SAFE_INTEGER, 24 * 60 * 60 * 1000)).toEqual({ removed: 0 });
+
+    expect(await cleanupPlaybackHlsCache(Number.MAX_SAFE_INTEGER, 24 * 60 * 60 * 1000, { forceIdle: true })).toEqual({
+      removed: 1,
+    });
+    expect(await exists(encodeArtifactDirectory)).toBe(false);
+  });
+
   test("cleanupPlaybackHlsCache keeps entries with active refs", async () => {
     const sessionId = await createTranscodeSession({ mediaFileId: "file-1", userId: "user-1" });
     const { cacheId, encodeArtifactDirectory } = await acquireForSession(sessionId);
