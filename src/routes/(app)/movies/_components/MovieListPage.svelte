@@ -2,6 +2,8 @@
   import MovieCard from "$lib/components/MovieCard.svelte";
   import Pagination from "$lib/components/Pagination.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
+  import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
+  import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import type { MovieSummary } from "$lib/media/types";
   import { ArrowLeft } from "@lucide/svelte";
 
@@ -22,7 +24,6 @@
     hrefForPage,
     query = "",
     status = "all",
-    sort = "title",
     showFilters = false,
   }: {
     title: string;
@@ -32,12 +33,13 @@
     hrefForPage: (page: number) => string;
     query?: string;
     status?: string;
-    sort?: string;
     showFilters?: boolean;
   } = $props();
 
-  let searchForm: HTMLFormElement | null = $state(null);
-  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
+  const catalogSearch = createDebouncedCatalogSearch(
+    () => query,
+    () => ({ status }),
+  );
 
   const range = $derived({
     first: pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1,
@@ -45,22 +47,9 @@
   });
   const summary = $derived(`Showing ${range.first}-${range.last} of ${pageInfo.total}`);
 
-  function submitSearchNow() {
-    if (searchSubmitTimer) {
-      clearTimeout(searchSubmitTimer);
-      searchSubmitTimer = undefined;
-    }
-    searchForm?.requestSubmit();
-  }
-
-  function submitSearchSoon() {
-    if (searchSubmitTimer) {
-      clearTimeout(searchSubmitTimer);
-    }
-    searchSubmitTimer = setTimeout(() => {
-      searchSubmitTimer = undefined;
-      searchForm?.requestSubmit();
-    }, 350);
+  function onStatusChange(event: Event) {
+    const nextStatus = (event.currentTarget as HTMLSelectElement).value;
+    catalogSearch.commitSearch({ status: nextStatus });
   }
 </script>
 
@@ -74,18 +63,25 @@
     <p class="muted">{description}</p>
   </div>
   {#if showFilters}
-    <form method="GET" role="search" bind:this={searchForm}>
-      <SearchField ariaLabel="Search movies" placeholder="Search movies" value={query} oninput={submitSearchSoon} />
-      <select name="status" aria-label="Watch status" onchange={submitSearchNow}>
+    <form
+      method="GET"
+      role="search"
+      onsubmit={(event) => {
+        event.preventDefault();
+        catalogSearch.commitSearch();
+      }}
+    >
+      <SearchField
+        ariaLabel="Search movies"
+        placeholder={MOVIE_SEARCH_PLACEHOLDER}
+        bind:value={catalogSearch.queryInput}
+        bind:inputRef={catalogSearch.searchInput}
+        oninput={catalogSearch.submitSearchSoon}
+      />
+      <select name="status" aria-label="Watch status" value={status} onchange={onStatusChange}>
         <option value="all" selected={status === "all"}>All</option>
         <option value="unwatched" selected={status === "unwatched"}>Unwatched</option>
         <option value="watched" selected={status === "watched"}>Watched</option>
-      </select>
-      <select name="sort" aria-label="Sort movies" onchange={submitSearchNow}>
-        <option value="title" selected={sort === "title"}>Title</option>
-        <option value="recent" selected={sort === "recent"}>Recently added</option>
-        <option value="year_desc" selected={sort === "year_desc"}>Release year</option>
-        <option value="rating" selected={sort === "rating"}>Rating</option>
       </select>
     </form>
   {/if}
@@ -124,7 +120,7 @@
 <style>
   .page-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(34rem, 46rem);
+    grid-template-columns: minmax(0, 1fr) minmax(26rem, 38rem);
     gap: 1rem;
     align-items: end;
     margin-bottom: 1.6rem;
@@ -151,8 +147,10 @@
 
   form {
     display: grid;
-    grid-template-columns: minmax(16rem, 1fr) minmax(7rem, auto) minmax(8rem, auto);
+    grid-template-columns: minmax(14rem, 1fr) minmax(8rem, auto);
     gap: 0.5rem;
+    justify-self: end;
+    width: 100%;
   }
 
   .grid {

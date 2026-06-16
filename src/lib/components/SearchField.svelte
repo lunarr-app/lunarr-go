@@ -5,20 +5,22 @@
     ariaLabel,
     name = "q",
     placeholder,
-    value = "",
+    value = $bindable(""),
+    inputRef = $bindable<HTMLInputElement | null>(null),
     oninput,
   }: {
     ariaLabel: string;
     name?: string;
     placeholder: string;
     value?: string;
+    inputRef?: HTMLInputElement | null;
     oninput?: (event: Event) => void;
   } = $props();
 </script>
 
 <label class="search-field" aria-label={ariaLabel}>
   <Search size={16} aria-hidden="true" />
-  <input type="search" {name} {placeholder} {value} {oninput} />
+  <input type="search" {name} {placeholder} bind:this={inputRef} bind:value {oninput} />
 </label>
 
 <style>

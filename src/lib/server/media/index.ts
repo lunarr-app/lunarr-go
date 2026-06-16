@@ -34,6 +34,32 @@ function escapeLikePattern(value: string) {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
 }
 
+function searchLikePattern(searchPattern: string) {
+  return `%${escapeLikePattern(searchPattern)}%`;
+}
+
+function movieMatchesSearchSql(searchPattern: string) {
+  const pattern = searchLikePattern(searchPattern);
+  return sql<boolean>`(
+    media_item.title like ${pattern} escape '\\'
+    or coalesce(media_item.original_title, '') like ${pattern} escape '\\'
+    or media_item.sort_title like ${pattern} escape '\\'
+    or media_file.basename like ${pattern} escape '\\'
+    or exists (
+      select 1
+      from media_item_keyword
+      where media_item_keyword.media_item_id = media_item.id
+        and media_item_keyword.name like ${pattern} escape '\\'
+    )
+    or exists (
+      select 1
+      from media_item_genre
+      where media_item_genre.media_item_id = media_item.id
+        and media_item_genre.name like ${pattern} escape '\\'
+    )
+  )`;
+}
+
 function accessibleLibrarySql(userId: string, libraryIdRef = "media_file.library_id") {
   return sql<boolean>`(
     exists (
@@ -188,9 +214,7 @@ export async function movieRows(
       .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
       .where("media_item.kind", "=", "movie")
       .where(accessibleLibrarySql(userId))
-      .$if(searchPattern.length > 0, (qb) =>
-        qb.where(sql<boolean>`media_item.title like ${`%${escapeLikePattern(searchPattern)}%`} escape '\\'`),
-      )
+      .$if(searchPattern.length > 0, (qb) => qb.where(movieMatchesSearchSql(searchPattern)))
       .$if(status === "watched", (qb) =>
         qb.where((eb) =>
           eb.exists(
@@ -451,9 +475,30 @@ async function filteredShows(userId: string, search = "") {
     .where("season.kind", "=", "season")
     .where("episode.kind", "=", "episode")
     .where(accessibleLibrarySql(userId))
-    .$if(searchPattern.length > 0, (qb) =>
-      qb.where(sql<boolean>`show.title like ${`%${escapeLikePattern(searchPattern)}%`} escape '\\'`),
-    );
+    .$if(searchPattern.length > 0, (qb) => qb.where(showMatchesSearchSql(searchPattern)));
+}
+
+function showMatchesSearchSql(searchPattern: string) {
+  const pattern = searchLikePattern(searchPattern);
+  return sql<boolean>`(
+    show.title like ${pattern} escape '\\'
+    or coalesce(show.original_title, '') like ${pattern} escape '\\'
+    or show.sort_title like ${pattern} escape '\\'
+    or episode.title like ${pattern} escape '\\'
+    or media_file.basename like ${pattern} escape '\\'
+    or exists (
+      select 1
+      from media_item_keyword
+      where media_item_keyword.media_item_id = show.id
+        and media_item_keyword.name like ${pattern} escape '\\'
+    )
+    or exists (
+      select 1
+      from media_item_genre
+      where media_item_genre.media_item_id = show.id
+        and media_item_genre.name like ${pattern} escape '\\'
+    )
+  )`;
 }
 
 function showBrowseSelect(filtered: Awaited<ReturnType<typeof filteredShows>>) {

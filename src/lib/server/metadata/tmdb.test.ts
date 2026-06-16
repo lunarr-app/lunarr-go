@@ -834,6 +834,7 @@ describe("matchTvSeasonMetadata", () => {
     expect(calls[0]).toContain("/search/tv");
     expect(calls[0]).toContain("query=Battlestar+Galactica");
     expect(calls[0]).toContain("first_air_date_year=2004");
+    expect(calls[0]).toContain("include_adult=true");
     expect(calls[1]).toContain("/tv/1972");
     expect(calls[1]).toContain(
       "append_to_response=aggregate_credits%2Cvideos%2Ckeywords%2Ccontent_ratings%2Cexternal_ids",

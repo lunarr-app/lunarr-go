@@ -209,6 +209,36 @@ describe("showRows", () => {
     expect(await showRows("user-1", "missing", "title")).toEqual([]);
   });
 
+  test("matches shows by original title, episode title, keywords, genres, and basename", async () => {
+    await db.updateTable("media_item").set({ original_title: "Leviathan Wakes" }).where("id", "=", "show-1").execute();
+    await db
+      .insertInto("media_item_keyword")
+      .values({
+        media_item_id: "show-1",
+        provider: "tmdb",
+        provider_id: "keyword-1",
+        name: "space opera",
+      })
+      .execute();
+
+    expect((await showRows("user-1", "leviathan", "title")).map((show) => show.title)).toEqual(["The Expanse"]);
+    expect((await showRows("user-1", "dulcinea", "title")).map((show) => show.title)).toEqual(["The Expanse"]);
+    expect((await showRows("user-1", "sci-fi", "title")).map((show) => show.title)).toEqual(["The Expanse"]);
+    expect((await showRows("user-1", "space opera", "title")).map((show) => show.title)).toEqual(["The Expanse"]);
+    expect((await showRows("user-1", "s01e01", "title")).map((show) => show.title)).toEqual(["The Expanse"]);
+  });
+
+  test("treats show search wildcards as literal text", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ title: "100% Real", sort_title: "100% real" })
+      .where("id", "=", "show-1")
+      .execute();
+
+    expect((await showRows("user-1", "%", "title")).map((show) => show.title)).toEqual(["100% Real"]);
+    expect((await showRows("user-1", "_", "title")).map((show) => show.title)).toEqual([]);
+  });
+
   test("loads show detail with seasons, episodes, playback file, and progress", async () => {
     await db
       .insertInto("media_item")
@@ -625,6 +655,42 @@ describe("movieRows", () => {
     expect((await movieRows("user-1", "", "watched")).all.map((movie) => movie.title)).toEqual(["Alpha"]);
     expect((await movieRows("user-1", "", "unwatched")).all.map((movie) => movie.title)).toEqual(["Bravo"]);
     expect((await movieRows("user-1", "rav", "all")).all.map((movie) => movie.title)).toEqual(["Bravo"]);
+  });
+
+  test("matches movies by original title, sort title, keywords, genres, and basename", async () => {
+    const now = new Date().toISOString();
+    await db.updateTable("media_item").set({ original_title: "Alpha Original" }).where("id", "=", "movie-a").execute();
+    await db
+      .insertInto("media_item_keyword")
+      .values({
+        media_item_id: "movie-b",
+        provider: "tmdb",
+        provider_id: "keyword-1",
+        name: "undercover",
+      })
+      .execute();
+    await db
+      .updateTable("media_file")
+      .set({ basename: "Dead.End.Street.1977.mkv" })
+      .where("media_item_id", "=", "movie-b")
+      .execute();
+
+    await db
+      .insertInto("media_item_genre")
+      .values({
+        media_item_id: "movie-a",
+        provider: "tmdb",
+        provider_id: "genre-1",
+        name: "Horror",
+        position: 0,
+      })
+      .execute();
+
+    expect((await movieRows("user-1", "original", "all")).all.map((movie) => movie.title)).toEqual(["Alpha"]);
+    expect((await movieRows("user-1", "horror", "all")).all.map((movie) => movie.title)).toEqual(["Alpha"]);
+    expect((await movieRows("user-1", "undercover", "all")).all.map((movie) => movie.title)).toEqual(["Bravo"]);
+    expect((await movieRows("user-1", "dead.end", "all")).all.map((movie) => movie.title)).toEqual(["Bravo"]);
+    expect((await movieRows("user-1", "bravo", "all")).all.map((movie) => movie.title)).toEqual(["Bravo"]);
   });
 
   test("treats movie search wildcards as literal text", async () => {

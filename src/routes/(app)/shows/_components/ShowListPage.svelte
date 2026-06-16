@@ -2,6 +2,8 @@
   import Pagination from "$lib/components/Pagination.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
+  import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
+  import { SHOW_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import type { ShowSummary } from "$lib/media/types";
   import { ArrowLeft } from "@lucide/svelte";
 
@@ -21,7 +23,6 @@
     pageInfo,
     hrefForPage,
     query = "",
-    sort = "title",
     showFilters = false,
   }: {
     title: string;
@@ -30,36 +31,16 @@
     pageInfo: PageInfo;
     hrefForPage: (page: number) => string;
     query?: string;
-    sort?: string;
     showFilters?: boolean;
   } = $props();
 
-  let searchForm: HTMLFormElement | null = $state(null);
-  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
+  const catalogSearch = createDebouncedCatalogSearch(() => query);
 
   const range = $derived({
     first: pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1,
     last: Math.min(pageInfo.page * pageInfo.pageSize, pageInfo.total),
   });
   const summary = $derived(`Showing ${range.first}-${range.last} of ${pageInfo.total}`);
-
-  function submitSearchNow() {
-    if (searchSubmitTimer) {
-      clearTimeout(searchSubmitTimer);
-      searchSubmitTimer = undefined;
-    }
-    searchForm?.requestSubmit();
-  }
-
-  function submitSearchSoon() {
-    if (searchSubmitTimer) {
-      clearTimeout(searchSubmitTimer);
-    }
-    searchSubmitTimer = setTimeout(() => {
-      searchSubmitTimer = undefined;
-      searchForm?.requestSubmit();
-    }, 350);
-  }
 </script>
 
 <header class="page-header">
@@ -72,14 +53,21 @@
     <p class="muted">{description}</p>
   </div>
   {#if showFilters}
-    <form method="GET" role="search" bind:this={searchForm}>
-      <SearchField ariaLabel="Search shows" placeholder="Search shows" value={query} oninput={submitSearchSoon} />
-      <select name="sort" aria-label="Sort shows" onchange={submitSearchNow}>
-        <option value="title" selected={sort === "title"}>Title</option>
-        <option value="recent" selected={sort === "recent"}>Recently added</option>
-        <option value="latest" selected={sort === "latest"}>Latest aired</option>
-        <option value="popular" selected={sort === "popular"}>Popular</option>
-      </select>
+    <form
+      method="GET"
+      role="search"
+      onsubmit={(event) => {
+        event.preventDefault();
+        catalogSearch.commitSearch();
+      }}
+    >
+      <SearchField
+        ariaLabel="Search shows"
+        placeholder={SHOW_SEARCH_PLACEHOLDER}
+        bind:value={catalogSearch.queryInput}
+        bind:inputRef={catalogSearch.searchInput}
+        oninput={catalogSearch.submitSearchSoon}
+      />
     </form>
   {/if}
 </header>
@@ -144,7 +132,7 @@
 
   form {
     display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(8rem, auto);
+    grid-template-columns: 1fr;
     gap: 0.5rem;
   }
 
@@ -168,12 +156,6 @@
 
   @media (max-width: 820px) {
     .page-header {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 640px) {
-    form {
       grid-template-columns: 1fr;
     }
   }

@@ -1002,7 +1002,7 @@ export async function matchTvSeasonMetadata(
   const searchUrl = new URL("https://api.themoviedb.org/3/search/tv");
   searchUrl.searchParams.set("query", title);
   if (year) searchUrl.searchParams.set("first_air_date_year", String(year));
-  searchUrl.searchParams.set("include_adult", "false");
+  searchUrl.searchParams.set("include_adult", "true");
 
   const search = await tmdbFetch<{ results: TmdbTvSearchResult[] }>(searchUrl, options.credentials, options.fetch);
   const first = bestTvSearchResult(search?.results, title, year);

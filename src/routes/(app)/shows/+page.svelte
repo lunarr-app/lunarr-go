@@ -2,12 +2,13 @@
   import EpisodeCard from "$lib/components/EpisodeCard.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
+  import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
+  import { SHOW_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import { twoRowRailOrder } from "$lib/media/rails";
   import { ChevronRight, Library, Search } from "@lucide/svelte";
 
   let { data } = $props();
-  let searchForm: HTMLFormElement | null = $state(null);
-  let searchSubmitTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
+  const catalogSearch = createDebouncedCatalogSearch(() => data.query);
 
   const hasActiveSearch = $derived(data.query.trim().length > 0);
   const episodeSections = $derived(
@@ -53,9 +54,7 @@
       href: "/shows/popular",
     },
   ]);
-  const hasContent = $derived(
-    episodeSections.length > 0 || showSections.some((section) => section.shows.length > 0),
-  );
+  const hasContent = $derived(episodeSections.length > 0 || showSections.some((section) => section.shows.length > 0));
   const TWO_ROW_EPISODE_RAIL_COUNT = 5;
   const TWO_ROW_SHOW_RAIL_COUNT = 9;
 
@@ -63,25 +62,8 @@
     const params = new URLSearchParams();
     const query = data.query.trim();
     if (query.length > 0) params.set("q", query);
-    if (data.sort !== "title") params.set("sort", data.sort);
     const search = params.toString();
     return search ? `/shows/all?${search}` : "/shows/all";
-  }
-
-  function submitSearchNow() {
-    if (searchSubmitTimer) {
-      clearTimeout(searchSubmitTimer);
-      searchSubmitTimer = undefined;
-    }
-    searchForm?.requestSubmit();
-  }
-
-  function submitSearchSoon() {
-    if (searchSubmitTimer) clearTimeout(searchSubmitTimer);
-    searchSubmitTimer = setTimeout(() => {
-      searchSubmitTimer = undefined;
-      searchForm?.requestSubmit();
-    }, 350);
   }
 </script>
 
@@ -95,14 +77,21 @@
     <h1>Shows</h1>
     <p class="muted">Browse scanned TV libraries by show and season.</p>
   </div>
-  <form method="GET" role="search" bind:this={searchForm}>
-    <SearchField ariaLabel="Search shows" placeholder="Search shows" value={data.query} oninput={submitSearchSoon} />
-    <select name="sort" aria-label="Sort shows" onchange={submitSearchNow}>
-      <option value="title" selected={data.sort === "title"}>Title</option>
-      <option value="recent" selected={data.sort === "recent"}>Recently added</option>
-      <option value="latest" selected={data.sort === "latest"}>Latest aired</option>
-      <option value="popular" selected={data.sort === "popular"}>Popular</option>
-    </select>
+  <form
+    method="GET"
+    role="search"
+    onsubmit={(event) => {
+      event.preventDefault();
+      catalogSearch.commitSearch();
+    }}
+  >
+    <SearchField
+      ariaLabel="Search shows"
+      placeholder={SHOW_SEARCH_PLACEHOLDER}
+      bind:value={catalogSearch.queryInput}
+      bind:inputRef={catalogSearch.searchInput}
+      oninput={catalogSearch.submitSearchSoon}
+    />
   </form>
 </header>
 
@@ -175,7 +164,7 @@
 
   form {
     display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(8rem, auto);
+    grid-template-columns: 1fr;
     gap: 0.5rem;
   }
 
@@ -288,10 +277,6 @@
   }
 
   @media (max-width: 640px) {
-    form {
-      grid-template-columns: 1fr;
-    }
-
     .section-heading {
       display: flex;
       flex-wrap: wrap;
