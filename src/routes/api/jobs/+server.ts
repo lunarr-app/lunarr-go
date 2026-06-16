@@ -1,10 +1,5 @@
 import { isAdmin } from "$lib/server/auth/users";
-import {
-  getPlaybackSessionSummary,
-  getScanJobSummary,
-  listPlaybackSessions,
-  listScanJobs,
-} from "$lib/server/jobs";
+import { getPlaybackSessionSummary, getScanJobSummary, listPlaybackSessions, listScanJobs } from "$lib/server/jobs";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 

@@ -2,9 +2,12 @@ import { isAdmin } from "$lib/server/auth/users";
 import { fail } from "@sveltejs/kit";
 import { tmdbCredentialsConfigured } from "./tmdb";
 
-type MetadataRefreshUser = {
-  role?: string | null;
-} | null | undefined;
+type MetadataRefreshUser =
+  | {
+      role?: string | null;
+    }
+  | null
+  | undefined;
 
 export async function metadataRefreshPrerequisites(user: MetadataRefreshUser) {
   if (!isAdmin(user)) {

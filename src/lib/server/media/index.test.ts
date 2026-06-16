@@ -658,7 +658,6 @@ describe("movieRows", () => {
   });
 
   test("matches movies by original title, sort title, keywords, genres, and basename", async () => {
-    const now = new Date().toISOString();
     await db.updateTable("media_item").set({ original_title: "Alpha Original" }).where("id", "=", "movie-a").execute();
     await db
       .insertInto("media_item_keyword")
