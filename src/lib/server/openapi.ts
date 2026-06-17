@@ -1,4 +1,26 @@
 import { APP_VERSION } from "./version";
+import { CLIENT_PLAYBACK_CAPABILITY_KEYS, PLAYBACK_TARGETS } from "$lib/playback/capabilities";
+
+function playbackCapabilityParameters() {
+  return CLIENT_PLAYBACK_CAPABILITY_KEYS.map((name) => ({
+    name,
+    in: "query" as const,
+    required: false,
+    schema: { type: "boolean" },
+    description: `Client reports support for ${name}. Used for web, cast, and airplay targets.`,
+  }));
+}
+
+function playbackTargetParameter() {
+  return {
+    name: "target",
+    in: "query" as const,
+    required: false,
+    schema: { type: "string", enum: [...PLAYBACK_TARGETS] },
+    description:
+      "Playback client profile. Omit for web. Use cast or airplay for remote receivers and native for VLC or other local decoders.",
+  };
+}
 
 type OpenApiDocument = Record<string, unknown>;
 
@@ -533,22 +555,34 @@ export const openApiDocument = {
       get: {
         tags: ["Playback"],
         summary: "Prepare playback data for a media item.",
+        description:
+          "Returns playback mode, subtitle tracks, and a signed stream URL when ready. Cast, AirPlay, and native clients receive absolute URLs with an 8-hour remoteToken.",
         operationId: "getPlayback",
         parameters: [
           pathIdParameter(),
-          { name: "file", in: "query", required: false, schema: stringSchema },
           {
-            name: "target",
+            name: "file",
             in: "query",
             required: false,
-            schema: { type: "string", enum: ["web", "cast", "airplay"] },
+            schema: stringSchema,
+            description: "Specific media file id when the item has multiple files.",
           },
+          {
+            name: "start",
+            in: "query",
+            required: false,
+            schema: { type: "integer", minimum: 0 },
+            description: "Resume position in seconds.",
+          },
+          playbackTargetParameter(),
           {
             name: "transcode",
             in: "query",
             required: false,
             schema: { type: "boolean" },
+            description: "Force temporary HLS even when direct play is available.",
           },
+          ...playbackCapabilityParameters(),
         ],
         responses: {
           "200": jsonResponse(objectSchema("Signed playback payload.")),

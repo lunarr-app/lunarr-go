@@ -125,6 +125,67 @@ describe("transcode capabilities", () => {
     expect(isDirectPlayCompatible(webm, { webm: true, vp9: true, opus: true })).toBe(true);
   });
 
+  test("uses native target for universal direct play and skips HLS remux", () => {
+    const mkv = {
+      extension: ".mkv",
+      container: "matroska",
+      videoCodec: "hevc",
+      audioCodec: "dts",
+    };
+
+    expect(isDirectPlayCompatible(mkv, null, "native")).toBe(true);
+    expect(isRemuxCompatible(mkv, null, "mpegts", "native")).toBe(false);
+    expect(
+      decidePlaybackMode({
+        file: mkv,
+        policy: {
+          transcodingEnabled: true,
+          playbackPreference: "prefer_transcode",
+        },
+        target: "native",
+      }),
+    ).toEqual({
+      mode: "direct",
+      reason: "direct_supported",
+    });
+    expect(
+      decidePlaybackMode({
+        file: {
+          extension: ".mkv",
+          container: "matroska",
+          videoCodec: "h264",
+          audioCodec: "aac",
+        },
+        policy: { transcodingEnabled: true, playbackPreference: "auto" },
+        target: "native",
+      }),
+    ).toEqual({
+      mode: "direct",
+      reason: "direct_supported",
+    });
+  });
+
+  test("marks native playback unavailable when file metadata is missing", () => {
+    const unknownFile = {
+      extension: null,
+      container: null,
+      videoCodec: "h264",
+      audioCodec: "aac",
+    };
+
+    expect(isDirectPlayCompatible(unknownFile, null, "native")).toBe(false);
+    expect(
+      decidePlaybackMode({
+        file: unknownFile,
+        policy: { transcodingEnabled: true, playbackPreference: "auto" },
+        target: "native",
+      }),
+    ).toEqual({
+      mode: "unavailable",
+      reason: "transcoding_disabled",
+    });
+  });
+
   test("uses target-specific direct play profiles", () => {
     const webm = {
       extension: ".webm",

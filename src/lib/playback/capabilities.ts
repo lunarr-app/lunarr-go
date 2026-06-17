@@ -10,9 +10,8 @@ export type ClientPlaybackCapabilities = {
   hlsNative: boolean;
 };
 
-export const PLAYBACK_TARGETS = ["web", "cast", "airplay"] as const;
+export const PLAYBACK_TARGETS = ["web", "cast", "airplay", "native"] as const;
 export type PlaybackTarget = (typeof PLAYBACK_TARGETS)[number];
-export type RemotePlaybackTarget = Extract<PlaybackTarget, "cast" | "airplay">;
 
 export const CLIENT_PLAYBACK_CAPABILITY_KEYS = [
   "hevc",
@@ -44,9 +43,35 @@ export function normalizePlaybackTarget(value: string | null | undefined): Playb
   return PLAYBACK_TARGETS.includes(value as PlaybackTarget) ? (value as PlaybackTarget) : "web";
 }
 
+export const WEB_PLAYBACK_API_QUERY_KEYS = ["file", "start", "transcode"] as const;
+
+export function appendWebPlaybackApiParamsFromPage(apiParams: URLSearchParams, pageUrl: URL) {
+  for (const key of WEB_PLAYBACK_API_QUERY_KEYS) {
+    const value = pageUrl.searchParams.get(key);
+    if (value) apiParams.set(key, value);
+  }
+
+  const target = normalizePlaybackTarget(pageUrl.searchParams.get("target"));
+  if (target === "cast" || target === "airplay") {
+    apiParams.set("target", target);
+  }
+}
+
+export function webPlaybackApiPath(mediaItemId: string) {
+  return `/api/playback/${encodeURIComponent(mediaItemId)}`;
+}
+
 export function parseClientPlaybackCapabilityValue(value: string | null) {
   const normalized = value?.trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "probably";
+}
+
+export function parseClientPlaybackCapabilities(url: URL): ClientPlaybackCapabilities {
+  const capabilities = emptyClientPlaybackCapabilities();
+  for (const key of CLIENT_PLAYBACK_CAPABILITY_KEYS) {
+    capabilities[key] = parseClientPlaybackCapabilityValue(url.searchParams.get(key));
+  }
+  return capabilities;
 }
 
 function canPlayAny(canPlayType: (type: string) => string, mediaTypes: readonly string[]) {

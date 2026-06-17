@@ -7,12 +7,12 @@ import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
+import { parseClientPlaybackCapabilities } from "$lib/playback/capabilities";
 import {
   getPlaybackDecision,
   isRewatchFromStart,
   markWatched,
   normalizePlaybackProgress,
-  parseClientPlaybackCapabilities,
   parsePlaybackProgressBody,
   saveProgress,
 } from ".";
@@ -507,6 +507,88 @@ describe("getPlaybackDecision", () => {
     expect(decision?.playbackSessionId).toBeTruthy();
     expect(decision?.streamUrl).toBe(`/media/playback-sessions/${decision?.playbackSessionId}/master.m3u8`);
     expect(segmentGenerationCount).toBe(1);
+  });
+
+  test("uses native target for direct MKV playback", async () => {
+    const decision = await getPlaybackDecision("movie-1", "remux-file", "user-1", 0, {
+      playbackTarget: "native",
+    });
+
+    expect(decision).toMatchObject({
+      mode: "direct",
+      status: "ready",
+      target: "native",
+      modeDecision: { mode: "direct", reason: "direct_supported" },
+      playbackSessionId: null,
+      streamUrl: "/media/files/remux-file/stream",
+    });
+  });
+
+  test("forces HLS for native playback when transcode is requested", async () => {
+    await db.updateTable("media_file").set({ duration_seconds: 60 }).where("id", "=", "remux-file").execute();
+    let segmentGenerationCount = 0;
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input) {
+        segmentGenerationCount += 1;
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision("movie-1", "remux-file", "user-1", 0, {
+      playbackTarget: "native",
+      forceTranscode: true,
+    });
+
+    expect(decision).toMatchObject({
+      mode: "transcode",
+      status: "ready",
+      target: "native",
+      modeDecision: { mode: "direct", reason: "direct_supported" },
+      streamStartSeconds: 0,
+    });
+    expect(decision?.playbackSessionId).toBeTruthy();
+    expect(decision?.streamUrl).toBe(`/media/playback-sessions/${decision?.playbackSessionId}/master.m3u8`);
+    expect(segmentGenerationCount).toBe(1);
+  });
+
+  test("returns unavailable native playback when file metadata is missing", async () => {
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+    await db
+      .insertInto("media_file")
+      .values({
+        id: "native-unknown-file",
+        library_id: "library-1",
+        media_item_id: "movie-1",
+        path: path.join(tempDir, "Movie.Unknown"),
+        basename: "Movie.Unknown",
+        extension: "",
+        size_bytes: 10,
+        mtime_ms: nowMs,
+        duration_seconds: 120,
+        video_codec: null,
+        audio_codec: null,
+        container: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    const decision = await getPlaybackDecision("movie-1", "native-unknown-file", "user-1", 0, {
+      playbackTarget: "native",
+    });
+
+    expect(decision).toMatchObject({
+      mode: "unavailable",
+      status: "unavailable",
+      target: "native",
+      modeDecision: { mode: "unavailable", reason: "transcoding_disabled" },
+      playbackSessionId: null,
+      streamUrl: null,
+    });
   });
 
   test("returns at most one default subtitle track", async () => {

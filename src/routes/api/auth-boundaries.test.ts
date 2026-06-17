@@ -657,6 +657,128 @@ describe("authenticated API route boundaries", () => {
     }
   });
 
+  test("returns signed direct playback URLs for native clients", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-api-native-playback-"));
+
+    try {
+      await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
+      await migrateDatabase();
+      const db = await getDb();
+      const nowMs = Date.now();
+      const now = new Date(nowMs).toISOString();
+      const filePath = path.join(tempDir, "Movie.2026.mkv");
+      await writeFile(filePath, "0123456789");
+      await db
+        .insertInto("user")
+        .values({
+          id: "user-1",
+          name: "User",
+          email: "user@example.com",
+          role: "user",
+          email_verified: 0,
+          image: null,
+          created_at: nowMs,
+          updated_at: nowMs,
+        })
+        .execute();
+      await db
+        .insertInto("library")
+        .values({
+          id: "library-1",
+          name: "Movies",
+          kind: "movie",
+          path: tempDir,
+          access_mode: "all",
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+      await db
+        .insertInto("media_item")
+        .values({
+          id: "movie-1",
+          kind: "movie",
+          title: "Movie",
+          sort_title: "movie",
+          year: 2026,
+          overview: null,
+          runtime_seconds: null,
+          poster_path: null,
+          backdrop_path: null,
+          release_date: "2026-01-01",
+          provider: null,
+          provider_id: null,
+          parent_id: null,
+          popularity: null,
+          vote_average: null,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+      await db
+        .insertInto("media_file")
+        .values({
+          id: "file-mkv",
+          library_id: "library-1",
+          media_item_id: "movie-1",
+          path: filePath,
+          basename: "Movie.2026.mkv",
+          extension: ".mkv",
+          size_bytes: 10,
+          mtime_ms: nowMs,
+          duration_seconds: 120,
+          video_codec: "hevc",
+          audio_codec: "dts",
+          container: "matroska",
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+
+      const nativeResponse = await playbackGet({
+        params: { id: "movie-1" },
+        url: new URL("http://localhost/api/playback/movie-1?file=file-mkv&target=native"),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never);
+
+      expect(nativeResponse.status).toBe(200);
+      const nativeBody = await nativeResponse.json();
+      expect(nativeBody.playback).toMatchObject({
+        mode: "direct",
+        status: "ready",
+        target: "native",
+        file: { id: "file-mkv", extension: ".mkv" },
+        playbackSessionId: null,
+      });
+      const nativeStreamUrl = new URL(nativeBody.playback.streamUrl);
+      expect(nativeStreamUrl.pathname).toBe("/media/files/file-mkv/stream");
+      expect(
+        verifySignedPlaybackToken(nativeStreamUrl.searchParams.get("remoteToken"), {
+          route: "direct",
+          mediaFileId: "file-mkv",
+        }),
+      ).toMatchObject({
+        route: "direct",
+        userId: "user-1",
+        mediaFileId: "file-mkv",
+      });
+
+      const webResponse = await playbackGet({
+        params: { id: "movie-1" },
+        url: new URL("http://localhost/api/playback/movie-1?file=file-mkv"),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never);
+
+      expect(webResponse.status).toBe(200);
+      const webBody = await webResponse.json();
+      expect(webBody.playback.target).toBe("web");
+      expect(webBody.playback.mode).not.toBe("direct");
+    } finally {
+      await closeDatabaseForTests();
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test("rejects direct unauthenticated stream calls", async () => {
     const request = new Request("http://localhost/media/files/file-1/stream");
     const getResponse = await streamGet({

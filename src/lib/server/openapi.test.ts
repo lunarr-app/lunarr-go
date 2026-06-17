@@ -70,6 +70,16 @@ describe("OpenAPI document", () => {
     expect(openApiDocument.components).toHaveProperty("securitySchemes");
   });
 
+  test("documents playback target query values", () => {
+    const playbackPath = openApiDocument.paths as Record<string, Record<string, unknown>>;
+    const getPlayback = playbackPath["/api/playback/{id}"].get as {
+      parameters: Array<{ name: string; schema?: { enum?: string[] } }>;
+    };
+    const target = getPlayback.parameters.find((parameter) => parameter.name === "target");
+
+    expect(target?.schema?.enum).toEqual(["web", "cast", "airplay", "native"]);
+  });
+
   test("serializes the document as YAML", () => {
     const yaml = openApiYaml();
 

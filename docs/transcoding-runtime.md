@@ -18,7 +18,7 @@ The Docker runtime image installs system FFmpeg and runs the baseline FFmpeg pla
 
 ## Playback Behavior
 
-Direct play remains the default. Lunarr starts HLS only when the file is not browser-compatible, when the user forces transcoding, or when the user's playback preference asks for transcoding and global transcoding is enabled.
+Direct play remains the default for `target=web`. Lunarr starts HLS when the file is not browser-compatible, when the user forces transcoding, or when the user's playback preference asks for transcoding and global transcoding is enabled. `target=native` always prefers a direct signed file stream. `target=cast` and `target=airplay` use receiver-specific profiles. See [Playback Targets](playback.md#playback-targets).
 
 The web player sends conservative client capability hints when opening playback. MP4 HEVC/AV1 and WebM VP8/VP9/AV1 files direct play only when the browser reports support for the matching container and codec combination. Capability checks normalize common codec-string aliases such as `avc1.*`, `mp4a.*`, `hvc1.*`, `av01.*`, and `vp09.*`. Direct-play support does not automatically make those codecs safe for HLS remux.
 

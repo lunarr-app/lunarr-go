@@ -125,7 +125,9 @@ GET /media/playback-sessions/:sessionId/segments/:segment
 HEAD /media/playback-sessions/:sessionId/segments/:segment
 ```
 
-Progress body:
+`GET /api/playback/:mediaItemId` prepares playback for a movie or episode. The response includes item metadata, the selected file, subtitle tracks, the resolved playback mode (`direct`, `remux`, `transcode`, or `unavailable`), and a ready `streamUrl` when playback can start.
+
+Progress body for `POST /api/playback/:mediaItemId`:
 
 ```json
 {
@@ -136,7 +138,48 @@ Progress body:
 }
 ```
 
-Playback stream, subtitle, and HLS routes also accept API-key authentication.
+Authenticate playback API calls with a browser session cookie or `X-API-Key`. Stream, subtitle, and HLS media routes also accept API keys directly, or a signed `remoteToken` query parameter for cookieless receivers and native players.
+
+### Playback targets
+
+The `target` query parameter selects the client capability profile. See [Playback Targets](playback.md#playback-targets) for behavior details and troubleshooting.
+
+| Target  | Query value          | Typical client                         |
+| ------- | -------------------- | -------------------------------------- |
+| Web     | omit or `target=web` | Lunarr web player                      |
+| Cast    | `target=cast`        | Chromecast receiver                    |
+| AirPlay | `target=airplay`     | AirPlay receiver                       |
+| Native  | `target=native`      | VLC, mobile apps, other native players |
+
+- **Web** — uses browser codec hints and user playback preferences.
+- **Cast / AirPlay** — tuned for remote receivers; returns signed `streamUrl` and subtitle URLs with an 8-hour `remoteToken`.
+- **Native** — always returns a signed direct file stream unless `transcode=1` is set. Ignores `prefer_transcode`.
+
+### Query parameters
+
+```text
+file=<mediaFileId>
+start=<seconds>
+transcode=1
+target=web|cast|airplay|native
+hevc=1
+av1=1
+webm=1
+vp9=1
+vp8=1
+opus=1
+vorbis=1
+hlsFmp4=1
+hlsNative=1
+```
+
+- `file` — choose a specific media file when an item has more than one.
+- `start` — resume from an explicit position in seconds.
+- `transcode=1` — force temporary HLS even when direct play is available.
+- `target` — select the playback target profile (see table above).
+- `hevc`, `av1`, `webm`, `vp9`, `vp8`, `opus`, `vorbis`, `hlsFmp4`, `hlsNative` — optional client capability hints for `web`, `cast`, and `airplay`. The Lunarr web player sets these automatically from `video.canPlayType()`. Omit them for `target=native`.
+
+Signed responses include absolute URLs. Re-request playback before `remoteToken` expires after eight hours on long sessions.
 
 ## Watched State
 

@@ -1,8 +1,6 @@
 import {
-  CLIENT_PLAYBACK_CAPABILITY_KEYS,
-  emptyClientPlaybackCapabilities,
   normalizePlaybackTarget,
-  parseClientPlaybackCapabilityValue,
+  parseClientPlaybackCapabilities,
   type ClientPlaybackCapabilities,
   type PlaybackTarget,
 } from "$lib/playback/capabilities";
@@ -85,14 +83,6 @@ function parseRequestedStartSeconds(url: URL) {
 function parseForceTranscode(url: URL) {
   const value = url.searchParams.get("transcode")?.trim().toLowerCase();
   return value === "1" || value === "true" || value === "transcode";
-}
-
-export function parseClientPlaybackCapabilities(url: URL): ClientPlaybackCapabilities {
-  const capabilities = emptyClientPlaybackCapabilities();
-  for (const key of CLIENT_PLAYBACK_CAPABILITY_KEYS) {
-    capabilities[key] = parseClientPlaybackCapabilityValue(url.searchParams.get(key));
-  }
-  return capabilities;
 }
 
 function normalizedLanguage(value: string | null | undefined) {

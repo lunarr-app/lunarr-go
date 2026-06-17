@@ -39,6 +39,55 @@ Users can set a preferred audio language in Profile. Temporary HLS transcoding p
 
 Users can also set a preferred subtitle language in Profile. Lunarr still returns applicable external subtitle tracks for the selected file, but marks the matching language as the default track when available.
 
+## Playback Targets
+
+`GET /api/playback/:mediaItemId` accepts a `target` query parameter. Lunarr uses the target to choose a client capability profile before it decides between direct play and temporary HLS. The web player omits `target` (equivalent to `web`). Cast, AirPlay, and API clients set `target` explicitly when preparing playback.
+
+| Target  | Query value          | Used by                                | Server assumes                                      | Typical outcome                                                  |
+| ------- | -------------------- | -------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------- |
+| Web     | omit or `target=web` | Lunarr web player                      | Browser codec hints (`hevc=1`, `webm=1`, and so on) | Direct when browser-compatible; otherwise HLS remux or transcode |
+| Cast    | `target=cast`        | Chromecast receiver                    | HLS-capable receiver; no WebM direct                | Direct MP4/H.264 when possible; otherwise signed HLS             |
+| AirPlay | `target=airplay`     | AirPlay receiver                       | Safari/client hints; no WebM direct                 | Direct when receiver-compatible; otherwise signed HLS            |
+| Native  | `target=native`      | VLC, mobile apps, other native players | Client decodes locally                              | Signed direct file stream; HLS only when `transcode=1`           |
+
+Capability hints matter for `web`, `cast`, and `airplay`. They are optional for `target=native`. See [API](api.md#playback) for the full query contract.
+
+### Web (`target=web`)
+
+The Lunarr web player detects support with `video.canPlayType()` and sends positive hints on the playback API request. Without hints, Lunarr assumes a conservative browser profile: MP4 with H.264/AAC direct plays; HEVC, AV1, WebM, and non-MP4 containers fall back to temporary HLS when transcoding is enabled.
+
+User playback preferences (`auto`, `prefer_direct`, `prefer_transcode`) apply to web playback. `?transcode=1` forces temporary HLS even when direct play is available.
+
+### Cast (`target=cast`)
+
+The web player switches to `target=cast` before loading media on a Chromecast receiver. Lunarr treats the receiver as HLS-capable, does not direct-play WebM, and prefers direct MP4/H.264 when that is safe for the receiver.
+
+Non-direct Cast playback uses the same temporary HLS sessions as the browser player. Lunarr waits until the playlist is ready, then returns signed receiver URLs for the playlist, segments, and external subtitles.
+
+Chromecast sessions are Cast-owned after media loads. Closing or navigating away from the browser page does not immediately cancel the Cast playback session. Stopping Cast from the player ends the Cast session and cancels the owned HLS session.
+
+### AirPlay (`target=airplay`)
+
+The web player switches to `target=airplay` before handing off to an AirPlay receiver. Lunarr keeps Safari-reported codec hints, forces HLS support flags, and disables WebM direct play.
+
+AirPlay is closer to native Safari video playback than Cast. Progress and lifecycle depend on Safari continuing to update the video element. Closing or navigating away from the page can stop playback and cancel temporary HLS.
+
+### Native (`target=native`)
+
+API clients such as a Lunarr mobile app or VLC integration use `target=native` when the player decodes media locally. Native playback always returns a signed direct file stream URL and does not start temporary HLS remux or transcode, even when the file would require HLS in the web player.
+
+User playback preferences such as `prefer_transcode` do not override `target=native`. Use `?transcode=1` when the client explicitly wants Lunarr to prepare temporary HLS instead.
+
+### Signed stream URLs
+
+When playback leaves the browser cookie session, `GET /api/playback/:mediaItemId` returns absolute `streamUrl` and subtitle `src` values with an 8-hour `remoteToken` query parameter. Cast, AirPlay, VLC, and other receivers or native players load media with that token. They do not need Lunarr session cookies for stream, subtitle, or HLS segment requests.
+
+Authenticate the playback API call with a session cookie or `X-API-Key`. Re-request playback before the token expires if a session runs longer than eight hours.
+
+Remote receivers must reach Lunarr by its configured public origin, not only from the browser that opened the player. Use HTTPS in production. Chrome and Edge rely on Google's Cast Web Sender SDK, and secure origins are required for reliable Cast discovery.
+
+If Cast or AirPlay controls are missing, check browser support, HTTPS/origin configuration, receiver network access to Lunarr, and whether the current playback decision has a ready direct stream or HLS playlist. If a receiver opens but does not play, verify it can reach the generated Lunarr URL and that the stream container, codecs, and HLS segment format are supported by that receiver.
+
 ## Web Player Controls
 
 The Lunarr web player uses a custom control bar over the video. Controls can be hidden during ordinary local playback so the video stays unobstructed, while still allowing quick surface and keyboard actions.
@@ -99,16 +148,6 @@ Focus the player (click the video surface or tab to the player region) to use:
 | `Escape`       | Close the subtitle menu when it is open             |
 
 Shortcuts are ignored while typing in buttons or other interactive controls outside the player shell.
-
-## Chromecast And AirPlay
-
-Chromecast and AirPlay receivers load media from Lunarr directly. The app must be reachable from the receiver device by its configured public origin, not only from the browser that opened the player. Use HTTPS for production deployments, Chrome and Edge rely on Google's Cast Web Sender SDK, and secure origins are required for reliable Cast discovery and launch behavior.
-
-Direct playback can be sent to a receiver when the receiver supports the served container and codecs. Non-direct playback uses the same temporary HLS sessions as the browser player. Before sending HLS to a receiver, Lunarr waits until the playlist is available, then returns signed receiver URLs for the playlist, segments, and external subtitle tracks. Remote playback tokens are scoped to the media route and expire after 8 hours.
-
-HLS receiver playback stays alive through normal playback-session heartbeats and through playlist or segment requests from the receiver. Chromecast sessions are treated as Cast-owned after media is loaded, so closing or navigating away from the browser page does not immediately cancel the Cast playback session. Stopping Cast from the player ends the Cast session and cancels the owned HLS session. AirPlay is closer to native Safari video playback: progress and lifecycle depend on Safari continuing to update the video element, and closing or navigating away from the page can stop playback and cancel temporary HLS.
-
-If Cast or AirPlay controls are missing, first check browser support, HTTPS/origin configuration, receiver network access to Lunarr, and whether the current playback decision has a ready direct stream or HLS playlist. If a receiver opens but does not play, verify the receiver can reach the generated Lunarr URL and that the stream container, codecs, and HLS segment format are supported by that receiver.
 
 ## FFmpeg Verification
 

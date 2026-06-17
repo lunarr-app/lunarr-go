@@ -70,7 +70,7 @@ Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Side
 - [Getting Started](docs/getting-started.md): first-run setup, TMDb, adding libraries, and scanning.
 - [Configuration](docs/configuration.md): environment variables, Docker, data storage, and production start.
 - [Libraries](docs/libraries.md): local, SFTP, and WebDAV behavior, watchers, scheduled rescans, and remote tuning.
-- [Playback And Maintenance](docs/playback.md): direct play, HLS, transcode cache, cleanup, and job history retention.
+- [Playback And Maintenance](docs/playback.md): direct play, HLS, playback targets, transcode cache, cleanup, and job history retention.
 - [API](docs/api.md): authenticated JSON APIs and API-key usage.
 - [Transcoding Runtime](docs/transcoding-runtime.md): FFmpeg playback and NodeAV probing implementation notes.
 - [Contributing](CONTRIBUTING.md): local setup, checks, coding guidelines, and PR expectations.

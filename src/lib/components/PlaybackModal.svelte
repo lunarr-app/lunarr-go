@@ -4,7 +4,12 @@
   import { page } from "$app/state";
   import MediaPlayer from "$lib/components/MediaPlayer.svelte";
   import PlayerShell from "$lib/components/PlayerShell.svelte";
-  import { appendClientPlaybackCapabilityParams, detectClientPlaybackCapabilities } from "$lib/playback/capabilities";
+  import {
+    appendClientPlaybackCapabilityParams,
+    appendWebPlaybackApiParamsFromPage,
+    detectClientPlaybackCapabilities,
+    webPlaybackApiPath,
+  } from "$lib/playback/capabilities";
   import { shouldClosePlaybackModalOnKeydown } from "$lib/playback/controls";
   import type { PlaybackData } from "$lib/server/playback";
 
@@ -20,11 +25,8 @@
   const playbackRequestHref = $derived.by(() => (mediaItemId ? playbackApiHref(mediaItemId, page.url) : null));
 
   function playbackApiHref(id: string, sourceUrl: URL) {
-    const apiUrl = new URL(`/api/playback/${encodeURIComponent(id)}`, sourceUrl.origin);
-    for (const key of ["file", "start", "transcode", "target"]) {
-      const value = sourceUrl.searchParams.get(key);
-      if (value) apiUrl.searchParams.set(key, value);
-    }
+    const apiUrl = new URL(webPlaybackApiPath(id), sourceUrl.origin);
+    appendWebPlaybackApiParamsFromPage(apiUrl.searchParams, sourceUrl);
     if (browser) {
       const video = document.createElement("video");
       appendClientPlaybackCapabilityParams(
