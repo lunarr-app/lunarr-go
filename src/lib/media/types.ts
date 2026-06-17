@@ -49,3 +49,12 @@ export type ShowSummary = {
   latestEpisodeReleaseDate: string | null;
   character?: string | null;
 };
+
+export type CatalogPageInfo = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+};

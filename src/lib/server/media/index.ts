@@ -1,6 +1,7 @@
 import { sql } from "kysely";
 import { getDb } from "../db";
 import { tmdbImageUrl } from "$lib/media/images";
+import type { CatalogPageInfo } from "$lib/media/types";
 import { TV_SHOW_CREATOR_JOBS } from "../metadata/show-creators";
 
 const MOVIE_STATUS_FILTERS = ["all", "watched", "unwatched"] as const;
@@ -12,6 +13,35 @@ const SHOW_SORTS = ["title", "recent", "latest", "popular"] as const;
 export type MovieStatusFilter = (typeof MOVIE_STATUS_FILTERS)[number];
 export type MovieSort = (typeof MOVIE_SORTS)[number];
 export type ShowSort = (typeof SHOW_SORTS)[number];
+
+function catalogPageSize(pageSizeInput: number) {
+  return Math.max(1, Math.min(Math.floor(pageSizeInput), 200));
+}
+
+function catalogPageInfo(pageInput: number, pageSizeInput: number, total: number): CatalogPageInfo {
+  const pageSize = catalogPageSize(pageSizeInput);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(normalizePage(pageInput), totalPages);
+  return {
+    page,
+    pageSize,
+    total,
+    totalPages,
+    hasPrevious: page > 1,
+    hasNext: page < totalPages,
+  };
+}
+
+function emptyCatalogPage(pageInput: number, pageSizeInput: number): CatalogPageInfo {
+  return {
+    page: normalizePage(pageInput),
+    pageSize: catalogPageSize(pageSizeInput),
+    total: 0,
+    totalPages: 1,
+    hasPrevious: false,
+    hasNext: false,
+  };
+}
 
 export function normalizeMovieStatusFilter(value: string | null | undefined): MovieStatusFilter {
   return MOVIE_STATUS_FILTERS.includes(value as MovieStatusFilter) ? (value as MovieStatusFilter) : "all";
@@ -81,6 +111,115 @@ function accessibleLibrarySql(userId: string, libraryIdRef = "media_file.library
         and library_user.user_id = ${userId}
     )
   )`;
+}
+
+type SimilarPersonKey = { provider: string; provider_id: string };
+
+function providerPairsWhereSql(pairs: SimilarPersonKey[]) {
+  if (pairs.length === 0) return sql<boolean>`0`;
+  const conditions = pairs.map(
+    (pair) => sql<boolean>`(provider = ${pair.provider} and provider_id = ${pair.provider_id})`,
+  );
+  return sql<boolean>`(${sql.join(conditions, sql` or `)})`;
+}
+
+function uniqueStrings(values: { name: string }[]) {
+  return [...new Set(values.map((row) => row.name).filter((name) => name.trim().length > 0))];
+}
+
+function uniquePersonPairs(values: SimilarPersonKey[]) {
+  const seen = new Set<string>();
+  const out: SimilarPersonKey[] = [];
+  for (const value of values) {
+    const key = `${value.provider}::${value.provider_id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+  }
+  return out;
+}
+
+type SimilaritySeeds = {
+  genres: string[];
+  keywords: string[];
+  people: SimilarPersonKey[];
+};
+
+type CrewSeedFilter = { job: string; limit: number } | { jobs: readonly string[]; limit: number };
+
+async function fetchSimilaritySeeds(mediaItemId: string, crew: CrewSeedFilter): Promise<SimilaritySeeds> {
+  const db = await getDb();
+  const crewQuery = db
+    .selectFrom("media_item_credit")
+    .select(["provider", "provider_id"])
+    .where("media_item_id", "=", mediaItemId)
+    .where("credit_type", "=", "crew")
+    .orderBy("credit_order", "asc");
+
+  const [genres, keywords, castPairs, crewPairs] = await Promise.all([
+    db.selectFrom("media_item_genre").select(["name"]).where("media_item_id", "=", mediaItemId).execute(),
+    db
+      .selectFrom("media_item_keyword")
+      .select(["name"])
+      .where("media_item_id", "=", mediaItemId)
+      .orderBy("name", "asc")
+      .limit(12)
+      .execute(),
+    db
+      .selectFrom("media_item_credit")
+      .select(["provider", "provider_id"])
+      .where("media_item_id", "=", mediaItemId)
+      .where("credit_type", "=", "cast")
+      .orderBy("credit_order", "asc")
+      .limit(8)
+      .execute(),
+    ("job" in crew
+      ? crewQuery.where("job", "=", crew.job).limit(crew.limit)
+      : crewQuery.where("job", "in", [...crew.jobs]).limit(crew.limit)
+    ).execute(),
+  ]);
+
+  return {
+    genres: uniqueStrings(genres),
+    keywords: uniqueStrings(keywords),
+    people: uniquePersonPairs([...castPairs, ...crewPairs]),
+  };
+}
+
+function buildSimilarityScoreSubquery(
+  db: Awaited<ReturnType<typeof getDb>>,
+  mediaItemId: string,
+  seeds: SimilaritySeeds,
+) {
+  const { genres: seedGenres, keywords: seedKeywords, people: seedPeople } = seeds;
+
+  return db
+    .selectFrom(
+      db
+        .selectFrom("media_item_genre")
+        .select(["media_item_id", sql<number>`3`.as("score")])
+        .$if(seedGenres.length > 0, (qb) => qb.where("name", "in", seedGenres))
+        .$if(seedGenres.length === 0, (qb) => qb.where(sql<boolean>`0`))
+        .unionAll(
+          db
+            .selectFrom("media_item_keyword")
+            .select(["media_item_id", sql<number>`2`.as("score")])
+            .$if(seedKeywords.length > 0, (qb) => qb.where("name", "in", seedKeywords))
+            .$if(seedKeywords.length === 0, (qb) => qb.where(sql<boolean>`0`)),
+        )
+        .unionAll(
+          db
+            .selectFrom("media_item_credit")
+            .select(["media_item_id", sql<number>`1`.as("score")])
+            .$if(seedPeople.length > 0, (qb) => qb.where(providerPairsWhereSql(seedPeople)))
+            .$if(seedPeople.length === 0, (qb) => qb.where(sql<boolean>`0`)),
+        )
+        .as("match_rows"),
+    )
+    .select(["media_item_id", sql<number>`sum(score)`.as("score")])
+    .where("media_item_id", "!=", mediaItemId)
+    .groupBy("media_item_id")
+    .as("similar_scores");
 }
 
 type MovieBrowseRow = {
@@ -1255,6 +1394,168 @@ export async function getMovieDetail(id: string, userId: string) {
     productionCompanies: productionCompanies.map((company) => company.name),
     posterUrl: tmdbImageUrl(posterPath, "w500"),
     backdropUrl: tmdbImageUrl(backdropPath, "w1280"),
+  };
+}
+
+export async function getAccessibleMovieHeader(id: string, userId: string) {
+  const db = await getDb();
+  const movie = await db
+    .selectFrom("media_item")
+    .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+    .select(["media_item.id", "media_item.title"])
+    .where("media_item.id", "=", id)
+    .where("media_item.kind", "=", "movie")
+    .where(accessibleLibrarySql(userId))
+    .executeTakeFirst();
+
+  return movie ?? null;
+}
+
+export async function getAccessibleShowHeader(id: string, userId: string) {
+  const db = await getDb();
+  const show = await db
+    .selectFrom("media_item")
+    .select(["id", "title"])
+    .where("id", "=", id)
+    .where("kind", "=", "show")
+    .where((eb) =>
+      eb.exists(
+        eb
+          .selectFrom("media_item as season")
+          .innerJoin("media_item as episode", "episode.parent_id", "season.id")
+          .innerJoin("media_file", "media_file.media_item_id", "episode.id")
+          .select("media_file.id")
+          .whereRef("season.parent_id", "=", "media_item.id")
+          .where("season.kind", "=", "season")
+          .where("episode.kind", "=", "episode")
+          .where(accessibleLibrarySql(userId)),
+      ),
+    )
+    .executeTakeFirst();
+
+  return show ?? null;
+}
+
+export async function getSimilarMovies(movieId: string, userId: string, pageInput = 1, pageSize = MOVIE_PAGE_SIZE) {
+  const db = await getDb();
+  const seeds = await fetchSimilaritySeeds(movieId, { job: "Director", limit: 3 });
+
+  if (seeds.genres.length === 0 && seeds.keywords.length === 0 && seeds.people.length === 0) {
+    return { movies: [], page: emptyCatalogPage(pageInput, pageSize) };
+  }
+
+  const scoreSubquery = buildSimilarityScoreSubquery(db, movieId, seeds);
+
+  const similarMoviesBase = () =>
+    db
+      .selectFrom(scoreSubquery)
+      .innerJoin("media_item", "media_item.id", "similar_scores.media_item_id")
+      .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+      .where("media_item.kind", "=", "movie")
+      .where(accessibleLibrarySql(userId));
+
+  const totalRow = await similarMoviesBase()
+    .select(sql<number>`count(distinct media_item.id)`.as("total"))
+    .executeTakeFirst();
+  const page = catalogPageInfo(pageInput, pageSize, Number(totalRow?.total ?? 0));
+  const offset = (page.page - 1) * page.pageSize;
+
+  const rows = await similarMoviesBase()
+    .select([
+      "media_item.id",
+      "media_item.title",
+      "media_item.year",
+      "media_item.poster_path",
+      "media_item.release_date",
+      "media_item.popularity",
+      "media_item.vote_average",
+      sql<number>`count(distinct media_file.id)`.as("file_count"),
+      sql<number>`max(similar_scores.score)`.as("similarity_score"),
+    ])
+    .groupBy("media_item.id")
+    .orderBy("similarity_score", "desc")
+    .orderBy("media_item.popularity", "desc")
+    .orderBy("media_item.release_date", "desc")
+    .limit(page.pageSize)
+    .offset(offset)
+    .execute();
+
+  return {
+    movies: rows.map((movie) => ({
+      id: movie.id,
+      title: movie.title,
+      year: movie.year,
+      posterUrl: tmdbImageUrl(movie.poster_path),
+      releaseDate: movie.release_date,
+      popularity: movie.popularity,
+      voteAverage: movie.vote_average,
+      fileCount: Number(movie.file_count ?? 0),
+      resumeFileId: null,
+      progressSeconds: 0,
+      durationSeconds: null,
+      completed: false,
+    })),
+    page,
+  };
+}
+
+export async function getSimilarShows(showId: string, userId: string, pageInput = 1, pageSize = SHOW_PAGE_SIZE) {
+  const db = await getDb();
+  const seeds = await fetchSimilaritySeeds(showId, { jobs: TV_SHOW_CREATOR_JOBS, limit: 4 });
+
+  if (seeds.genres.length === 0 && seeds.keywords.length === 0 && seeds.people.length === 0) {
+    return { shows: [], page: emptyCatalogPage(pageInput, pageSize) };
+  }
+
+  const scoreSubquery = buildSimilarityScoreSubquery(db, showId, seeds);
+
+  const similarShowsBase = () =>
+    db
+      .selectFrom(scoreSubquery)
+      .innerJoin("media_item as show", "show.id", "similar_scores.media_item_id")
+      .innerJoin("media_item as season", "season.parent_id", "show.id")
+      .innerJoin("media_item as episode", "episode.parent_id", "season.id")
+      .innerJoin("media_file", "media_file.media_item_id", "episode.id")
+      .where("show.kind", "=", "show")
+      .where("season.kind", "=", "season")
+      .where("episode.kind", "=", "episode")
+      .where(accessibleLibrarySql(userId));
+
+  const totalRow = await similarShowsBase()
+    .select(sql<number>`count(distinct show.id)`.as("total"))
+    .executeTakeFirst();
+  const page = catalogPageInfo(pageInput, pageSize, Number(totalRow?.total ?? 0));
+  const offset = (page.page - 1) * page.pageSize;
+
+  const rows = await similarShowsBase()
+    .select([
+      "show.id",
+      "show.title",
+      "show.sort_title",
+      "show.year",
+      "show.poster_path",
+      "show.backdrop_path",
+      "show.release_date",
+      "show.status",
+      "show.popularity",
+      "show.vote_average",
+      sql<number>`count(distinct episode.id)`.as("episode_count"),
+      sql<number>`count(distinct season.id)`.as("season_count"),
+      sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
+      sql<string | null>`max(episode.release_date)`.as("latest_episode_release_date"),
+      sql<number>`max(similar_scores.score)`.as("similarity_score"),
+    ])
+    .groupBy("show.id")
+    .orderBy("similarity_score", "desc")
+    .orderBy("show.popularity", "desc")
+    .orderBy("show.release_date", "desc")
+    .limit(page.pageSize)
+    .offset(offset)
+    .execute();
+
+  return {
+    shows: rows.map(publicShowSummary),
+    page,
   };
 }
 

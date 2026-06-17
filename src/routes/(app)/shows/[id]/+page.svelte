@@ -4,7 +4,7 @@
   import { formatDateTime } from "$lib/media/format";
   import { tmdbImageUrl } from "$lib/media/images";
   import { playbackModalHref } from "$lib/playback/links";
-  import { Calendar, CirclePlay, ExternalLink, RefreshCw, Star, Users } from "@lucide/svelte";
+  import { Calendar, CirclePlay, ExternalLink, RefreshCw, Sparkles, Star, Users } from "@lucide/svelte";
 
   let { data, form } = $props();
 
@@ -114,6 +114,10 @@
         Trailer
       </a>
     {/if}
+    <a class="button secondary" href={`/shows/${data.show.id}/similar`}>
+      <Sparkles size={16} aria-hidden="true" />
+      Similar
+    </a>
   {/snippet}
 
   {#snippet below()}

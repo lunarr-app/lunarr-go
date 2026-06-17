@@ -13,6 +13,7 @@
     HardDrive,
     RefreshCw,
     RotateCcw,
+    Sparkles,
     Star,
     Tags,
     Users,
@@ -195,6 +196,10 @@
         Trailer
       </a>
     {/if}
+    <a class="button secondary" href={`/movies/${data.movie.id}/similar`}>
+      <Sparkles size={16} aria-hidden="true" />
+      Similar
+    </a>
   {/snippet}
 
   {#snippet below()}
