@@ -85,8 +85,10 @@ Transcoding settings accept the combined temporary playback storage limit, encod
 GET /api/continue
 GET /api/movies
 GET /api/movies/:id
+GET /api/movies/:id/similar
 GET /api/shows
 GET /api/shows/:id
+GET /api/shows/:id/similar
 GET /api/episodes/:id
 GET /api/people/:provider/:id
 ```
@@ -99,6 +101,8 @@ status=all|watched|unwatched
 sort=title|recent|year_desc|rating|release_date
 page
 ```
+
+Similar movie and show endpoints accept `page` and return accessible titles ranked by shared genres, keywords, and cast or creators. Responses include the source title plus paginated `movies` or `shows` and a `page` object with `total`, `totalPages`, `hasPrevious`, and `hasNext`.
 
 Show query parameters:
 

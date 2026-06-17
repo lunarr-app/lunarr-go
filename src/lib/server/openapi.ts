@@ -111,6 +111,14 @@ const searchParameter = {
   schema: stringSchema,
 };
 
+const pageParameter = {
+  name: "page",
+  in: "query",
+  required: false,
+  description: "1-based page number.",
+  schema: { type: "integer", minimum: 1 },
+};
+
 const commonErrors = {
   "401": errorResponse,
   "403": errorResponse,
@@ -256,6 +264,20 @@ export const openApiDocument = {
         parameters: [pathIdParameter()],
         responses: {
           "200": jsonResponse(objectSchema("Movie detail payload.")),
+          ...commonErrors,
+        },
+      },
+    },
+    "/api/movies/{id}/similar": {
+      get: {
+        tags: ["Catalog"],
+        summary: "List movies similar to a title in the caller's accessible library.",
+        operationId: "getSimilarMovies",
+        parameters: [pathIdParameter(), pageParameter],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/SimilarMoviesResponse",
+          }),
           ...commonErrors,
         },
       },
@@ -557,6 +579,20 @@ export const openApiDocument = {
         parameters: [pathIdParameter()],
         responses: {
           "200": jsonResponse(objectSchema("Show detail payload.")),
+          ...commonErrors,
+        },
+      },
+    },
+    "/api/shows/{id}/similar": {
+      get: {
+        tags: ["Catalog"],
+        summary: "List shows similar to a title in the caller's accessible library.",
+        operationId: "getSimilarShows",
+        parameters: [pathIdParameter(), pageParameter],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/SimilarShowsResponse",
+          }),
           ...commonErrors,
         },
       },
@@ -1307,6 +1343,38 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
+        },
+      },
+      MediaHeader: {
+        type: "object",
+        required: ["id", "title"],
+        properties: {
+          id: stringSchema,
+          title: stringSchema,
+        },
+      },
+      SimilarMoviesResponse: {
+        type: "object",
+        required: ["movie", "movies", "page"],
+        properties: {
+          movie: { $ref: "#/components/schemas/MediaHeader" },
+          movies: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          page: { $ref: "#/components/schemas/PageMetadata" },
+        },
+      },
+      SimilarShowsResponse: {
+        type: "object",
+        required: ["show", "shows", "page"],
+        properties: {
+          show: { $ref: "#/components/schemas/MediaHeader" },
+          shows: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          page: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
       MovieRowsResponse: {
