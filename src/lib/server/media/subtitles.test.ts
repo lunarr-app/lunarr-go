@@ -127,6 +127,19 @@ describe("getExternalMovieSubtitleTrack", () => {
           updated_at: now,
         },
         {
+          id: "shared-movie-subtitle",
+          media_item_id: "movie-1",
+          media_file_id: null,
+          label: "Shared English",
+          language: "en",
+          source_kind: "external",
+          path: path.join(tempDir, "Movie.shared.en.vtt"),
+          mime_type: "text/vtt",
+          is_default: 0,
+          created_at: now,
+          updated_at: now,
+        },
+        {
           id: "show-subtitle",
           media_item_id: "show-1",
           media_file_id: "show-file",
@@ -156,6 +169,7 @@ describe("getExternalMovieSubtitleTrack", () => {
       .execute();
 
     await writeFile(path.join(tempDir, "Movie.en.vtt"), "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n");
+    await writeFile(path.join(tempDir, "Movie.shared.en.vtt"), "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nShared\n");
   });
 
   afterEach(async () => {
@@ -166,6 +180,10 @@ describe("getExternalMovieSubtitleTrack", () => {
   test("returns only external subtitle tracks for movie items", async () => {
     expect(await getExternalMovieSubtitleTrack("movie-subtitle", "user-1")).toMatchObject({
       label: "English",
+      mime_type: "text/vtt",
+    });
+    expect(await getExternalMovieSubtitleTrack("shared-movie-subtitle", "user-1")).toMatchObject({
+      label: "Shared English",
       mime_type: "text/vtt",
     });
     expect(await getExternalMovieSubtitleTrack("show-subtitle", "user-1")).toBeUndefined();
@@ -185,6 +203,16 @@ describe("getExternalMovieSubtitleTrack", () => {
     expect(headResponse.headers.get("content-type")).toBe("text/vtt");
     expect(headResponse.headers.get("content-length")).toBe("44");
     expect(headResponse.body).toBeNull();
+  });
+
+  test("serves shared external movie subtitles without a media file id", async () => {
+    const response = await externalMovieSubtitleResponse("shared-movie-subtitle", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/vtt");
+    expect(response.headers.get("content-length")).toBe("45");
+    expect(response.headers.get("content-disposition")).toBe('inline; filename="Shared English"');
+    expect(await response.text()).toBe("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nShared\n");
   });
 
   test("returns not found for missing subtitle files", async () => {

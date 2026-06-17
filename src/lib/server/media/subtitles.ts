@@ -9,8 +9,18 @@ export async function getExternalMovieSubtitleTrack(id: string, userId: string) 
   return db
     .selectFrom("subtitle_track")
     .innerJoin("media_item", "media_item.id", "subtitle_track.media_item_id")
-    .leftJoin("media_file", "media_file.id", "subtitle_track.media_file_id")
-    .leftJoin("library", "library.id", "media_file.library_id")
+    .innerJoin("media_file as storage_file", (join) =>
+      join.on(
+        sql<boolean>`(
+          storage_file.id = subtitle_track.media_file_id
+          or (
+            subtitle_track.media_file_id is null
+            and storage_file.media_item_id = subtitle_track.media_item_id
+          )
+        )`,
+      ),
+    )
+    .innerJoin("library", "library.id", "storage_file.library_id")
     .select([
       "subtitle_track.path",
       "subtitle_track.mime_type",
@@ -31,11 +41,12 @@ export async function getExternalMovieSubtitleTrack(id: string, userId: string) 
       or library.access_mode = 'all'
       or exists (
         select 1 from library_user
-        where library_user.library_id = media_file.library_id
+        where library_user.library_id = storage_file.library_id
           and library_user.user_id = ${userId}
       )
     )`,
     )
+    .orderBy("storage_file.basename", "asc")
     .executeTakeFirst();
 }
 
