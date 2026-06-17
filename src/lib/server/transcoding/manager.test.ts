@@ -208,7 +208,7 @@ describe.serial("request-driven HLS manager", () => {
 
     expect(await nearGeneration).toBe(true);
     releaseFarSegment?.();
-    await expect(farGeneration).resolves.toBe(false);
+    expect(await farGeneration).toBe(false);
   });
 
   test("aborted HTTP segment request does not session-cancel background lookahead encode", async () => {
@@ -356,7 +356,7 @@ describe.serial("request-driven HLS manager", () => {
     expect(cancelJobCalls).toBeGreaterThan(0);
     expect(sessionCancelCalls).toBe(0);
     releaseFarSegment?.();
-    await expect(farGeneration).resolves.toBe(false);
+    expect(await farGeneration).toBe(false);
   });
 
   test("ensureHlsLookaheadForSegment reads ahead from the shared encode directory", async () => {
@@ -470,7 +470,7 @@ describe.serial("request-driven HLS manager", () => {
 
     await waitFor(() => forwardEncodeAborted);
     expect(await backwardGeneration).toBe(true);
-    await expect(forwardGeneration).resolves.toBe(false);
+    expect(await forwardGeneration).toBe(false);
   });
 
   test("releases cache refs when segment generation fails", async () => {
@@ -808,7 +808,7 @@ describe.serial("request-driven HLS manager", () => {
       "encode failed",
     );
 
-    await expect(stat(path.join(encodeArtifactDirectory, "segment-00000.ts"))).rejects.toThrow();
+    await expectRejectsToThrow(stat(path.join(encodeArtifactDirectory, "segment-00000.ts")));
   });
 
   test("releases cache refs when transcoding is disabled before segment generation", async () => {
@@ -1028,6 +1028,6 @@ describe.serial("request-driven HLS manager", () => {
     );
 
     expect(await stat(path.join(encodeArtifactDirectory, "segment-00000.ts"))).toBeDefined();
-    await expect(stat(path.join(encodeArtifactDirectory, "segment-00001.ts"))).rejects.toThrow();
+    await expectRejectsToThrow(stat(path.join(encodeArtifactDirectory, "segment-00001.ts")));
   });
 });

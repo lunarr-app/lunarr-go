@@ -1,4 +1,5 @@
 import { API_KEY_MAX_EXPIRES_IN_DAYS, API_KEY_MAX_EXPIRES_IN_SECONDS, API_KEY_MAX_NAME_LENGTH } from "./api-key-config";
+import { auth } from "./index";
 
 export type ApiKeySummary = {
   id: string;
@@ -91,11 +92,6 @@ export function apiKeyHttpStatus(error: unknown) {
   return 400;
 }
 
-async function getAuth() {
-  const { auth } = await import("./index");
-  return auth;
-}
-
 function isNotFoundError(error: unknown) {
   if (!error || typeof error !== "object") return false;
   if ("status" in error && (error.status === 404 || error.status === "NOT_FOUND")) {
@@ -113,7 +109,6 @@ export async function createApiKey(input: { name?: unknown; expiresIn?: unknown;
   const expiresIn = normalizeExpiresIn(input.expiresIn);
 
   try {
-    const auth = await getAuth();
     const created = await auth.api.createApiKey({
       body: {
         name,
@@ -133,7 +128,6 @@ export async function createApiKey(input: { name?: unknown; expiresIn?: unknown;
 
 export async function listApiKeys(headers: Headers) {
   try {
-    const auth = await getAuth();
     const result = await auth.api.listApiKeys({
       query: {
         sortBy: "createdAt",
@@ -155,7 +149,6 @@ export function isApiKeyUnauthorized(error: unknown) {
 
 export async function revokeApiKey(input: { headers: Headers; apiKeyId: string }) {
   try {
-    const auth = await getAuth();
     await auth.api.deleteApiKey({
       body: { keyId: input.apiKeyId },
       headers: input.headers,

@@ -1,4 +1,5 @@
 import type { ApiKeySummary } from "../api-keys";
+import { auth } from "../index";
 
 function isoDate(value: Date | number | string | null | undefined) {
   if (value == null) return null;
@@ -9,7 +10,6 @@ function isoDate(value: Date | number | string | null | undefined) {
 
 /** Creates an API key for a specific user without a session. Test-only helper. */
 export async function createApiKeyForUser(input: { userId: string; name?: string; expiresIn?: number }) {
-  const { auth } = await import("../index");
   const created = await auth.api.createApiKey({
     body: {
       name: input.name ?? "Mobile app",

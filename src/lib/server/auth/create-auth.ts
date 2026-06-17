@@ -1,6 +1,7 @@
 import { getRequestEvent } from "$app/server";
 import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { appEnv } from "../config/env";
 import { getDb } from "../db";
@@ -10,7 +11,8 @@ import {
   API_KEY_MAX_NAME_LENGTH,
   API_KEY_PREFIX,
 } from "./api-key-config";
-import { roleForNewUser, signupAllowed } from "./users";
+import { lunarrAuthSafeguards } from "./plugins/lunarr-auth-safeguards";
+import { lunarrSignupPolicy } from "./plugins/signup-policy";
 
 async function createAuth() {
   return betterAuth({
@@ -26,14 +28,6 @@ async function createAuth() {
         emailVerified: "email_verified",
         createdAt: "created_at",
         updatedAt: "updated_at",
-      },
-      additionalFields: {
-        role: {
-          type: "string",
-          required: false,
-          input: false,
-          defaultValue: "user",
-        },
       },
     },
     session: {
@@ -78,22 +72,26 @@ async function createAuth() {
       window: 60,
       max: 100,
     },
-    databaseHooks: {
-      user: {
-        create: {
-          before: async (user) => {
-            if (!(await signupAllowed())) return false;
-            return {
-              data: {
-                ...user,
-                role: await roleForNewUser(),
-              },
-            };
+    plugins: [
+      lunarrSignupPolicy(),
+      admin({
+        adminRoles: ["admin"],
+        defaultRole: "user",
+        schema: {
+          user: {
+            fields: {
+              banReason: "ban_reason",
+              banExpires: "ban_expires",
+            },
+          },
+          session: {
+            fields: {
+              impersonatedBy: "impersonated_by",
+            },
           },
         },
-      },
-    },
-    plugins: [
+      }),
+      lunarrAuthSafeguards(),
       apiKey({
         defaultPrefix: API_KEY_PREFIX,
         maximumNameLength: API_KEY_MAX_NAME_LENGTH,

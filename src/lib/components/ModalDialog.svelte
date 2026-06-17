@@ -7,6 +7,8 @@
     titleId,
     subtitle = "",
     focusKey,
+    width = "36rem",
+    maxHeight = "48rem",
     onClose,
     children,
   }: {
@@ -14,6 +16,8 @@
     titleId: string;
     subtitle?: string;
     focusKey?: string;
+    width?: string;
+    maxHeight?: string;
     onClose: () => void;
     children: Snippet;
   } = $props();
@@ -36,7 +40,16 @@
 </script>
 
 <div class="overlay" role="presentation" onpointerdown={(event) => event.target === event.currentTarget && onClose()}>
-  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabindex="-1" bind:this={dialog}>
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby={titleId}
+    tabindex="-1"
+    bind:this={dialog}
+    style:--modal-width={width}
+    style:--modal-max-height={maxHeight}
+  >
     <header class="dialog-header">
       <div>
         <h2 id={titleId}>{title}</h2>
@@ -67,8 +80,8 @@
   }
 
   .dialog {
-    width: min(100%, 36rem);
-    max-height: min(90vh, 48rem);
+    width: min(100%, var(--modal-width, 36rem));
+    max-height: min(90vh, var(--modal-max-height, 48rem));
     overflow: auto;
     border: 1px solid var(--color-border-strong);
     border-radius: 8px;

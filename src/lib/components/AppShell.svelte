@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { page } from "$app/state";
-  import { Activity, Clock3, Film, Library, LogOut, Settings, Tv, UserRound } from "@lucide/svelte";
+  import { Activity, Clock3, Film, Library, LogOut, Settings, Tv, UserRound, Users } from "@lucide/svelte";
   import type { Snippet } from "svelte";
   import type PlaybackModalComponent from "$lib/components/PlaybackModal.svelte";
 
@@ -32,6 +32,7 @@
       ? [
           { href: "/libraries", label: "Libraries", icon: Library },
           { href: "/jobs", label: "Jobs", icon: Activity },
+          { href: "/users", label: "Users", icon: Users },
           { href: "/settings", label: "Settings", icon: Settings },
         ]
       : [],

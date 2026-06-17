@@ -221,8 +221,33 @@ PUT /api/settings/registration
 PUT /api/settings/metadata
 PUT /api/settings/transcoding
 POST /api/settings/actions
+GET /api/users
+POST /api/users
+PATCH /api/users/:userId
+DELETE /api/users/:userId
 POST /api/movies/:id/metadata/refresh
 POST /api/shows/:id/metadata/refresh
+```
+
+`GET /api/users` returns registered accounts with roles and timestamps. Admins can create accounts with `POST /api/users`, promote or demote users with `PATCH /api/users/:userId`, and remove accounts with `DELETE /api/users/:userId`. Lunarr keeps at least one admin and blocks self-deletion.
+
+Create user body:
+
+```json
+{
+  "name": "Viewer",
+  "email": "viewer@example.com",
+  "password": "secure-password",
+  "role": "user"
+}
+```
+
+Update role body:
+
+```json
+{
+  "role": "admin"
+}
 ```
 
 `GET /api/jobs` returns recent scan jobs, playback sessions, and summary counts. Each scan job row includes `errors_count`, but error rows are not embedded in that response.

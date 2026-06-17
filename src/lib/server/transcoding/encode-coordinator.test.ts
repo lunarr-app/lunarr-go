@@ -178,14 +178,14 @@ describe("encode-coordinator", () => {
 
     releaseStartJob?.();
 
-    await expect(
-      Promise.race([
+    expect(
+      await Promise.race([
         Promise.all([first, second]),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("timed out waiting for reservation release")), 1_000),
         ),
       ]),
-    ).resolves.toEqual([false, false]);
+    ).toEqual([false, false]);
   });
 
   test("ensureSegment waits on a covering active job", async () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Save } from "@lucide/svelte";
   import type { PageData } from "../$types";
-  import LibraryDialog from "./LibraryDialog.svelte";
+  import ModalDialog from "$lib/components/ModalDialog.svelte";
 
   type Library = PageData["libraries"][number];
   type User = PageData["users"][number];
@@ -19,7 +19,7 @@
   const subtitle = $derived(`${library.kind === "tv" ? "TV shows" : "Movies"} · ${library.source}`);
 </script>
 
-<LibraryDialog
+<ModalDialog
   title="Sharing for {library.name}"
   titleId="library-sharing-title"
   {subtitle}
@@ -57,7 +57,7 @@
       </button>
     </div>
   </form>
-</LibraryDialog>
+</ModalDialog>
 
 <style>
   fieldset {

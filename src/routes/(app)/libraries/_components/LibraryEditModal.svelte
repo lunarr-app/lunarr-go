@@ -2,7 +2,7 @@
   import { Save } from "@lucide/svelte";
   import type { PageData } from "../$types";
   import LibraryAutomationFields from "./LibraryAutomationFields.svelte";
-  import LibraryDialog from "./LibraryDialog.svelte";
+  import ModalDialog from "$lib/components/ModalDialog.svelte";
   import { libraryRemoteFieldValues } from "./libraryRemoteFieldValues";
   import RemoteLibraryFields from "./RemoteLibraryFields.svelte";
 
@@ -19,7 +19,7 @@
   const subtitle = $derived(`${library.kind === "tv" ? "TV shows" : "Movies"} · ${library.source} · ${library.path}`);
 </script>
 
-<LibraryDialog title="Edit {library.name}" titleId="library-edit-title" {subtitle} focusKey={library.id} {onClose}>
+<ModalDialog title="Edit {library.name}" titleId="library-edit-title" {subtitle} focusKey={library.id} {onClose}>
   <form method="POST" action="?/edit" class="dialog-form">
     <input type="hidden" name="libraryId" value={library.id} />
     <input type="hidden" name="source" value={library.source} />
@@ -63,4 +63,4 @@
       <p class="muted">Finish or cancel the active scan before editing this library.</p>
     {/if}
   </form>
-</LibraryDialog>
+</ModalDialog>

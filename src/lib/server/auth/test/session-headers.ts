@@ -1,6 +1,7 @@
 import { createId } from "$lib/server/id";
 import { getDb } from "$lib/server/db";
 import { hashPassword } from "better-auth/crypto";
+import { auth } from "../index";
 
 export async function sessionHeadersFor(
   user: {
@@ -40,7 +41,6 @@ export async function sessionHeadersFor(
       .execute();
   }
 
-  const { auth } = await import("../index");
   const response = await auth.api.signInEmail({
     body: {
       email: user.email,

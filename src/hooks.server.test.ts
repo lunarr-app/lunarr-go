@@ -1,4 +1,3 @@
-import "$lib/server/auth/test/setup-mocks";
 import { beforeAll, afterAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";

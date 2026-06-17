@@ -482,6 +482,73 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/users": {
+      get: {
+        tags: ["Admin"],
+        summary: "List registered users.",
+        operationId: "getUsers",
+        responses: {
+          "200": jsonResponse({ $ref: "#/components/schemas/UsersResponse" }),
+          "401": errorResponse,
+          "403": errorResponse,
+        },
+      },
+      post: {
+        tags: ["Admin"],
+        summary: "Create a user account.",
+        operationId: "createUser",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateUserRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": jsonResponse({ $ref: "#/components/schemas/UserResponse" }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+        },
+      },
+    },
+    "/api/users/{id}": {
+      patch: {
+        tags: ["Admin"],
+        summary: "Update a user's role.",
+        operationId: "updateUserRole",
+        parameters: [pathIdParameter("id", "User identifier.")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateUserRoleRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": jsonResponse({ $ref: "#/components/schemas/UserResponse" }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+      delete: {
+        tags: ["Admin"],
+        summary: "Delete a user account.",
+        operationId: "deleteUser",
+        parameters: [pathIdParameter("id", "User identifier.")],
+        responses: {
+          "200": okResponse,
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+    },
     "/api/shows/{id}": {
       get: {
         tags: ["Catalog"],
@@ -1024,6 +1091,53 @@ export const openApiDocument = {
           id: stringSchema,
           name: stringSchema,
           email: stringSchema,
+          role: { type: "string", enum: ["admin", "user"] },
+        },
+      },
+      ManagedUser: {
+        type: "object",
+        required: ["id", "name", "email", "role", "banned", "createdAt", "updatedAt"],
+        properties: {
+          id: stringSchema,
+          name: stringSchema,
+          email: stringSchema,
+          role: { type: "string", enum: ["admin", "user"] },
+          banned: { type: "boolean" },
+          createdAt: stringSchema,
+          updatedAt: stringSchema,
+        },
+      },
+      UsersResponse: {
+        type: "object",
+        required: ["users"],
+        properties: {
+          users: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ManagedUser" },
+          },
+        },
+      },
+      UserResponse: {
+        type: "object",
+        required: ["user"],
+        properties: {
+          user: { $ref: "#/components/schemas/ManagedUser" },
+        },
+      },
+      UpdateUserRoleRequest: {
+        type: "object",
+        required: ["role"],
+        properties: {
+          role: { type: "string", enum: ["admin", "user"] },
+        },
+      },
+      CreateUserRequest: {
+        type: "object",
+        required: ["name", "email", "password"],
+        properties: {
+          name: stringSchema,
+          email: stringSchema,
+          password: stringSchema,
           role: { type: "string", enum: ["admin", "user"] },
         },
       },

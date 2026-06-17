@@ -8,6 +8,9 @@ export type UserTable = {
   role: ColumnType<string, string | undefined, string | undefined>;
   email_verified: ColumnType<boolean, boolean | number, boolean | number>;
   image: string | null;
+  banned: ColumnType<boolean, boolean | number | undefined, boolean | number | undefined>;
+  ban_reason: string | null;
+  ban_expires: TimestampMs | null;
   created_at: TimestampMs;
   updated_at: TimestampMs;
 };
@@ -19,6 +22,7 @@ export type SessionTable = {
   expires_at: TimestampMs;
   ip_address: string | null;
   user_agent: string | null;
+  impersonated_by: string | null;
   created_at: TimestampMs;
   updated_at: TimestampMs;
 };

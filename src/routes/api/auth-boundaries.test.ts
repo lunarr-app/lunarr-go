@@ -8,6 +8,8 @@ import { registerTranscodeHlsArtifact, setTranscodeTouchDelayForTests } from "$l
 import { verifySignedPlaybackToken } from "$lib/server/playback/signed-token";
 import { GET as jobsGet } from "./jobs/+server";
 import { GET as jobErrorsGet } from "./jobs/[id]/errors/+server";
+import { GET as usersGet } from "./users/+server";
+import { PATCH as updateUserPatch, DELETE as deleteUserDelete } from "./users/[id]/+server";
 import { GET as playbackGet, POST as playbackPost } from "./playback/[id]/+server";
 import { POST as cancelPlaybackSessionPost } from "./playback-sessions/[sessionId]/cancel/+server";
 import { POST as heartbeatPlaybackSessionPost } from "./playback-sessions/[sessionId]/heartbeat/+server";
@@ -1023,6 +1025,40 @@ describe("authenticated API route boundaries", () => {
     } as never);
     expect(nonAdmin.status).toBe(403);
     expect(await nonAdmin.json()).toEqual({ error: "Admin access required" });
+  });
+
+  test("distinguishes unauthenticated and non-admin users API calls", async () => {
+    const unauthenticated = await usersGet({
+      locals: { user: null },
+    } as never);
+    expect(unauthenticated.status).toBe(401);
+    expect(await unauthenticated.json()).toEqual({ error: "Unauthorized" });
+
+    const nonAdmin = await usersGet({
+      locals: { user: { id: "user-1", role: "user" } },
+    } as never);
+    expect(nonAdmin.status).toBe(403);
+    expect(await nonAdmin.json()).toEqual({ error: "Admin access required" });
+
+    const patchRequest = new Request("http://localhost/api/users/user-2", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role: "admin" }),
+    });
+    const forbiddenPatch = await updateUserPatch({
+      params: { id: "user-2" },
+      request: patchRequest,
+      locals: { user: { id: "user-1", role: "user" } },
+    } as never);
+    expect(forbiddenPatch.status).toBe(403);
+    expect(await forbiddenPatch.json()).toEqual({ error: "Admin access required" });
+
+    const forbiddenDelete = await deleteUserDelete({
+      params: { id: "user-2" },
+      locals: { user: { id: "user-1", role: "user" } },
+    } as never);
+    expect(forbiddenDelete.status).toBe(403);
+    expect(await forbiddenDelete.json()).toEqual({ error: "Admin access required" });
   });
 
   test("returns scan jobs and playback sessions for admin jobs API calls", async () => {
