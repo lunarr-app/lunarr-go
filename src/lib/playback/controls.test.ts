@@ -41,6 +41,7 @@ import {
   shouldCloseSubtitleMenuOnPlayerKeydown,
   shouldHandlePlayerShortcut,
   shouldShowCustomControls,
+  shouldSyncTimelineUiNow,
   shouldUseHlsRepositionForSeek,
   subtitleTextTrackMode,
   volumeSliderAriaValue,
@@ -885,6 +886,63 @@ describe("custom player controls", () => {
         subtitleMenuOpen: false,
         controlsFocused: false,
         controlsHovered: true,
+      }),
+    ).toBe(true);
+  });
+
+  test("throttles visible timeline ui syncs to one hertz", () => {
+    expect(
+      shouldSyncTimelineUiNow({
+        controlsBarVisible: false,
+        seeking: false,
+        scrubbing: false,
+        lastSyncAtMs: 0,
+        nowMs: 500,
+      }),
+    ).toBe(false);
+    expect(
+      shouldSyncTimelineUiNow({
+        controlsBarVisible: true,
+        seeking: false,
+        scrubbing: false,
+        lastSyncAtMs: 0,
+        nowMs: 500,
+      }),
+    ).toBe(false);
+    expect(
+      shouldSyncTimelineUiNow({
+        controlsBarVisible: true,
+        seeking: false,
+        scrubbing: false,
+        lastSyncAtMs: 0,
+        nowMs: 1000,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSyncTimelineUiNow({
+        controlsBarVisible: true,
+        seeking: false,
+        scrubbing: false,
+        lastSyncAtMs: 1000,
+        nowMs: 1500,
+      }),
+    ).toBe(false);
+    expect(
+      shouldSyncTimelineUiNow({
+        controlsBarVisible: true,
+        seeking: true,
+        scrubbing: false,
+        lastSyncAtMs: 1000,
+        nowMs: 1100,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSyncTimelineUiNow({
+        controlsBarVisible: true,
+        seeking: false,
+        scrubbing: true,
+        lastSyncAtMs: 1000,
+        nowMs: 1100,
       }),
     ).toBe(true);
   });

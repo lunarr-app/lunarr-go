@@ -45,6 +45,7 @@
     shouldCloseSubtitleMenuOnPlayerKeydown,
     shouldHandlePlayerShortcut,
     shouldShowCustomControls,
+    shouldSyncTimelineUiNow,
     subtitleTextTrackMode,
     volumeSliderAriaValue,
     volumeStateForMuteToggle,
@@ -134,6 +135,9 @@
   let screenWakeLock: ScreenWakeLockSentinel | null = null;
   let screenWakeLockRequest: Promise<void> | null = null;
   let hasPlaybackActivity = false;
+  let timelinePlaybackSeconds = 0;
+  let timelineDurationSeconds: number | null = null;
+  let lastTimelineUiSyncAt = 0;
   let lastPointerControlsRefreshAt = -Infinity;
   const castHolder: { api?: ReturnType<typeof createMediaPlayerCast> } = {};
 
@@ -214,13 +218,10 @@
     releaseScreenWakeLock();
   }
 
-  function airPlayVideoElement() {
-    return video as SafariVideoElement | undefined;
-  }
-
   function syncAirPlayActiveState() {
+    const safariVideo = video as SafariVideoElement | undefined;
     airPlayActive = airPlayActiveFromVideo({
-      currentPlaybackTargetIsWireless: airPlayVideoElement()?.webkitCurrentPlaybackTargetIsWireless,
+      currentPlaybackTargetIsWireless: safariVideo?.webkitCurrentPlaybackTargetIsWireless,
     });
   }
 
@@ -240,7 +241,7 @@
   function showAirPlayTargetPicker() {
     if (castHolder.api?.switchPlaybackTarget("airplay")) return;
 
-    const player = airPlayVideoElement();
+    const player = video as SafariVideoElement | undefined;
     const picker = player?.webkitShowPlaybackTargetPicker;
     if (
       airPlayTargetPickerAction({
@@ -268,20 +269,14 @@
 
   function showControls() {
     playerControlsVisible = true;
+    currentPlaybackSeconds = timelinePlaybackSeconds;
+    durationSeconds = timelineDurationSeconds;
+    lastTimelineUiSyncAt = browser ? window.performance.now() : 0;
     playerControlsActivityTick = nextControlsActivityTick(playerControlsActivityTick);
   }
 
   function handlePlayerPointerMove() {
-    if (
-      shouldShowCustomControls({
-        controlsVisible: playerControlsVisible,
-        uiState: playerUiState,
-        casting: castHolder.api?.isCasting() ?? false,
-        subtitleMenuOpen,
-        controlsFocused: playerControlsFocused,
-        controlsHovered: playerControlsHovered,
-      })
-    ) {
+    if (customControlsVisible) {
       const now = window.performance.now();
       if (playerControlsVisible && now - lastPointerControlsRefreshAt < POINTER_CONTROLS_REFRESH_INTERVAL_MS) {
         return;
@@ -412,14 +407,28 @@
 
   function updateTimelineFromVideo(sourceData: PlaybackData = data) {
     if (!video) return;
-    currentPlaybackSeconds = clampPlaybackSeconds({
+    const duration = playbackDurationSeconds(sourceData);
+    timelinePlaybackSeconds = clampPlaybackSeconds({
       seconds: mediaTimelineSeconds({
         relativeSeconds: Number.isFinite(video.currentTime) ? video.currentTime : 0,
         streamStartSeconds: sourceData.playback.streamStartSeconds,
       }),
-      durationSeconds: playbackDurationSeconds(sourceData),
+      durationSeconds: duration,
     });
-    durationSeconds = playbackDurationSeconds(sourceData);
+    timelineDurationSeconds = duration;
+    if (
+      shouldSyncTimelineUiNow({
+        controlsBarVisible: customControlsVisible,
+        seeking: playerUiState === "seeking",
+        scrubbing: seekPreviewSeconds !== null,
+        lastSyncAtMs: lastTimelineUiSyncAt,
+        nowMs: browser ? window.performance.now() : 0,
+      })
+    ) {
+      currentPlaybackSeconds = timelinePlaybackSeconds;
+      durationSeconds = timelineDurationSeconds;
+      lastTimelineUiSyncAt = browser ? window.performance.now() : 0;
+    }
   }
 
   function applyVideoVolume() {
@@ -500,8 +509,8 @@
     getData: () => data,
     getVideo: () => video,
     isCasting: () => castHolder.api?.isCasting() ?? false,
-    getCurrentPlaybackSeconds: () => currentPlaybackSeconds,
-    getDurationSeconds: () => durationSeconds,
+    getCurrentPlaybackSeconds: () => seekPreviewSeconds ?? timelinePlaybackSeconds,
+    getDurationSeconds: () => timelineDurationSeconds ?? durationSeconds,
     getHasPlaybackActivity: () => hasPlaybackActivity,
     setHasPlaybackActivity: (value) => {
       hasPlaybackActivity = value;
@@ -514,24 +523,26 @@
   function currentPlaybackTargetSeconds() {
     const payload = session.progressPayload(data, false);
     if (payload) return payload.positionSeconds;
-    const displayedSeconds = displayedPlaybackSeconds();
+    const displayedSeconds = seekPreviewSeconds ?? timelinePlaybackSeconds;
     if (Number.isFinite(displayedSeconds)) return displayedSeconds;
     return Number.isFinite(data.startSeconds) ? data.startSeconds : 0;
   }
 
-  castHolder.api = createMediaPlayerCast({
+  const cast = createMediaPlayerCast({
     getData: () => data,
     getVideo: () => video,
     getPlayerUiState: () => playerUiState,
     setPlayerUiState: (state) => {
       playerUiState = state;
     },
-    getCurrentPlaybackSeconds: () => currentPlaybackSeconds,
+    getCurrentPlaybackSeconds: () => seekPreviewSeconds ?? timelinePlaybackSeconds,
     setCurrentPlaybackSeconds: (seconds) => {
+      timelinePlaybackSeconds = seconds;
       currentPlaybackSeconds = seconds;
     },
-    getDurationSeconds: () => durationSeconds,
+    getDurationSeconds: () => timelineDurationSeconds ?? durationSeconds,
     setDurationSeconds: (seconds) => {
+      timelineDurationSeconds = seconds;
       durationSeconds = seconds;
     },
     setHasPlaybackActivity: (value) => {
@@ -547,7 +558,17 @@
     onReposition: (href) => onReposition(href),
     getPlaybackButtonAction: () => primaryPlaybackButtonState({ uiState: playerUiState }).action,
   });
-  const cast = castHolder.api;
+  castHolder.api = cast;
+  const customControlsVisible = $derived(
+    shouldShowCustomControls({
+      controlsVisible: playerControlsVisible,
+      uiState: playerUiState,
+      casting: cast.isCasting(),
+      subtitleMenuOpen,
+      controlsFocused: playerControlsFocused,
+      controlsHovered: playerControlsHovered,
+    }),
+  );
 
   const hls = createMediaPlayerHls({
     getData: () => data,
@@ -556,12 +577,14 @@
     setPlayerUiState: (state) => {
       playerUiState = state;
     },
-    getCurrentPlaybackSeconds: () => currentPlaybackSeconds,
+    getCurrentPlaybackSeconds: () => seekPreviewSeconds ?? timelinePlaybackSeconds,
     setCurrentPlaybackSeconds: (seconds) => {
+      timelinePlaybackSeconds = seconds;
       currentPlaybackSeconds = seconds;
     },
-    getDurationSeconds: () => durationSeconds,
+    getDurationSeconds: () => timelineDurationSeconds ?? durationSeconds,
     setDurationSeconds: (seconds) => {
+      timelineDurationSeconds = seconds;
       durationSeconds = seconds;
     },
     getSeekPreviewSeconds: () => seekPreviewSeconds,
@@ -620,22 +643,6 @@
       casting: cast.isCasting(),
     }),
   );
-  const customControlsVisible = $derived(
-    shouldShowCustomControls({
-      controlsVisible: playerControlsVisible,
-      uiState: playerUiState,
-      casting: cast.isCasting(),
-      subtitleMenuOpen,
-      controlsFocused: playerControlsFocused,
-      controlsHovered: playerControlsHovered,
-    }),
-  );
-  const seekSliderAria = $derived(
-    playbackSliderAriaValue({
-      seconds: displayedPlaybackSeconds(),
-      durationSeconds,
-    }),
-  );
   const volumeAria = $derived(volumeSliderAriaValue({ volume, muted }));
   const airPlayButton = $derived(
     airPlayControlState({
@@ -682,11 +689,14 @@
     showControls();
 
     if (action.kind === "cast") {
-      currentPlaybackSeconds = cast.castPlaybackSecondsAfterSeekAction(action.targetSeconds);
+      const seconds = cast.castPlaybackSecondsAfterSeekAction(action.targetSeconds);
+      timelinePlaybackSeconds = seconds;
+      currentPlaybackSeconds = seconds;
       return;
     }
 
     if (!video) return;
+    timelinePlaybackSeconds = action.targetSeconds;
     currentPlaybackSeconds = action.targetSeconds;
     hasPlaybackActivity = true;
     if (action.kind === "hls-reposition") {
@@ -1030,6 +1040,10 @@
     {/if}
 
     {#if customControlsVisible}
+      {@const seekSliderAria = playbackSliderAriaValue({
+        seconds: displayedPlaybackSeconds(),
+        durationSeconds,
+      })}
       <div
         class="player-controls"
         role="group"

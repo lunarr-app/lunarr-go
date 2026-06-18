@@ -474,6 +474,22 @@ export function shouldShowCustomControls(input: {
   return input.controlsVisible;
 }
 
+export const TIMELINE_UI_UPDATE_INTERVAL_MS = 1000;
+
+export function shouldSyncTimelineUiNow(input: {
+  controlsBarVisible: boolean;
+  seeking: boolean;
+  scrubbing: boolean;
+  lastSyncAtMs: number;
+  nowMs: number;
+}) {
+  if (!input.scrubbing && !input.seeking && !input.controlsBarVisible) {
+    return false;
+  }
+  if (input.seeking || input.scrubbing) return true;
+  return input.nowMs - input.lastSyncAtMs >= TIMELINE_UI_UPDATE_INTERVAL_MS;
+}
+
 export function shouldAutoHideControls(input: {
   uiState: PlayerControlUiState;
   controlsVisible: boolean;
