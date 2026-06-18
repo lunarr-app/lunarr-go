@@ -9,6 +9,8 @@ import {
   getSimilarMovies,
   getSimilarShows,
   getShowDetail,
+  listBecauseYouWatchedMovies,
+  listBecauseYouWatchedShows,
   movieRows,
   normalizePage,
   normalizeMovieSort,
@@ -1414,5 +1416,83 @@ describe("similar media", () => {
     expect(results.shows.map((show) => show.id)).toEqual(["show-2", "show-3"]);
     expect(results.shows.some((show) => show.id === "show-1")).toBe(false);
     expect(results.page.total).toBe(2);
+
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "ep-1",
+        media_file_id: "tv-file-1",
+        position_seconds: 120,
+        duration_seconds: 6000,
+        completed: 0,
+        updated_at: now,
+      })
+      .execute();
+
+    const showList = await listBecauseYouWatchedShows("user-1");
+    expect(showList.shows.map((show) => show.id)).toEqual(["show-2", "show-3"]);
+    expect(showList.page.total).toBe(2);
+
+    const showPage = await listBecauseYouWatchedShows("user-1", 1, 1);
+    expect(showPage.shows.map((show) => show.id)).toEqual(["show-2"]);
+    expect(showPage.page.total).toBe(2);
+    expect(showPage.page.totalPages).toBe(2);
+  });
+
+  test("because you watched recommends similar unwatched titles from recent seeds", async () => {
+    const now = new Date().toISOString();
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "movie-1",
+        media_file_id: "file-seed",
+        position_seconds: 120,
+        duration_seconds: 6000,
+        completed: 0,
+        updated_at: now,
+      })
+      .execute();
+
+    const list = await listBecauseYouWatchedMovies("user-1");
+    expect(list.movies.map((movie) => movie.id)).toEqual(["movie-2", "movie-3"]);
+    expect(list.movies.some((movie) => movie.id === "movie-1")).toBe(false);
+    expect(list.page.total).toBe(2);
+
+    const page = await listBecauseYouWatchedMovies("user-1", 1, 1);
+    expect(page.movies.map((movie) => movie.id)).toEqual(["movie-2"]);
+    expect(page.page.total).toBe(2);
+    expect(page.page.totalPages).toBe(2);
+  });
+
+  test("because you watched excludes completed titles", async () => {
+    const now = new Date().toISOString();
+    await db
+      .insertInto("watch_progress")
+      .values([
+        {
+          user_id: "user-1",
+          media_item_id: "movie-1",
+          media_file_id: "file-seed",
+          position_seconds: 120,
+          duration_seconds: 6000,
+          completed: 0,
+          updated_at: now,
+        },
+        {
+          user_id: "user-1",
+          media_item_id: "movie-2",
+          media_file_id: "file-2",
+          position_seconds: 6000,
+          duration_seconds: 6000,
+          completed: 1,
+          updated_at: now,
+        },
+      ])
+      .execute();
+
+    const list = await listBecauseYouWatchedMovies("user-1");
+    expect(list.movies.map((movie) => movie.id)).toEqual(["movie-3"]);
   });
 });

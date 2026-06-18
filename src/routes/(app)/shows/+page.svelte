@@ -5,7 +5,7 @@
   import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
   import { SHOW_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import { twoRowRailOrder } from "$lib/media/rails";
-  import { ChevronRight, Library, Search } from "@lucide/svelte";
+  import { ChevronRight, Library, Search, Sparkles } from "@lucide/svelte";
 
   let { data } = $props();
   const catalogSearch = createDebouncedCatalogSearch(() => data.query);
@@ -74,7 +74,15 @@
 
 <header class="page-header">
   <div>
-    <h1>Shows</h1>
+    <div class="title-row">
+      <h1>Shows</h1>
+      {#if !hasActiveSearch}
+        <a class="discover-link button secondary" href="/shows/discover">
+          <Sparkles size={16} aria-hidden="true" />
+          Discover TV shows
+        </a>
+      {/if}
+    </div>
     <p class="muted">Browse scanned TV libraries by show and season.</p>
   </div>
   <form
@@ -138,10 +146,12 @@
       <section class="media-section">
         <div class="section-heading">
           <h2>{section.title}</h2>
-          <a class="view-all" href={section.href}>
-            <span>View all</span>
-            <ChevronRight size={16} aria-hidden="true" />
-          </a>
+          {#if section.href}
+            <a class="view-all" href={section.href}>
+              <span>View all</span>
+              <ChevronRight size={16} aria-hidden="true" />
+            </a>
+          {/if}
         </div>
         <div class="show-rail" class:two-row={section.shows.length >= TWO_ROW_SHOW_RAIL_COUNT}>
           {#each twoRowRailOrder(section.shows, TWO_ROW_SHOW_RAIL_COUNT) as show}
@@ -162,14 +172,24 @@
     margin-bottom: 1.6rem;
   }
 
+  .title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
   form {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.5rem;
+    justify-self: end;
+    width: 100%;
   }
 
   h1 {
-    margin: 0 0 0.25rem;
+    margin: 0;
     font-size: clamp(1.55rem, 2.4vw, 2.25rem);
   }
 

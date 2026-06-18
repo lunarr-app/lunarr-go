@@ -84,9 +84,11 @@ Transcoding settings accept the combined temporary playback storage limit, encod
 ```http
 GET /api/continue
 GET /api/movies
+GET /api/movies/discover
 GET /api/movies/:id
 GET /api/movies/:id/similar
 GET /api/shows
+GET /api/shows/discover
 GET /api/shows/:id
 GET /api/shows/:id/similar
 GET /api/episodes/:id
@@ -102,7 +104,14 @@ sort=title|recent|year_desc|rating|release_date
 page
 ```
 
-Similar movie and show endpoints accept `page` and return accessible titles ranked by shared genres, keywords, and cast or creators. Responses include the source title plus paginated `movies` or `shows` and a `page` object with `total`, `totalPages`, `hasPrevious`, and `hasNext`.
+Similar movie and show endpoints accept `page` and return accessible titles ranked by shared genres, keywords, cast, and directors or creators. Responses include the source title plus paginated `movies` or `shows` and a `page` object with `total`, `totalPages`, `hasPrevious`, and `hasNext`.
+
+```http
+GET /api/movies/discover?page=
+GET /api/shows/discover?page=
+```
+
+These endpoints return personalized recommendations ranked by shared metadata overlap (genres +3, keywords +2, cast and directors or creators +1 per seed; seeds weighted by recency). Completed movies and shows with a completed episode are excluded.
 
 Show query parameters:
 

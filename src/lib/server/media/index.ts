@@ -147,6 +147,9 @@ type SimilaritySeeds = {
 
 type CrewSeedFilter = { job: string; limit: number } | { jobs: readonly string[]; limit: number };
 
+const MOVIE_SIMILARITY_CREW = { job: "Director", limit: 3 } as const satisfies CrewSeedFilter;
+const SHOW_SIMILARITY_CREW = { jobs: TV_SHOW_CREATOR_JOBS, limit: 4 } as const satisfies CrewSeedFilter;
+
 async function fetchSimilaritySeeds(mediaItemId: string, crew: CrewSeedFilter): Promise<SimilaritySeeds> {
   const db = await getDb();
   const crewQuery = db
@@ -220,6 +223,298 @@ function buildSimilarityScoreSubquery(
     .where("media_item_id", "!=", mediaItemId)
     .groupBy("media_item_id")
     .as("similar_scores");
+}
+
+const RECOMMENDATION_SEED_LIMIT = 3;
+const RECOMMENDATION_SEED_WEIGHTS = [3, 2, 1] as const;
+
+async function aggregateWeightedSimilarityScores(
+  db: Awaited<ReturnType<typeof getDb>>,
+  seedIds: string[],
+  crew: CrewSeedFilter,
+) {
+  const scores = new Map<string, number>();
+  for (let index = 0; index < seedIds.length; index++) {
+    const seedId = seedIds[index];
+    if (!seedId) continue;
+    const weight = RECOMMENDATION_SEED_WEIGHTS[index] ?? 1;
+    const seeds = await fetchSimilaritySeeds(seedId, crew);
+    if (seeds.genres.length === 0 && seeds.keywords.length === 0 && seeds.people.length === 0) {
+      continue;
+    }
+    const scoreSubquery = buildSimilarityScoreSubquery(db, seedId, seeds);
+    const rows = await db.selectFrom(scoreSubquery).select(["media_item_id", "score"]).execute();
+    for (const row of rows) {
+      scores.set(row.media_item_id, (scores.get(row.media_item_id) ?? 0) + Number(row.score) * weight);
+    }
+  }
+  return scores;
+}
+
+function rankIdsByScore(scores: Map<string, number>, excludeIds: ReadonlySet<string>, limit?: number) {
+  const ranked = [...scores.entries()]
+    .filter(([id, score]) => score > 0 && !excludeIds.has(id))
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .map(([id]) => id);
+  return limit === undefined ? ranked : ranked.slice(0, limit);
+}
+
+async function collapseSimilarityScoresToShows(db: Awaited<ReturnType<typeof getDb>>, scores: Map<string, number>) {
+  const mediaIds = [...scores.keys()];
+  if (mediaIds.length === 0) return new Map<string, number>();
+
+  const items = await db
+    .selectFrom("media_item")
+    .select(["id", "kind", "parent_id"])
+    .where("id", "in", mediaIds)
+    .execute();
+
+  const episodeIds = items.filter((item) => item.kind === "episode").map((item) => item.id);
+  const episodeShowIds =
+    episodeIds.length === 0
+      ? new Map<string, string>()
+      : new Map(
+          (
+            await db
+              .selectFrom("media_item as episode")
+              .innerJoin("media_item as season", "season.id", "episode.parent_id")
+              .select(["episode.id as episode_id", "season.parent_id as show_id"])
+              .where("episode.id", "in", episodeIds)
+              .where("season.kind", "=", "season")
+              .execute()
+          ).map((row) => [row.episode_id, row.show_id]),
+        );
+
+  const showScores = new Map<string, number>();
+  for (const item of items) {
+    const score = scores.get(item.id) ?? 0;
+    if (score <= 0) continue;
+
+    const showId =
+      item.kind === "show"
+        ? item.id
+        : item.kind === "season"
+          ? item.parent_id
+          : item.kind === "episode"
+            ? episodeShowIds.get(item.id)
+            : null;
+    if (!showId) continue;
+
+    showScores.set(showId, Math.max(showScores.get(showId) ?? 0, score));
+  }
+
+  return showScores;
+}
+
+async function filterAccessibleMovieIds(userId: string, ids: string[]) {
+  if (ids.length === 0) return [];
+  const db = await getDb();
+  const rows = await db
+    .selectFrom("media_item")
+    .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+    .select("media_item.id")
+    .where("media_item.kind", "=", "movie")
+    .where("media_item.id", "in", ids)
+    .where(accessibleLibrarySql(userId))
+    .groupBy("media_item.id")
+    .execute();
+  const accessible = new Set(rows.map((row) => row.id));
+  return ids.filter((id) => accessible.has(id));
+}
+
+async function filterAccessibleShowIds(userId: string, ids: string[]) {
+  if (ids.length === 0) return [];
+  const filtered = await filteredShows(userId);
+  const rows = await showBrowseSelect(filtered).where("show.id", "in", ids).select("show.id").execute();
+  const accessible = new Set(rows.map((row) => row.id));
+  return ids.filter((id) => accessible.has(id));
+}
+
+async function rankedBecauseYouWatchedMovieIds(userId: string) {
+  const db = await getDb();
+  const seedIds = await fetchRecentMovieSeeds(userId);
+  if (seedIds.length === 0) return [];
+
+  const completedIds = await completedMovieIdsForUser(userId);
+  const excludeIds = new Set([...seedIds, ...completedIds]);
+  const scores = await aggregateWeightedSimilarityScores(db, seedIds, MOVIE_SIMILARITY_CREW);
+  const ranked = rankIdsByScore(scores, excludeIds);
+  return filterAccessibleMovieIds(userId, ranked);
+}
+
+async function rankedBecauseYouWatchedShowIds(userId: string) {
+  const db = await getDb();
+  const seedIds = await fetchRecentShowSeeds(userId);
+  if (seedIds.length === 0) return [];
+
+  const watchedShowIds = await showsWithCompletedEpisodeForUser(userId);
+  const excludeIds = new Set([...seedIds, ...watchedShowIds]);
+  const scores = await aggregateWeightedSimilarityScores(db, seedIds, SHOW_SIMILARITY_CREW);
+  const showScores = await collapseSimilarityScoresToShows(db, scores);
+  const ranked = rankIdsByScore(showScores, excludeIds);
+  return filterAccessibleShowIds(userId, ranked);
+}
+
+async function fetchRecentMovieSeeds(userId: string, limit = RECOMMENDATION_SEED_LIMIT) {
+  const db = await getDb();
+  const rows = await db
+    .selectFrom("watch_progress")
+    .innerJoin("media_item", "media_item.id", "watch_progress.media_item_id")
+    .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+    .where("watch_progress.user_id", "=", userId)
+    .where("media_item.kind", "=", "movie")
+    .where(sql<boolean>`(watch_progress.position_seconds > 0 or watch_progress.completed = 1)`)
+    .where(accessibleLibrarySql(userId))
+    .select("media_item.id")
+    .groupBy("media_item.id")
+    .orderBy(sql<string>`max(watch_progress.updated_at)`, "desc")
+    .limit(limit)
+    .execute();
+  return rows.map((row) => row.id);
+}
+
+async function fetchRecentShowSeeds(userId: string, limit = RECOMMENDATION_SEED_LIMIT) {
+  const db = await getDb();
+  const rows = await db
+    .selectFrom("watch_progress")
+    .innerJoin("media_item as episode", "episode.id", "watch_progress.media_item_id")
+    .innerJoin("media_item as season", "season.id", "episode.parent_id")
+    .innerJoin("media_item as show", "show.id", "season.parent_id")
+    .innerJoin("media_file", "media_file.media_item_id", "episode.id")
+    .where("watch_progress.user_id", "=", userId)
+    .where("episode.kind", "=", "episode")
+    .where("season.kind", "=", "season")
+    .where("show.kind", "=", "show")
+    .where(sql<boolean>`(watch_progress.position_seconds > 0 or watch_progress.completed = 1)`)
+    .where(accessibleLibrarySql(userId))
+    .select("show.id")
+    .groupBy("show.id")
+    .orderBy(sql<string>`max(watch_progress.updated_at)`, "desc")
+    .limit(limit)
+    .execute();
+  return rows.map((row) => row.id);
+}
+
+async function completedMovieIdsForUser(userId: string) {
+  const db = await getDb();
+  const rows = await db
+    .selectFrom("watch_progress")
+    .innerJoin("media_item", "media_item.id", "watch_progress.media_item_id")
+    .select("media_item.id")
+    .where("watch_progress.user_id", "=", userId)
+    .where("media_item.kind", "=", "movie")
+    .where(sql<boolean>`watch_progress.completed = 1`)
+    .execute();
+  return new Set(rows.map((row) => row.id));
+}
+
+async function showsWithCompletedEpisodeForUser(userId: string) {
+  const db = await getDb();
+  const rows = await sql<{ show_id: string }>`
+    select distinct progressed_season.parent_id as show_id
+    from watch_progress
+    inner join media_item episode on episode.id = watch_progress.media_item_id and episode.kind = 'episode'
+    inner join media_item progressed_season on progressed_season.id = episode.parent_id and progressed_season.kind = 'season'
+    where watch_progress.user_id = ${userId}
+      and watch_progress.completed = 1
+  `.execute(db);
+  return new Set(rows.rows.map((row) => row.show_id));
+}
+
+function movieBrowseSelect(db: Awaited<ReturnType<typeof getDb>>) {
+  return db
+    .selectFrom("media_item")
+    .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+    .where("media_item.kind", "=", "movie")
+    .select([
+      "media_item.id",
+      "media_item.title",
+      "media_item.sort_title",
+      "media_item.year",
+      "media_item.poster_path",
+      "media_item.release_date",
+      "media_item.popularity",
+      "media_item.vote_average",
+      sql<number>`count(distinct media_file.id)`.as("file_count"),
+      sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
+    ])
+    .groupBy("media_item.id");
+}
+
+async function movieBrowseRowsForIds(userId: string, ids: string[]) {
+  if (ids.length === 0) return [] as MovieBrowseRow[];
+  const db = await getDb();
+  const rows = await movieBrowseSelect(db)
+    .where("media_item.id", "in", ids)
+    .where(accessibleLibrarySql(userId))
+    .execute();
+  const order = new Map(ids.map((id, index) => [id, index]));
+  return rows.sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+}
+
+async function showBrowseRowsForIds(userId: string, ids: string[]) {
+  if (ids.length === 0) return [] as ShowBrowseRow[];
+  const db = await getDb();
+  const filtered = await filteredShows(userId);
+  const rows = await showBrowseSelect(filtered).where("show.id", "in", ids).execute();
+  const order = new Map(ids.map((id, index) => [id, index]));
+  return rows.sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+}
+
+function publicMovieListItem(summary: ReturnType<typeof publicMovieSummary>) {
+  return {
+    id: summary.id,
+    title: summary.title,
+    year: summary.year,
+    posterUrl: summary.posterUrl,
+    releaseDate: summary.releaseDate,
+    popularity: summary.popularity,
+    voteAverage: summary.voteAverage,
+    fileCount: summary.fileCount,
+    resumeFileId: summary.resumeFileId,
+    progressSeconds: summary.progressSeconds,
+    durationSeconds: summary.durationSeconds,
+    completed: summary.completed,
+  };
+}
+
+async function publicMoviesFromBrowseRows(userId: string, browseRows: MovieBrowseRow[]) {
+  const db = await getDb();
+  const movieIds = browseRows.map((movie) => movie.id);
+  const progressRows =
+    movieIds.length === 0
+      ? []
+      : await db
+          .selectFrom("watch_progress")
+          .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
+          .where("user_id", "=", userId)
+          .where("media_item_id", "in", movieIds)
+          .orderBy("updated_at", "desc")
+          .execute();
+  const progress = summarizeMovieProgress(progressRows);
+  return browseRows.map((movie) => publicMovieListItem(publicMovieSummary(movie, progress)));
+}
+
+export async function listBecauseYouWatchedMovies(userId: string, pageInput = 1, pageSize = MOVIE_PAGE_SIZE) {
+  const rankedIds = await rankedBecauseYouWatchedMovieIds(userId);
+  const page = catalogPageInfo(pageInput, pageSize, rankedIds.length);
+  const offset = (page.page - 1) * page.pageSize;
+  const browseRows = await movieBrowseRowsForIds(userId, rankedIds.slice(offset, offset + page.pageSize));
+  return {
+    movies: await publicMoviesFromBrowseRows(userId, browseRows),
+    page,
+  };
+}
+
+export async function listBecauseYouWatchedShows(userId: string, pageInput = 1, pageSize = SHOW_PAGE_SIZE) {
+  const rankedIds = await rankedBecauseYouWatchedShowIds(userId);
+  const page = catalogPageInfo(pageInput, pageSize, rankedIds.length);
+  const offset = (page.page - 1) * page.pageSize;
+  const browseRows = await showBrowseRowsForIds(userId, rankedIds.slice(offset, offset + page.pageSize));
+  return {
+    shows: browseRows.map(publicShowSummary),
+    page,
+  };
 }
 
 type MovieBrowseRow = {
@@ -499,20 +794,7 @@ export async function movieRows(
     };
   };
 
-  const publicMovie = (movie: ReturnType<typeof mapMovie>) => ({
-    id: movie.id,
-    title: movie.title,
-    year: movie.year,
-    posterUrl: movie.posterUrl,
-    releaseDate: movie.releaseDate,
-    popularity: movie.popularity,
-    voteAverage: movie.voteAverage,
-    fileCount: movie.fileCount,
-    resumeFileId: movie.resumeFileId,
-    progressSeconds: movie.progressSeconds,
-    durationSeconds: movie.durationSeconds,
-    completed: movie.completed,
-  });
+  const publicMovie = (movie: ReturnType<typeof mapMovie>) => publicMovieListItem(movie);
 
   return {
     continueWatching: continueRows.map(mapMovie).map(publicMovie),
@@ -528,21 +810,6 @@ export async function movieRows(
     recent: recentRows.map(mapMovie).map(publicMovie),
     latest: latestRows.map(mapMovie).map(publicMovie),
     popular: popularRows.map(mapMovie).map(publicMovie),
-  };
-}
-
-export async function movieListRows(
-  userId: string,
-  search = "",
-  status: MovieStatusFilter = "all",
-  sort: MovieSort = "title",
-  pageInput = 1,
-  pageSize = MOVIE_PAGE_SIZE,
-) {
-  const rows = await movieRows(userId, search, status, sort, pageInput, pageSize);
-  return {
-    movies: rows.all,
-    page: rows.allPage,
   };
 }
 
@@ -682,7 +949,7 @@ export async function showRows(userId: string, search = "", sort: ShowSort = "ti
   return (await orderShowBrowseQuery(showBrowseSelect(filtered), sort).execute()).map(publicShowSummary);
 }
 
-async function showBrowseRows(
+export async function showBrowseRows(
   userId: string,
   search = "",
   sort: ShowSort = "title",
@@ -721,20 +988,6 @@ async function showBrowseRows(
     recent: recentRows.map(mapShow),
     latest: latestRows.map(mapShow),
     popular: popularRows.map(mapShow),
-  };
-}
-
-export async function showListRows(
-  userId: string,
-  search = "",
-  sort: ShowSort = "title",
-  pageInput = 1,
-  pageSize = SHOW_PAGE_SIZE,
-) {
-  const rows = await showBrowseRows(userId, search, sort, pageInput, pageSize);
-  return {
-    shows: rows.all,
-    page: rows.allPage,
   };
 }
 
@@ -1438,7 +1691,7 @@ export async function getAccessibleShowHeader(id: string, userId: string) {
 
 export async function getSimilarMovies(movieId: string, userId: string, pageInput = 1, pageSize = MOVIE_PAGE_SIZE) {
   const db = await getDb();
-  const seeds = await fetchSimilaritySeeds(movieId, { job: "Director", limit: 3 });
+  const seeds = await fetchSimilaritySeeds(movieId, MOVIE_SIMILARITY_CREW);
 
   if (seeds.genres.length === 0 && seeds.keywords.length === 0 && seeds.people.length === 0) {
     return { movies: [], page: emptyCatalogPage(pageInput, pageSize) };
@@ -1501,7 +1754,7 @@ export async function getSimilarMovies(movieId: string, userId: string, pageInpu
 
 export async function getSimilarShows(showId: string, userId: string, pageInput = 1, pageSize = SHOW_PAGE_SIZE) {
   const db = await getDb();
-  const seeds = await fetchSimilaritySeeds(showId, { jobs: TV_SHOW_CREATOR_JOBS, limit: 4 });
+  const seeds = await fetchSimilaritySeeds(showId, SHOW_SIMILARITY_CREW);
 
   if (seeds.genres.length === 0 && seeds.keywords.length === 0 && seeds.people.length === 0) {
     return { shows: [], page: emptyCatalogPage(pageInput, pageSize) };

@@ -4,13 +4,15 @@
   import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
   import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import { twoRowRailOrder } from "$lib/media/rails";
-  import { ChevronRight, Library, Search } from "@lucide/svelte";
+  import { ChevronRight, Library, Search, Sparkles } from "@lucide/svelte";
 
   let { data } = $props();
   const catalogSearch = createDebouncedCatalogSearch(
     () => data.query,
     () => ({ status: data.status }),
   );
+
+  const hasActiveFilters = $derived(data.query.trim().length > 0 || data.status !== "all");
 
   const sections = $derived([
     {
@@ -44,7 +46,6 @@
       href: "/movies/popular",
     },
   ]);
-  const hasActiveFilters = $derived(data.query.trim().length > 0 || data.status !== "all");
   const TWO_ROW_MOVIE_RAIL_COUNT = 9;
 
   function allMoviesHref() {
@@ -69,7 +70,15 @@
 
 <header class="page-header">
   <div>
-    <h1>Movies</h1>
+    <div class="title-row">
+      <h1>Movies</h1>
+      {#if !hasActiveFilters}
+        <a class="discover-link button secondary" href="/movies/discover">
+          <Sparkles size={16} aria-hidden="true" />
+          Discover movies
+        </a>
+      {/if}
+    </div>
     <p class="muted">Browse scanned local movies and resume playback.</p>
   </div>
   <form
@@ -119,10 +128,12 @@
       <section class="movie-section">
         <div class="section-heading">
           <h2>{section.title}</h2>
-          <a class="view-all" href={section.href}>
-            <span>View all</span>
-            <ChevronRight size={16} aria-hidden="true" />
-          </a>
+          {#if section.href}
+            <a class="view-all" href={section.href}>
+              <span>View all</span>
+              <ChevronRight size={16} aria-hidden="true" />
+            </a>
+          {/if}
         </div>
         <div class="movie-rail" class:two-row={section.movies.length >= TWO_ROW_MOVIE_RAIL_COUNT}>
           {#each twoRowRailOrder(section.movies, TWO_ROW_MOVIE_RAIL_COUNT) as movie}
@@ -143,6 +154,14 @@
     margin-bottom: 1.6rem;
   }
 
+  .title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
   form {
     display: grid;
     grid-template-columns: minmax(14rem, 1fr) minmax(8rem, auto);
@@ -152,7 +171,7 @@
   }
 
   h1 {
-    margin: 0 0 0.25rem;
+    margin: 0;
     font-size: clamp(1.55rem, 2.4vw, 2.25rem);
   }
 

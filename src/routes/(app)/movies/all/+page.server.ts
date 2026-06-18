@@ -1,4 +1,4 @@
-import { movieListRows, normalizeMovieSort, normalizeMovieStatusFilter, normalizePage } from "$lib/server/media";
+import { movieRows, normalizeMovieSort, normalizeMovieStatusFilter, normalizePage } from "$lib/server/media";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -6,11 +6,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const status = normalizeMovieStatusFilter(url.searchParams.get("status"));
   const page = normalizePage(url.searchParams.get("page"));
   const query = url.searchParams.get("q") ?? "";
-  const rows = await movieListRows(locals.user!.id, query, status, sort, page);
+  const rows = await movieRows(locals.user!.id, query, status, sort, page);
 
   return {
-    movies: rows.movies,
-    pageInfo: rows.page,
+    movies: rows.all,
+    pageInfo: rows.allPage,
     query,
     status,
     sort,

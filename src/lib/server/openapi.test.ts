@@ -65,6 +65,8 @@ describe("OpenAPI document", () => {
     });
     expect(openApiDocument.paths).toHaveProperty("/api/me");
     expect(openApiDocument.paths).toHaveProperty("/api/continue");
+    expect(openApiDocument.paths).toHaveProperty("/api/movies/discover");
+    expect(openApiDocument.paths).toHaveProperty("/api/shows/discover");
     expect(openApiDocument.paths).toHaveProperty("/api/playback/{id}");
     expect(openApiDocument.paths).toHaveProperty("/media/files/{id}/stream");
     expect(openApiDocument.components).toHaveProperty("securitySchemes");

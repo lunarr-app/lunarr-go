@@ -46,7 +46,9 @@
   </a>
   <div>
     <h1>Similar to {title}</h1>
-    <p class="muted">Based on genres, keywords, and cast from your library.</p>
+    <p class="muted">
+      Based on genres, keywords, cast, and {kind === "movie" ? "directors" : "creators"} from your library.
+    </p>
   </div>
 </header>
 

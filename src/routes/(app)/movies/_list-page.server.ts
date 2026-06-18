@@ -1,4 +1,4 @@
-import { movieListRows, normalizePage, type MovieSort } from "$lib/server/media";
+import { movieRows, normalizePage, type MovieSort } from "$lib/server/media";
 
 type MovieListLoadEvent = {
   locals: App.Locals;
@@ -8,11 +8,11 @@ type MovieListLoadEvent = {
 export function createPresetMovieListLoad(sort: MovieSort) {
   return async ({ locals, url }: MovieListLoadEvent) => {
     const page = normalizePage(url.searchParams.get("page"));
-    const rows = await movieListRows(locals.user!.id, "", "all", sort, page);
+    const rows = await movieRows(locals.user!.id, "", "all", sort, page);
 
     return {
-      movies: rows.movies,
-      pageInfo: rows.page,
+      movies: rows.all,
+      pageInfo: rows.allPage,
     };
   };
 }

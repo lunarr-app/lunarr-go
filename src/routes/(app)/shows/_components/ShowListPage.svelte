@@ -24,6 +24,12 @@
     hrefForPage,
     query = "",
     showFilters = false,
+    backHref = "/shows",
+    backLabel = "Shows",
+    emptyHref = "/shows",
+    emptyTitle = "No matching shows",
+    emptyDescription = "Adjust the filters or return to the show dashboard.",
+    emptyActionLabel = "Back to shows",
   }: {
     title: string;
     description: string;
@@ -32,6 +38,12 @@
     hrefForPage: (page: number) => string;
     query?: string;
     showFilters?: boolean;
+    backHref?: string;
+    backLabel?: string;
+    emptyHref?: string;
+    emptyTitle?: string;
+    emptyDescription?: string;
+    emptyActionLabel?: string;
   } = $props();
 
   const catalogSearch = createDebouncedCatalogSearch(() => query);
@@ -45,9 +57,9 @@
 
 <header class="page-header">
   <div>
-    <a class="back-link" href="/shows">
+    <a class="back-link" href={backHref}>
       <ArrowLeft size={16} aria-hidden="true" />
-      <span>Shows</span>
+      <span>{backLabel}</span>
     </a>
     <h1>{title}</h1>
     <p class="muted">{description}</p>
@@ -93,11 +105,11 @@
   </section>
 {:else}
   <section class="empty">
-    <h2>No matching shows</h2>
-    <p class="muted">Adjust the filters or return to the show dashboard.</p>
-    <a class="button secondary" href="/shows">
+    <h2>{emptyTitle}</h2>
+    <p class="muted">{emptyDescription}</p>
+    <a class="button secondary" href={emptyHref}>
       <ArrowLeft size={16} aria-hidden="true" />
-      Back to shows
+      {emptyActionLabel}
     </a>
   </section>
 {/if}

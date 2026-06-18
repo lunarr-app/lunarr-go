@@ -6,7 +6,7 @@ Lunarr is a self-hosted media server for movie and TV libraries on local disks, 
 
 ## Features
 
-- Local, SFTP, and WebDAV libraries with TMDb metadata, continue watching, and per-user access
+- Local, SFTP, and WebDAV libraries with TMDb metadata, continue watching, similar titles, and personalized because-you-watched recommendations
 - Direct play or on-the-fly HLS, Chromecast and AirPlay
 - Sidecar subtitles, FFmpeg transcoding, optional hardware acceleration
 - API keys and OpenAPI at `/api/openapi.json`

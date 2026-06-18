@@ -25,6 +25,12 @@
     query = "",
     status = "all",
     showFilters = false,
+    backHref = "/movies",
+    backLabel = "Movies",
+    emptyHref = "/movies",
+    emptyTitle = "No matching movies",
+    emptyDescription = "Adjust the filters or return to the movie dashboard.",
+    emptyActionLabel = "Back to movies",
   }: {
     title: string;
     description: string;
@@ -34,6 +40,12 @@
     query?: string;
     status?: string;
     showFilters?: boolean;
+    backHref?: string;
+    backLabel?: string;
+    emptyHref?: string;
+    emptyTitle?: string;
+    emptyDescription?: string;
+    emptyActionLabel?: string;
   } = $props();
 
   const catalogSearch = createDebouncedCatalogSearch(
@@ -55,9 +67,9 @@
 
 <header class="page-header">
   <div>
-    <a class="back-link" href="/movies">
+    <a class="back-link" href={backHref}>
       <ArrowLeft size={16} aria-hidden="true" />
-      <span>Movies</span>
+      <span>{backLabel}</span>
     </a>
     <h1>{title}</h1>
     <p class="muted">{description}</p>
@@ -108,11 +120,11 @@
   </section>
 {:else}
   <section class="empty">
-    <h2>No matching movies</h2>
-    <p class="muted">Adjust the filters or return to the movie dashboard.</p>
-    <a class="button secondary" href="/movies">
+    <h2>{emptyTitle}</h2>
+    <p class="muted">{emptyDescription}</p>
+    <a class="button secondary" href={emptyHref}>
       <ArrowLeft size={16} aria-hidden="true" />
-      Back to movies
+      {emptyActionLabel}
     </a>
   </section>
 {/if}

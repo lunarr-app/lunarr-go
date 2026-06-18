@@ -219,6 +219,22 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/movies/discover": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Paginated personalized movie recommendations from recent watch history.",
+        description:
+          "Ranks accessible unwatched movies by shared genres, keywords, cast, and directors with the caller's recent watches. Scoring: genres +3, keywords +2, people +1 per seed; up to three recent seeds weighted 3/2/1.",
+        operationId: "getDiscoverMovies",
+        parameters: [pageParameter],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/DiscoverMoviesResponse",
+          }),
+          "401": errorResponse,
+        },
+      },
+    },
     "/api/movies": {
       get: {
         tags: ["Catalog"],
@@ -338,6 +354,22 @@ export const openApiDocument = {
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/ShowRowsResponse",
+          }),
+          "401": errorResponse,
+        },
+      },
+    },
+    "/api/shows/discover": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Paginated personalized show recommendations from recent episode watch history.",
+        description:
+          "Ranks accessible unwatched shows by shared genres, keywords, cast, and creators with the caller's recent episode watches. Scoring: genres +3, keywords +2, people +1 per seed; up to three recent show seeds weighted 3/2/1.",
+        operationId: "getDiscoverShows",
+        parameters: [pageParameter],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/DiscoverShowsResponse",
           }),
           "401": errorResponse,
         },
@@ -1432,6 +1464,28 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },
           },
+        },
+      },
+      DiscoverMoviesResponse: {
+        type: "object",
+        required: ["movies", "page"],
+        properties: {
+          movies: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          page: { $ref: "#/components/schemas/PageMetadata" },
+        },
+      },
+      DiscoverShowsResponse: {
+        type: "object",
+        required: ["shows", "page"],
+        properties: {
+          shows: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          page: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
       ShowRowsResponse: {
