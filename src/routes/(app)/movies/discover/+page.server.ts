@@ -1,4 +1,5 @@
-import { listBecauseYouWatchedMovies, normalizePage } from "$lib/server/media";
+import { normalizePage } from "$lib/server/media/catalog";
+import { listBecauseYouWatchedMovies } from "$lib/server/media/movies";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

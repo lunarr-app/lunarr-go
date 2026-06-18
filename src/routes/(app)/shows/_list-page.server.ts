@@ -1,4 +1,5 @@
-import { normalizePage, showBrowseRows, type ShowSort } from "$lib/server/media";
+import { normalizePage, type ShowSort } from "$lib/server/media/catalog";
+import { showBrowseRows } from "$lib/server/media/shows";
 
 type ShowListLoadEvent = {
   locals: App.Locals;

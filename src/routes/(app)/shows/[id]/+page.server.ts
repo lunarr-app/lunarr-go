@@ -1,5 +1,5 @@
 import { isAdmin } from "$lib/server/auth/users";
-import { getShowDetail } from "$lib/server/media";
+import { getShowDetail } from "$lib/server/media/shows";
 import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
 import { refreshTvShowMetadataResult } from "$lib/server/metadata/tv";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";

@@ -1,4 +1,5 @@
-import { movieRows, normalizePage, type MovieSort } from "$lib/server/media";
+import { normalizePage, type MovieSort } from "$lib/server/media/catalog";
+import { movieRows } from "$lib/server/media/movies";
 
 type MovieListLoadEvent = {
   locals: App.Locals;

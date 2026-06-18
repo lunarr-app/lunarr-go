@@ -1,4 +1,4 @@
-import { getShowDetail } from "$lib/server/media";
+import { getShowDetail } from "$lib/server/media/shows";
 import { markWatched } from "$lib/server/playback";
 import { markSeasonWatched } from "$lib/server/playback/commands";
 import { error, fail, redirect } from "@sveltejs/kit";

@@ -1,5 +1,6 @@
 import { requireJsonUser } from "$lib/server/api";
-import { listBecauseYouWatchedShows, normalizePage } from "$lib/server/media";
+import { normalizePage } from "$lib/server/media/catalog";
+import { listBecauseYouWatchedShows } from "$lib/server/media/shows";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 

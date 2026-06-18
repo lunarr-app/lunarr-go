@@ -1,5 +1,5 @@
 import { requireJsonUser } from "$lib/server/api";
-import { getPersonDetail } from "$lib/server/media";
+import { getPersonDetail } from "$lib/server/media/people";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 

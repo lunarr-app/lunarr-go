@@ -1,10 +1,6 @@
-import {
-  getAccessibleMovieHeader,
-  getAccessibleShowHeader,
-  getSimilarMovies,
-  getSimilarShows,
-  normalizePage,
-} from "$lib/server/media";
+import { normalizePage } from "./catalog";
+import { getAccessibleMovieHeader, getSimilarMovies } from "./movies";
+import { getAccessibleShowHeader, getSimilarShows } from "./shows";
 import { error } from "@sveltejs/kit";
 
 type SimilarPageLoadEvent = {

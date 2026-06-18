@@ -1,4 +1,4 @@
-import { getPersonDetail } from "$lib/server/media";
+import { getPersonDetail } from "$lib/server/media/people";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 

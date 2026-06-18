@@ -1,4 +1,5 @@
-import { movieRows, normalizeMovieSort, normalizeMovieStatusFilter, normalizePage } from "$lib/server/media";
+import { normalizeMovieSort, normalizeMovieStatusFilter, normalizePage } from "$lib/server/media/catalog";
+import { movieRows } from "$lib/server/media/movies";
 import { requireJsonUser } from "$lib/server/api";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";

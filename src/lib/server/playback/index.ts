@@ -5,7 +5,7 @@ import {
   type PlaybackTarget,
 } from "$lib/playback/capabilities";
 import { getDb } from "../db";
-import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media";
+import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media/files";
 import { nowIso } from "../time";
 import { decidePlaybackMode, type PlaybackModeDecision } from "../transcoding/capabilities";
 import {

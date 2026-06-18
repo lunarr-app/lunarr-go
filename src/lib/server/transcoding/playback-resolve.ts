@@ -18,7 +18,7 @@ import { DEFAULT_HLS_SEGMENT_SECONDS, type HlsSegmentFormat, hlsSegmentName, vir
 import { TRANSCODING_DISABLED_MESSAGE } from "./hls-segment-jobs";
 import type { TranscodeMode } from "../db/schema/streaming";
 import { currentDatabasePaths, getDb } from "../db";
-import { getMediaFile } from "../media";
+import { getMediaFile } from "../media/files";
 import {
   createDefaultLibraryStorageForTests,
   createLibraryStorage,

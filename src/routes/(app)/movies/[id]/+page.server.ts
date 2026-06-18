@@ -1,5 +1,5 @@
 import { isAdmin } from "$lib/server/auth/users";
-import { getMovieDetail } from "$lib/server/media";
+import { getMovieDetail } from "$lib/server/media/movies";
 import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
 import { refreshMovieMetadataResult } from "$lib/server/metadata/movies";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";

@@ -6,7 +6,7 @@ import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "./db";
 import type { Database } from "./db/schema";
 import { createLibrary } from "./libraries";
-import { getMovieDetail, movieRows } from "./media";
+import { getMovieDetail, movieRows } from "./media/movies";
 import { mediaStreamResponse } from "./media/stream";
 import type { MatchedMovieMetadata } from "./metadata/tmdb";
 import { getPlaybackDecision, saveProgress } from "./playback";

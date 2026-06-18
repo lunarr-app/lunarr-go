@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import { getMediaFile } from ".";
+import { getMediaFile } from "./files";
 import { mediaContentTypeForExtension } from "$lib/playback/content-type";
 import type { LibrarySource } from "../db/schema";
 import { createLibraryStorage, createLocalStorage, type LibraryStorage } from "../storage";

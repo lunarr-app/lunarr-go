@@ -1,4 +1,5 @@
-import { normalizePage, normalizeShowSort, tvRows } from "$lib/server/media";
+import { normalizePage, normalizeShowSort } from "$lib/server/media/catalog";
+import { tvRows } from "$lib/server/media/shows";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

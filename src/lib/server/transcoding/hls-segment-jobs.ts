@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises";
 import path from "node:path";
-import { getMediaFile } from "../media";
+import { getMediaFile } from "../media/files";
 import { isRemoteLibrarySource } from "../libraries/source";
 import {
   getEncodeAheadSegmentCount,

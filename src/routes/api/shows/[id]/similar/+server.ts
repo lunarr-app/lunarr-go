@@ -1,6 +1,6 @@
 import { requireJsonUser } from "$lib/server/api";
 import { loadSimilarShows } from "$lib/server/media/similar-page-load";
-import { normalizePage } from "$lib/server/media";
+import { normalizePage } from "$lib/server/media/catalog";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 

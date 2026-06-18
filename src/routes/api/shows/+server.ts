@@ -1,4 +1,5 @@
-import { normalizePage, normalizeShowSort, tvRows } from "$lib/server/media";
+import { normalizePage, normalizeShowSort } from "$lib/server/media/catalog";
+import { tvRows } from "$lib/server/media/shows";
 import { requireJsonUser } from "$lib/server/api";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
