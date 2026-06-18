@@ -131,6 +131,7 @@
   let airPlayAvailable = $state(false);
   let airPlayActive = $state(false);
   let signedPlaybackNotice = $state<string | null>(null);
+  let playbackErrorDetail = $state<string | null>(null);
   let signedPlaybackNoticeTimeout: number | null = null;
   let screenWakeLock: ScreenWakeLockSentinel | null = null;
   let screenWakeLockRequest: Promise<void> | null = null;
@@ -140,6 +141,11 @@
   let lastTimelineUiSyncAt = 0;
   let lastPointerControlsRefreshAt = -Infinity;
   const castHolder: { api?: ReturnType<typeof createMediaPlayerCast> } = {};
+
+  function setPlaybackErrorDetail(message: string | null) {
+    const trimmed = message?.trim() ?? "";
+    playbackErrorDetail = trimmed.length > 0 ? trimmed : null;
+  }
 
   function clearSignedPlaybackNotice() {
     signedPlaybackNotice = null;
@@ -383,8 +389,6 @@
         return "Buffering";
       case "seeking":
         return "Seeking";
-      case "error":
-        return "Playback error";
       default:
         return "Starting playback";
     }
@@ -395,6 +399,7 @@
     showControls();
     if (switchToWebPlaybackTarget()) return;
     playerUiState = "starting";
+    setPlaybackErrorDetail(null);
     try {
       await video.play();
       hasPlaybackActivity = true;
@@ -534,6 +539,7 @@
     getPlayerUiState: () => playerUiState,
     setPlayerUiState: (state) => {
       playerUiState = state;
+      if (state === "playing") setPlaybackErrorDetail(null);
     },
     getCurrentPlaybackSeconds: () => seekPreviewSeconds ?? timelinePlaybackSeconds,
     setCurrentPlaybackSeconds: (seconds) => {
@@ -576,6 +582,7 @@
     getPlayerUiState: () => playerUiState,
     setPlayerUiState: (state) => {
       playerUiState = state;
+      if (state === "playing") setPlaybackErrorDetail(null);
     },
     getCurrentPlaybackSeconds: () => seekPreviewSeconds ?? timelinePlaybackSeconds,
     setCurrentPlaybackSeconds: (seconds) => {
@@ -632,6 +639,7 @@
     save: session.save,
     onReload: () => onReload(),
     onReposition: (href) => onReposition(href),
+    setPlaybackErrorDetail,
   });
 
   const saveState = $derived(session.saveState);
@@ -1029,7 +1037,10 @@
           <p>Chromecast connected</p>
         {:else if playerStatusState === "error"}
           <span class="overlay-error" aria-hidden="true">!</span>
-          <p>{playerOverlayMessage()}</p>
+          <p>Playback error</p>
+          {#if playbackErrorDetail}
+            <p class="overlay-detail">{playbackErrorDetail}</p>
+          {/if}
         {:else if playerStatusState === "busy"}
           <span class="overlay-spinner" aria-hidden="true"></span>
           <p>{playerOverlayMessage()}</p>
@@ -1382,6 +1393,16 @@
     padding: 0.45rem 0.75rem;
     font-size: 0.85rem;
     font-weight: 750;
+  }
+
+  .player-status-overlay .overlay-detail {
+    max-width: 28rem;
+    border-radius: 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: rgba(248, 250, 252, 0.88);
+    white-space: normal;
   }
 
   .signed-playback-notice {

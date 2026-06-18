@@ -21,12 +21,16 @@ export function shouldReloadHlsPlaybackDataOnError(input: {
   currentSeconds: number;
   hasPlaybackActivity: boolean;
   hasLoadedMetadata?: boolean;
+  repositionUnavailable?: boolean;
+  alreadyRepositioning?: boolean;
 }) {
   if (!isHlsPlaybackMode(input.mode) || input.status !== "ready") return false;
   if (!Number.isFinite(input.currentSeconds) || input.currentSeconds < 0) return false;
   if (input.currentSeconds <= 0) return false;
   if (!input.hasPlaybackActivity && input.hasLoadedMetadata) return false;
-  return !shouldRecoverHlsPlaybackError(input);
+  if (input.alreadyRepositioning) return true;
+  if (input.repositionUnavailable && input.hasPlaybackActivity) return true;
+  return false;
 }
 
 export function hlsRepositionHref(input: {

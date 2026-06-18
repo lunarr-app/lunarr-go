@@ -5,6 +5,7 @@ import {
   shouldApplyLocalWaitingState,
   shouldAttemptLocalAutoplay,
 } from "$lib/playback/controls";
+import { formatHlsError, formatMediaElementError, type HlsPlaybackErrorData } from "$lib/playback/errors";
 import {
   absolutePlaybackSeconds,
   createHlsSeekEventController,
@@ -55,6 +56,7 @@ export type MediaPlayerHlsDeps = {
   save: (completed?: boolean, sourceData?: PlaybackData) => Promise<void>;
   onReload: () => void;
   onReposition: (href: string) => void;
+  setPlaybackErrorDetail: (message: string | null) => void;
 };
 
 export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
@@ -109,6 +111,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
         ].join(":");
         if (playbackActivityKey !== currentPlaybackActivityKey) {
           playbackActivityKey = currentPlaybackActivityKey;
+          deps.setPlaybackErrorDetail(null);
           deps.setHasPlaybackActivity(false);
           deps.setHasStartedPlayback(false);
           deps.setPlayerUiState("starting");
@@ -150,8 +153,10 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
                 backBufferLength: 60,
                 startPosition: relativeStartSeconds(),
               });
-              hls.on(Hls.Events.ERROR, (_event, eventData) => {
-                if (!disposed && eventData.fatal) restartHlsNearCurrentTime("hls");
+              hls.on(Hls.Events.ERROR, (_event, eventData: HlsPlaybackErrorData) => {
+                if (!disposed && eventData.fatal) {
+                  restartHlsNearCurrentTime("hls", formatHlsError(eventData));
+                }
               });
               hls.loadSource(streamUrl);
               hls.attachMedia(player);
@@ -258,37 +263,52 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
           streamStartSeconds: playback.streamStartSeconds,
         });
 
-        const restartHlsNearCurrentTime = (source: "hls" | "native" = "native") => {
+        const reportPlaybackError = (message: string | null | undefined) => {
+          if (!message?.trim()) return;
+          deps.setPlaybackErrorDetail(message);
+          deps.setPlayerUiState("error");
+        };
+
+        const restartHlsNearCurrentTime = (source: "hls" | "native" = "native", errorDetail?: string | null) => {
           if (disposed) return;
-          if (source === "native" && hls) return;
-          const currentTime = currentPlayerTime();
-          if (
-            repositioning ||
-            !shouldRecoverHlsPlaybackError({
-              mode: playback.mode,
-              status: playback.status,
-              currentSeconds: currentTime,
-              hasPlaybackActivity: deps.getHasPlaybackActivity(),
-            })
-          ) {
-            if (
-              shouldReloadHlsPlaybackDataOnError({
-                mode: playback.mode,
-                status: playback.status,
-                currentSeconds: currentTime,
-                hasPlaybackActivity: deps.getHasPlaybackActivity(),
-                hasLoadedMetadata: player.readyState >= HTMLMediaElement.HAVE_METADATA,
-              })
-            ) {
-              repositioning = true;
-              stopHlsTransport();
-              deps.cancelPlaybackSession(playback);
-              deps.onReload();
-            }
+          if (source === "native" && hls) {
+            if (errorDetail) restartHlsNearCurrentTime("hls", errorDetail);
             return;
           }
 
-          repositionHlsPlayback(currentTime);
+          const recoveryContext = {
+            mode: playback.mode,
+            status: playback.status,
+            currentSeconds: currentPlayerTime(),
+            hasPlaybackActivity: deps.getHasPlaybackActivity(),
+            hasLoadedMetadata: player.readyState >= HTMLMediaElement.HAVE_METADATA,
+          };
+
+          if (shouldRecoverHlsPlaybackError(recoveryContext) && !repositioning) {
+            if (repositionHlsPlayback(recoveryContext.currentSeconds)) {
+              deps.setPlaybackErrorDetail(errorDetail ?? "Recovering playback…");
+              deps.setPlayerUiState("buffering");
+              return;
+            }
+          }
+
+          if (
+            shouldReloadHlsPlaybackDataOnError({
+              ...recoveryContext,
+              repositionUnavailable: true,
+              alreadyRepositioning: repositioning,
+            })
+          ) {
+            repositioning = true;
+            stopHlsTransport();
+            deps.setPlaybackErrorDetail(errorDetail ?? "Retrying playback…");
+            deps.setPlayerUiState("buffering");
+            deps.cancelPlaybackSession(playback);
+            deps.onReload();
+            return;
+          }
+
+          reportPlaybackError(errorDetail ?? "Playback failed and could not be recovered.");
         };
 
         const onTimeUpdate = () => {
@@ -369,8 +389,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
         };
         const onPlayerError = () => {
           if (deps.castControlsPlayback()) return;
-          deps.setPlayerUiState("error");
-          restartHlsNearCurrentTime("native");
+          restartHlsNearCurrentTime("native", formatMediaElementError(player));
         };
         const onEnded = () => {
           if (deps.castControlsPlayback()) return;

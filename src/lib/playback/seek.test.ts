@@ -185,6 +185,24 @@ describe("HLS seek helpers", () => {
     ).toBe(false);
     expect(
       shouldReloadHlsPlaybackDataOnError({
+        mode: "transcode",
+        status: "ready",
+        currentSeconds: 65,
+        hasPlaybackActivity: true,
+        repositionUnavailable: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldReloadHlsPlaybackDataOnError({
+        mode: "transcode",
+        status: "ready",
+        currentSeconds: 65,
+        hasPlaybackActivity: true,
+        alreadyRepositioning: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldReloadHlsPlaybackDataOnError({
         mode: "direct",
         status: "ready",
         currentSeconds: 0,

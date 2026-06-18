@@ -455,9 +455,8 @@ export function createMediaPlayerCast(deps: MediaPlayerCastDeps) {
     } catch (error) {
       castLaunchState = "error";
       deps.setPlayerUiState(previousUiState);
-      deps.showSignedPlaybackNotice(
-        error instanceof Error && error.message ? error.message : "Could not prepare Cast playback.",
-      );
+      const message = error instanceof Error && error.message ? error.message : "Could not prepare Cast playback.";
+      deps.showSignedPlaybackNotice(message);
     }
   }
 
