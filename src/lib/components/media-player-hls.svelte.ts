@@ -284,9 +284,12 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
             hasLoadedMetadata: player.readyState >= HTMLMediaElement.HAVE_METADATA,
           };
 
+          let repositionAttempted = false;
+
           if (shouldRecoverHlsPlaybackError(recoveryContext) && !repositioning) {
+            repositionAttempted = true;
             if (repositionHlsPlayback(recoveryContext.currentSeconds)) {
-              deps.setPlaybackErrorDetail(errorDetail ?? "Recovering playback…");
+              if (errorDetail) deps.setPlaybackErrorDetail(errorDetail);
               deps.setPlayerUiState("buffering");
               return;
             }
@@ -295,13 +298,13 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
           if (
             shouldReloadHlsPlaybackDataOnError({
               ...recoveryContext,
-              repositionUnavailable: true,
+              repositionUnavailable: repositionAttempted,
               alreadyRepositioning: repositioning,
             })
           ) {
             repositioning = true;
             stopHlsTransport();
-            deps.setPlaybackErrorDetail(errorDetail ?? "Retrying playback…");
+            if (errorDetail) deps.setPlaybackErrorDetail(errorDetail);
             deps.setPlayerUiState("buffering");
             deps.cancelPlaybackSession(playback);
             deps.onReload();

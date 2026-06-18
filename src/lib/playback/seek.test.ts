@@ -89,13 +89,12 @@ describe("HLS seek helpers", () => {
     ).toBe("/movies/movie-1?play=movie-1&file=file-1&transcode=1#player");
   });
 
-  test("recovers HLS playback errors only after playback has started", () => {
+  test("recovers HLS playback errors only after the timeline advances past zero", () => {
     expect(
       shouldRecoverHlsPlaybackError({
         mode: "transcode",
         status: "ready",
         currentSeconds: 65,
-        hasPlaybackActivity: true,
       }),
     ).toBe(true);
     expect(
@@ -103,7 +102,6 @@ describe("HLS seek helpers", () => {
         mode: "remux",
         status: "ready",
         currentSeconds: 65,
-        hasPlaybackActivity: false,
       }),
     ).toBe(true);
     expect(
@@ -111,15 +109,6 @@ describe("HLS seek helpers", () => {
         mode: "transcode",
         status: "ready",
         currentSeconds: 0,
-        hasPlaybackActivity: true,
-      }),
-    ).toBe(false);
-    expect(
-      shouldRecoverHlsPlaybackError({
-        mode: "transcode",
-        status: "ready",
-        currentSeconds: 0,
-        hasPlaybackActivity: false,
       }),
     ).toBe(false);
     expect(
@@ -127,7 +116,6 @@ describe("HLS seek helpers", () => {
         mode: "direct",
         status: "ready",
         currentSeconds: 65,
-        hasPlaybackActivity: true,
       }),
     ).toBe(false);
   });

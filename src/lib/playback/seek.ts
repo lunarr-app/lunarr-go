@@ -4,12 +4,7 @@ export function isHlsPlaybackMode(mode: string) {
   return mode === "transcode" || mode === "remux";
 }
 
-export function shouldRecoverHlsPlaybackError(input: {
-  mode: string;
-  status: string;
-  currentSeconds: number;
-  hasPlaybackActivity: boolean;
-}) {
+export function shouldRecoverHlsPlaybackError(input: { mode: string; status: string; currentSeconds: number }) {
   if (!isHlsPlaybackMode(input.mode) || input.status !== "ready") return false;
   if (!Number.isFinite(input.currentSeconds) || input.currentSeconds < 0) return false;
   return input.currentSeconds > 0;

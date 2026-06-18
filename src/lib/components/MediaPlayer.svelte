@@ -1044,6 +1044,9 @@
         {:else if playerStatusState === "busy"}
           <span class="overlay-spinner" aria-hidden="true"></span>
           <p>{playerOverlayMessage()}</p>
+          {#if playbackErrorDetail}
+            <p class="overlay-detail">{playbackErrorDetail}</p>
+          {/if}
         {:else}
           <p>{playerOverlayMessage()}</p>
         {/if}
