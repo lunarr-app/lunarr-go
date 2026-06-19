@@ -1,4 +1,4 @@
-import type { PublicShareRecord, SharePageData } from "$lib/shares/types";
+import type { AdminShareRecord, PublicShareRecord, SharePageData } from "$lib/shares/types";
 import { SHARE_LIST_RECENTLY_EXPIRED_MS } from "$lib/shares/constants";
 import { randomBytes } from "node:crypto";
 import { getDb } from "../db";
@@ -27,6 +27,22 @@ function publicShareRecord(share: ResolvedMediaShare): PublicShareRecord {
     createdAt: share.created_at,
     active: isShareActive(share),
     sharePath: `/share/${share.token}`,
+  };
+}
+
+function adminShareRecord(input: {
+  share: ResolvedMediaShare;
+  title: string;
+  createdByName: string;
+  createdByEmail: string;
+}): AdminShareRecord {
+  const record = publicShareRecord(input.share);
+  return {
+    ...record,
+    title: input.title,
+    contentHref: record.kind === "movie" ? `/movies/${record.mediaItemId}` : `/shows/${record.mediaItemId}`,
+    createdByName: input.createdByName,
+    createdByEmail: input.createdByEmail,
   };
 }
 
@@ -138,6 +154,39 @@ export async function listSharesForMedia(mediaItemId: string) {
     .execute();
 
   return rows.map((row) => publicShareRecord(mapShareRow(row as MediaShareRow)));
+}
+
+export async function listAllShares(): Promise<AdminShareRecord[]> {
+  const db = await getDb();
+  const rows = await db
+    .selectFrom("media_share")
+    .innerJoin("media_item", "media_item.id", "media_share.media_item_id")
+    .innerJoin("user", "user.id", "media_share.created_by_user_id")
+    .select([
+      "media_share.id",
+      "media_share.token",
+      "media_share.created_by_user_id",
+      "media_share.kind",
+      "media_share.media_item_id",
+      "media_share.season_ids",
+      "media_share.expires_at",
+      "media_share.revoked_at",
+      "media_share.created_at",
+      "media_item.title as media_title",
+      "user.name as creator_name",
+      "user.email as creator_email",
+    ])
+    .orderBy("media_share.created_at", "desc")
+    .execute();
+
+  return rows.map((row) =>
+    adminShareRecord({
+      share: mapShareRow(row as MediaShareRow),
+      title: row.media_title,
+      createdByName: row.creator_name,
+      createdByEmail: row.creator_email,
+    }),
+  );
 }
 
 export async function cleanupExpiredShares(options: { retentionMs?: number; now?: number } = {}) {

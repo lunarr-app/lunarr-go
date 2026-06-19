@@ -18,6 +18,12 @@ export function shareStatusDetail(share: Pick<PublicShareRecord, "active" | "rev
   return formatShareExpiryDescription(share.expiresAt);
 }
 
+export function shareScopeLabel(share: Pick<PublicShareRecord, "kind" | "seasonIds">) {
+  if (share.kind === "movie") return "Movie";
+  if (!share.seasonIds?.length) return "All seasons";
+  return `${share.seasonIds.length} season${share.seasonIds.length === 1 ? "" : "s"}`;
+}
+
 const maxCustomDays = MAX_SHARE_EXPIRY_SECONDS / (24 * 60 * 60);
 const maxCustomHours = MAX_SHARE_EXPIRY_SECONDS / (60 * 60);
 

@@ -21,6 +21,13 @@ export type PublicShareRecord = {
   sharePath: string;
 };
 
+export type AdminShareRecord = PublicShareRecord & {
+  title: string;
+  contentHref: string;
+  createdByName: string;
+  createdByEmail: string;
+};
+
 export type SharePageData =
   | {
       kind: "movie";

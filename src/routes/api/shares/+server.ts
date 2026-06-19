@@ -1,5 +1,5 @@
 import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
-import { createShare, listSharesForMedia, parseCreateShareInput } from "$lib/server/shares";
+import { createShare, listAllShares, listSharesForMedia, parseCreateShareInput } from "$lib/server/shares";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
@@ -9,7 +9,13 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
   const mediaItemId = url.searchParams.get("mediaItemId")?.trim() ?? "";
   if (!mediaItemId) {
-    return json({ error: "mediaItemId is required." }, { status: 400 });
+    try {
+      return json({
+        shares: await listAllShares(),
+      });
+    } catch (error) {
+      return jsonError(error, "Could not list shares.");
+    }
   }
 
   try {

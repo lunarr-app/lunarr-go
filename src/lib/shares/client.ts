@@ -1,4 +1,4 @@
-import type { CreateSharePayload, PublicShareRecord } from "$lib/shares/types";
+import type { AdminShareRecord, CreateSharePayload, PublicShareRecord } from "$lib/shares/types";
 
 async function readJsonError(response: Response, fallback: string) {
   const body = await response.json().catch(() => null);
@@ -12,6 +12,15 @@ export async function listSharesForMedia(mediaItemId: string) {
   }
   const body = await response.json().catch(() => null);
   return (body?.shares ?? []) as PublicShareRecord[];
+}
+
+export async function listShares() {
+  const response = await fetch("/api/shares");
+  if (!response.ok) {
+    await readJsonError(response, "Could not load share links.");
+  }
+  const body = await response.json().catch(() => null);
+  return (body?.shares ?? []) as AdminShareRecord[];
 }
 
 export async function createShare(payload: CreateSharePayload) {

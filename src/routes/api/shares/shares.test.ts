@@ -199,6 +199,33 @@ describe("/api/shares admin routes", () => {
     } as never);
     expect(revoked.status).toBe(200);
   });
+
+  test("lists all shares for admins when mediaItemId is omitted", async () => {
+    const created = await sharesPost({
+      request: new Request("http://localhost/api/shares", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "movie", mediaItemId: "movie-1", expiresInSeconds: 3600 }),
+      }),
+      locals: { user: adminUser },
+    } as never);
+    expect(created.status).toBe(201);
+    const createdBody = await created.json();
+
+    const listed = await sharesGet({
+      url: new URL("http://localhost/api/shares"),
+      locals: { user: adminUser },
+    } as never);
+    expect(listed.status).toBe(200);
+    const listedBody = await listed.json();
+    expect(listedBody.shares.length).toBeGreaterThan(0);
+    expect(listedBody.shares[0]).toMatchObject({
+      id: createdBody.share.id,
+      title: "Movie",
+      createdByEmail: "admin@example.com",
+      contentHref: "/movies/movie-1",
+    });
+  });
 });
 
 describe("guest share routes", () => {
