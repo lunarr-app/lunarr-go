@@ -131,13 +131,21 @@ export async function listSharesForMedia(mediaItemId: string) {
       eb.or([
         eb("revoked_at", "is", null).and("expires_at", ">", nowIso()),
         eb("expires_at", ">=", cutoff),
-        eb("revoked_at", "is not", null).and("revoked_at", ">=", cutoff),
+        eb("revoked_at", "is not", null),
       ]),
     )
     .orderBy("created_at", "desc")
     .execute();
 
   return rows.map((row) => publicShareRecord(mapShareRow(row as MediaShareRow)));
+}
+
+export async function cleanupExpiredShares(options: { retentionMs?: number; now?: number } = {}) {
+  const retentionMs = options.retentionMs ?? SHARE_LIST_RECENTLY_EXPIRED_MS;
+  const cutoff = new Date((options.now ?? Date.now()) - retentionMs).toISOString();
+  const db = await getDb();
+  const result = await db.deleteFrom("media_share").where("expires_at", "<", cutoff).executeTakeFirst();
+  return Number(result.numDeletedRows ?? 0);
 }
 
 export async function getSharePageData(token: string): Promise<SharePageData | null> {

@@ -8,6 +8,7 @@ import type { Database } from "../db/schema";
 import {
   assertShareAllowsPlayableItem,
   createShare,
+  cleanupExpiredShares,
   getSharePageData,
   listSharesForMedia,
   resolveShare,
@@ -338,5 +339,48 @@ describe("media shares", () => {
     const shares = await listSharesForMedia("movie-1");
     expect(shares.length).toBeGreaterThan(0);
     expect(shares[0]?.mediaItemId).toBe("movie-1");
+  });
+
+  test("keeps revoked shares in history and deletes shares expired more than 30 days ago", async () => {
+    const now = Date.now();
+    const nowIso = new Date(now).toISOString();
+    const futureExpiresAt = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const staleExpiresAt = new Date(now - 31 * 24 * 60 * 60 * 1000).toISOString();
+
+    await db
+      .insertInto("media_share")
+      .values([
+        {
+          id: "share-stale",
+          token: "stale-token",
+          created_by_user_id: "admin-1",
+          kind: "movie",
+          media_item_id: "movie-1",
+          season_ids: null,
+          expires_at: staleExpiresAt,
+          revoked_at: null,
+          created_at: nowIso,
+        },
+        {
+          id: "share-revoked",
+          token: "revoked-token",
+          created_by_user_id: "admin-1",
+          kind: "movie",
+          media_item_id: "movie-1",
+          season_ids: null,
+          expires_at: futureExpiresAt,
+          revoked_at: nowIso,
+          created_at: nowIso,
+        },
+      ])
+      .execute();
+
+    expect(await cleanupExpiredShares({ now })).toBe(1);
+
+    const shares = await listSharesForMedia("movie-1");
+    expect(shares.some((share) => share.id === "share-stale")).toBe(false);
+    expect(shares.some((share) => share.id === "share-revoked")).toBe(true);
+    expect(await resolveShare("stale-token")).toBeNull();
+    expect(await resolveShare("revoked-token")).toBeNull();
   });
 });

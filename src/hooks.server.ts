@@ -3,6 +3,7 @@ import { auth } from "$lib/server/auth";
 import { hasRegisteredUsers } from "$lib/server/auth/users";
 import { migrateDatabase } from "$lib/server/db";
 import { cleanupJobHistory } from "$lib/server/jobs";
+import { cleanupExpiredShares } from "$lib/server/shares";
 import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM } from "$lib/server/playback/signed-token";
 import { SHARE_TOKEN_QUERY_PARAM } from "$lib/shares/constants";
 import { resumeInterruptedJobs } from "$lib/server/scanner";
@@ -24,6 +25,7 @@ function ensureStartup() {
     await recoverInterruptedTranscodeSessions();
     await cleanupConfiguredPlaybackSessionArtifacts();
     await cleanupJobHistory();
+    await cleanupExpiredShares();
     await resumeInterruptedJobs();
     if (!building) {
       startStaleTranscodeExpiryLoop();
