@@ -1,5 +1,6 @@
 import type { AdminShareRecord, PublicShareRecord, SharePageData } from "$lib/shares/types";
-import { SHARE_LIST_RECENTLY_EXPIRED_MS } from "$lib/shares/constants";
+import { SHARE_LIST_RECENTLY_EXPIRED_MS, SHARE_PAGE_SIZE, type ShareListStatus } from "$lib/shares/constants";
+import { catalogPageInfo, catalogPageSize } from "../media/catalog";
 import { randomBytes } from "node:crypto";
 import { getDb } from "../db";
 import { getMovieDetail } from "../media/movies";
@@ -45,6 +46,46 @@ function adminShareRecord(input: {
     createdByEmail: input.createdByEmail,
   };
 }
+
+function normalizeShareListStatus(value: string | null | undefined): ShareListStatus {
+  if (value === "active" || value === "expired" || value === "revoked") return value;
+  return "all";
+}
+
+function shareListBaseQuery(db: Awaited<ReturnType<typeof getDb>>) {
+  return db
+    .selectFrom("media_share")
+    .innerJoin("media_item", "media_item.id", "media_share.media_item_id")
+    .innerJoin("user", "user.id", "media_share.created_by_user_id");
+}
+
+function applyShareListStatusFilter<Q extends { where: Function }>(query: Q, status: ShareListStatus, now: string): Q {
+  if (status === "active") {
+    return query.where("media_share.revoked_at", "is", null).where("media_share.expires_at", ">", now) as Q;
+  }
+  if (status === "expired") {
+    return query.where("media_share.revoked_at", "is", null).where("media_share.expires_at", "<=", now) as Q;
+  }
+  if (status === "revoked") {
+    return query.where("media_share.revoked_at", "is not", null) as Q;
+  }
+  return query;
+}
+
+const adminShareSelect = [
+  "media_share.id",
+  "media_share.token",
+  "media_share.created_by_user_id",
+  "media_share.kind",
+  "media_share.media_item_id",
+  "media_share.season_ids",
+  "media_share.expires_at",
+  "media_share.revoked_at",
+  "media_share.created_at",
+  "media_item.title as media_title",
+  "user.name as creator_name",
+  "user.email as creator_email",
+] as const;
 
 function createShareToken() {
   return randomBytes(32).toString("base64url");
@@ -157,29 +198,57 @@ export async function listSharesForMedia(mediaItemId: string) {
 }
 
 export async function listAllShares(): Promise<AdminShareRecord[]> {
+  const { shares } = await listAdminSharesPage({ page: 1, pageSize: 10_000, status: "all" });
+  return shares;
+}
+
+export async function shareListCounts() {
   const db = await getDb();
-  const rows = await db
-    .selectFrom("media_share")
-    .innerJoin("media_item", "media_item.id", "media_share.media_item_id")
-    .innerJoin("user", "user.id", "media_share.created_by_user_id")
-    .select([
-      "media_share.id",
-      "media_share.token",
-      "media_share.created_by_user_id",
-      "media_share.kind",
-      "media_share.media_item_id",
-      "media_share.season_ids",
-      "media_share.expires_at",
-      "media_share.revoked_at",
-      "media_share.created_at",
-      "media_item.title as media_title",
-      "user.name as creator_name",
-      "user.email as creator_email",
-    ])
+  const now = nowIso();
+  const countFor = async (status: ShareListStatus) => {
+    const row = await applyShareListStatusFilter(
+      db.selectFrom("media_share").select((eb) => eb.fn.countAll<number>().as("total")),
+      status,
+      now,
+    ).executeTakeFirst();
+    return Number(row?.total ?? 0);
+  };
+
+  const [all, active, expired, revoked] = await Promise.all([
+    countFor("all"),
+    countFor("active"),
+    countFor("expired"),
+    countFor("revoked"),
+  ]);
+
+  return { all, active, expired, revoked };
+}
+
+export async function listAdminSharesPage(options: {
+  page?: number;
+  pageSize?: number;
+  status?: ShareListStatus | string | null;
+}) {
+  const db = await getDb();
+  const now = nowIso();
+  const status = normalizeShareListStatus(options.status);
+  const pageSize = catalogPageSize(options.pageSize ?? SHARE_PAGE_SIZE);
+
+  const totalRow = await applyShareListStatusFilter(
+    db.selectFrom("media_share").select((eb) => eb.fn.countAll<number>().as("total")),
+    status,
+    now,
+  ).executeTakeFirst();
+  const page = catalogPageInfo(options.page ?? 1, pageSize, Number(totalRow?.total ?? 0));
+  const offset = (page.page - 1) * page.pageSize;
+
+  const rows = await applyShareListStatusFilter(shareListBaseQuery(db).select(adminShareSelect), status, now)
     .orderBy("media_share.created_at", "desc")
+    .offset(offset)
+    .limit(page.pageSize)
     .execute();
 
-  return rows.map((row) =>
+  const shares = rows.map((row) =>
     adminShareRecord({
       share: mapShareRow(row as MediaShareRow),
       title: row.media_title,
@@ -187,6 +256,8 @@ export async function listAllShares(): Promise<AdminShareRecord[]> {
       createdByEmail: row.creator_email,
     }),
   );
+
+  return { shares, page, status };
 }
 
 export async function cleanupExpiredShares(options: { retentionMs?: number; now?: number } = {}) {

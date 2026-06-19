@@ -13,6 +13,14 @@ type SharesLoadResult = {
     createdByEmail: string;
     contentHref: string;
   }>;
+  page: {
+    page: number;
+    total: number;
+  };
+  counts: {
+    all: number;
+    active: number;
+  };
 };
 
 describe("shares page server", () => {
@@ -86,6 +94,7 @@ describe("shares page server", () => {
   test("loads shares for admins", async () => {
     const data = (await load({
       locals: { user: { id: "admin-1", role: "admin" } },
+      url: new URL("http://localhost/shares"),
     } as never)) as SharesLoadResult;
 
     expect(data.shares).toHaveLength(1);
@@ -95,6 +104,9 @@ describe("shares page server", () => {
       createdByEmail: "admin@example.com",
       contentHref: "/movies/movie-1",
     });
+    expect(data.page.total).toBe(1);
+    expect(data.counts.all).toBe(1);
+    expect(data.counts.active).toBe(1);
   });
 
   test("keeps share management admin-only", async () => {
