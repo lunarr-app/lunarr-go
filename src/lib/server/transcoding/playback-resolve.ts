@@ -41,6 +41,7 @@ import {
 } from "./playback-lifecycle";
 import { getTranscodeBackend } from "./playback-backend";
 import { ensureHlsSegmentForRequest } from "./segment-request-gateway";
+import { withOperationTimeout } from "./operation-timeout";
 
 const PLAYBACK_CANCELLED_MESSAGE = "Playback session was cancelled.";
 const PLAYBACK_SESSION_INACTIVE_MESSAGE = "Playback session is no longer active.";
@@ -236,49 +237,6 @@ export async function isReadableFile(filePath: string) {
   }
 }
 
-function withOperationTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  label: string,
-  onLateResolve?: (value: T) => Promise<void> | void,
-  signal?: AbortSignal,
-) {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  let stopped = false;
-  let abortHandler: (() => void) | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeout = setTimeout(() => {
-      stopped = true;
-      reject(new Error(`${label} timed out after ${timeoutMs}ms.`));
-    }, timeoutMs);
-  });
-  const abortPromise = new Promise<never>((_, reject) => {
-    if (!signal) return;
-    abortHandler = () => {
-      stopped = true;
-      reject(new Error(PLAYBACK_CANCELLED_MESSAGE));
-    };
-    if (signal.aborted) {
-      abortHandler();
-      return;
-    }
-    signal.addEventListener("abort", abortHandler, { once: true });
-  });
-  promise
-    .then((value) => {
-      if (!stopped || !onLateResolve) return;
-      void Promise.resolve(onLateResolve(value)).catch(() => undefined);
-    })
-    .catch(() => undefined);
-
-  return Promise.race([promise, timeoutPromise, abortPromise]).finally(() => {
-    if (timeout) clearTimeout(timeout);
-    if (signal && abortHandler) {
-      signal.removeEventListener("abort", abortHandler);
-    }
-  });
-}
-
 export async function createSeekableStorageInputSource(
   file: NonNullable<Awaited<ReturnType<typeof getMediaFile>>>,
   setupSignal?: AbortSignal,
@@ -295,6 +253,7 @@ export async function createSeekableStorageInputSource(
     `Remote input setup for ${file.path}`,
     (lateStorage) => lateStorage.close(),
     setupSignal,
+    PLAYBACK_CANCELLED_MESSAGE,
   );
   const inputSource = await createSeekableInputSourceFromStorage({
     file: {

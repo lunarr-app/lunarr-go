@@ -126,7 +126,13 @@ export function createMediaPlayerSession(deps: MediaPlayerSessionDeps) {
     });
   }
 
+  function shouldRunPlaybackHeartbeat() {
+    const persistProgress = typeof deps.persistProgress === "function" ? deps.persistProgress() : deps.persistProgress;
+    return persistProgress !== false;
+  }
+
   function heartbeatPlaybackSession(playback: PlaybackDecision) {
+    if (!shouldRunPlaybackHeartbeat()) return;
     const sessionId = activePlaybackSessionId(playback);
     if (!sessionId) return;
     const requestPathname = window.location.pathname;
@@ -154,7 +160,7 @@ export function createMediaPlayerSession(deps: MediaPlayerSessionDeps) {
 
   function runHeartbeatEffect() {
     $effect(() => {
-      if (!browser) return;
+      if (!browser || !shouldRunPlaybackHeartbeat()) return;
       const playback = deps.getData().playback;
       if (
         (playback.mode !== "transcode" && playback.mode !== "remux") ||

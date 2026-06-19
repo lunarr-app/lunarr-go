@@ -5,8 +5,16 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
+import {
+  resetGuestShareRateLimitsForTests,
+  setGuestShareRateLimitOverridesForTests,
+} from "$lib/server/shares/rate-limit";
 import type { SharePageData } from "$lib/shares/types";
 import { load } from "./+page.server";
+
+const guestEventBase = {
+  getClientAddress: () => "127.0.0.1",
+};
 
 async function expectNotFound(operation: unknown) {
   try {
@@ -14,6 +22,15 @@ async function expectNotFound(operation: unknown) {
     throw new Error("Expected 404.");
   } catch (error) {
     expect(error).toMatchObject({ status: 404 });
+  }
+}
+
+async function expectRateLimited(operation: unknown) {
+  try {
+    await operation;
+    throw new Error("Expected 429.");
+  } catch (error) {
+    expect(error).toMatchObject({ status: 429 });
   }
 }
 
@@ -219,12 +236,16 @@ describe("guest share page server load", () => {
   });
 
   afterEach(async () => {
+    resetGuestShareRateLimitsForTests();
+    setGuestShareRateLimitOverridesForTests(null);
     await closeDatabaseForTests();
     await rm(tempDir, { recursive: true, force: true });
   });
 
   test("returns season-scoped show data for active token", async () => {
-    const result = (await load({ params: { token: showToken } } as never)) as { share: SharePageData };
+    const result = (await load({ params: { token: showToken }, ...guestEventBase } as never)) as {
+      share: SharePageData;
+    };
     expect(result.share.kind).toBe("show");
     if (result.share.kind === "show") {
       expect(result.share.seasons).toHaveLength(1);
@@ -234,7 +255,7 @@ describe("guest share page server load", () => {
   });
 
   test("throws 404 for missing and expired tokens", async () => {
-    await expectNotFound(load({ params: { token: "missing-token" } } as never));
+    await expectNotFound(load({ params: { token: "missing-token" }, ...guestEventBase } as never));
 
     const now = new Date().toISOString();
     await db
@@ -252,6 +273,14 @@ describe("guest share page server load", () => {
       })
       .execute();
 
-    await expectNotFound(load({ params: { token: "expired-token" } } as never));
+    await expectNotFound(load({ params: { token: "expired-token" }, ...guestEventBase } as never));
+  });
+
+  test("rate limits guest share page loads", async () => {
+    setGuestShareRateLimitOverridesForTests({ "share:resolve": 2 });
+
+    await load({ params: { token: showToken }, ...guestEventBase } as never);
+    await load({ params: { token: showToken }, ...guestEventBase } as never);
+    await expectRateLimited(load({ params: { token: showToken }, ...guestEventBase } as never));
   });
 });

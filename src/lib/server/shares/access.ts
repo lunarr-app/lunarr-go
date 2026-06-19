@@ -47,11 +47,7 @@ async function authorizedShareForMediaItem(share: ResolvedMediaShare, mediaItemI
   return { userId: share.created_by_user_id };
 }
 
-export async function verifyShareMediaAccess(input: {
-  token: string;
-  mediaFileId: string;
-  playbackSessionId?: string;
-}) {
+export async function verifyShareMediaAccess(input: { token: string; mediaFileId: string }) {
   const share = await resolveShare(input.token);
   if (!share) return null;
 
@@ -62,15 +58,6 @@ export async function verifyShareMediaAccess(input: {
     .where("id", "=", input.mediaFileId)
     .executeTakeFirst();
   if (!file) return null;
-
-  if (input.playbackSessionId) {
-    const session = await db
-      .selectFrom("playback_session")
-      .select(["id", "media_file_id"])
-      .where("id", "=", input.playbackSessionId)
-      .executeTakeFirst();
-    if (!session || session.media_file_id !== file.id) return null;
-  }
 
   return authorizedShareForMediaItem(share, file.media_item_id);
 }

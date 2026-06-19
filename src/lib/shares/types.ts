@@ -1,5 +1,13 @@
 export type ShareKind = "movie" | "show";
 
+export type CreateSharePayload = {
+  kind: ShareKind;
+  mediaItemId: string;
+  seasonIds?: string[] | null;
+  expiresAt?: string;
+  expiresInSeconds?: number;
+};
+
 export type PublicShareRecord = {
   id: string;
   token: string;

@@ -131,7 +131,7 @@ export async function listSharesForMedia(mediaItemId: string) {
       eb.or([
         eb("revoked_at", "is", null).and("expires_at", ">", nowIso()),
         eb("expires_at", ">=", cutoff),
-        eb("revoked_at", "is not", null),
+        eb("revoked_at", "is not", null).and("revoked_at", ">=", cutoff),
       ]),
     )
     .orderBy("created_at", "desc")

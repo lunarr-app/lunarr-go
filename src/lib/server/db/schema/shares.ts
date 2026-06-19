@@ -1,7 +1,7 @@
 import type { NullableText, TimestampText } from "./common";
-import type { MediaKind } from "./media";
+import type { ShareKind } from "$lib/shares/types";
 
-export type MediaShareKind = Extract<MediaKind, "movie" | "show">;
+export type MediaShareKind = ShareKind;
 
 export type MediaShareTable = {
   id: string;

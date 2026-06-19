@@ -13,7 +13,7 @@
     shareStatusLabel,
     validateCustomShareExpiry,
   } from "$lib/shares/format";
-  import type { PublicShareRecord } from "$lib/shares/types";
+  import type { CreateSharePayload, PublicShareRecord } from "$lib/shares/types";
   import { Copy, Link2, Trash2 } from "@lucide/svelte";
 
   type SeasonOption = {
@@ -63,7 +63,7 @@
     creating = true;
     error = null;
     try {
-      const payload: Record<string, unknown> = {
+      const payload: CreateSharePayload = {
         kind,
         mediaItemId,
         seasonIds: kind === "show" && !allSeasons ? selectedSeasonIds : undefined,

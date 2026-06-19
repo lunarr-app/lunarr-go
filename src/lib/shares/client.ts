@@ -1,4 +1,4 @@
-import type { PublicShareRecord } from "$lib/shares/types";
+import type { CreateSharePayload, PublicShareRecord } from "$lib/shares/types";
 
 async function readJsonError(response: Response, fallback: string) {
   const body = await response.json().catch(() => null);
@@ -14,7 +14,7 @@ export async function listSharesForMedia(mediaItemId: string) {
   return (body?.shares ?? []) as PublicShareRecord[];
 }
 
-export async function createShare(payload: Record<string, unknown>) {
+export async function createShare(payload: CreateSharePayload) {
   const response = await fetch("/api/shares", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -35,7 +35,7 @@ export async function revokeShare(shareId: string) {
     await readJsonError(response, "Could not revoke share link.");
   }
   const body = await response.json().catch(() => null);
-  return body?.share as { revokedAt?: string } | undefined;
+  return (body?.share ?? undefined) as PublicShareRecord | undefined;
 }
 
 export function shareLinkUrl(share: Pick<PublicShareRecord, "sharePath">) {
