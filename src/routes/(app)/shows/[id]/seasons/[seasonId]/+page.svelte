@@ -1,21 +1,16 @@
 <script lang="ts">
   import { page } from "$app/state";
   import MediaHero from "$lib/components/MediaHero.svelte";
+  import SeasonTabs, { type SeasonTab } from "$lib/components/SeasonTabs.svelte";
   import { formatEpisodeCode } from "$lib/media/format";
+  import { showSeasonHref } from "$lib/media/seasons";
   import { playbackModalHref } from "$lib/playback/links";
-  import { Calendar, Check, ChevronLeft, ChevronRight, CirclePlay, Clock3, RotateCcw, Star } from "@lucide/svelte";
+  import { Calendar, Check, ChevronLeft, CirclePlay, Clock3, RotateCcw, Star } from "@lucide/svelte";
 
   let { data, form } = $props();
 
   type Episode = (typeof data.season.episodes)[number];
 
-  const currentSeasonIndex = $derived(data.seasons.findIndex((season) => season.id === data.season.id));
-  const previousSeason = $derived(currentSeasonIndex > 0 ? data.seasons[currentSeasonIndex - 1] : null);
-  const nextSeason = $derived(
-    currentSeasonIndex >= 0 && currentSeasonIndex < data.seasons.length - 1
-      ? data.seasons[currentSeasonIndex + 1]
-      : null,
-  );
   const watchedCount = $derived(data.season.episodes.filter((episode) => episode.completed).length);
   const episodeCount = $derived(data.season.episodes.length);
   const playableCount = $derived(data.season.episodes.filter((episode) => episode.fileId).length);
@@ -38,10 +33,6 @@
     return `${episodeLabel} · ${watchedCount} watched`;
   });
 
-  function episodeCode(episode: Pick<Episode, "seasonNumber" | "episodeNumber">) {
-    return formatEpisodeCode(episode);
-  }
-
   function watchHref(episode: Pick<Episode, "id" | "fileId">) {
     return playbackModalHref({
       currentUrl: page.url,
@@ -50,9 +41,16 @@
     });
   }
 
-  function seasonHref(season: Pick<(typeof data.seasons)[number], "id">) {
-    return `/shows/${data.show.id}/seasons/${season.id}`;
-  }
+  const seasonTabs = $derived(
+    data.seasons.map(
+      (season): SeasonTab => ({
+        id: season.id,
+        title: season.title,
+        seasonNumber: season.seasonNumber,
+        href: showSeasonHref(data.show.id, season),
+      }),
+    ),
+  );
 
   function runtimeLabel(seconds: number | null) {
     return seconds ? `${Math.round(seconds / 60)} min` : null;
@@ -75,10 +73,17 @@
   title={`${data.show.title} · ${data.season.title}`}
   posterUrl={data.season.posterUrl ?? data.show.posterUrl}
   backdropUrl={data.show.backdropUrl}
-  overview={data.show.overview}
+  overview={data.season.overview ?? data.show.overview}
   genres={data.show.genres.slice(0, 4)}
   bottomMargin="1.6rem"
 >
+  {#snippet leading()}
+    <a href={`/shows/${data.show.id}`}>
+      <ChevronLeft size={16} aria-hidden="true" />
+      {data.show.title}
+    </a>
+  {/snippet}
+
   {#snippet facts()}
     {#if data.show.year}<span><Calendar size={15} aria-hidden="true" />{data.show.year}</span>{/if}
     {#if data.show.status}<span>{data.show.status}</span>{/if}
@@ -94,7 +99,21 @@
         <CirclePlay size={19} aria-hidden="true" />
         {nextEpisode.progressSeconds > 0 ? "Resume" : "Play"}
       </a>
-      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}>{episodeCode(nextEpisode) || "Episode"}</a>
+      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}>{formatEpisodeCode(nextEpisode) || "Episode"}</a>
+    {/if}
+    {#if playableCount > 0}
+      <form class="season-bulk-action" method="POST" action="?/seasonWatched">
+        <input type="hidden" name="completed" value={seasonComplete ? "false" : "true"} />
+        <button class="button secondary" type="submit">
+          {#if seasonComplete}
+            <RotateCcw size={16} aria-hidden="true" />
+            Unwatch season
+          {:else}
+            <Check size={16} aria-hidden="true" />
+            Watched season
+          {/if}
+        </button>
+      </form>
     {/if}
   {/snippet}
 
@@ -115,58 +134,9 @@
   <p class="error">{form.error}</p>
 {/if}
 
-<div class="season-return-row">
-  <a class="show-return" href={`/shows/${data.show.id}`}>
-    <ChevronLeft size={16} aria-hidden="true" />
-    {data.show.title}
-  </a>
-  <div class="season-stepper">
-    {#if previousSeason}
-      <a class="step-link" href={seasonHref(previousSeason)}>
-        <ChevronLeft size={16} aria-hidden="true" />
-        <span>{previousSeason.title}</span>
-      </a>
-    {/if}
-    {#if nextSeason}
-      <a class="step-link" href={seasonHref(nextSeason)}>
-        <span>{nextSeason.title}</span>
-        <ChevronRight size={16} aria-hidden="true" />
-      </a>
-    {/if}
-  </div>
+<div class="season-tabs-block">
+  <SeasonTabs seasons={seasonTabs} activeSeasonId={data.season.id} />
 </div>
-
-<nav class="season-navigation" aria-label="Season navigation">
-  <div class="season-toolbar">
-    <div class="current-season">
-      <strong>{data.season.title}</strong>
-      <span>{seasonProgressLabel}</span>
-    </div>
-    {#if playableCount > 0}
-      <form class="season-bulk-action" method="POST" action="?/seasonWatched">
-        <input type="hidden" name="completed" value={seasonComplete ? "false" : "true"} />
-        <button class="secondary compact">
-          {#if seasonComplete}
-            <RotateCcw size={15} aria-hidden="true" />
-            Unwatch season
-          {:else}
-            <Check size={15} aria-hidden="true" />
-            Watched season
-          {/if}
-        </button>
-      </form>
-    {/if}
-  </div>
-
-  <div class="season-list" aria-label="All seasons">
-    {#each data.seasons as season}
-      <a class:active={season.id === data.season.id} href={seasonHref(season)}>
-        <span>{season.title}</span>
-        <small>{season.episodes.length}</small>
-      </a>
-    {/each}
-  </div>
-</nav>
 
 <section class="episodes-section" aria-label="Episodes">
   <div class="episodes">
@@ -178,7 +148,7 @@
             {#if episode.stillUrl}
               <img src={episode.stillUrl} alt="" loading="lazy" />
             {:else}
-              <span>{episodeCode(episode) || episode.episodeNumber || ""}</span>
+              <span>{formatEpisodeCode(episode) || episode.episodeNumber || ""}</span>
             {/if}
             {#if episode.progressSeconds > 0 && !episode.completed}
               <div class="episode-progress" aria-hidden="true">
@@ -193,13 +163,13 @@
             {#if episode.stillUrl}
               <img src={episode.stillUrl} alt="" loading="lazy" />
             {:else}
-              <span>{episodeCode(episode) || episode.episodeNumber || ""}</span>
+              <span>{formatEpisodeCode(episode) || episode.episodeNumber || ""}</span>
             {/if}
           </div>
         {/if}
         <div class="episode-main">
           <div class="episode-heading">
-            <span>{episodeCode(episode)}</span>
+            <span>{formatEpisodeCode(episode)}</span>
             <h4>
               {#if episode.fileId}
                 <a href={`/episodes/${episode.id}`}>{episode.title}</a>
@@ -210,13 +180,13 @@
           </div>
           <div class="episode-facts">
             {#if episode.releaseDate}
-              <span class="icon-fact"
+              <span
                 ><Calendar size={14} aria-hidden="true" />
                 {episode.releaseDate}</span
               >
             {/if}
             {#if runtimeLabel(episode.runtimeSeconds)}
-              <span class="icon-fact"
+              <span
                 ><Clock3 size={14} aria-hidden="true" />
                 {runtimeLabel(episode.runtimeSeconds)}</span
               >
@@ -313,161 +283,16 @@
     background: var(--color-accent);
   }
 
-  .season-return-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin: -0.45rem 0 0.45rem;
-  }
-
-  .show-return {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    width: fit-content;
-    min-height: 1.85rem;
-    color: var(--color-muted);
-    font-size: 0.86rem;
-    font-weight: 750;
-  }
-
-  .show-return:hover {
-    color: var(--color-text);
-  }
-
-  .season-navigation {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    display: grid;
-    gap: 0.25rem;
-    margin: -0.25rem 0 1rem;
-    border-bottom: 1px solid var(--color-border-strong);
-    padding: 0.35rem 0 0;
-  }
-
-  .season-toolbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.55rem;
-    align-items: center;
-  }
-
-  .step-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    min-height: 1.8rem;
-    border: 1px solid var(--color-border-strong);
-    border-radius: 6px;
-    background: var(--color-surface-faint);
-    color: var(--color-text-soft);
-    padding: 0 0.55rem;
-    font-size: 0.82rem;
-    font-weight: 750;
-    white-space: nowrap;
-  }
-
-  .step-link {
-    border-color: transparent;
-    background: transparent;
-    color: var(--color-muted);
-  }
-
-  .step-link:hover {
-    border-color: var(--color-accent-border);
-    background: var(--color-accent-soft);
-    color: var(--color-text);
-  }
-
-  .current-season {
-    display: grid;
-    gap: 0;
-    min-width: 0;
-  }
-
-  .current-season strong,
-  .current-season span,
-  .step-link span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .current-season span {
-    color: var(--color-muted);
-    font-size: 0.78rem;
-  }
-
-  .season-stepper,
-  .season-list {
-    display: flex;
-    gap: 0.4rem;
-    overflow-x: auto;
-    scrollbar-width: thin;
-  }
-
-  .season-stepper {
-    justify-content: flex-end;
-    min-width: 0;
-  }
-
-  .season-list {
-    padding-bottom: 0;
-  }
-
-  .season-list a {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    min-height: 2rem;
-    padding: 0 0.65rem;
-    color: var(--color-muted);
-    font-size: 0.86rem;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-
-  .season-list a::after {
-    content: "";
-    position: absolute;
-    right: 0.7rem;
-    bottom: -1px;
-    left: 0.7rem;
-    height: 2px;
-    border-radius: 999px;
-    background: transparent;
-  }
-
-  .season-list a:hover,
-  .season-list a.active {
-    color: var(--color-text);
-  }
-
-  .season-list a.active::after {
-    background: var(--color-accent);
-  }
-
-  .season-list small {
-    color: var(--color-muted);
-    font-size: 0.78rem;
-    font-weight: 800;
+  .season-tabs-block {
+    margin: -0.25rem 0 0.75rem;
   }
 
   .episodes-section {
     display: grid;
-    gap: 0.9rem;
-  }
-
-  h4 {
-    margin: 0;
   }
 
   .season-bulk-action {
-    margin: 0;
+    display: contents;
   }
 
   .episodes {
@@ -514,10 +339,6 @@
     opacity: 0.74;
   }
 
-  .missing-still:hover {
-    border-color: var(--color-border);
-  }
-
   .still img {
     width: 100%;
     height: 100%;
@@ -547,10 +368,10 @@
     color: var(--color-muted);
     font-size: 0.78rem;
     font-weight: 800;
-    letter-spacing: 0;
   }
 
   h4 {
+    margin: 0;
     font-size: 1rem;
   }
 
@@ -602,27 +423,8 @@
       grid-template-columns: 1fr;
     }
 
-    .season-return-row {
-      display: grid;
-      gap: 0.35rem;
-    }
-
-    .season-toolbar {
-      grid-template-columns: 1fr;
-      align-items: start;
-    }
-
-    .season-stepper {
-      justify-content: flex-start;
-      max-width: 100%;
-    }
-
     .episode-row {
       grid-template-columns: 1fr;
-    }
-
-    .still {
-      max-width: none;
     }
 
     .episode-actions {

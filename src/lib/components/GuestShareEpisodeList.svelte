@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeasonTabs from "$lib/components/SeasonTabs.svelte";
   import { formatEpisodeCode, formatMediaDuration } from "$lib/media/format";
   import type { SharePageData } from "$lib/shares/types";
   import { CirclePlay } from "@lucide/svelte";
@@ -17,37 +18,30 @@
 
   const activeSeason = $derived(seasons.find((season) => season.id === selectedSeasonId) ?? seasons[0] ?? null);
 
+  const seasonTabs = $derived(
+    seasons.map((season) => ({
+      id: season.id,
+      title: season.title,
+      seasonNumber: season.seasonNumber,
+    })),
+  );
+
   $effect(() => {
     if (!seasons.some((season) => season.id === selectedSeasonId)) {
       selectedSeasonId = seasons[0]?.id ?? "";
     }
   });
-
-  function seasonTabLabel(season: ShareSeason) {
-    if (season.seasonNumber !== null) {
-      return `Season ${season.seasonNumber}`;
-    }
-    return season.title;
-  }
 </script>
 
 <section class="episodes-section" aria-label="Episodes">
-  <div class="season-tabs" role="tablist" aria-label="Seasons">
-    {#each seasons as season (season.id)}
-      <button
-        class:active={activeSeason?.id === season.id}
-        type="button"
-        role="tab"
-        aria-selected={activeSeason?.id === season.id}
-        onclick={() => (selectedSeasonId = season.id)}
-      >
-        {seasonTabLabel(season)}
-      </button>
-    {/each}
-  </div>
+  <SeasonTabs
+    seasons={seasonTabs}
+    activeSeasonId={activeSeason?.id ?? ""}
+    onSelect={(seasonId) => (selectedSeasonId = seasonId)}
+  />
 
   {#if activeSeason}
-    <div role="tabpanel" aria-label={seasonTabLabel(activeSeason)}>
+    <div role="tabpanel">
       <div class="episodes">
         {#each activeSeason.episodes as episode (episode.id)}
           <article class="episode-row">
@@ -85,39 +79,6 @@
   .episodes-section {
     display: grid;
     gap: 1rem;
-  }
-
-  .season-tabs {
-    display: flex;
-    gap: 0.35rem;
-    overflow-x: auto;
-    padding-bottom: 0.15rem;
-    border-bottom: 1px solid var(--color-border);
-    scrollbar-width: thin;
-  }
-
-  .season-tabs button {
-    flex: 0 0 auto;
-    min-height: 2.25rem;
-    padding: 0.35rem 0.85rem;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    border-radius: 0;
-    background: transparent;
-    color: var(--color-subtle);
-    font-size: 0.92rem;
-    font-weight: 650;
-    white-space: nowrap;
-  }
-
-  .season-tabs button:hover {
-    color: var(--color-text);
-  }
-
-  .season-tabs button.active {
-    color: var(--color-text);
-    border-bottom-color: var(--color-accent);
   }
 
   .episodes {

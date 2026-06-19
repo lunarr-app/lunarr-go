@@ -8,6 +8,7 @@ import {
   formatGibibytes,
   formatMediaDuration,
   formatRelativeTime,
+  seasonTabLabel,
 } from "./format";
 
 describe("formatDateTime", () => {
@@ -67,6 +68,18 @@ describe("formatGibibytes", () => {
   test("formats gibibyte labels", () => {
     expect(formatGibibytes(2 * 1024 * 1024 * 1024)).toBe("2 GiB");
     expect(formatGibibytes(1.5 * 1024 * 1024 * 1024)).toBe("1.5 GiB");
+  });
+});
+
+describe("seasonTabLabel", () => {
+  test("prefers season number labels", () => {
+    expect(seasonTabLabel({ title: "Season 1", seasonNumber: 1 })).toBe("Season 1");
+    expect(seasonTabLabel({ title: "Specials", seasonNumber: 0 })).toBe("Season 0");
+  });
+
+  test("falls back to title when season number is missing", () => {
+    expect(seasonTabLabel({ title: "Bonus Content" })).toBe("Bonus Content");
+    expect(seasonTabLabel({ title: "Season 2", seasonNumber: null })).toBe("Season 2");
   });
 });
 

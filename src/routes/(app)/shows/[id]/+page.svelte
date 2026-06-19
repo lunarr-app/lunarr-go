@@ -3,6 +3,7 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
   import { formatDateTime, formatEpisodeCode } from "$lib/media/format";
+  import { showSeasonHref } from "$lib/media/seasons";
   import { tmdbImageUrl } from "$lib/media/images";
   import { playbackModalHref } from "$lib/playback/links";
   import { Calendar, CirclePlay, ExternalLink, Link2, RefreshCw, Sparkles, Star, Users } from "@lucide/svelte";
@@ -54,10 +55,6 @@
     });
   }
 
-  function seasonHref(season: Pick<Season, "id">) {
-    return `/shows/${data.show.id}/seasons/${season.id}`;
-  }
-
   function seasonStats(season: Season) {
     const episodes = season.episodes;
     const total = episodes.length;
@@ -71,10 +68,6 @@
       missing,
       progress: total > 0 ? Math.round((watched / total) * 100) : 0,
     };
-  }
-
-  function episodeCode(episode: Pick<Episode, "seasonNumber" | "episodeNumber"> | undefined) {
-    return formatEpisodeCode(episode);
   }
 </script>
 
@@ -107,7 +100,7 @@
         <CirclePlay size={19} aria-hidden="true" />
         {nextEpisode.progressSeconds > 0 ? "Resume" : "Play"}
       </a>
-      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}>{episodeCode(nextEpisode) || "Episode"}</a>
+      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}>{formatEpisodeCode(nextEpisode) || "Episode"}</a>
     {/if}
     {#if trailerHref}
       <a class="button secondary" href={trailerHref} target="_blank" rel="noreferrer">
@@ -153,7 +146,7 @@
       <div class="season-grid">
         {#each data.seasons as season}
           {@const stats = seasonStats(season)}
-          <a class="season-card" href={seasonHref(season)}>
+          <a class="season-card" href={showSeasonHref(data.show.id, season)}>
             <div class="poster">
               {#if season.posterUrl || data.show.posterUrl}
                 <img src={season.posterUrl ?? data.show.posterUrl} alt="" loading="lazy" />

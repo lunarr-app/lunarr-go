@@ -1,3 +1,4 @@
+import { resolveShowSeason, showSeasonHref, showSeasonKey } from "$lib/media/seasons";
 import { getShowDetail } from "$lib/server/media/shows";
 import { markWatched } from "$lib/server/playback";
 import { markSeasonWatched } from "$lib/server/playback/commands";
@@ -8,8 +9,13 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   const detail = await getShowDetail(params.id, locals.user!.id);
   if (!detail) throw error(404, "Show not found");
 
-  const season = detail.seasons.find((season) => season.id === params.seasonId);
+  const season = resolveShowSeason(detail.seasons, params.seasonId);
   if (!season) throw error(404, "Season not found");
+
+  const canonicalSeasonKey = showSeasonKey(season);
+  if (params.seasonId !== canonicalSeasonKey) {
+    throw redirect(301, showSeasonHref(detail.show.id, season));
+  }
 
   return {
     ...detail,
@@ -19,6 +25,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 export const actions: Actions = {
   watched: async ({ params, request, locals }) => {
+    const detail = await getShowDetail(params.id, locals.user!.id);
+    if (!detail) return fail(404, { error: "Show not found." });
+
+    const season = resolveShowSeason(detail.seasons, params.seasonId);
+    if (!season) return fail(404, { error: "Season not found." });
+
     const form = await request.formData();
     const episodeId = String(form.get("episodeId") ?? "");
     const fileId = String(form.get("fileId") ?? "");
@@ -38,9 +50,15 @@ export const actions: Actions = {
       });
     }
 
-    throw redirect(303, `/shows/${params.id}/seasons/${params.seasonId}`);
+    throw redirect(303, showSeasonHref(detail.show.id, season));
   },
   seasonWatched: async ({ params, request, locals }) => {
+    const detail = await getShowDetail(params.id, locals.user!.id);
+    if (!detail) return fail(404, { error: "Show not found." });
+
+    const season = resolveShowSeason(detail.seasons, params.seasonId);
+    if (!season) return fail(404, { error: "Season not found." });
+
     const form = await request.formData();
     const completed = String(form.get("completed") ?? "") === "true";
 
@@ -48,7 +66,7 @@ export const actions: Actions = {
       await markSeasonWatched({
         userId: locals.user!.id,
         showId: params.id,
-        seasonId: params.seasonId,
+        seasonId: season.id,
         completed,
       });
     } catch (error) {
@@ -57,6 +75,6 @@ export const actions: Actions = {
       });
     }
 
-    throw redirect(303, `/shows/${params.id}/seasons/${params.seasonId}`);
+    throw redirect(303, showSeasonHref(detail.show.id, season));
   },
 };

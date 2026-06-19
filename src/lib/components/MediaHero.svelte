@@ -7,6 +7,7 @@
     backdropUrl,
     overview,
     genres = [],
+    leading,
     facts,
     actions,
     below,
@@ -18,6 +19,7 @@
     backdropUrl: string | null;
     overview: string | null;
     genres?: string[];
+    leading?: Snippet;
     facts?: Snippet;
     actions?: Snippet;
     below?: Snippet;
@@ -32,12 +34,19 @@
   style={`--backdrop: url('${backdropUrl ?? ""}'); --hero-bottom-margin: ${bottomMargin}`}
 >
   <div class="hero-inner">
-    <div class="poster">
-      {#if posterUrl}
-        <img src={posterUrl} alt="" />
-      {:else}
-        <span>{title}</span>
+    <div class="poster-column">
+      {#if leading}
+        <div class="leading">
+          {@render leading()}
+        </div>
       {/if}
+      <div class="poster">
+        {#if posterUrl}
+          <img src={posterUrl} alt="" />
+        {:else}
+          <span>{title}</span>
+        {/if}
+      </div>
     </div>
 
     <div class="copy">
@@ -113,6 +122,28 @@
     align-items: center;
     min-height: calc(clamp(20rem, 44vh, 30rem) - clamp(2rem, 4vw, 3rem));
     max-width: 64rem;
+  }
+
+  .poster-column {
+    display: grid;
+    gap: 0.65rem;
+    align-content: start;
+    justify-items: start;
+  }
+
+  .leading :global(a) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: fit-content;
+    color: var(--hero-text-soft);
+    font-size: 0.86rem;
+    font-weight: 750;
+    text-decoration: none;
+  }
+
+  .leading :global(a:hover) {
+    color: var(--hero-text);
   }
 
   .poster {
@@ -202,6 +233,10 @@
       align-items: center;
       min-height: 0;
       grid-template-columns: 1fr;
+    }
+
+    .poster-column {
+      justify-items: center;
     }
 
     .poster {

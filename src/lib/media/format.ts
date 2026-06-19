@@ -77,6 +77,18 @@ export function formatGibibytes(value: number): string {
   return `${Number.isInteger(gib) ? gib : gib.toFixed(1)} GiB`;
 }
 
+type SeasonTabLabelInput = {
+  title: string;
+  seasonNumber?: number | null;
+};
+
+export function seasonTabLabel(season: SeasonTabLabelInput): string {
+  if (season.seasonNumber !== null && season.seasonNumber !== undefined) {
+    return `Season ${season.seasonNumber}`;
+  }
+  return season.title;
+}
+
 type EpisodeCodeInput = {
   seasonNumber: number | null;
   episodeNumber: number | null;

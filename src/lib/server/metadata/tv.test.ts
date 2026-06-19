@@ -279,4 +279,57 @@ describe("refreshTvShowMetadata", () => {
       poster_path: "/show.jpg",
     });
   });
+
+  test("updates an existing linked episode when TMDb provider ids change", async () => {
+    globalThis.fetch = (async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: [{ id: 63639, name: "The Expanse", first_air_date: "2015-12-14" }],
+        });
+      }
+      if (url.includes("/tv/63639/season/1")) {
+        return Response.json({
+          id: 60001,
+          name: "Season 1",
+          season_number: 1,
+          episodes: [
+            {
+              id: 70001,
+              name: "Dulcinea",
+              overview: "Updated opener.",
+              episode_number: 1,
+              season_number: 1,
+              still_path: "/episode-1-updated.jpg",
+              vote_average: 8.1,
+              vote_count: 10,
+            },
+          ],
+        });
+      }
+      return Response.json({
+        id: 63639,
+        name: "The Expanse",
+        overview: "Updated show overview.",
+        first_air_date: "2015-12-14",
+        genres: [],
+      });
+    }) as typeof fetch;
+
+    await refreshTvShowMetadataResult("show-1");
+
+    const episodes = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "episode")
+      .where("parent_id", "=", "season-1")
+      .execute();
+    expect(episodes).toHaveLength(1);
+    expect(episodes[0]).toMatchObject({
+      id: "episode-1",
+      provider: "tmdb",
+      provider_id: "70001",
+      overview: "Updated opener.",
+    });
+  });
 });

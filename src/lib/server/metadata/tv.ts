@@ -67,7 +67,7 @@ async function mergeChildItems(oldParentId: string, newParentId: string, now: st
   await db.deleteFrom("media_item").where("id", "=", oldParentId).where("provider", "is", null).execute();
 }
 
-async function moveEpisodeAssociations(oldMediaItemId: string, newMediaItemId: string, now: string) {
+export async function moveEpisodeAssociations(oldMediaItemId: string, newMediaItemId: string, now: string) {
   if (oldMediaItemId === newMediaItemId) return;
 
   const db = await getDb();
@@ -203,27 +203,26 @@ async function upsertEpisodeMetadata(seasonId: string, metadata: MatchedTvEpisod
     .where("provider", "=", metadata.provider)
     .where("provider_id", "=", metadata.providerId)
     .executeTakeFirst();
-  const localExisting = await db
+  const libraryExisting = await db
     .selectFrom("media_item")
     .select("id")
     .where("kind", "=", "episode")
     .where("parent_id", "=", seasonId)
     .where("season_number", "=", metadata.seasonNumber)
     .where("episode_number", "=", metadata.episodeNumber)
-    .where("provider", "is", null)
     .executeTakeFirst();
 
   if (providerExisting) {
     await db.updateTable("media_item").set(values).where("id", "=", providerExisting.id).execute();
-    if (localExisting && localExisting.id !== providerExisting.id) {
-      await moveEpisodeAssociations(localExisting.id, providerExisting.id, now);
+    if (libraryExisting && libraryExisting.id !== providerExisting.id) {
+      await moveEpisodeAssociations(libraryExisting.id, providerExisting.id, now);
     }
     return { id: providerExisting.id, created: false };
   }
 
-  if (localExisting) {
-    await db.updateTable("media_item").set(values).where("id", "=", localExisting.id).execute();
-    return { id: localExisting.id, created: false };
+  if (libraryExisting) {
+    await db.updateTable("media_item").set(values).where("id", "=", libraryExisting.id).execute();
+    return { id: libraryExisting.id, created: false };
   }
 
   const id = createId();

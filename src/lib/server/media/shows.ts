@@ -599,6 +599,7 @@ export async function getShowDetail(id: string, userId: string) {
       id: season.id,
       title: season.title,
       seasonNumber: season.season_number,
+      overview: season.overview,
       posterUrl: tmdbImageUrl(season.poster_path),
       episodes: (episodesBySeason.get(season.id) ?? []).map((episode) => {
         const summary = publicMovieSummary(

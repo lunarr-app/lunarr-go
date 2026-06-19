@@ -16,6 +16,7 @@ import type {
   MatchedTvShowMetadata,
 } from "../metadata/tmdb";
 import { lookupTvSeasonMetadata, type MovieMetadataMatcher, type TvSeasonMetadataMatcher } from "../metadata/matching";
+import { moveEpisodeAssociations } from "../metadata/tv";
 import type { StorageFileInfo } from "../storage";
 import { replaceMediaStreamInfo } from "../transcoding/probe";
 import { sortTitle } from "./scan-movies";
@@ -199,16 +200,14 @@ async function findOrCreateEpisodeMetadataItem(seasonId: string, metadata: Match
     .where("provider", "=", metadata.provider)
     .where("provider_id", "=", metadata.providerId)
     .executeTakeFirst();
-  const localExisting = await db
+  const libraryExisting = await db
     .selectFrom("media_item")
     .selectAll()
     .where("kind", "=", "episode")
     .where("parent_id", "=", seasonId)
     .where("season_number", "=", metadata.seasonNumber)
     .where("episode_number", "=", metadata.episodeNumber)
-    .where("provider", "is", null)
     .executeTakeFirst();
-  const existing = providerExisting ?? localExisting;
   const values = {
     ...tvEpisodeMetadataValues(metadata, now),
     kind: "episode" as const,
@@ -216,9 +215,17 @@ async function findOrCreateEpisodeMetadataItem(seasonId: string, metadata: Match
     parent_id: seasonId,
   };
 
-  if (existing) {
-    await db.updateTable("media_item").set(values).where("id", "=", existing.id).execute();
-    return existing.id;
+  if (providerExisting) {
+    await db.updateTable("media_item").set(values).where("id", "=", providerExisting.id).execute();
+    if (libraryExisting && libraryExisting.id !== providerExisting.id) {
+      await moveEpisodeAssociations(libraryExisting.id, providerExisting.id, now);
+    }
+    return providerExisting.id;
+  }
+
+  if (libraryExisting) {
+    await db.updateTable("media_item").set(values).where("id", "=", libraryExisting.id).execute();
+    return libraryExisting.id;
   }
 
   const id = createId();

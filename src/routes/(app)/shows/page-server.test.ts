@@ -275,7 +275,7 @@ describe("shows page server", () => {
       ],
     });
     const seasonResult = await seasonLoad({
-      params: { id: "show-1", seasonId: "season-1" },
+      params: { id: "show-1", seasonId: "1" },
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
     expect(seasonResult).toMatchObject({
@@ -304,14 +304,14 @@ describe("shows page server", () => {
 
     await expectRedirect(
       seasonActions.watched({
-        params: { id: "show-1", seasonId: "season-1" },
-        request: new Request("http://localhost/shows/show-1/seasons/season-1", {
+        params: { id: "show-1", seasonId: "1" },
+        request: new Request("http://localhost/shows/show-1/seasons/1", {
           method: "POST",
           body: form,
         }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never),
-      "/shows/show-1/seasons/season-1",
+      "/shows/show-1/seasons/1",
     );
 
     expect(
@@ -331,14 +331,14 @@ describe("shows page server", () => {
 
     await expectRedirect(
       seasonActions.seasonWatched({
-        params: { id: "show-1", seasonId: "season-1" },
-        request: new Request("http://localhost/shows/show-1/seasons/season-1", {
+        params: { id: "show-1", seasonId: "1" },
+        request: new Request("http://localhost/shows/show-1/seasons/1", {
           method: "POST",
           body: seasonForm,
         }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never),
-      "/shows/show-1/seasons/season-1",
+      "/shows/show-1/seasons/1",
     );
 
     expect(
@@ -358,14 +358,14 @@ describe("shows page server", () => {
 
     await expectRedirect(
       seasonActions.seasonWatched({
-        params: { id: "show-1", seasonId: "season-1" },
-        request: new Request("http://localhost/shows/show-1/seasons/season-1", {
+        params: { id: "show-1", seasonId: "1" },
+        request: new Request("http://localhost/shows/show-1/seasons/1", {
           method: "POST",
           body: unwatchForm,
         }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never),
-      "/shows/show-1/seasons/season-1",
+      "/shows/show-1/seasons/1",
     );
 
     expect(
@@ -493,5 +493,50 @@ describe("shows page server", () => {
       backdrop_path: "/backdrop-refreshed.jpg",
       vote_average: 8.4,
     });
+
+    const seasonResult = (await seasonLoad({
+      params: { id: "show-1", seasonId: "1" },
+      locals: { user: { id: "user-1", role: "user" } },
+    } as never)) as {
+      season: {
+        id: string;
+        overview: string | null;
+        episodes: Array<{ id: string; overview: string | null; fileId: string | null }>;
+      };
+      show: { overview: string | null };
+    };
+    expect(seasonResult.season.episodes).toHaveLength(1);
+    expect(seasonResult).toMatchObject({
+      show: {
+        overview: "Refreshed from the detail page.",
+      },
+      season: {
+        id: "season-1",
+        overview: "Refreshed season overview.",
+        episodes: [
+          {
+            id: "episode-1",
+            title: "Dulcinea",
+            overview: "Refreshed opener.",
+            fileId: "file-1",
+          },
+        ],
+      },
+    });
+  });
+
+  test("redirects legacy season ids to season-number routes", async () => {
+    try {
+      await seasonLoad({
+        params: { id: "show-1", seasonId: "season-1" },
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never);
+      throw new Error("Expected redirect to /shows/show-1/seasons/1.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        status: 301,
+        location: "/shows/show-1/seasons/1",
+      });
+    }
   });
 });
