@@ -73,7 +73,7 @@
 
   .episode-row {
     display: grid;
-    grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr) auto;
     gap: 0.9rem;
     align-items: center;
     padding: 0.75rem;
@@ -150,7 +150,7 @@
 
   @media (max-width: 760px) {
     .episode-row {
-      grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+      grid-template-columns: minmax(8rem, 10rem) minmax(0, 1fr);
     }
 
     .play-button {

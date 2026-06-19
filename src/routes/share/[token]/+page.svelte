@@ -5,11 +5,11 @@
   import GuestShareEpisodeList from "$lib/components/GuestShareEpisodeList.svelte";
   import LunarrBrand from "$lib/components/LunarrBrand.svelte";
   import MediaHero from "$lib/components/MediaHero.svelte";
-  import { formatMediaDuration } from "$lib/media/format";
+  import { formatEpisodeCode, formatMediaDuration } from "$lib/media/format";
   import { buildClientPlaybackApiHref } from "$lib/playback/client-href";
   import { formatShareExpiryDescription } from "$lib/shares/format";
   import { shareClosePlaybackHref, sharePlaybackApiPath, sharePlaybackHref } from "$lib/shares/links";
-  import { CirclePlay, Clock3 } from "@lucide/svelte";
+  import { CirclePlay, Clock3, Tv } from "@lucide/svelte";
 
   let { data } = $props();
 
@@ -23,6 +23,20 @@
         })
       : null,
   );
+
+  const firstPlayableEpisode = $derived.by(() => {
+    if (data.share.kind !== "show") return null;
+    for (const season of data.share.seasons) {
+      const episode = season.episodes.find((item) => item.fileId);
+      if (episode) return episode;
+    }
+    return null;
+  });
+
+  const playableEpisodeCount = $derived.by(() => {
+    if (data.share.kind !== "show") return 0;
+    return data.share.seasons.reduce((count, season) => count + season.episodes.length, 0);
+  });
 
   function closePlayer() {
     void goto(shareClosePlaybackHref(page.url), {
@@ -52,6 +66,9 @@
   const runtimeLabel = $derived(
     data.share.kind === "movie" && data.share.runtimeSeconds ? formatMediaDuration(data.share.runtimeSeconds) : null,
   );
+  const firstEpisodeLabel = $derived(
+    firstPlayableEpisode ? formatEpisodeCode(firstPlayableEpisode, { style: "padded" }) : null,
+  );
 </script>
 
 <svelte:head>
@@ -67,9 +84,9 @@
     onReposition={repositionPlayback}
   />
 {:else}
-  <div class="share-shell" class:share-shell-show={data.share.kind === "show"}>
+  <div class="share-shell">
     <header class="share-header">
-      <div class="share-inner">
+      <div class="share-frame share-header-row">
         <LunarrBrand />
         <p class="expiry">
           <Clock3 size={16} aria-hidden="true" />
@@ -78,70 +95,88 @@
       </div>
     </header>
 
-    <MediaHero
-      standalone
-      title={data.share.title}
-      posterUrl={data.share.posterUrl}
-      backdropUrl={data.share.backdropUrl}
-      overview={data.share.overview}
-      bottomMargin="0"
-    >
-      {#snippet facts()}
-        {#if runtimeLabel}
-          <span>
-            <Clock3 size={14} aria-hidden="true" />
-            {runtimeLabel}
-          </span>
-        {/if}
-      {/snippet}
+    <div class="share-hero">
+      <MediaHero
+        standalone
+        title={data.share.title}
+        posterUrl={data.share.posterUrl}
+        backdropUrl={data.share.backdropUrl}
+        overview={data.share.overview}
+        bottomMargin="0"
+      >
+        {#snippet facts()}
+          {#if runtimeLabel}
+            <span>
+              <Clock3 size={14} aria-hidden="true" />
+              {runtimeLabel}
+            </span>
+          {/if}
+          {#if data.share.kind === "show" && playableEpisodeCount > 0}
+            <span>
+              <Tv size={14} aria-hidden="true" />
+              {playableEpisodeCount} episode{playableEpisodeCount === 1 ? "" : "s"}
+            </span>
+          {/if}
+        {/snippet}
 
-      {#snippet actions()}
-        {#if data.share.kind === "movie"}
-          {@const movieShare = data.share}
-          {#if movieShare.fileId}
-            <button type="button" onclick={() => openPlayer(movieShare.movieId)}>
+        {#snippet actions()}
+          {#if data.share.kind === "movie"}
+            {@const movieShare = data.share}
+            {#if movieShare.fileId}
+              <button type="button" onclick={() => openPlayer(movieShare.movieId)}>
+                <CirclePlay size={18} aria-hidden="true" />
+                Play
+              </button>
+            {/if}
+          {:else if firstPlayableEpisode}
+            <button type="button" onclick={() => openPlayer(firstPlayableEpisode.id)}>
               <CirclePlay size={18} aria-hidden="true" />
-              Play
+              Play {firstEpisodeLabel}
             </button>
           {/if}
-        {/if}
-      {/snippet}
-    </MediaHero>
+        {/snippet}
+      </MediaHero>
+    </div>
 
     {#if data.share.kind === "show"}
-      <div class="share-body">
-        <GuestShareEpisodeList seasons={data.share.seasons} onPlay={openPlayer} />
-      </div>
+      <main class="share-main">
+        <div class="share-frame">
+          <GuestShareEpisodeList seasons={data.share.seasons} onPlay={openPlayer} />
+        </div>
+      </main>
     {/if}
   </div>
 {/if}
 
 <style>
   .share-shell {
-    display: grid;
-    grid-template-rows: auto auto;
-  }
-
-  .share-shell-show {
-    min-height: 100dvh;
-    grid-template-rows: auto auto 1fr;
-  }
-
-  .share-inner {
-    width: min(100%, 64rem);
-    margin: 0 auto;
+    --share-gutter: clamp(1rem, 3vw, 2.4rem);
+    --share-max-width: 64rem;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    min-height: 100dvh;
+    background: var(--color-bg);
+  }
+
+  .share-frame {
+    width: 100%;
+    max-width: var(--share-max-width);
+    margin: 0 auto;
   }
 
   .share-header {
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface-strong);
     backdrop-filter: blur(14px);
-    padding: 0.65rem clamp(1rem, 3vw, 2.4rem);
+    padding: 0.65rem var(--share-gutter);
+  }
+
+  .share-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
   }
 
   .expiry {
@@ -153,14 +188,27 @@
     font-size: 0.95rem;
   }
 
-  .share-body {
-    width: min(100%, 64rem);
-    margin: 0 auto;
-    padding: 1.5rem clamp(1rem, 3vw, 2.4rem) 2rem;
+  .share-hero {
+    padding-inline: var(--share-gutter);
+  }
+
+  .share-hero :global(.hero.standalone) {
+    min-height: clamp(16rem, 38vh, 26rem);
+    padding-inline: 0;
+    padding-block: clamp(1.5rem, 3vw, 2.25rem);
+  }
+
+  .share-hero :global(.hero.standalone .hero-inner) {
+    min-height: 0;
+  }
+
+  .share-main {
+    flex: 1;
+    padding: 1.5rem var(--share-gutter) 2rem;
   }
 
   @media (max-width: 760px) {
-    .share-inner {
+    .share-header-row {
       align-items: flex-start;
     }
   }
