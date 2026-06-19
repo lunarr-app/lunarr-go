@@ -85,12 +85,14 @@
     onProgressSaved,
     onReload,
     onReposition,
+    persistProgress = true,
   }: {
     data: PlaybackData;
     onClose?: () => void;
     onProgressSaved: () => void;
     onReload: () => void;
     onReposition: (href: string) => void;
+    persistProgress?: boolean;
   } = $props();
 
   function playbackDurationSeconds(sourceData: PlaybackData = data) {
@@ -523,6 +525,7 @@
     playbackIsCastOwned: (playback) => castHolder.api?.playbackIsCastOwned(playback) ?? false,
     onProgressSaved: () => onProgressSaved(),
     onReload: () => onReload(),
+    persistProgress: () => persistProgress,
   });
 
   function currentPlaybackTargetSeconds() {

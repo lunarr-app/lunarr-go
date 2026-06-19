@@ -4,13 +4,9 @@
   import { page } from "$app/state";
   import MediaPlayer from "$lib/components/MediaPlayer.svelte";
   import PlayerShell from "$lib/components/PlayerShell.svelte";
-  import {
-    appendClientPlaybackCapabilityParams,
-    appendWebPlaybackApiParamsFromPage,
-    detectClientPlaybackCapabilities,
-    webPlaybackApiPath,
-  } from "$lib/playback/capabilities";
   import { shouldClosePlaybackModalOnKeydown } from "$lib/playback/controls";
+  import { buildClientPlaybackApiHref } from "$lib/playback/client-href";
+  import { webPlaybackApiPath } from "$lib/playback/capabilities";
   import type { PlaybackData } from "$lib/server/playback";
 
   let playbackData: PlaybackData | null = $state(null);
@@ -25,23 +21,10 @@
   const playbackRequestHref = $derived.by(() => (mediaItemId ? playbackApiHref(mediaItemId, page.url) : null));
 
   function playbackApiHref(id: string, sourceUrl: URL) {
-    const apiUrl = new URL(webPlaybackApiPath(id), sourceUrl.origin);
-    appendWebPlaybackApiParamsFromPage(apiUrl.searchParams, sourceUrl);
-    if (browser) {
-      const video = document.createElement("video");
-      appendClientPlaybackCapabilityParams(
-        apiUrl.searchParams,
-        detectClientPlaybackCapabilities((type) => video.canPlayType(type), {
-          mediaSourceSupported: canUseFmp4MediaSource(),
-        }),
-      );
-    }
-    return `${apiUrl.pathname}${apiUrl.search}`;
-  }
-
-  function canUseFmp4MediaSource() {
-    if (!("MediaSource" in window)) return false;
-    return window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
+    return buildClientPlaybackApiHref({
+      pathname: webPlaybackApiPath(id),
+      sourceUrl,
+    });
   }
 
   function closeHref(sourceUrl = page.url) {
@@ -98,6 +81,7 @@
     const controller = new AbortController();
     loading = true;
     error = null;
+    playbackData = null;
 
     void fetch(href, { signal: controller.signal })
       .then(async (response) => {
@@ -105,10 +89,11 @@
           const body = await response.json().catch(() => null);
           throw new Error(body?.error ?? "Playback could not be started.");
         }
+        if (token !== reloadToken) return;
         playbackData = (await response.json()) as PlaybackData;
       })
       .catch((fetchError) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || token !== reloadToken) return;
         playbackData = null;
         error = fetchError instanceof Error ? fetchError.message : "Playback could not be started.";
       })

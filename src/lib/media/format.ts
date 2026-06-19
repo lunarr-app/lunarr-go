@@ -76,3 +76,22 @@ export function formatGibibytes(value: number): string {
   const gib = value / 1024 / 1024 / 1024;
   return `${Number.isInteger(gib) ? gib : gib.toFixed(1)} GiB`;
 }
+
+type EpisodeCodeInput = {
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+};
+
+export function formatEpisodeCode(
+  episode: EpisodeCodeInput | null | undefined,
+  options: { style?: "padded" | "short" } = {},
+): string {
+  if (!episode) return "";
+  const { seasonNumber, episodeNumber } = episode;
+  if (seasonNumber === null && episodeNumber === null) return "";
+  if (options.style === "short") {
+    return `${seasonNumber ?? "?"}x${episodeNumber ?? "?"}`;
+  }
+  if (seasonNumber === null && episodeNumber === null) return "";
+  return `S${seasonNumber === null ? "?" : String(seasonNumber).padStart(2, "0")}E${episodeNumber === null ? "?" : String(episodeNumber).padStart(2, "0")}`;
+}

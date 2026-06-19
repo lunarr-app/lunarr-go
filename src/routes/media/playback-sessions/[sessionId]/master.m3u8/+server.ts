@@ -1,8 +1,8 @@
+import { authorizePlaybackSessionMedia } from "$lib/server/shares/media-auth";
 import {
   SIGNED_PLAYBACK_TOKEN_QUERY_PARAM,
   signedPlaybackOptionsResponse,
   signedPlaybackSegmentQuery,
-  verifySignedPlaybackToken,
   withSignedPlaybackHeaders,
 } from "$lib/server/playback/signed-token";
 import {
@@ -21,15 +21,6 @@ import {
   hlsFailedActivityResponse,
 } from "../../hls-route-state";
 import type { RequestHandler } from "./$types";
-
-function authorizedUserId(input: { localsUserId?: string; sessionId: string; token: string | null }) {
-  if (input.localsUserId) return { userId: input.localsUserId, signed: false };
-  const payload = verifySignedPlaybackToken(input.token, {
-    route: "hls",
-    playbackSessionId: input.sessionId,
-  });
-  return payload ? { userId: payload.userId, signed: true } : null;
-}
 
 function cancelledPlaylistResponse() {
   return json({ error: "Playback playlist was not found." }, { status: 404 });
@@ -52,13 +43,13 @@ function shouldServeVirtualPlaylistByDefault(artifact: {
 }
 
 export const GET: RequestHandler = async ({ params, locals, url, request }) => {
-  const token = url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null;
-  const auth = authorizedUserId({
+  const auth = await authorizePlaybackSessionMedia({
     localsUserId: locals.user?.id,
-    sessionId: params.sessionId,
-    token,
+    playbackSessionId: params.sessionId,
+    url,
   });
   if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
+  const token = url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null;
 
   const artifact = await currentPlayableHlsArtifact(params.sessionId, auth.userId);
   if (artifact instanceof Response) return withSignedPlaybackHeaders(artifact, auth.signed);
@@ -147,11 +138,10 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
 };
 
 export const HEAD: RequestHandler = async ({ params, locals, url, request }) => {
-  const token = url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null;
-  const auth = authorizedUserId({
+  const auth = await authorizePlaybackSessionMedia({
     localsUserId: locals.user?.id,
-    sessionId: params.sessionId,
-    token,
+    playbackSessionId: params.sessionId,
+    url,
   });
   if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 

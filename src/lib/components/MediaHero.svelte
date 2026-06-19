@@ -11,6 +11,7 @@
     actions,
     below,
     bottomMargin = "0",
+    standalone = false,
   }: {
     title: string;
     posterUrl: string | null;
@@ -21,10 +22,15 @@
     actions?: Snippet;
     below?: Snippet;
     bottomMargin?: string;
+    standalone?: boolean;
   } = $props();
 </script>
 
-<section class="hero" style={`--backdrop: url('${backdropUrl ?? ""}'); --hero-bottom-margin: ${bottomMargin}`}>
+<section
+  class="hero"
+  class:standalone
+  style={`--backdrop: url('${backdropUrl ?? ""}'); --hero-bottom-margin: ${bottomMargin}`}
+>
   <div class="hero-inner">
     <div class="poster">
       {#if posterUrl}
@@ -83,6 +89,19 @@
       linear-gradient(90deg, rgba(8, 12, 17, 0.96) 0%, rgba(8, 12, 17, 0.82) 38%, rgba(8, 12, 17, 0.42) 100%),
       linear-gradient(0deg, #080c11 0%, rgba(8, 12, 17, 0.35) 42%, rgba(8, 12, 17, 0.75) 100%),
       var(--backdrop) center / cover;
+  }
+
+  .hero.standalone {
+    margin: 0;
+    min-height: 0;
+    padding-block: clamp(1.25rem, 3vw, 2rem);
+  }
+
+  .hero.standalone .hero-inner {
+    margin: 0 auto;
+    width: 100%;
+    min-height: 0;
+    align-items: start;
   }
 
   .hero-inner {
@@ -175,7 +194,7 @@
   }
 
   @media (max-width: 820px) {
-    .hero {
+    .hero:not(.standalone) {
       margin-inline: -1rem;
     }
 

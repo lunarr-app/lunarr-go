@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { formatFileSize, formatMediaDuration } from "$lib/media/format";
+  import { formatEpisodeCode, formatFileSize, formatMediaDuration } from "$lib/media/format";
   import { playbackModalHref } from "$lib/playback/links";
   import { Check, Play, RotateCcw } from "@lucide/svelte";
 
@@ -8,9 +8,7 @@
 
   const primaryFile = $derived(data.files[0] ?? null);
   const completed = $derived(data.progress.some((progress) => Number(progress.completed ?? 0) > 0));
-  const episodeCode = $derived(
-    `S${String(data.episode.seasonNumber ?? "?").padStart(2, "0")}E${String(data.episode.episodeNumber ?? "?").padStart(2, "0")}`,
-  );
+  const episodeCode = $derived(formatEpisodeCode(data.episode));
 
   function playHref(fileId: string) {
     return playbackModalHref({

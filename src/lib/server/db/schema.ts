@@ -21,6 +21,7 @@ import type {
 } from "./schema/media";
 import type { WatchProgressTable } from "./schema/playback";
 import type { ScanJobErrorTable, ScanJobTable } from "./schema/scanner";
+import type { MediaShareTable } from "./schema/shares";
 import type {
   MediaStreamInfoTable,
   PlaybackHlsCacheTable,
@@ -34,6 +35,7 @@ export type * from "./schema/library";
 export type * from "./schema/media";
 export type * from "./schema/playback";
 export type * from "./schema/scanner";
+export type * from "./schema/shares";
 export type * from "./schema/streaming";
 
 export type Database = {
@@ -62,4 +64,5 @@ export type Database = {
   playback_hls_cache: PlaybackHlsCacheTable;
   playback_hls_artifact: PlaybackHlsArtifactTable;
   media_stream_info: MediaStreamInfoTable;
+  media_share: MediaShareTable;
 };

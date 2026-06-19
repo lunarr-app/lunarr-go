@@ -22,6 +22,7 @@ export type MediaPlayerSessionDeps = {
   playbackIsCastOwned: (playback: PlaybackDecision) => boolean;
   onProgressSaved: () => void;
   onReload: () => void;
+  persistProgress?: boolean | (() => boolean);
 };
 
 export function createMediaPlayerSession(deps: MediaPlayerSessionDeps) {
@@ -53,6 +54,8 @@ export function createMediaPlayerSession(deps: MediaPlayerSessionDeps) {
   }
 
   async function save(completed = false, sourceData: PlaybackData = deps.getData()) {
+    const persistProgress = typeof deps.persistProgress === "function" ? deps.persistProgress() : deps.persistProgress;
+    if (persistProgress === false) return;
     const payload = progressPayload(sourceData, completed);
     if (!payload) return;
 
@@ -72,6 +75,8 @@ export function createMediaPlayerSession(deps: MediaPlayerSessionDeps) {
   }
 
   function flushProgress(sourceData: PlaybackData = deps.getData()) {
+    const persistProgress = typeof deps.persistProgress === "function" ? deps.persistProgress() : deps.persistProgress;
+    if (persistProgress === false) return;
     const payload = progressPayload(sourceData, false);
     if (!payload) return;
 

@@ -4,6 +4,7 @@ import { hasRegisteredUsers } from "$lib/server/auth/users";
 import { migrateDatabase } from "$lib/server/db";
 import { cleanupJobHistory } from "$lib/server/jobs";
 import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM } from "$lib/server/playback/signed-token";
+import { SHARE_TOKEN_QUERY_PARAM } from "$lib/shares/constants";
 import { resumeInterruptedJobs } from "$lib/server/scanner";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
@@ -41,7 +42,12 @@ function isAuthApiPath(pathname: string) {
 }
 
 function isPublicApiPath(pathname: string) {
-  return pathname === "/api/openapi.json" || pathname === "/api/openapi.yaml";
+  return (
+    pathname === "/api/openapi.json" ||
+    pathname === "/api/openapi.yaml" ||
+    pathname === "/api/share" ||
+    pathname.startsWith("/api/share/")
+  );
 }
 
 function isPublicPath(pathname: string) {
@@ -49,6 +55,8 @@ function isPublicPath(pathname: string) {
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/setup" ||
+    pathname === "/share" ||
+    pathname.startsWith("/share/") ||
     isPublicApiPath(pathname) ||
     isAuthApiPath(pathname)
   );
@@ -63,7 +71,11 @@ function isMediaResourcePath(pathname: string) {
 }
 
 function canResolveUnauthenticatedMediaResource(event: RequestEvent) {
-  return event.request.method === "OPTIONS" || event.url.searchParams.has(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM);
+  return (
+    event.request.method === "OPTIONS" ||
+    event.url.searchParams.has(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ||
+    event.url.searchParams.has(SHARE_TOKEN_QUERY_PARAM)
+  );
 }
 
 export const handle: Handle = async ({ event, resolve }) => {

@@ -3,6 +3,7 @@
   import { page } from "$app/state";
   import { Activity, Clock3, Film, Library, LogOut, Settings, Tv, UserRound, Users } from "@lucide/svelte";
   import type { Snippet } from "svelte";
+  import LunarrBrand from "$lib/components/LunarrBrand.svelte";
   import type PlaybackModalComponent from "$lib/components/PlaybackModal.svelte";
 
   let {
@@ -84,10 +85,7 @@
 <div class="shell">
   <header class="app-header">
     <div class="header-primary">
-      <a class="brand" href="/movies" aria-label="Lunarr home">
-        <img class="brand-logo brand-logo-dark" src="/images/lunarr-logo.svg" alt="Lunarr" />
-        <img class="brand-logo brand-logo-light" src="/images/lunarr-logo-light.svg" alt="Lunarr" />
-      </a>
+      <LunarrBrand href="/movies" />
 
       <nav class="nav-list" aria-label="App navigation">
         {#each primaryNav as item}
@@ -203,31 +201,6 @@
     align-items: center;
     gap: 1.25rem;
     min-width: 0;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-  }
-
-  .brand-logo {
-    width: 8rem;
-    max-width: 100%;
-    height: auto;
-    display: block;
-  }
-
-  .brand-logo-light {
-    display: none;
-  }
-
-  :global(:root[data-theme="light"]) .brand-logo-dark {
-    display: none;
-  }
-
-  :global(:root[data-theme="light"]) .brand-logo-light {
-    display: block;
   }
 
   .nav-list {
@@ -397,14 +370,6 @@
     .header-primary {
       flex: 1;
       gap: 0.55rem;
-    }
-
-    .brand {
-      min-height: 2.15rem;
-    }
-
-    .brand-logo {
-      width: 6.5rem;
     }
 
     .nav-list {

@@ -301,17 +301,22 @@ export async function getPlaybackData(input: {
   mediaItemId: string;
   userId: string;
   url: URL;
+  skipProgress?: boolean;
+  backHref?: string;
 }): Promise<PlaybackData | null> {
   const detail = await getWatchItemDetail(input.mediaItemId, input.userId);
   if (!detail) return null;
 
   const requestedMediaFileId = input.url.searchParams.get("file")?.trim() || null;
   const explicitStartSeconds = parseRequestedStartSeconds(input.url);
-  const latestResumeProgress = [...detail.progress]
-    .filter((item) => !Boolean(item.completed) && Number(item.position_seconds ?? 0) > 0)
-    .sort((left, right) => String(right.updated_at).localeCompare(String(left.updated_at)))[0];
+  const latestResumeProgress = input.skipProgress
+    ? undefined
+    : [...detail.progress]
+        .filter((item) => !Boolean(item.completed) && Number(item.position_seconds ?? 0) > 0)
+        .sort((left, right) => String(right.updated_at).localeCompare(String(left.updated_at)))[0];
   const mediaFileId = requestedMediaFileId ?? latestResumeProgress?.media_file_id ?? null;
-  const requestedProgress = mediaFileId ? detail.progress.find((item) => item.media_file_id === mediaFileId) : null;
+  const requestedProgress =
+    input.skipProgress || !mediaFileId ? null : detail.progress.find((item) => item.media_file_id === mediaFileId);
   const startSecondsForPlayback =
     explicitStartSeconds ??
     (requestedProgress && !requestedProgress.completed ? Math.floor(requestedProgress.position_seconds ?? 0) : 0);
@@ -322,12 +327,22 @@ export async function getPlaybackData(input: {
     playbackTarget: normalizePlaybackTarget(input.url.searchParams.get("target")),
   });
   if (!playback?.file) return null;
-  const progress = detail.progress.find((item) => item.media_file_id === playback.file.id);
+  const progress = input.skipProgress
+    ? undefined
+    : detail.progress.find((item) => item.media_file_id === playback.file.id);
 
   return {
-    item: detail.item,
+    item: {
+      ...detail.item,
+      backHref: input.backHref ?? detail.item.backHref,
+    },
     playback,
-    startSeconds: explicitStartSeconds ?? (progress?.completed ? 0 : Math.floor(progress?.position_seconds ?? 0)),
+    startSeconds:
+      input.skipProgress || explicitStartSeconds !== null
+        ? (explicitStartSeconds ?? 0)
+        : progress?.completed
+          ? 0
+          : Math.floor(progress?.position_seconds ?? 0),
   };
 }
 

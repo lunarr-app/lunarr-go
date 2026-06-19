@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import MediaHero from "$lib/components/MediaHero.svelte";
+  import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
   import { formatClockDuration, formatDateTime, formatFileSize, formatMediaDuration } from "$lib/media/format";
   import { tmdbImageUrl } from "$lib/media/images";
   import { playbackModalHref } from "$lib/playback/links";
@@ -17,9 +18,11 @@
     Star,
     Tags,
     Users,
+    Link2,
   } from "@lucide/svelte";
 
   let { data, form } = $props();
+  let shareModalOpen = $state(false);
 
   const firstFile = $derived(data.files[0]);
   const runtimeLabel = $derived(data.movie.runtime_seconds ? formatMediaDuration(data.movie.runtime_seconds) : null);
@@ -200,6 +203,12 @@
       <Sparkles size={16} aria-hidden="true" />
       Similar
     </a>
+    {#if data.canManageShares}
+      <button class="button secondary" type="button" onclick={() => (shareModalOpen = true)}>
+        <Link2 size={16} aria-hidden="true" />
+        Share
+      </button>
+    {/if}
   {/snippet}
 
   {#snippet below()}
@@ -414,6 +423,15 @@
     {/if}
   </aside>
 </div>
+
+{#if shareModalOpen}
+  <ShareLinkModal
+    title={data.movie.title}
+    kind="movie"
+    mediaItemId={data.movie.id}
+    onClose={() => (shareModalOpen = false)}
+  />
+{/if}
 
 <style>
   .primary-action {

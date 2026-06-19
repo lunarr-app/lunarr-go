@@ -9,12 +9,14 @@ import migration0001 from "./migrations/0001_initial.sql?raw";
 import migration0002 from "./migrations/0002_webdav_library_source.sql?raw";
 import migration0003 from "./migrations/0003_playback_hls_cache.sql?raw";
 import migration0004 from "./migrations/0004_admin_user_fields.sql?raw";
+import migration0005 from "./migrations/0005_media_share.sql?raw";
 
 const MIGRATION_SOURCES = {
   "0001_initial": migration0001,
   "0002_webdav_library_source": migration0002,
   "0003_playback_hls_cache": migration0003,
   "0004_admin_user_fields": migration0004,
+  "0005_media_share": migration0005,
 } satisfies Record<string, string>;
 
 let sqlite: LibsqlDatabase.Database | undefined;

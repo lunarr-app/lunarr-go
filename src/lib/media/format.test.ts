@@ -3,6 +3,7 @@ import {
   formatClockDuration,
   formatDateTime,
   formatElapsedDuration,
+  formatEpisodeCode,
   formatFileSize,
   formatGibibytes,
   formatMediaDuration,
@@ -66,5 +67,23 @@ describe("formatGibibytes", () => {
   test("formats gibibyte labels", () => {
     expect(formatGibibytes(2 * 1024 * 1024 * 1024)).toBe("2 GiB");
     expect(formatGibibytes(1.5 * 1024 * 1024 * 1024)).toBe("1.5 GiB");
+  });
+});
+
+describe("formatEpisodeCode", () => {
+  test("formats padded episode codes", () => {
+    expect(formatEpisodeCode({ seasonNumber: 1, episodeNumber: 5 })).toBe("S01E05");
+    expect(formatEpisodeCode({ seasonNumber: 12, episodeNumber: 3 })).toBe("S12E03");
+  });
+
+  test("formats short guest episode codes", () => {
+    expect(formatEpisodeCode({ seasonNumber: 1, episodeNumber: 5 }, { style: "short" })).toBe("1x5");
+    expect(formatEpisodeCode({ seasonNumber: null, episodeNumber: 2 }, { style: "short" })).toBe("?x2");
+  });
+
+  test("returns empty string when numbers are missing", () => {
+    expect(formatEpisodeCode({ seasonNumber: null, episodeNumber: null })).toBe("");
+    expect(formatEpisodeCode(null)).toBe("");
+    expect(formatEpisodeCode({ seasonNumber: null, episodeNumber: 5 })).toBe("S?E05");
   });
 });

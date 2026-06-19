@@ -12,6 +12,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   return {
     ...detail,
     canManageMetadata: isAdmin(locals.user),
+    canManageShares: isAdmin(locals.user),
     tmdbConfigured: await tmdbCredentialsConfigured(),
   };
 };

@@ -1,12 +1,14 @@
 <script lang="ts">
   import { page } from "$app/state";
   import MediaHero from "$lib/components/MediaHero.svelte";
-  import { formatDateTime } from "$lib/media/format";
+  import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
+  import { formatDateTime, formatEpisodeCode } from "$lib/media/format";
   import { tmdbImageUrl } from "$lib/media/images";
   import { playbackModalHref } from "$lib/playback/links";
-  import { Calendar, CirclePlay, ExternalLink, RefreshCw, Sparkles, Star, Users } from "@lucide/svelte";
+  import { Calendar, CirclePlay, ExternalLink, Link2, RefreshCw, Sparkles, Star, Users } from "@lucide/svelte";
 
   let { data, form } = $props();
+  let shareModalOpen = $state(false);
 
   type Season = (typeof data.seasons)[number];
   type Episode = Season["episodes"][number];
@@ -72,8 +74,7 @@
   }
 
   function episodeCode(episode: Pick<Episode, "seasonNumber" | "episodeNumber"> | undefined) {
-    if (!episode || episode.seasonNumber === null || episode.episodeNumber === null) return "";
-    return `S${String(episode.seasonNumber).padStart(2, "0")}E${String(episode.episodeNumber).padStart(2, "0")}`;
+    return formatEpisodeCode(episode);
   }
 </script>
 
@@ -118,6 +119,12 @@
       <Sparkles size={16} aria-hidden="true" />
       Similar
     </a>
+    {#if data.canManageShares}
+      <button class="button secondary" type="button" onclick={() => (shareModalOpen = true)}>
+        <Link2 size={16} aria-hidden="true" />
+        Share
+      </button>
+    {/if}
   {/snippet}
 
   {#snippet below()}
@@ -296,6 +303,19 @@
     {/if}
   </aside>
 </div>
+
+{#if shareModalOpen}
+  <ShareLinkModal
+    title={data.show.title}
+    kind="show"
+    mediaItemId={data.show.id}
+    seasons={data.seasons.map((season) => ({
+      id: season.id,
+      title: season.title,
+    }))}
+    onClose={() => (shareModalOpen = false)}
+  />
+{/if}
 
 <style>
   .primary-action {

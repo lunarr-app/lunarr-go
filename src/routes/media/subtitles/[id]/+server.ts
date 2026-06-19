@@ -1,27 +1,14 @@
 import { externalMovieSubtitleResponse } from "$lib/server/media/subtitles";
-import {
-  SIGNED_PLAYBACK_TOKEN_QUERY_PARAM,
-  signedPlaybackOptionsResponse,
-  verifySignedPlaybackToken,
-  withSignedPlaybackHeaders,
-} from "$lib/server/playback/signed-token";
+import { authorizeSubtitleMedia } from "$lib/server/shares/media-auth";
+import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "$lib/server/playback/signed-token";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
-function authorizedUserId(input: { localsUserId?: string; subtitleTrackId: string; token: string | null }) {
-  if (input.localsUserId) return { userId: input.localsUserId, signed: false };
-  const payload = verifySignedPlaybackToken(input.token, {
-    route: "subtitle",
-    subtitleTrackId: input.subtitleTrackId,
-  });
-  return payload ? { userId: payload.userId, signed: true } : null;
-}
-
 export const GET: RequestHandler = async ({ params, locals, request, url }) => {
-  const auth = authorizedUserId({
+  const auth = await authorizeSubtitleMedia({
     localsUserId: locals.user?.id,
     subtitleTrackId: params.id,
-    token: url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
+    url,
   });
   if (!auth) {
     return json({ error: "Unauthorized" }, { status: 401 });
@@ -32,10 +19,10 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
 };
 
 export const HEAD: RequestHandler = async ({ params, locals, request, url }) => {
-  const auth = authorizedUserId({
+  const auth = await authorizeSubtitleMedia({
     localsUserId: locals.user?.id,
     subtitleTrackId: params.id,
-    token: url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
+    url,
   });
   if (!auth) {
     return new Response(null, { status: 401 });

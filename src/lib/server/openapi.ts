@@ -139,6 +139,7 @@ export const openApiDocument = {
     { name: "Playback" },
     { name: "Media" },
     { name: "Admin" },
+    { name: "Shares" },
     { name: "Docs" },
   ],
   security: [{ sessionCookie: [] }, { apiKey: [] }],
@@ -603,6 +604,62 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/shares": {
+      get: {
+        tags: ["Admin"],
+        summary: "List guest share links for a movie or show.",
+        operationId: "listMediaShares",
+        parameters: [
+          {
+            name: "mediaItemId",
+            in: "query",
+            required: true,
+            schema: stringSchema,
+            description: "Movie or show identifier.",
+          },
+        ],
+        responses: {
+          "200": jsonResponse(objectSchema("Share list payload.")),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+        },
+      },
+      post: {
+        tags: ["Admin"],
+        summary: "Create a guest share link.",
+        operationId: "createMediaShare",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: objectSchema("Create share request."),
+            },
+          },
+        },
+        responses: {
+          "201": jsonResponse(objectSchema("Created share payload."), "Share created."),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+        },
+      },
+    },
+    "/api/shares/{id}": {
+      delete: {
+        tags: ["Admin"],
+        summary: "Revoke a guest share link.",
+        operationId: "revokeMediaShare",
+        parameters: [pathIdParameter("id", "Share identifier.")],
+        responses: {
+          "200": jsonResponse(objectSchema("Revoked share payload.")),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+    },
     "/api/shows/{id}": {
       get: {
         tags: ["Catalog"],
@@ -738,6 +795,61 @@ export const openApiDocument = {
           "200": okResponse,
           "400": errorResponse,
           "401": errorResponse,
+        },
+      },
+    },
+    "/api/share/{token}": {
+      get: {
+        tags: ["Shares"],
+        summary: "Get public guest share page data.",
+        operationId: "getGuestShare",
+        security: [],
+        parameters: [
+          {
+            name: "token",
+            in: "path",
+            required: true,
+            schema: stringSchema,
+            description: "Opaque guest share token.",
+          },
+        ],
+        responses: {
+          "200": jsonResponse(objectSchema("Guest share page payload.")),
+          "404": errorResponse,
+          "429": errorResponse,
+        },
+      },
+    },
+    "/api/share/{token}/playback/{mediaItemId}": {
+      get: {
+        tags: ["Shares"],
+        summary: "Prepare guest playback for a shared movie or episode.",
+        operationId: "getGuestSharePlayback",
+        security: [],
+        parameters: [
+          {
+            name: "token",
+            in: "path",
+            required: true,
+            schema: stringSchema,
+          },
+          pathIdParameter("mediaItemId", "Movie or episode identifier."),
+          {
+            name: "file",
+            in: "query",
+            required: false,
+            schema: stringSchema,
+          },
+          playbackTargetParameter(),
+          ...playbackCapabilityParameters(),
+        ],
+        responses: {
+          "200": jsonResponse(objectSchema("Signed guest playback payload.")),
+          "403": errorResponse,
+          "404": errorResponse,
+          "409": errorResponse,
+          "429": errorResponse,
+          "500": errorResponse,
         },
       },
     },

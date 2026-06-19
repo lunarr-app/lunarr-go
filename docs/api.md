@@ -213,6 +213,52 @@ Body:
 
 Season watched requests only need `completed`, the server marks the accessible playable episodes in that season.
 
+## Guest shares
+
+Admins can create time-limited guest links for a movie or TV show. Guests open `/share/:token` without signing in. Guest playback does not write watch progress.
+
+Admin management (admin session or admin-created API key):
+
+```http
+POST /api/shares
+GET /api/shares?mediaItemId=
+DELETE /api/shares/:id
+```
+
+Create share body:
+
+```json
+{
+  "kind": "movie",
+  "mediaItemId": "movie-id",
+  "expiresInSeconds": 604800
+}
+```
+
+`expiresInSeconds` and `expiresAt` accept durations up to about 10 years.
+
+For shows, omit `seasonIds` to share all seasons or pass selected season ids:
+
+```json
+{
+  "kind": "show",
+  "mediaItemId": "show-id",
+  "seasonIds": ["season-id-1", "season-id-2"],
+  "expiresInSeconds": 604800
+}
+```
+
+Public guest endpoints (no authentication):
+
+```http
+GET /api/share/:token
+GET /api/share/:token/playback/:mediaItemId
+```
+
+Guest share endpoints are rate limited per client IP (60 resolve requests/minute, 30 playback prep requests/minute). Excess requests return `429` with `{ "error": "Too many requests. Try again later." }`.
+
+Signed stream, HLS, and subtitle URLs include both `remoteToken` and `shareToken` for scoped guest access.
+
 ## Admin
 
 Admin endpoints require an admin user or an API key created by an admin.
@@ -240,6 +286,9 @@ PATCH /api/users/:userId
 DELETE /api/users/:userId
 POST /api/movies/:id/metadata/refresh
 POST /api/shows/:id/metadata/refresh
+POST /api/shares
+GET /api/shares?mediaItemId=
+DELETE /api/shares/:id
 ```
 
 `GET /api/users` returns registered accounts with roles and timestamps. Admins can create accounts with `POST /api/users`, promote or demote users with `PATCH /api/users/:userId`, and remove accounts with `DELETE /api/users/:userId`. Lunarr keeps at least one admin and blocks self-deletion.

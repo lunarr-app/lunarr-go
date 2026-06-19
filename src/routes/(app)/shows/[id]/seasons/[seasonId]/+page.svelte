@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import MediaHero from "$lib/components/MediaHero.svelte";
+  import { formatEpisodeCode } from "$lib/media/format";
   import { playbackModalHref } from "$lib/playback/links";
   import { Calendar, Check, ChevronLeft, ChevronRight, CirclePlay, Clock3, RotateCcw, Star } from "@lucide/svelte";
 
@@ -38,8 +39,7 @@
   });
 
   function episodeCode(episode: Pick<Episode, "seasonNumber" | "episodeNumber">) {
-    if (episode.seasonNumber === null || episode.episodeNumber === null) return "";
-    return `S${String(episode.seasonNumber).padStart(2, "0")}E${String(episode.episodeNumber).padStart(2, "0")}`;
+    return formatEpisodeCode(episode);
   }
 
   function watchHref(episode: Pick<Episode, "id" | "fileId">) {

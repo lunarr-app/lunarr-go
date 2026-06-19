@@ -4,6 +4,7 @@ import {
   createSignedPlaybackToken,
   type SignedPlaybackRoute,
 } from "$lib/server/playback/signed-token";
+import { SHARE_TOKEN_QUERY_PARAM } from "$lib/shares/constants";
 import { hlsPlaylistFileExists } from "$lib/server/transcoding/hls";
 import { getAuthorizedHlsArtifact, isEndedPlaybackArtifactFresh } from "$lib/server/transcoding/sessions";
 import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
@@ -18,9 +19,19 @@ export class PlaybackSourceRequestError extends Error {
   }
 }
 
-function absoluteSignedUrl(pathname: string, token: string, origin?: string) {
-  if (!origin) return absoluteSignedPlaybackUrl(pathname, token);
-  return new URL(appendSignedPlaybackToken(pathname, token), origin).toString();
+function appendShareToken(pathname: string, shareToken?: string) {
+  if (!shareToken) return pathname;
+  const separator = pathname.includes("?") ? "&" : "?";
+  return `${pathname}${separator}${SHARE_TOKEN_QUERY_PARAM}=${encodeURIComponent(shareToken)}`;
+}
+
+function absoluteSignedUrl(pathname: string, token: string, origin?: string, shareToken?: string) {
+  const signedPath = appendShareToken(appendSignedPlaybackToken(pathname, token), shareToken);
+  if (!origin) {
+    const remoteOnly = absoluteSignedPlaybackUrl(pathname, token);
+    return shareToken ? appendShareToken(remoteOnly, shareToken) : remoteOnly;
+  }
+  return new URL(signedPath, origin).toString();
 }
 
 async function assertSignedHlsReady(input: { artifact: Awaited<ReturnType<typeof getAuthorizedHlsArtifact>> }) {
@@ -45,7 +56,12 @@ async function assertSignedHlsReady(input: { artifact: Awaited<ReturnType<typeof
   }
 }
 
-async function signedPlaybackStreamUrl(input: { playback: PlaybackDecision; userId: string; origin: string }) {
+async function signedPlaybackStreamUrl(input: {
+  playback: PlaybackDecision;
+  userId: string;
+  origin: string;
+  shareToken?: string;
+}) {
   const { playback } = input;
   let route: SignedPlaybackRoute;
   let streamPath: string;
@@ -76,23 +92,35 @@ async function signedPlaybackStreamUrl(input: { playback: PlaybackDecision; user
     mediaFileId: playback.file.id,
     playbackSessionId,
   });
-  return absoluteSignedUrl(streamPath, token, input.origin);
+  return absoluteSignedUrl(streamPath, token, input.origin, input.shareToken);
 }
 
-function signedSubtitleSrc(input: { trackId: string; mediaFileId: string; userId: string; origin: string }) {
+function signedSubtitleSrc(input: {
+  trackId: string;
+  mediaFileId: string;
+  userId: string;
+  origin: string;
+  shareToken?: string;
+}) {
   const token = createSignedPlaybackToken({
     route: "subtitle",
     userId: input.userId,
     mediaFileId: input.mediaFileId,
     subtitleTrackId: input.trackId,
   });
-  return absoluteSignedUrl(`/media/subtitles/${encodeURIComponent(input.trackId)}`, token, input.origin);
+  return absoluteSignedUrl(
+    `/media/subtitles/${encodeURIComponent(input.trackId)}`,
+    token,
+    input.origin,
+    input.shareToken,
+  );
 }
 
 export async function withSignedPlaybackSource(input: {
   data: PlaybackData;
   userId: string;
   origin: string;
+  shareToken?: string;
 }): Promise<PlaybackData> {
   const playback = input.data.playback;
   if (playback.status !== "ready" || !playback.streamUrl) return input.data;
@@ -105,6 +133,7 @@ export async function withSignedPlaybackSource(input: {
         playback,
         userId: input.userId,
         origin: input.origin,
+        shareToken: input.shareToken,
       }),
       tracks: playback.tracks.map((track) => ({
         ...track,
@@ -113,6 +142,7 @@ export async function withSignedPlaybackSource(input: {
           mediaFileId: playback.file.id,
           userId: input.userId,
           origin: input.origin,
+          shareToken: input.shareToken,
         }),
       })),
     },

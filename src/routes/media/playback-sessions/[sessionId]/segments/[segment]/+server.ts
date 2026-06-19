@@ -1,7 +1,7 @@
+import { authorizePlaybackSessionMedia } from "$lib/server/shares/media-auth";
 import {
   SIGNED_PLAYBACK_TOKEN_QUERY_PARAM,
   signedPlaybackOptionsResponse,
-  verifySignedPlaybackToken,
   withSignedPlaybackHeaders,
 } from "$lib/server/playback/signed-token";
 import {
@@ -26,15 +26,6 @@ import {
   playbackRouteError,
 } from "../../../hls-route-state";
 import type { RequestHandler } from "./$types";
-
-function authorizedUserId(input: { localsUserId?: string; sessionId: string; token: string | null }) {
-  if (input.localsUserId) return { userId: input.localsUserId, signed: false };
-  const payload = verifySignedPlaybackToken(input.token, {
-    route: "hls",
-    playbackSessionId: input.sessionId,
-  });
-  return payload ? { userId: payload.userId, signed: true } : null;
-}
 
 function cancelledSegmentResponse() {
   return new Response("Not found.", { status: 404 });
@@ -64,10 +55,10 @@ function staleCancelledPlaybackSegmentResponse(artifact: AuthorizedHlsArtifact) 
 }
 
 export const GET: RequestHandler = async ({ params, locals, request, url }) => {
-  const auth = authorizedUserId({
+  const auth = await authorizePlaybackSessionMedia({
     localsUserId: locals.user?.id,
-    sessionId: params.sessionId,
-    token: url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
+    playbackSessionId: params.sessionId,
+    url,
   });
   if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 
@@ -193,10 +184,10 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
 };
 
 export const HEAD: RequestHandler = async ({ params, locals, request, url }) => {
-  const auth = authorizedUserId({
+  const auth = await authorizePlaybackSessionMedia({
     localsUserId: locals.user?.id,
-    sessionId: params.sessionId,
-    token: url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null,
+    playbackSessionId: params.sessionId,
+    url,
   });
   if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
 
