@@ -1,9 +1,5 @@
 import { authorizePlaybackSessionMedia } from "$lib/server/shares/media-auth";
-import {
-  SIGNED_PLAYBACK_TOKEN_QUERY_PARAM,
-  signedPlaybackOptionsResponse,
-  withSignedPlaybackHeaders,
-} from "$lib/server/playback/signed-token";
+import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "$lib/server/playback/signed-token";
 import {
   hlsSegmentIndex,
   hlsSegmentHeadResponse,
