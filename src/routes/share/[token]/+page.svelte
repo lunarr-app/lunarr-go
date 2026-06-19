@@ -5,7 +5,7 @@
   import GuestShareEpisodeList from "$lib/components/GuestShareEpisodeList.svelte";
   import LunarrBrand from "$lib/components/LunarrBrand.svelte";
   import MediaHero from "$lib/components/MediaHero.svelte";
-  import { formatEpisodeCode, formatMediaDuration } from "$lib/media/format";
+  import { formatMediaDuration } from "$lib/media/format";
   import { buildClientPlaybackApiHref } from "$lib/playback/client-href";
   import { formatShareExpiryDescription } from "$lib/shares/format";
   import { shareClosePlaybackHref, sharePlaybackApiPath, sharePlaybackHref } from "$lib/shares/links";
@@ -23,15 +23,6 @@
         })
       : null,
   );
-
-  const firstPlayableEpisode = $derived.by(() => {
-    if (data.share.kind !== "show") return null;
-    for (const season of data.share.seasons) {
-      const episode = season.episodes.find((item) => item.fileId);
-      if (episode) return episode;
-    }
-    return null;
-  });
 
   const playableEpisodeCount = $derived.by(() => {
     if (data.share.kind !== "show") return 0;
@@ -65,9 +56,6 @@
   const expiryLabel = $derived(formatShareExpiryDescription(data.share.expiresAt));
   const runtimeLabel = $derived(
     data.share.kind === "movie" && data.share.runtimeSeconds ? formatMediaDuration(data.share.runtimeSeconds) : null,
-  );
-  const firstEpisodeLabel = $derived(
-    firstPlayableEpisode ? formatEpisodeCode(firstPlayableEpisode, { style: "padded" }) : null,
   );
 </script>
 
@@ -128,11 +116,6 @@
                 Play
               </button>
             {/if}
-          {:else if firstPlayableEpisode}
-            <button type="button" onclick={() => openPlayer(firstPlayableEpisode.id)}>
-              <CirclePlay size={18} aria-hidden="true" />
-              Play {firstEpisodeLabel}
-            </button>
           {/if}
         {/snippet}
       </MediaHero>

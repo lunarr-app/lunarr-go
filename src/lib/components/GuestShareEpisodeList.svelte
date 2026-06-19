@@ -12,14 +12,44 @@
     seasons: ShareSeason[];
     onPlay: (episodeId: string) => void;
   } = $props();
+
+  let selectedSeasonId = $state("");
+
+  const activeSeason = $derived(seasons.find((season) => season.id === selectedSeasonId) ?? seasons[0] ?? null);
+
+  $effect(() => {
+    if (!seasons.some((season) => season.id === selectedSeasonId)) {
+      selectedSeasonId = seasons[0]?.id ?? "";
+    }
+  });
+
+  function seasonTabLabel(season: ShareSeason) {
+    if (season.seasonNumber !== null) {
+      return `Season ${season.seasonNumber}`;
+    }
+    return season.title;
+  }
 </script>
 
 <section class="episodes-section" aria-label="Episodes">
-  {#each seasons as season (season.id)}
-    <div class="season-block">
-      <h2>{season.title}</h2>
+  <div class="season-tabs" role="tablist" aria-label="Seasons">
+    {#each seasons as season (season.id)}
+      <button
+        class:active={activeSeason?.id === season.id}
+        type="button"
+        role="tab"
+        aria-selected={activeSeason?.id === season.id}
+        onclick={() => (selectedSeasonId = season.id)}
+      >
+        {seasonTabLabel(season)}
+      </button>
+    {/each}
+  </div>
+
+  {#if activeSeason}
+    <div role="tabpanel" aria-label={seasonTabLabel(activeSeason)}>
       <div class="episodes">
-        {#each season.episodes as episode (episode.id)}
+        {#each activeSeason.episodes as episode (episode.id)}
           <article class="episode-row">
             <div class="still" aria-hidden="true">
               {#if episode.stillUrl}
@@ -48,18 +78,46 @@
         {/each}
       </div>
     </div>
-  {/each}
+  {/if}
 </section>
 
 <style>
   .episodes-section {
     display: grid;
-    gap: 1.5rem;
+    gap: 1rem;
   }
 
-  .season-block h2 {
-    margin: 0 0 0.75rem;
-    font-size: 1.1rem;
+  .season-tabs {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+    border-bottom: 1px solid var(--color-border);
+    scrollbar-width: thin;
+  }
+
+  .season-tabs button {
+    flex: 0 0 auto;
+    min-height: 2.25rem;
+    padding: 0.35rem 0.85rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-subtle);
+    font-size: 0.92rem;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+
+  .season-tabs button:hover {
+    color: var(--color-text);
+  }
+
+  .season-tabs button.active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-accent);
   }
 
   .episodes {
