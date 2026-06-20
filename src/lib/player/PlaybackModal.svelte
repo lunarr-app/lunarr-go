@@ -2,8 +2,8 @@
   import { browser } from "$app/environment";
   import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
-  import MediaPlayer from "$lib/components/MediaPlayer.svelte";
-  import PlayerShell from "$lib/components/PlayerShell.svelte";
+  import MediaPlayer from "$lib/player/MediaPlayer.svelte";
+  import PlayerShell from "$lib/player/PlayerShell.svelte";
   import { shouldClosePlaybackModalOnKeydown } from "$lib/playback/controls";
   import { buildClientPlaybackApiHref } from "$lib/playback/client-href";
   import { webPlaybackApiPath } from "$lib/playback/capabilities";

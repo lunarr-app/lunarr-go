@@ -4,7 +4,7 @@
   import { Activity, Clock3, Film, Library, Link2, LogOut, Settings, Tv, UserRound, Users } from "@lucide/svelte";
   import type { Snippet } from "svelte";
   import LunarrBrand from "$lib/components/LunarrBrand.svelte";
-  import type PlaybackModalComponent from "$lib/components/PlaybackModal.svelte";
+  import type PlaybackModalComponent from "$lib/player/PlaybackModal.svelte";
 
   let {
     children,
@@ -73,7 +73,7 @@
     if (!browser || !playbackRequested || PlaybackModal || playbackModalLoading) return;
 
     playbackModalLoading = true;
-    void import("$lib/components/PlaybackModal.svelte")
+    void import("$lib/player/PlaybackModal.svelte")
       .then((module) => {
         PlaybackModal = module.default;
       })

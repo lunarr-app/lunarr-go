@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
-  import PlayerShell from "$lib/components/PlayerShell.svelte";
+  import PlayerShell from "$lib/player/PlayerShell.svelte";
   import {
     Airplay,
     Captions,
@@ -16,9 +16,9 @@
     VolumeX,
     X,
   } from "@lucide/svelte";
-  import { createMediaPlayerCast } from "$lib/components/media-player-cast.svelte";
-  import { createMediaPlayerHls } from "$lib/components/media-player-hls.svelte";
-  import { createMediaPlayerSession } from "$lib/components/media-player-session.svelte";
+  import { createMediaPlayerCast } from "$lib/player/media-player-cast.svelte";
+  import { createMediaPlayerHls } from "$lib/player/media-player-hls.svelte";
+  import { createMediaPlayerSession } from "$lib/player/media-player-session.svelte";
   import {
     airPlayActiveFromVideo,
     airPlayAvailableFromEvent,

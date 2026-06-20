@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
-  import MediaPlayer from "$lib/components/MediaPlayer.svelte";
-  import PlayerShell from "$lib/components/PlayerShell.svelte";
+  import MediaPlayer from "$lib/player/MediaPlayer.svelte";
+  import PlayerShell from "$lib/player/PlayerShell.svelte";
   import { shouldClosePlaybackModalOnKeydown } from "$lib/playback/controls";
   import type { PlaybackData } from "$lib/server/playback";
 
