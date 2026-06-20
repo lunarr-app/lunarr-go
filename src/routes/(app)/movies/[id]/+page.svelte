@@ -1,25 +1,13 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import MediaHero from "$lib/components/MediaHero.svelte";
+  import MediaCastRail from "$lib/components/MediaCastRail.svelte";
+  import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
-  import { formatClockDuration, formatDateTime, formatFileSize, formatMediaDuration } from "$lib/media/format";
-  import { tmdbImageUrl } from "$lib/media/images";
+  import { formatMediaDuration } from "$lib/media/format";
   import { playbackModalHref } from "$lib/playback/links";
-  import {
-    Calendar,
-    Check,
-    CirclePlay,
-    Clock3,
-    ExternalLink,
-    HardDrive,
-    RefreshCw,
-    RotateCcw,
-    Sparkles,
-    Star,
-    Tags,
-    Users,
-    Link2,
-  } from "@lucide/svelte";
+  import MovieDetailHero from "./_components/MovieDetailHero.svelte";
+  import MovieFilesSection from "./_components/MovieFilesSection.svelte";
+  import MovieMetadataSidebar from "./_components/MovieMetadataSidebar.svelte";
 
   let { data, form } = $props();
   let shareModalOpen = $state(false);
@@ -92,59 +80,6 @@
       : null,
   );
   const providerLabel = $derived(data.movie.provider ? data.movie.provider.toUpperCase() : "Local");
-  const progressByFile = $derived.by(() => {
-    const rows = new Map<
-      string,
-      {
-        position_seconds: number;
-        duration_seconds: number | null;
-        completed: boolean | number;
-      }
-    >();
-    for (const item of data.progress) {
-      rows.set(item.media_file_id, item);
-    }
-    return rows;
-  });
-
-  function fileProgress(fileId: string) {
-    return progressByFile.get(fileId);
-  }
-
-  function progressLabel(
-    progress:
-      | {
-          position_seconds: number;
-          duration_seconds: number | null;
-          completed: boolean | number;
-        }
-      | undefined,
-  ) {
-    if (!progress) return "Unwatched";
-    if (Boolean(progress.completed)) return "Watched";
-
-    const position = Math.max(0, Math.floor(Number(progress.position_seconds ?? 0)));
-    const duration =
-      progress.duration_seconds === null ? null : Math.max(0, Math.floor(Number(progress.duration_seconds)));
-    if (position <= 0) return "Unwatched";
-    if (!duration) return formatClockDuration(position);
-    return `${formatClockDuration(position)} / ${formatClockDuration(duration)} · ${progressPercent(position, duration)}%`;
-  }
-
-  function progressPercent(position: number, duration: number) {
-    return Math.min(99, Math.max(1, Math.round((position / duration) * 100)));
-  }
-
-  function fileDetails(file: (typeof data.files)[number]) {
-    const parts = [
-      file.container?.toUpperCase() ?? file.extension.replace(/^\./, "").toUpperCase(),
-      file.duration_seconds ? formatMediaDuration(file.duration_seconds) : null,
-      file.video_codec ? `Video ${file.video_codec}` : null,
-      file.audio_codec ? `Audio ${file.audio_codec}` : null,
-    ].filter(Boolean);
-
-    return parts.join(" - ");
-  }
 </script>
 
 <svelte:head>
@@ -155,274 +90,58 @@
   />
 </svelte:head>
 
-<MediaHero
+<MovieDetailHero
   title={data.movie.title}
   posterUrl={data.posterUrl}
   backdropUrl={data.backdropUrl}
   overview={data.movie.overview}
   genres={data.genres}
->
-  {#snippet facts()}
-    {#if releaseLabel}
-      <span><Calendar size={15} aria-hidden="true" />{releaseLabel}</span>
-    {/if}
-    {#if runtimeLabel}
-      <span><Clock3 size={15} aria-hidden="true" />{runtimeLabel}</span>
-    {/if}
-    {#if ratingLabel}
-      <span><Star size={15} aria-hidden="true" />{ratingLabel}</span>
-    {/if}
+  {releaseLabel}
+  {runtimeLabel}
+  {ratingLabel}
+  {primaryFile}
+  {primaryHref}
+  {primaryActionLabel}
+  {hasCompletedProgress}
+  {resumeLabel}
+  {resumePercent}
+  {trailerHref}
+  similarHref={`/movies/${data.movie.id}/similar`}
+  canManageShares={data.canManageShares}
+  onShareOpen={() => (shareModalOpen = true)}
+/>
+
+<MediaDetailLayout>
+  {#snippet main()}
+    <MovieFilesSection
+      movieId={data.movie.id}
+      files={data.files}
+      progress={data.progress}
+      primaryFileId={primaryFile?.id}
+      formError={form?.error}
+    />
+    <MediaCastRail cast={data.cast} />
   {/snippet}
 
-  {#snippet actions()}
-    {#if primaryFile}
-      <a class="button primary-action" href={primaryHref}>
-        <CirclePlay size={19} aria-hidden="true" />
-        {primaryActionLabel}
-      </a>
-      <form class="inline-action" method="POST" action="?/watched">
-        <input type="hidden" name="fileId" value={primaryFile.id} />
-        <button class="secondary" name="completed" value={hasCompletedProgress ? "false" : "true"}>
-          {#if hasCompletedProgress}
-            <RotateCcw size={16} aria-hidden="true" />
-            Mark unwatched
-          {:else}
-            <Check size={16} aria-hidden="true" />
-            Mark watched
-          {/if}
-        </button>
-      </form>
-    {/if}
-    {#if trailerHref}
-      <a class="button secondary" href={trailerHref} target="_blank" rel="noreferrer">
-        <ExternalLink size={16} aria-hidden="true" />
-        Trailer
-      </a>
-    {/if}
-    <a class="button secondary" href={`/movies/${data.movie.id}/similar`}>
-      <Sparkles size={16} aria-hidden="true" />
-      Similar
-    </a>
-    {#if data.canManageShares}
-      <button class="button secondary" type="button" onclick={() => (shareModalOpen = true)}>
-        <Link2 size={16} aria-hidden="true" />
-        Share
-      </button>
-    {/if}
+  {#snippet aside()}
+    <MovieMetadataSidebar
+      movie={data.movie}
+      canManageMetadata={data.canManageMetadata}
+      tmdbConfigured={data.tmdbConfigured}
+      {ratingLabel}
+      {voteCountLabel}
+      {runtimeLabel}
+      {providerLabel}
+      {directorLabel}
+      {writerLabel}
+      {fileCountLabel}
+      {totalSizeBytes}
+      productionCompanies={data.productionCompanies}
+      keywords={data.keywords}
+      metadataError={form?.metadataError}
+    />
   {/snippet}
-
-  {#snippet below()}
-    {#if resumeLabel}
-      <div class="resume">
-        <span>{resumeLabel}</span>
-        <div aria-hidden="true">
-          <span style={`width: ${resumePercent}%`}></span>
-        </div>
-      </div>
-    {/if}
-  {/snippet}
-</MediaHero>
-
-<div class="details">
-  <div class="detail-main">
-    <section class="files-section" aria-label="Files">
-      {#if form?.error}
-        <p class="error">{form.error}</p>
-      {/if}
-      <div class="files">
-        <div class="files-header" aria-hidden="true">
-          <span>File</span>
-          <span>Status</span>
-          <span>Actions</span>
-        </div>
-        {#each data.files as file}
-          {@const progress = fileProgress(file.id)}
-          <article class="file-row" class:featured={primaryFile?.id === file.id}>
-            <div class="file-copy">
-              <div class="file-title">
-                <strong>{file.basename}</strong>
-                {#if data.files.length > 1 && primaryFile?.id === file.id}
-                  <span>Primary</span>
-                {/if}
-              </div>
-              <div class="file-meta">
-                <span><HardDrive size={14} aria-hidden="true" />{formatFileSize(file.size_bytes)}</span>
-                {#if fileDetails(file)}
-                  <span><Tags size={14} aria-hidden="true" />{fileDetails(file)}</span>
-                {/if}
-              </div>
-            </div>
-            <span class="status" class:watched={Boolean(progress?.completed)}>{progressLabel(progress)}</span>
-            <div class="file-actions">
-              <a
-                class="button secondary"
-                href={playbackModalHref({
-                  currentUrl: page.url,
-                  mediaItemId: data.movie.id,
-                  mediaFileId: file.id,
-                })}
-              >
-                <CirclePlay size={16} aria-hidden="true" />
-                Play
-              </a>
-              <form class="inline-action" method="POST" action="?/watched">
-                <input type="hidden" name="fileId" value={file.id} />
-                {#if Boolean(progress?.completed)}
-                  <button class="secondary compact" name="completed" value="false">
-                    <RotateCcw size={14} aria-hidden="true" />
-                    Unwatch
-                  </button>
-                {:else}
-                  <button class="secondary compact" name="completed" value="true">
-                    <Check size={14} aria-hidden="true" />
-                    Watched
-                  </button>
-                {/if}
-              </form>
-            </div>
-          </article>
-        {/each}
-      </div>
-    </section>
-
-    {#if data.cast.length}
-      <section class="cast-section" aria-labelledby="cast-heading">
-        <div class="section-heading">
-          <div>
-            <h2 id="cast-heading">Cast</h2>
-            <p class="muted">Top billed people from TMDb.</p>
-          </div>
-        </div>
-        <div class="cast-rail">
-          {#each data.cast as person}
-            <a
-              class="person"
-              href={`/people/${encodeURIComponent(person.provider)}/${encodeURIComponent(person.providerId)}`}
-            >
-              <div class="profile">
-                {#if person.profilePath}
-                  <img src={tmdbImageUrl(person.profilePath, "w185")} alt="" loading="lazy" />
-                {:else}
-                  <Users size={22} aria-hidden="true" />
-                {/if}
-              </div>
-              <strong>{person.name}</strong>
-              {#if person.character}
-                <span>{person.character}</span>
-              {/if}
-            </a>
-          {/each}
-        </div>
-      </section>
-    {/if}
-  </div>
-
-  <aside class="metadata" aria-labelledby="metadata-heading">
-    <div class="section-heading">
-      <h2 id="metadata-heading">Metadata</h2>
-      {#if data.canManageMetadata}
-        <form class="metadata-refresh" method="POST" action="?/refreshMetadata">
-          <button
-            class="text-button"
-            disabled={!data.tmdbConfigured}
-            title={data.tmdbConfigured ? "Refresh metadata from TMDb" : "TMDb credentials are not configured"}
-          >
-            <RefreshCw size={14} aria-hidden="true" />
-            Refresh
-          </button>
-        </form>
-      {/if}
-    </div>
-    {#if form?.metadataError}
-      <p class="error">{form.metadataError}</p>
-    {/if}
-    <div class="metadata-score">
-      <div>
-        <strong>{ratingLabel ?? "-"}</strong>
-        <span>{voteCountLabel ? `${voteCountLabel} votes` : "Unrated"}</span>
-      </div>
-      <div>
-        <strong>{data.movie.certification ?? "NR"}</strong>
-        <span>{data.movie.status ?? "Unknown status"}</span>
-      </div>
-    </div>
-    <div class="metadata-chips" aria-label="Movie metadata facts">
-      <span>{providerLabel}</span>
-      {#if data.movie.release_date}
-        <span>{data.movie.release_date}</span>
-      {/if}
-      {#if runtimeLabel}
-        <span>{runtimeLabel}</span>
-      {/if}
-      {#if data.movie.original_language}
-        <span>{data.movie.original_language.toUpperCase()}</span>
-      {/if}
-    </div>
-    <div class="metadata-blocks">
-      <section>
-        <h3>Credits</h3>
-        <dl>
-          <div>
-            <dt>Director</dt>
-            <dd>{directorLabel || "Unknown"}</dd>
-          </div>
-          <div>
-            <dt>Writers</dt>
-            <dd>{writerLabel || "Unknown"}</dd>
-          </div>
-        </dl>
-      </section>
-      <section>
-        <h3>Library</h3>
-        <dl>
-          <div>
-            <dt>Files</dt>
-            <dd>{fileCountLabel}</dd>
-          </div>
-          <div>
-            <dt>Total size</dt>
-            <dd>{formatFileSize(totalSizeBytes)}</dd>
-          </div>
-          <div>
-            <dt>Provider ID</dt>
-            <dd>{data.movie.provider_id ?? "None"}</dd>
-          </div>
-          <div>
-            <dt>Last updated</dt>
-            <dd>{formatDateTime(data.movie.updated_at)}</dd>
-          </div>
-        </dl>
-      </section>
-      {#if data.movie.collection_name || data.productionCompanies.length}
-        <section>
-          <h3>Production</h3>
-          <dl>
-            <div>
-              <dt>Collection</dt>
-              <dd>{data.movie.collection_name ?? "None"}</dd>
-            </div>
-            {#if data.productionCompanies.length}
-              <div>
-                <dt>Studios</dt>
-                <dd>{data.productionCompanies.join(", ")}</dd>
-              </div>
-            {/if}
-          </dl>
-        </section>
-      {/if}
-    </div>
-    {#if data.keywords.length}
-      <section class="metadata-keywords">
-        <h3>Keywords</h3>
-        <div class="keyword-list">
-          {#each data.keywords as keyword}
-            <span>{keyword}</span>
-          {/each}
-        </div>
-      </section>
-    {/if}
-  </aside>
-</div>
+</MediaDetailLayout>
 
 {#if shareModalOpen}
   <ShareLinkModal
@@ -432,387 +151,3 @@
     onClose={() => (shareModalOpen = false)}
   />
 {/if}
-
-<style>
-  .primary-action {
-    min-width: 8rem;
-  }
-
-  .resume {
-    display: grid;
-    gap: 0.35rem;
-    width: min(100%, 24rem);
-    color: var(--color-subtle);
-    font-size: 0.9rem;
-    font-weight: 700;
-  }
-
-  .resume div {
-    height: 0.28rem;
-    overflow: hidden;
-    border-radius: 999px;
-    background: var(--color-border-strong);
-  }
-
-  .resume div span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--color-accent);
-  }
-
-  .details {
-    margin-top: 1rem;
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 0.8fr);
-    gap: clamp(1rem, 2vw, 1.4rem);
-    align-items: start;
-  }
-
-  .detail-main {
-    display: grid;
-    gap: 1rem;
-    min-width: 0;
-  }
-
-  .section-heading {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.85rem;
-  }
-
-  .section-heading h2,
-  .section-heading p {
-    margin: 0;
-  }
-
-  .files {
-    display: grid;
-    gap: 0;
-  }
-
-  .files-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr) minmax(12rem, max-content);
-    gap: 0.75rem;
-    border-bottom: 1px solid var(--color-border);
-    color: var(--color-dim);
-    padding: 0.35rem 0 0.45rem;
-    font-size: 0.74rem;
-    font-weight: 800;
-    text-transform: uppercase;
-  }
-
-  .files-section,
-  .cast-section {
-    min-width: 0;
-  }
-
-  .file-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr) minmax(12rem, max-content);
-    gap: 0.75rem;
-    align-items: center;
-    border-bottom: 1px solid var(--color-border);
-    padding: 0.65rem 0;
-  }
-
-  .file-row.featured {
-    border-color: var(--color-accent-border);
-  }
-
-  .file-copy {
-    display: grid;
-    gap: 0.35rem;
-    min-width: 0;
-  }
-
-  .file-title {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    min-width: 0;
-  }
-
-  .file-title strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .file-title span {
-    flex-shrink: 0;
-    color: var(--color-accent);
-    font-size: 0.76rem;
-    font-weight: 800;
-  }
-
-  .file-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.7rem;
-    color: var(--color-muted);
-    font-size: 0.84rem;
-  }
-
-  .file-meta span {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.28rem;
-    min-width: 0;
-  }
-
-  .status {
-    color: var(--color-accent);
-    font-size: 0.82rem;
-    font-weight: 700;
-    line-height: 1.3;
-    white-space: nowrap;
-  }
-
-  .status.watched {
-    color: var(--color-success);
-  }
-
-  .file-actions,
-  .inline-action {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .file-actions {
-    justify-content: flex-end;
-  }
-
-  .file-actions .compact {
-    min-height: 2rem;
-    padding: 0 0.65rem;
-    font-size: 0.86rem;
-  }
-
-  .cast-rail {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(8.2rem, 9.5rem);
-    gap: 0.85rem;
-    overflow-x: auto;
-    padding-bottom: 0.4rem;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-scrollbar) transparent;
-  }
-
-  .person {
-    display: grid;
-    grid-template-columns: 1fr;
-    align-content: start;
-    gap: 0.35rem;
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
-
-  .profile {
-    display: grid;
-    place-items: center;
-    aspect-ratio: 2 / 3;
-    overflow: hidden;
-    border-radius: 8px;
-    background: var(--color-surface-muted);
-    color: var(--color-muted);
-  }
-
-  .profile img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .person strong,
-  .person span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .person span {
-    color: var(--color-muted);
-    font-size: 0.84rem;
-  }
-
-  .metadata {
-    position: sticky;
-    top: 1rem;
-    display: grid;
-    gap: 1rem;
-    border-left: 1px solid var(--color-border-strong);
-    padding-left: clamp(1rem, 2vw, 1.4rem);
-  }
-
-  .metadata .section-heading {
-    align-items: center;
-    margin-bottom: 0;
-  }
-
-  .metadata-refresh {
-    margin: 0;
-    flex-shrink: 0;
-  }
-
-  dl {
-    display: grid;
-    gap: 0.5rem;
-    margin: 0;
-  }
-
-  dl div {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    min-width: 0;
-  }
-
-  dt {
-    color: var(--color-dim);
-    flex-shrink: 0;
-  }
-
-  dd {
-    margin: 0;
-    min-width: 0;
-    overflow-wrap: anywhere;
-    text-align: right;
-  }
-
-  .text-button {
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--color-muted);
-    font-size: 0.86rem;
-    font-weight: 650;
-    justify-content: flex-start;
-    gap: 0.35rem;
-  }
-
-  .text-button:hover:not(:disabled) {
-    color: var(--color-accent);
-  }
-
-  .text-button:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
-
-  .metadata-score {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.6rem;
-  }
-
-  .metadata-score > div {
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    background: var(--color-surface-faint);
-    padding: 0.75rem;
-    display: grid;
-    gap: 0.15rem;
-  }
-
-  .metadata-score strong {
-    font-size: 1.6rem;
-    line-height: 1;
-  }
-
-  .metadata-score span {
-    color: var(--color-muted);
-    font-size: 0.82rem;
-  }
-
-  .metadata-chips,
-  .keyword-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .metadata-chips span,
-  .keyword-list span {
-    border-radius: 999px;
-    background: var(--color-surface-muted);
-    color: var(--color-text-soft);
-    padding: 0.18rem 0.5rem;
-    font-size: 0.78rem;
-    font-weight: 700;
-  }
-
-  .metadata-chips span {
-    border: 1px solid var(--color-border);
-  }
-
-  .metadata-blocks,
-  .metadata-blocks section,
-  .metadata-keywords {
-    display: grid;
-    gap: 0.7rem;
-  }
-
-  .metadata-blocks section,
-  .metadata-keywords {
-    border-top: 1px solid var(--color-border);
-    padding-top: 0.8rem;
-  }
-
-  .metadata-blocks h3,
-  .metadata-keywords h3 {
-    margin: 0;
-    color: var(--color-dim);
-    font-size: 0.9rem;
-  }
-
-  @media (max-width: 820px) {
-    .details {
-      grid-template-columns: 1fr;
-    }
-
-    .file-row {
-      grid-template-columns: 1fr;
-    }
-
-    .files-header {
-      display: none;
-    }
-
-    .status {
-      grid-column: 1 / -1;
-    }
-
-    .file-actions {
-      grid-column: 1 / -1;
-      justify-content: flex-start;
-    }
-
-    .metadata {
-      position: static;
-      border-left: 0;
-      border-top: 1px solid var(--color-border-strong);
-      padding: 1rem 0 0;
-    }
-  }
-
-  @media (max-width: 560px) {
-    .file-actions,
-    .file-actions form {
-      width: 100%;
-    }
-
-    .file-actions a,
-    .file-actions button {
-      flex: 1 1 10rem;
-    }
-  }
-</style>
