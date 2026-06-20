@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.5.0 - 2026-06-20
+
+### Added
+
+- Added guest share links for movies and TV shows, including scoped public share pages, season-limited show shares, guest playback endpoints, signed media URLs with share tokens, per-IP share rate limits, and admin share management.
+- Added an admin Shares page with status filtering, pagination, full revoked-share history, stale-link cleanup on startup, and share creation from media detail pages.
+- Added admin user management in the app and API, backed by Better Auth user creation, role updates, deletion, last-admin safeguards, and self-deletion protection.
+- Added similar movies and shows, paginated similar browse pages, and matching API endpoints ranked by shared genres, keywords, cast, directors, and show creators.
+- Added personalized movie and show discover pages and API endpoints using weighted because-you-watched recommendations from recent completed media.
+- Added a native playback target for VLC, mobile apps, and other API clients so they can request signed direct streams without web-player transcode preferences forcing HLS.
+- Added shared media UI building blocks for detail layouts, metadata panels, season tabs, cast rails, share modals, brand display, and watch summaries.
+- Added an Apache-2.0 license and package metadata for open-source distribution.
+
+### Changed
+
+- Split the large server media module into focused movie, show, file, progress, catalog, similarity, people, and shared type modules.
+- Split movie, show, season, profile, and settings pages into route-local components and moved player components under `src/lib/player`.
+- Moved feature-specific styling out of global CSS so `app.css` mostly holds tokens and shared primitives.
+- Refined movie, show, and episode rail layouts with reusable rail components that fill a bounded two-row grid instead of overflowing long two-row sections.
+- Redesigned season pages and guest share pages with season tabs, denser episode lists, and cleaner playback presentation.
+- Improved playback error recovery and runtime failure messaging with more actionable player overlays.
+- Reduced web player timeline reactivity to better match mobile playback pacing.
+- Updated API and playback documentation for discover/similar endpoints, guest shares, admin users, and playback targets.
+- Updated dependencies, including Better Auth 1.6.19, SvelteKit 2.65.2, `@lucide/svelte` 1.20.0, Playwright 1.61.0, and `prettier-plugin-svelte` 4.1.1.
+
+### Fixed
+
+- Fixed shared external subtitle tracks with no `media_file_id` so subtitles advertised by playback can be authorized and served.
+- Fixed guest share playback heartbeats and hardened share listing behavior.
+- Fixed episode metadata merging after TV refreshes.
+- Fixed HLS playback error recovery and busy-overlay detail during runtime failures.
+- Fixed the FFmpeg contract allowlist after splitting the transcoding settings panel.
+- Fixed a SvelteKit/adapter-node startup deadlock by pinning compatible package versions.
+- Removed an unused signed-token import from the HLS segment route.
+
 ## 0.4.0 - 2026-06-16
 
 ### Added
