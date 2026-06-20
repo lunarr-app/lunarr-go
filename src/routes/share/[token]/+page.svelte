@@ -1,8 +1,8 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import GuestPlaybackShell from "$lib/components/GuestPlaybackShell.svelte";
-  import GuestShareEpisodeList from "$lib/components/GuestShareEpisodeList.svelte";
+  import GuestPlaybackShell from "../_components/GuestPlaybackShell.svelte";
+  import GuestShareEpisodeList from "../_components/GuestShareEpisodeList.svelte";
   import LunarrBrand from "$lib/components/LunarrBrand.svelte";
   import MediaHero from "$lib/components/MediaHero.svelte";
   import { formatMediaDuration } from "$lib/media/format";
