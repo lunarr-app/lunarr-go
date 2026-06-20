@@ -74,7 +74,7 @@
       </div>
     </div>
 
-    <dl>
+    <dl class="ops-status-dl">
       <div>
         <dt>HLS cache entries</dt>
         <dd>
@@ -147,76 +147,3 @@
     </dl>
   </div>
 </section>
-
-<style>
-  h2 {
-    font-size: 1.02rem;
-    margin: 0;
-  }
-
-  .status-panel {
-    margin-top: 0.75rem;
-  }
-
-  .status-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-    gap: 0.5rem;
-  }
-
-  .status-cards div {
-    display: grid;
-    gap: 0.15rem;
-    align-items: center;
-  }
-
-  .status-cards span {
-    color: var(--ops-muted);
-    font-size: 0.86rem;
-  }
-
-  .status-cards strong {
-    font-size: 1.05rem;
-  }
-
-  dl {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.45rem 1.25rem;
-  }
-
-  dl div {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    min-width: 0;
-  }
-
-  dt {
-    color: var(--ops-muted);
-  }
-
-  dd {
-    margin: 0;
-    min-width: 0;
-    overflow-wrap: anywhere;
-    text-align: right;
-  }
-
-  @media (max-width: 920px) {
-    dl {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 560px) {
-    dl div {
-      display: grid;
-      gap: 0.2rem;
-    }
-
-    dd {
-      text-align: left;
-    }
-  }
-</style>

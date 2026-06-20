@@ -15,7 +15,7 @@
 
 {#if cast.length}
   <section class="cast-section" aria-labelledby="cast-heading">
-    <div class="section-heading">
+    <div class="media-section-heading">
       <div>
         <h2 id="cast-heading">Cast</h2>
         <p class="muted">Top billed people from TMDb.</p>
@@ -47,19 +47,6 @@
 <style>
   .cast-section {
     min-width: 0;
-  }
-
-  .section-heading {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.85rem;
-  }
-
-  .section-heading h2,
-  .section-heading p {
-    margin: 0;
   }
 
   .cast-rail {

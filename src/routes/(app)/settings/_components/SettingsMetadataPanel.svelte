@@ -87,31 +87,3 @@
     </button>
   </div>
 </form>
-
-<style>
-  h2 {
-    font-size: 1.02rem;
-    margin: 0;
-  }
-
-  .detail-copy {
-    line-height: 1.5;
-    font-size: 0.88rem;
-  }
-
-  .check {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-  }
-
-  .check input {
-    width: auto;
-    min-height: 0;
-  }
-
-  .subdued {
-    color: var(--color-subtle);
-    font-size: 0.9rem;
-  }
-</style>

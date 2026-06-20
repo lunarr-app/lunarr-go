@@ -105,10 +105,6 @@
 </MediaHero>
 
 <style>
-  .primary-action {
-    min-width: 8rem;
-  }
-
   .watch-summary {
     display: grid;
     grid-template-columns: auto minmax(10rem, 18rem);

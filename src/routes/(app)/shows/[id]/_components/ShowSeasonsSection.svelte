@@ -38,7 +38,7 @@
 </script>
 
 <section class="seasons" aria-labelledby="seasons-heading">
-  <div class="section-heading">
+  <div class="media-section-heading">
     <div>
       <h2 id="seasons-heading">Seasons</h2>
       <p class="muted">Choose a season to browse episodes.</p>
@@ -76,23 +76,6 @@
 <style>
   .seasons {
     min-width: 0;
-  }
-
-  .section-heading {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.85rem;
-  }
-
-  .section-heading h2,
-  .section-heading p {
-    margin: 0;
-  }
-
-  .section-heading p {
-    margin-top: 0.25rem;
   }
 
   .season-grid {

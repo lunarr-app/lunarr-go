@@ -106,10 +106,6 @@
 </MediaHero>
 
 <style>
-  .primary-action {
-    min-width: 8rem;
-  }
-
   .resume {
     display: grid;
     gap: 0.35rem;
