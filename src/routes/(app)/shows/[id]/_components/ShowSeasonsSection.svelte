@@ -1,5 +1,4 @@
 <script lang="ts">
-  import MediaSectionHeading from "$lib/components/MediaSectionHeading.svelte";
   import { showSeasonHref } from "$lib/media/seasons";
 
   type Season = {
@@ -39,7 +38,10 @@
 </script>
 
 <section class="seasons" aria-labelledby="seasons-heading">
-  <MediaSectionHeading headingId="seasons-heading" title="Seasons" description="Choose a season to browse episodes." />
+  <div class="section-heading">
+    <h2 id="seasons-heading">Seasons</h2>
+    <p class="muted">Choose a season to browse episodes.</p>
+  </div>
 
   <div class="season-grid">
     {#each seasons as season}
@@ -72,6 +74,19 @@
 <style>
   .seasons {
     min-width: 0;
+  }
+
+  .section-heading {
+    margin-bottom: 0.85rem;
+  }
+
+  .section-heading h2,
+  .section-heading p {
+    margin: 0;
+  }
+
+  .section-heading p {
+    margin-top: 0.25rem;
   }
 
   .season-grid {

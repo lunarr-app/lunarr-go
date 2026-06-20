@@ -1,6 +1,5 @@
 <script lang="ts">
   import { tmdbImageUrl } from "$lib/media/images";
-  import MediaSectionHeading from "$lib/components/MediaSectionHeading.svelte";
   import { Users } from "@lucide/svelte";
 
   type CastPerson = {
@@ -16,7 +15,10 @@
 
 {#if cast.length}
   <section class="cast-section" aria-labelledby="cast-heading">
-    <MediaSectionHeading headingId="cast-heading" title="Cast" description="Top billed people from TMDb." />
+    <div class="section-heading">
+      <h2 id="cast-heading">Cast</h2>
+      <p class="muted">Top billed people from TMDb.</p>
+    </div>
     <div class="cast-rail">
       {#each cast as person}
         <a
@@ -43,6 +45,19 @@
 <style>
   .cast-section {
     min-width: 0;
+  }
+
+  .section-heading {
+    margin-bottom: 0.85rem;
+  }
+
+  .section-heading h2,
+  .section-heading p {
+    margin: 0;
+  }
+
+  .section-heading p {
+    margin-top: 0.25rem;
   }
 
   .cast-rail {
