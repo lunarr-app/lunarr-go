@@ -1,5 +1,6 @@
 <script lang="ts">
   import MediaHero from "$lib/components/MediaHero.svelte";
+  import ShowWatchSummary from "$lib/components/ShowWatchSummary.svelte";
   import { formatEpisodeCode } from "$lib/media/format";
   import { Calendar, Check, ChevronLeft, CirclePlay, RotateCcw, Star } from "@lucide/svelte";
 
@@ -94,15 +95,7 @@
   {/snippet}
 
   {#snippet below()}
-    <div class="watch-summary" aria-label={`${watchedCount} of ${episodeCount} episodes watched`}>
-      <div>
-        <strong>{watchedCount}/{episodeCount}</strong>
-        <span>Watched</span>
-      </div>
-      <div class="watch-progress" aria-hidden="true">
-        <span style={`width: ${progressPercent}%`}></span>
-      </div>
-    </div>
+    <ShowWatchSummary {watchedCount} totalCount={episodeCount} {progressPercent} />
   {/snippet}
 </MediaHero>
 

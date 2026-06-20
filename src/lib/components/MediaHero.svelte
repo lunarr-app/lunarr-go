@@ -224,6 +224,10 @@
     gap: 0.6rem;
   }
 
+  .hero-actions :global(.primary-action) {
+    min-width: 8rem;
+  }
+
   @media (max-width: 820px) {
     .hero:not(.standalone) {
       margin-inline: -1rem;

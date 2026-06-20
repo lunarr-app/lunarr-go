@@ -147,3 +147,71 @@
     </dl>
   </div>
 </section>
+
+<style>
+  .status-panel {
+    margin-top: 0.75rem;
+  }
+
+  .status-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    gap: 0.5rem;
+  }
+
+  .status-cards div {
+    display: grid;
+    gap: 0.15rem;
+    align-items: center;
+  }
+
+  .status-cards span {
+    color: var(--ops-muted);
+    font-size: 0.86rem;
+  }
+
+  .status-cards strong {
+    font-size: 1.05rem;
+  }
+
+  .ops-status-dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 1.25rem;
+  }
+
+  .ops-status-dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .ops-status-dl dt {
+    color: var(--ops-muted);
+  }
+
+  .ops-status-dl dd {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+
+  @media (max-width: 920px) {
+    .ops-status-dl {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .ops-status-dl div {
+      display: grid;
+      gap: 0.2rem;
+    }
+
+    .ops-status-dl dd {
+      text-align: left;
+    }
+  }
+</style>

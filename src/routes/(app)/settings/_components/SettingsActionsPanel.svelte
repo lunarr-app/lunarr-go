@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingsActionRow from "./SettingsActionRow.svelte";
   import { RefreshCw, ScanSearch, SearchCheck, Wrench } from "@lucide/svelte";
 
   let {
@@ -41,8 +42,8 @@
       <p class="muted action-note">TMDb actions need metadata credentials.</p>
     {/if}
 
-    <div class="action-row">
-      <div class="action-copy">
+    <SettingsActionRow>
+      {#snippet copy()}
         <h3>TMDb connection</h3>
         <p class="muted">Validate the active credential.</p>
         {#if tmdbTestMessage}
@@ -50,17 +51,20 @@
             {tmdbTestMessage}
           </p>
         {/if}
-      </div>
-      <form method="POST" action="?/testTmdb">
-        <button class="secondary compact-action">
-          <SearchCheck size={16} aria-hidden="true" />
-          Test
-        </button>
-      </form>
-    </div>
+      {/snippet}
 
-    <div class="action-row">
-      <div class="action-copy">
+      {#snippet actions()}
+        <form method="POST" action="?/testTmdb">
+          <button class="secondary compact-action">
+            <SearchCheck size={16} aria-hidden="true" />
+            Test
+          </button>
+        </form>
+      {/snippet}
+    </SettingsActionRow>
+
+    <SettingsActionRow>
+      {#snippet copy()}
         <h3>Metadata repair</h3>
         <p class="muted">Refresh stored TMDb data.</p>
         <div class="action-messages">
@@ -77,25 +81,28 @@
             <p>{tvMetadataMessage}</p>
           {/if}
         </div>
-      </div>
-      <div class="button-group">
-        <form method="POST" action="?/refreshMetadata">
-          <button class="secondary compact-action" disabled={!tmdbConfigured}>
-            <RefreshCw size={16} aria-hidden="true" />
-            Movies
-          </button>
-        </form>
-        <form method="POST" action="?/refreshTvMetadata">
-          <button class="secondary compact-action" disabled={!tmdbConfigured}>
-            <RefreshCw size={16} aria-hidden="true" />
-            TV
-          </button>
-        </form>
-      </div>
-    </div>
+      {/snippet}
 
-    <div class="action-row">
-      <div class="action-copy">
+      {#snippet actions()}
+        <div class="button-group">
+          <form method="POST" action="?/refreshMetadata">
+            <button class="secondary compact-action" disabled={!tmdbConfigured}>
+              <RefreshCw size={16} aria-hidden="true" />
+              Movies
+            </button>
+          </form>
+          <form method="POST" action="?/refreshTvMetadata">
+            <button class="secondary compact-action" disabled={!tmdbConfigured}>
+              <RefreshCw size={16} aria-hidden="true" />
+              TV
+            </button>
+          </form>
+        </div>
+      {/snippet}
+    </SettingsActionRow>
+
+    <SettingsActionRow>
+      {#snippet copy()}
         <h3>Library scans</h3>
         <p class="muted">Detect file additions, changes, and removals.</p>
         {#if scanError}
@@ -104,17 +111,20 @@
         {#if scanMessage}
           <p>{scanMessage}</p>
         {/if}
-      </div>
-      <form method="POST" action="?/scanAll">
-        <button class="secondary compact-action">
-          <ScanSearch size={16} aria-hidden="true" />
-          Scan all
-        </button>
-      </form>
-    </div>
+      {/snippet}
 
-    <div class="action-row">
-      <div class="action-copy">
+      {#snippet actions()}
+        <form method="POST" action="?/scanAll">
+          <button class="secondary compact-action">
+            <ScanSearch size={16} aria-hidden="true" />
+            Scan all
+          </button>
+        </form>
+      {/snippet}
+    </SettingsActionRow>
+
+    <SettingsActionRow>
+      {#snippet copy()}
         <h3>Media probes</h3>
         <p class="muted">Backfill duration and codec details for playback.</p>
         {#if probeError}
@@ -123,13 +133,36 @@
         {#if probeMessage}
           <p>{probeMessage}</p>
         {/if}
-      </div>
-      <form method="POST" action="?/repairMediaProbes">
-        <button class="secondary compact-action">
-          <Wrench size={16} aria-hidden="true" />
-          Repair
-        </button>
-      </form>
-    </div>
+      {/snippet}
+
+      {#snippet actions()}
+        <form method="POST" action="?/repairMediaProbes">
+          <button class="secondary compact-action">
+            <Wrench size={16} aria-hidden="true" />
+            Repair
+          </button>
+        </form>
+      {/snippet}
+    </SettingsActionRow>
   </div>
 </section>
+
+<style>
+  .maintenance-panel {
+    align-self: start;
+  }
+
+  .action-note {
+    border: 1px solid var(--color-warning-border);
+    border-radius: 8px;
+    background: var(--color-warning-soft);
+    padding: 0.5rem 0.6rem;
+    font-size: 0.86rem;
+  }
+
+  .action-messages {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+</style>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SettingsSwitchField from "./SettingsSwitchField.svelte";
+
   let {
     signupOpen: initialSignupOpen,
     registrationError,
@@ -28,16 +30,13 @@
   </div>
 
   <div class="ops-panel-body">
-    <label class="switch-row">
-      <span>
-        <strong>Allow new users</strong>
-        <small>{signupOpen ? "Registration open" : "Registration closed"}</small>
-      </span>
-      <span class="switch">
-        <input type="checkbox" name="signupOpen" bind:checked={signupOpen} onchange={submitRegistration} />
-        <span class="switch-track" aria-hidden="true"></span>
-      </span>
-    </label>
+    <SettingsSwitchField
+      name="signupOpen"
+      title="Allow new users"
+      description={signupOpen ? "Registration open" : "Registration closed"}
+      bind:checked={signupOpen}
+      onchange={submitRegistration}
+    />
     <p class="muted detail-copy">
       Existing users and admins are unaffected when registration is disabled. Manage per-library sharing from Libraries.
     </p>
@@ -47,3 +46,10 @@
     {/if}
   </div>
 </form>
+
+<style>
+  .detail-copy {
+    line-height: 1.5;
+    font-size: 0.88rem;
+  }
+</style>

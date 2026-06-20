@@ -1,5 +1,7 @@
 <script lang="ts">
   import { formatGibibytes } from "$lib/media/format";
+  import SettingsActionRow from "./SettingsActionRow.svelte";
+  import SettingsSwitchField from "./SettingsSwitchField.svelte";
   import { Trash2 } from "@lucide/svelte";
 
   let {
@@ -59,21 +61,13 @@
 
   <form method="POST" action="?/saveTranscoding" bind:this={transcodingForm}>
     <div class="ops-panel-body">
-      <label class="switch-row">
-        <span>
-          <strong>Allow transcoding</strong>
-          <small>{transcodingEnabled ? "Unsupported files can use HLS playback" : "Direct play only"}</small>
-        </span>
-        <span class="switch">
-          <input
-            type="checkbox"
-            name="transcodingEnabled"
-            bind:checked={transcodingEnabled}
-            onchange={submitTranscoding}
-          />
-          <span class="switch-track" aria-hidden="true"></span>
-        </span>
-      </label>
+      <SettingsSwitchField
+        name="transcodingEnabled"
+        title="Allow transcoding"
+        description={transcodingEnabled ? "Unsupported files can use HLS playback" : "Direct play only"}
+        bind:checked={transcodingEnabled}
+        onchange={submitTranscoding}
+      />
 
       <label>
         Hardware acceleration
@@ -159,9 +153,9 @@
     </div>
   </form>
 
-  <div class="ops-panel-body transcoding-cleanup">
-    <div class="action-row transcoding-action-row">
-      <div class="action-copy">
+  <div class="ops-panel-body">
+    <SettingsActionRow>
+      {#snippet copy()}
         <h3>Force cleanup</h3>
         <p class="muted">
           Clear idle shared HLS segments and expired session artifacts immediately, ignoring cache TTL and storage
@@ -173,13 +167,23 @@
         {#if playbackCleanupMessage}
           <p>{playbackCleanupMessage}</p>
         {/if}
-      </div>
-      <form method="POST" action="?/cleanupPlaybackArtifacts">
-        <button type="submit" class="secondary compact-action">
-          <Trash2 size={16} aria-hidden="true" />
-          Force cleanup
-        </button>
-      </form>
-    </div>
+      {/snippet}
+
+      {#snippet actions()}
+        <form method="POST" action="?/cleanupPlaybackArtifacts">
+          <button type="submit" class="secondary compact-action">
+            <Trash2 size={16} aria-hidden="true" />
+            Force cleanup
+          </button>
+        </form>
+      {/snippet}
+    </SettingsActionRow>
   </div>
 </section>
+
+<style>
+  .detail-copy {
+    line-height: 1.5;
+    font-size: 0.88rem;
+  }
+</style>
