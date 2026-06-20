@@ -1309,6 +1309,8 @@
     --color-text: #f8fafc;
     --color-text-soft: rgba(248, 250, 252, 0.82);
     --color-border-strong: rgba(255, 255, 255, 0.18);
+    --color-accent: #00ccff;
+    --color-accent-soft: rgba(0, 168, 214, 0.14);
     --player-border-subtle: rgba(255, 255, 255, 0.28);
     --player-focus-ring: rgba(0, 204, 255, 0.78);
     --player-accent: var(--color-accent);

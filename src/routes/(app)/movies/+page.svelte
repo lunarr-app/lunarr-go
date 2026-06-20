@@ -1,9 +1,8 @@
 <script lang="ts">
-  import MovieCard from "$lib/components/MovieCard.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
   import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
   import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
-  import { twoRowRailOrder } from "$lib/media/rails";
+  import MovieRail from "./_components/MovieRail.svelte";
   import { ChevronRight, Library, Search, Sparkles } from "@lucide/svelte";
 
   let { data } = $props();
@@ -135,11 +134,7 @@
             </a>
           {/if}
         </div>
-        <div class="movie-rail" class:two-row={section.movies.length >= TWO_ROW_MOVIE_RAIL_COUNT}>
-          {#each twoRowRailOrder(section.movies, TWO_ROW_MOVIE_RAIL_COUNT) as movie}
-            <MovieCard {movie} />
-          {/each}
-        </div>
+        <MovieRail movies={section.movies} twoRowThreshold={TWO_ROW_MOVIE_RAIL_COUNT} />
       </section>
     {/if}
   {/each}
@@ -205,47 +200,6 @@
     color: var(--color-text);
   }
 
-  .movie-rail {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: clamp(8.8rem, 12vw, 10.5rem);
-    grid-template-rows: auto;
-    gap: 1.1rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-inline: contain;
-    padding: 0.1rem 0 0.85rem;
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: 0.25rem;
-    scrollbar-color: var(--color-scrollbar) transparent;
-    scrollbar-width: thin;
-  }
-
-  .movie-rail.two-row {
-    grid-template-rows: repeat(2, auto);
-  }
-
-  .movie-rail :global(.movie) {
-    scroll-snap-align: start;
-  }
-
-  .movie-rail::-webkit-scrollbar {
-    height: 0.55rem;
-  }
-
-  .movie-rail::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .movie-rail::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: var(--color-scrollbar);
-  }
-
-  .movie-rail::-webkit-scrollbar-thumb:hover {
-    background: var(--color-scrollbar-hover);
-  }
-
   .empty {
     display: grid;
     justify-items: start;
@@ -272,10 +226,6 @@
     .section-heading {
       display: flex;
       flex-wrap: wrap;
-    }
-
-    .movie-rail {
-      grid-auto-columns: minmax(8.25rem, 38vw);
     }
   }
 </style>

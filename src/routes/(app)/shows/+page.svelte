@@ -1,10 +1,9 @@
 <script lang="ts">
-  import EpisodeCard from "$lib/components/EpisodeCard.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
-  import ShowCard from "$lib/components/ShowCard.svelte";
   import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
   import { SHOW_SEARCH_PLACEHOLDER } from "$lib/media/search";
-  import { twoRowRailOrder } from "$lib/media/rails";
+  import EpisodeRail from "./_components/EpisodeRail.svelte";
+  import ShowRail from "./_components/ShowRail.svelte";
   import { ChevronRight, Library, Search, Sparkles } from "@lucide/svelte";
 
   let { data } = $props();
@@ -133,11 +132,7 @@
           </a>
         {/if}
       </div>
-      <div class="episode-rail" class:two-row={section.episodes.length >= TWO_ROW_EPISODE_RAIL_COUNT}>
-        {#each twoRowRailOrder(section.episodes, TWO_ROW_EPISODE_RAIL_COUNT) as episode}
-          <EpisodeCard {episode} />
-        {/each}
-      </div>
+      <EpisodeRail episodes={section.episodes} twoRowThreshold={TWO_ROW_EPISODE_RAIL_COUNT} />
     </section>
   {/each}
 
@@ -153,11 +148,7 @@
             </a>
           {/if}
         </div>
-        <div class="show-rail" class:two-row={section.shows.length >= TWO_ROW_SHOW_RAIL_COUNT}>
-          {#each twoRowRailOrder(section.shows, TWO_ROW_SHOW_RAIL_COUNT) as show}
-            <ShowCard {show} />
-          {/each}
-        </div>
+        <ShowRail shows={section.shows} twoRowThreshold={TWO_ROW_SHOW_RAIL_COUNT} />
       </section>
     {/if}
   {/each}
@@ -223,61 +214,6 @@
     color: var(--color-text);
   }
 
-  .episode-rail,
-  .show-rail {
-    display: grid;
-    grid-auto-flow: column;
-    grid-template-rows: auto;
-    gap: 1.1rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-inline: contain;
-    padding: 0.1rem 0 0.85rem;
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: 0.25rem;
-    scrollbar-color: var(--color-scrollbar) transparent;
-    scrollbar-width: thin;
-  }
-
-  .episode-rail.two-row,
-  .show-rail.two-row {
-    grid-template-rows: repeat(2, auto);
-  }
-
-  .episode-rail {
-    grid-auto-columns: clamp(15rem, 24vw, 20rem);
-  }
-
-  .show-rail {
-    grid-auto-columns: clamp(8.8rem, 12vw, 10.5rem);
-  }
-
-  .episode-rail :global(.episode),
-  .show-rail :global(.show) {
-    scroll-snap-align: start;
-  }
-
-  .episode-rail::-webkit-scrollbar,
-  .show-rail::-webkit-scrollbar {
-    height: 0.55rem;
-  }
-
-  .episode-rail::-webkit-scrollbar-track,
-  .show-rail::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .episode-rail::-webkit-scrollbar-thumb,
-  .show-rail::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: var(--color-scrollbar);
-  }
-
-  .episode-rail::-webkit-scrollbar-thumb:hover,
-  .show-rail::-webkit-scrollbar-thumb:hover {
-    background: var(--color-scrollbar-hover);
-  }
-
   .empty {
     display: grid;
     justify-items: start;
@@ -300,14 +236,6 @@
     .section-heading {
       display: flex;
       flex-wrap: wrap;
-    }
-
-    .episode-rail {
-      grid-auto-columns: minmax(15rem, 78vw);
-    }
-
-    .show-rail {
-      grid-auto-columns: minmax(8.25rem, 38vw);
     }
   }
 </style>

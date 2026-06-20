@@ -70,7 +70,7 @@ async function mediaPlayerStyle() {
 }
 
 async function mediaPlayerSource() {
-  return readFile(path.join(root, "src/lib/components/MediaPlayer.svelte"), "utf8");
+  return readFile(path.join(root, "src/lib/player/MediaPlayer.svelte"), "utf8");
 }
 
 function assertMediaPlayerSourceContract(source) {
@@ -420,7 +420,7 @@ try {
 
     const hoveredPlayButtonStyle = getComputedStyle(playButton);
     if (
-      hoveredPlayButtonStyle.backgroundColor !== "rgba(0, 204, 255, 0.14)" ||
+      hoveredPlayButtonStyle.backgroundColor !== "rgba(0, 168, 214, 0.14)" ||
       hoveredPlayButtonStyle.color !== "rgb(0, 204, 255)"
     ) {
       return {
@@ -791,7 +791,7 @@ try {
     }, selector);
     if (
       !hoverStyle.found ||
-      hoverStyle.backgroundColor !== "rgba(0, 204, 255, 0.14)" ||
+      hoverStyle.backgroundColor !== "rgba(0, 168, 214, 0.14)" ||
       hoverStyle.color !== "rgb(0, 204, 255)"
     ) {
       throw new Error(`Expected ${selector} hover to use the app primary color, got ${JSON.stringify(hoverStyle)}.`);
