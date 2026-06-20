@@ -1,19 +1,14 @@
 <script lang="ts">
-  import AuthPosterCollage from "$lib/components/AuthPosterCollage.svelte";
   import { page } from "$app/state";
 
-  let { data, children } = $props();
+  let { children } = $props();
   const isErrorPage = $derived(Boolean(page.error));
-  const hasPosterCollage = $derived(data.authBackgroundPosters.length > 0);
 </script>
 
 {#if isErrorPage}
   {@render children()}
 {:else}
-  <main class="auth-shell" class:has-collage={hasPosterCollage}>
-    {#if hasPosterCollage}
-      <AuthPosterCollage posters={data.authBackgroundPosters} />
-    {/if}
+  <main class="auth-shell">
     <section class="auth-card">
       <img class="brand brand-dark" src="/images/lunarr-logo.svg" alt="Lunarr" />
       <img class="brand brand-light" src="/images/lunarr-logo-light.svg" alt="Lunarr" />
@@ -24,8 +19,6 @@
 
 <style>
   .auth-shell {
-    position: relative;
-    isolation: isolate;
     min-height: 100vh;
     display: grid;
     place-items: center;
@@ -35,13 +28,7 @@
       url("/images/lunarr-auth-background.png") center / cover;
   }
 
-  .auth-shell.has-collage {
-    background: var(--color-bg);
-  }
-
   .auth-card {
-    position: relative;
-    z-index: 1;
     width: min(100%, 28rem);
     border: 1px solid var(--color-border-strong);
     border-radius: 8px;
