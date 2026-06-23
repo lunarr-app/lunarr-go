@@ -59,7 +59,7 @@ jobs:
 
       - name: Checkout repository
         if: steps.source.outputs.should_build == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.source.outputs.sha }}
 
