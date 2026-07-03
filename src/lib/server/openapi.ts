@@ -1878,16 +1878,7 @@ export const openApiDocument = {
         type: "object",
         required: ["show", "season", "seasons"],
         properties: {
-          show: {
-            type: "object",
-            required: ["id", "title"],
-            properties: {
-              id: stringSchema,
-              title: stringSchema,
-              posterUrl: nullableStringSchema,
-              backdropUrl: nullableStringSchema,
-            },
-          },
+          show: { $ref: "#/components/schemas/ShowMetadata" },
           season: { $ref: "#/components/schemas/SeasonDetailWithEpisodes" },
           seasons: {
             type: "array",

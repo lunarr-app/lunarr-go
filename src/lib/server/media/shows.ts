@@ -783,19 +783,17 @@ export async function getShowSeasonDetail(showId: string, seasonKey: string, use
   const season = seasonRows.find((row) => row.id === resolvedSeason.id);
   if (!season) return null;
 
-  const episodeRows = await fetchShowEpisodeRows([season.id], userId);
+  const [metadata, episodeRows] = await Promise.all([
+    fetchShowOverviewMetadata(showId),
+    fetchShowEpisodeRows([season.id], userId),
+  ]);
   const progress = await tvEpisodeProgress(
     userId,
     episodeRows.map((episode) => episode.id),
   );
 
   return {
-    show: {
-      id: show.id,
-      title: show.title,
-      posterUrl: tmdbImageUrl(show.poster_path),
-      backdropUrl: tmdbImageUrl(show.backdrop_path, "w1280"),
-    },
+    show: buildPublicShow(show, metadata.genres),
     season: {
       id: season.id,
       title: season.title,

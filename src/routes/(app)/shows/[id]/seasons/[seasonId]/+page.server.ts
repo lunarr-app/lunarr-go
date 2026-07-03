@@ -1,35 +1,26 @@
-import { resolveShowSeason, showSeasonHref, showSeasonKey } from "$lib/media/seasons";
-import { getShowDetail } from "$lib/server/media/shows";
+import { showSeasonHref, showSeasonKey } from "$lib/media/seasons";
+import { getShowSeasonDetail } from "$lib/server/media/shows";
 import { markWatched } from "$lib/server/playback";
 import { markSeasonWatched } from "$lib/server/playback/commands";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-  const detail = await getShowDetail(params.id, locals.user!.id);
-  if (!detail) throw error(404, "Show not found");
+  const detail = await getShowSeasonDetail(params.id, params.seasonId, locals.user!.id);
+  if (!detail) throw error(404, "Show or season not found");
 
-  const season = resolveShowSeason(detail.seasons, params.seasonId);
-  if (!season) throw error(404, "Season not found");
-
-  const canonicalSeasonKey = showSeasonKey(season);
+  const canonicalSeasonKey = showSeasonKey(detail.season);
   if (params.seasonId !== canonicalSeasonKey) {
-    throw redirect(301, showSeasonHref(detail.show.id, season));
+    throw redirect(301, showSeasonHref(detail.show.id, detail.season));
   }
 
-  return {
-    ...detail,
-    season,
-  };
+  return detail;
 };
 
 export const actions: Actions = {
   watched: async ({ params, request, locals }) => {
-    const detail = await getShowDetail(params.id, locals.user!.id);
-    if (!detail) return fail(404, { error: "Show not found." });
-
-    const season = resolveShowSeason(detail.seasons, params.seasonId);
-    if (!season) return fail(404, { error: "Season not found." });
+    const detail = await getShowSeasonDetail(params.id, params.seasonId, locals.user!.id);
+    if (!detail) return fail(404, { error: "Show or season not found." });
 
     const form = await request.formData();
     const episodeId = String(form.get("episodeId") ?? "");
@@ -50,14 +41,11 @@ export const actions: Actions = {
       });
     }
 
-    throw redirect(303, showSeasonHref(detail.show.id, season));
+    throw redirect(303, showSeasonHref(detail.show.id, detail.season));
   },
   seasonWatched: async ({ params, request, locals }) => {
-    const detail = await getShowDetail(params.id, locals.user!.id);
-    if (!detail) return fail(404, { error: "Show not found." });
-
-    const season = resolveShowSeason(detail.seasons, params.seasonId);
-    if (!season) return fail(404, { error: "Season not found." });
+    const detail = await getShowSeasonDetail(params.id, params.seasonId, locals.user!.id);
+    if (!detail) return fail(404, { error: "Show or season not found." });
 
     const form = await request.formData();
     const completed = String(form.get("completed") ?? "") === "true";
@@ -66,7 +54,7 @@ export const actions: Actions = {
       await markSeasonWatched({
         userId: locals.user!.id,
         showId: params.id,
-        seasonId: season.id,
+        seasonId: detail.season.id,
         completed,
       });
     } catch (error) {
@@ -75,6 +63,6 @@ export const actions: Actions = {
       });
     }
 
-    throw redirect(303, showSeasonHref(detail.show.id, season));
+    throw redirect(303, showSeasonHref(detail.show.id, detail.season));
   },
 };

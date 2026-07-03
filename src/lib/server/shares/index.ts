@@ -3,8 +3,8 @@ import { SHARE_LIST_RECENTLY_EXPIRED_MS, SHARE_PAGE_SIZE, type ShareListStatus }
 import { catalogPageInfo, catalogPageSize } from "../media/catalog";
 import { randomBytes } from "node:crypto";
 import { getDb } from "../db";
-import { getMovieDetail } from "../media/movies";
-import { getShowDetail } from "../media/shows";
+import { getMovieOverview } from "../media/movies";
+import { getShowOverview, getShowSeasonDetail } from "../media/shows";
 import { nowIso } from "../time";
 import type { CreateShareInput } from "./input";
 import {
@@ -93,29 +93,27 @@ function createShareToken() {
 
 async function validateShareTarget(input: CreateShareInput, userId: string) {
   if (input.kind === "movie") {
-    const detail = await getMovieDetail(input.mediaItemId, userId);
-    if (!detail) {
+    const overview = await getMovieOverview(input.mediaItemId, userId);
+    if (!overview || overview.files.length === 0) {
       throw new Error("Movie not found or not playable.");
     }
     return;
   }
 
-  const detail = await getShowDetail(input.mediaItemId, userId);
-  if (!detail) {
+  const overview = await getShowOverview(input.mediaItemId, userId);
+  if (!overview) {
     throw new Error("Show not found or not playable.");
   }
 
   if (input.seasonIds) {
-    const allowedSeasonIds = new Set(detail.seasons.map((season) => season.id));
+    const allowedSeasonIds = new Set(overview.seasons.map((season) => season.id));
     for (const seasonId of input.seasonIds) {
       if (!allowedSeasonIds.has(seasonId)) {
         throw new Error("One or more selected seasons are not part of this show.");
       }
     }
-    const hasPlayableEpisode = detail.seasons.some(
-      (season) =>
-        input.seasonIds!.includes(season.id) &&
-        season.episodes.some((episode) => episode.fileCount > 0 && episode.fileId),
+    const hasPlayableEpisode = overview.seasons.some(
+      (season) => input.seasonIds!.includes(season.id) && season.playableCount > 0,
     );
     if (!hasPlayableEpisode) {
       throw new Error("Selected seasons do not contain any playable episodes.");
@@ -123,9 +121,7 @@ async function validateShareTarget(input: CreateShareInput, userId: string) {
     return;
   }
 
-  const hasPlayableEpisode = detail.seasons.some((season) =>
-    season.episodes.some((episode) => episode.fileCount > 0 && episode.fileId),
-  );
+  const hasPlayableEpisode = overview.seasons.some((season) => season.playableCount > 0);
   if (!hasPlayableEpisode) {
     throw new Error("This show does not contain any playable episodes.");
   }
@@ -275,36 +271,41 @@ export async function getSharePageData(token: string): Promise<SharePageData | n
   const userId = share.created_by_user_id;
 
   if (share.kind === "movie") {
-    const detail = await getMovieDetail(share.media_item_id, userId);
-    if (!detail) return null;
+    const overview = await getMovieOverview(share.media_item_id, userId);
+    if (!overview) return null;
 
     return {
       kind: "movie",
       token: share.token,
       expiresAt: share.expires_at,
-      title: detail.movie.title,
-      overview: detail.movie.overview,
-      posterUrl: detail.posterUrl,
-      backdropUrl: detail.backdropUrl,
-      runtimeSeconds: detail.movie.runtime_seconds,
-      releaseDate: detail.movie.release_date,
-      movieId: detail.movie.id,
-      fileId: detail.files[0]?.id ?? null,
+      title: overview.movie.title,
+      overview: overview.movie.overview,
+      posterUrl: overview.posterUrl,
+      backdropUrl: overview.backdropUrl,
+      runtimeSeconds: overview.movie.runtime_seconds,
+      releaseDate: overview.movie.release_date,
+      movieId: overview.movie.id,
+      fileId: overview.files[0]?.id ?? null,
     };
   }
 
-  const detail = await getShowDetail(share.media_item_id, userId);
-  if (!detail) return null;
+  const overview = await getShowOverview(share.media_item_id, userId);
+  if (!overview) return null;
 
   const allowedSeasonIds = share.seasonIds ? new Set(share.seasonIds) : null;
-  const seasons = detail.seasons
-    .filter((season) => !allowedSeasonIds || allowedSeasonIds.has(season.id))
-    .map((season) => ({
-      id: season.id,
-      title: season.title,
-      seasonNumber: season.seasonNumber,
-      posterUrl: season.posterUrl,
-      episodes: season.episodes
+  const seasonsToLoad = overview.seasons.filter((season) => !allowedSeasonIds || allowedSeasonIds.has(season.id));
+  const seasonDetails = await Promise.all(
+    seasonsToLoad.map((season) => getShowSeasonDetail(share.media_item_id, season.id, userId)),
+  );
+
+  const seasons = seasonDetails
+    .filter((detail) => detail !== null)
+    .map((detail) => ({
+      id: detail.season.id,
+      title: detail.season.title,
+      seasonNumber: detail.season.seasonNumber,
+      posterUrl: detail.season.posterUrl,
+      episodes: detail.season.episodes
         .filter((episode) => episode.fileCount > 0 && episode.fileId)
         .map((episode) => ({
           id: episode.id,
@@ -325,11 +326,11 @@ export async function getSharePageData(token: string): Promise<SharePageData | n
     kind: "show",
     token: share.token,
     expiresAt: share.expires_at,
-    title: detail.show.title,
-    overview: detail.show.overview,
-    posterUrl: detail.show.posterUrl,
-    backdropUrl: detail.show.backdropUrl,
-    showId: detail.show.id,
+    title: overview.show.title,
+    overview: overview.show.overview,
+    posterUrl: overview.show.posterUrl,
+    backdropUrl: overview.show.backdropUrl,
+    showId: overview.show.id,
     seasons,
   };
 }
