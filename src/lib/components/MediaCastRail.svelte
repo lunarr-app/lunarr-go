@@ -3,14 +3,19 @@
   import { Users } from "@lucide/svelte";
 
   type CastPerson = {
-    provider: string;
-    providerId: string;
+    provider: string | null;
+    providerId: string | null;
     profilePath: string | null;
     name: string;
     character: string | null;
   };
 
   let { cast }: { cast: CastPerson[] } = $props();
+
+  function personHref(person: CastPerson) {
+    if (!person.provider || !person.providerId) return null;
+    return `/people/${encodeURIComponent(person.provider)}/${encodeURIComponent(person.providerId)}`;
+  }
 </script>
 
 {#if cast.length}
@@ -20,23 +25,37 @@
       <p class="muted">Top billed people from TMDb.</p>
     </div>
     <div class="cast-rail">
-      {#each cast as person}
-        <a
-          class="person"
-          href={`/people/${encodeURIComponent(person.provider)}/${encodeURIComponent(person.providerId)}`}
-        >
-          <div class="profile">
-            {#if person.profilePath}
-              <img src={tmdbImageUrl(person.profilePath, "w185")} alt="" loading="lazy" />
-            {:else}
-              <Users size={22} aria-hidden="true" />
+      {#each cast as person (person.name + (person.character ?? ""))}
+        {@const href = personHref(person)}
+        {#if href}
+          <a class="person" {href}>
+            <div class="profile">
+              {#if person.profilePath}
+                <img src={tmdbImageUrl(person.profilePath, "w185")} alt="" loading="lazy" />
+              {:else}
+                <Users size={22} aria-hidden="true" />
+              {/if}
+            </div>
+            <strong>{person.name}</strong>
+            {#if person.character}
+              <span>{person.character}</span>
+            {/if}
+          </a>
+        {:else}
+          <div class="person">
+            <div class="profile">
+              {#if person.profilePath}
+                <img src={tmdbImageUrl(person.profilePath, "w185")} alt="" loading="lazy" />
+              {:else}
+                <Users size={22} aria-hidden="true" />
+              {/if}
+            </div>
+            <strong>{person.name}</strong>
+            {#if person.character}
+              <span>{person.character}</span>
             {/if}
           </div>
-          <strong>{person.name}</strong>
-          {#if person.character}
-            <span>{person.character}</span>
-          {/if}
-        </a>
+        {/if}
       {/each}
     </div>
   </section>
