@@ -8,5 +8,6 @@ export const load: PageServerLoad = async ({ locals }) => {
   return {
     movies: movieResults.continueWatching,
     episodes: tvResults.continueWatching,
+    nextUp: tvResults.nextUp,
   };
 };

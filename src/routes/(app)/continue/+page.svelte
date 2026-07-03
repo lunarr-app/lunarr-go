@@ -4,14 +4,18 @@
   import { Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();
-  const hasProgress = $derived(data.movies.length > 0 || data.episodes.length > 0);
+  const hasContent = $derived(data.movies.length > 0 || data.episodes.length > 0 || data.nextUp.length > 0);
   const movieCountLabel = $derived(`${data.movies.length} ${data.movies.length === 1 ? "movie" : "movies"}`);
   const episodeCountLabel = $derived(`${data.episodes.length} ${data.episodes.length === 1 ? "episode" : "episodes"}`);
+  const nextUpCountLabel = $derived(`${data.nextUp.length} ${data.nextUp.length === 1 ? "episode" : "episodes"}`);
 </script>
 
 <svelte:head>
   <title>Continue Watching - Lunarr</title>
-  <meta name="description" content="Resume movies and TV episodes that are still in progress in your Lunarr library." />
+  <meta
+    name="description"
+    content="Resume in-progress movies and TV episodes, plus the next unwatched episode for shows you are watching."
+  />
 </svelte:head>
 
 <header class="page-header">
@@ -20,7 +24,7 @@
   </div>
 </header>
 
-{#if hasProgress}
+{#if hasContent}
   {#if data.movies.length}
     <section class="media-section" aria-labelledby="movies-heading">
       <div class="section-heading">
@@ -43,6 +47,20 @@
       </div>
       <div class="episode-grid">
         {#each data.episodes as episode}
+          <EpisodeCard {episode} />
+        {/each}
+      </div>
+    </section>
+  {/if}
+
+  {#if data.nextUp.length}
+    <section class="media-section" aria-labelledby="next-up-heading">
+      <div class="section-heading">
+        <h2 id="next-up-heading" class="section-title">Next up</h2>
+        <span>{nextUpCountLabel}</span>
+      </div>
+      <div class="episode-grid">
+        {#each data.nextUp as episode}
           <EpisodeCard {episode} />
         {/each}
       </div>

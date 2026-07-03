@@ -41,6 +41,7 @@ type MoviesLoadResult = {
 type ContinueLoadResult = {
   movies: MovieRow[];
   episodes: Array<{ id: string }>;
+  nextUp: Array<{ id: string }>;
 };
 
 describe("movies page server", () => {
@@ -287,5 +288,6 @@ describe("movies page server", () => {
       completed: false,
     });
     expect(result.episodes).toEqual([]);
+    expect(result.nextUp).toEqual([]);
   });
 });

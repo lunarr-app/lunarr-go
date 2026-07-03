@@ -100,6 +100,10 @@ GET /api/episodes/:id
 GET /api/people/:provider/:id
 ```
 
+### Continue watching
+
+`GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). The web Continue page surfaces all three sections.
+
 ### TV show detail tiers
 
 Lunarr exposes three show-detail levels. Mobile and third-party clients should prefer the smaller endpoints and load episodes lazily per season.
