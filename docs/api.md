@@ -86,6 +86,8 @@ GET /api/continue
 GET /api/movies
 GET /api/movies/discover
 GET /api/movies/:id
+GET /api/movies/:id/overview
+GET /api/movies/:id/credits
 GET /api/movies/:id/similar
 GET /api/shows
 GET /api/shows/discover
@@ -119,6 +121,26 @@ Recommended mobile flow:
 6. Mark watched with `POST /api/episodes/:id/watched` or `POST /api/shows/:id/seasons/:seasonId/watched`.
 
 `seasonId` accepts the season UUID or the season number (for example `1`), matching the web app season URLs.
+
+### Movie detail tiers
+
+Lunarr exposes three movie-detail levels. Mobile and third-party clients should prefer the smaller endpoints and lazy-load cast when needed.
+
+| Endpoint                       | Returns                                                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/movies/:id/overview` | Movie metadata, genres, keywords, production companies, directors, writers, `files`, and `progress`. **No `cast`.**      |
+| `GET /api/movies/:id/credits`  | Cast rail plus directors and writers (`cast`, `directors`, `writers`). Load separately when the UI needs people credits. |
+| `GET /api/movies/:id`          | Full detail including `cast`. Use for bulk export or legacy clients.                                                     |
+
+Unlike TV overview, movie overview **includes `files` and `progress`** so clients can render Play/Resume and file selection without a second call.
+
+Recommended mobile flow:
+
+1. Browse with `GET /api/movies` (`continueWatching` is a movie summary list).
+2. Open a movie with `GET /api/movies/:id/overview`.
+3. Optionally load `GET /api/movies/:id/credits` when rendering the cast section.
+4. Prepare playback with `GET /api/playback/:movieId` (optionally choose a file via the `file` query parameter).
+5. Mark watched with `POST /api/movies/:id/watched`.
 
 Movie query parameters:
 

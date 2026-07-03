@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
 import { getMediaFile } from "./files";
-import { getMovieDetail, movieRows } from "./movies";
+import { getMovieCredits, getMovieDetail, getMovieOverview, movieRows } from "./movies";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 
@@ -422,6 +422,88 @@ describe("movieRows", () => {
     });
     expect(await getMovieDetail("metadata-only", "user-1")).toBeNull();
     expect(await getMovieDetail("show-a", "user-1")).toBeNull();
+  });
+
+  test("loads movie overview with files and progress but no cast", async () => {
+    const overview = await getMovieOverview("movie-a", "user-1");
+    expect(overview).toMatchObject({
+      movie: {
+        id: "movie-a",
+        title: "Alpha",
+      },
+      files: [{ id: "file-a-alt" }, { id: "file-a" }],
+      progress: [{ media_file_id: "file-a", completed: 1 }],
+    });
+    expect(overview).not.toHaveProperty("cast");
+  });
+
+  test("loads movie credits with cast and crew", async () => {
+    await db
+      .insertInto("media_item_credit")
+      .values([
+        {
+          media_item_id: "movie-a",
+          credit_type: "cast",
+          provider: "tmdb",
+          provider_id: "person-1",
+          credit_id: "credit-1",
+          name: "Keanu Reeves",
+          original_name: "Keanu Reeves",
+          profile_path: "/keanu.jpg",
+          credit_order: 0,
+          department: null,
+          job: null,
+          character_name: "Neo",
+        },
+        {
+          media_item_id: "movie-a",
+          credit_type: "crew",
+          provider: "tmdb",
+          provider_id: "person-2",
+          credit_id: "credit-2",
+          name: "Lana Wachowski",
+          original_name: "Lana Wachowski",
+          profile_path: null,
+          credit_order: 0,
+          department: "Directing",
+          job: "Director",
+          character_name: null,
+        },
+      ])
+      .execute();
+
+    const credits = await getMovieCredits("movie-a", "user-1");
+    expect(credits).toMatchObject({
+      show: { id: "movie-a", title: "Alpha" },
+      cast: [{ name: "Keanu Reeves", character: "Neo" }],
+      directors: ["Lana Wachowski"],
+      writers: [],
+    });
+  });
+
+  test("full movie detail still includes cast", async () => {
+    await db
+      .insertInto("media_item_credit")
+      .values({
+        media_item_id: "movie-a",
+        credit_type: "cast",
+        provider: "tmdb",
+        provider_id: "person-1",
+        credit_id: "credit-1",
+        name: "Keanu Reeves",
+        original_name: "Keanu Reeves",
+        profile_path: "/keanu.jpg",
+        credit_order: 0,
+        department: null,
+        job: null,
+        character_name: "Neo",
+      })
+      .execute();
+
+    expect(await getMovieDetail("movie-a", "user-1")).toMatchObject({
+      movie: { id: "movie-a", title: "Alpha" },
+      cast: [{ name: "Keanu Reeves", character: "Neo" }],
+    });
   });
 
   test("returns streamable files only for movie items", async () => {

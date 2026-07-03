@@ -276,11 +276,44 @@ export const openApiDocument = {
     "/api/movies/{id}": {
       get: {
         tags: ["Catalog"],
-        summary: "Get movie details.",
+        summary: "Get full movie details.",
+        description:
+          "Returns the complete movie payload including cast. Mobile and third-party clients should prefer GET /api/movies/{id}/overview and GET /api/movies/{id}/credits for smaller lazy-loaded responses.",
         operationId: "getMovie",
         parameters: [pathIdParameter()],
         responses: {
-          "200": jsonResponse(objectSchema("Movie detail payload.")),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MovieFullResponse",
+          }),
+          ...commonErrors,
+        },
+      },
+    },
+    "/api/movies/{id}/overview": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get movie metadata, files, and progress without cast.",
+        operationId: "getMovieOverview",
+        parameters: [pathIdParameter()],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MovieOverviewResponse",
+          }),
+          ...commonErrors,
+        },
+      },
+    },
+    "/api/movies/{id}/credits": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get cast, directors, and writers for a movie.",
+        description: "Lazy-load people credits for the movie landing screen.",
+        operationId: "getMovieCredits",
+        parameters: [pathIdParameter()],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MovieCreditsResponse",
+          }),
           ...commonErrors,
         },
       },
@@ -1460,6 +1493,183 @@ export const openApiDocument = {
           progressSeconds: { type: "number", minimum: 0 },
           durationSeconds: nullableNumberSchema,
           completed: { type: "boolean" },
+        },
+      },
+      MovieDetailRecord: {
+        type: "object",
+        required: ["id", "title"],
+        description: "Movie metadata record with database snake_case field names.",
+        properties: {
+          id: stringSchema,
+          title: stringSchema,
+          original_title: nullableStringSchema,
+          year: nullableIntegerSchema,
+          overview: nullableStringSchema,
+          tagline: nullableStringSchema,
+          runtime_seconds: nullableNumberSchema,
+          release_date: nullableStringSchema,
+          status: nullableStringSchema,
+          homepage: nullableStringSchema,
+          original_language: nullableStringSchema,
+          imdb_id: nullableStringSchema,
+          budget: nullableIntegerSchema,
+          revenue: nullableIntegerSchema,
+          vote_count: nullableIntegerSchema,
+          certification: nullableStringSchema,
+          trailer_site: nullableStringSchema,
+          trailer_key: nullableStringSchema,
+          trailer_name: nullableStringSchema,
+          collection_provider_id: nullableStringSchema,
+          collection_name: nullableStringSchema,
+          provider: nullableStringSchema,
+          provider_id: nullableStringSchema,
+          vote_average: nullableNumberSchema,
+          updated_at: nullableStringSchema,
+        },
+      },
+      MovieFileRecord: {
+        type: "object",
+        required: ["id", "basename", "extension", "size_bytes"],
+        properties: {
+          id: stringSchema,
+          basename: stringSchema,
+          extension: stringSchema,
+          size_bytes: { type: "integer", minimum: 0 },
+          duration_seconds: nullableNumberSchema,
+          video_codec: nullableStringSchema,
+          audio_codec: nullableStringSchema,
+          container: nullableStringSchema,
+        },
+      },
+      MovieProgressRecord: {
+        type: "object",
+        required: ["media_file_id", "position_seconds", "completed", "updated_at"],
+        properties: {
+          media_file_id: stringSchema,
+          position_seconds: { type: "number", minimum: 0 },
+          duration_seconds: nullableNumberSchema,
+          completed: { type: "boolean" },
+          updated_at: stringSchema,
+        },
+      },
+      MovieOverviewResponse: {
+        type: "object",
+        required: [
+          "movie",
+          "files",
+          "progress",
+          "genres",
+          "directors",
+          "writers",
+          "keywords",
+          "productionCompanies",
+          "posterUrl",
+          "backdropUrl",
+        ],
+        properties: {
+          movie: { $ref: "#/components/schemas/MovieDetailRecord" },
+          files: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieFileRecord" },
+          },
+          progress: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieProgressRecord" },
+          },
+          genres: {
+            type: "array",
+            items: stringSchema,
+          },
+          directors: {
+            type: "array",
+            items: stringSchema,
+          },
+          writers: {
+            type: "array",
+            items: stringSchema,
+          },
+          keywords: {
+            type: "array",
+            items: stringSchema,
+          },
+          productionCompanies: {
+            type: "array",
+            items: stringSchema,
+          },
+          posterUrl: nullableStringSchema,
+          backdropUrl: nullableStringSchema,
+        },
+      },
+      MovieCreditsResponse: {
+        type: "object",
+        required: ["show", "cast", "directors", "writers"],
+        properties: {
+          show: { $ref: "#/components/schemas/MediaHeader" },
+          cast: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowCastCredit" },
+          },
+          directors: {
+            type: "array",
+            items: stringSchema,
+          },
+          writers: {
+            type: "array",
+            items: stringSchema,
+          },
+        },
+      },
+      MovieFullResponse: {
+        type: "object",
+        required: [
+          "movie",
+          "files",
+          "progress",
+          "genres",
+          "cast",
+          "directors",
+          "writers",
+          "keywords",
+          "productionCompanies",
+          "posterUrl",
+          "backdropUrl",
+        ],
+        properties: {
+          movie: { $ref: "#/components/schemas/MovieDetailRecord" },
+          files: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieFileRecord" },
+          },
+          progress: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieProgressRecord" },
+          },
+          genres: {
+            type: "array",
+            items: stringSchema,
+          },
+          cast: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowCastCredit" },
+          },
+          directors: {
+            type: "array",
+            items: stringSchema,
+          },
+          writers: {
+            type: "array",
+            items: stringSchema,
+          },
+          keywords: {
+            type: "array",
+            items: stringSchema,
+          },
+          productionCompanies: {
+            type: "array",
+            items: stringSchema,
+          },
+          posterUrl: nullableStringSchema,
+          backdropUrl: nullableStringSchema,
         },
       },
       EpisodeSummary: {
