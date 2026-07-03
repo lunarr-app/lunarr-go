@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { getShowDetail, showRows, tvRows } from "./shows";
+import { getShowCredits, getShowDetail, getShowOverview, getShowSeasonDetail, showRows, tvRows } from "./shows";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 
@@ -271,6 +271,75 @@ describe("showRows", () => {
       ],
     });
     expect(await getShowDetail("episode-1", "user-1")).toBeNull();
+  });
+
+  test("loads show overview with season stubs and no episode arrays", async () => {
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "episode-1",
+        media_file_id: "file-1",
+        position_seconds: 2700,
+        duration_seconds: 2700,
+        completed: 1,
+        updated_at: new Date().toISOString(),
+      })
+      .execute();
+
+    const overview = await getShowOverview("show-1", "user-1");
+    expect(overview).toMatchObject({
+      show: {
+        id: "show-1",
+        title: "The Expanse",
+        genres: ["Sci-Fi & Fantasy"],
+      },
+      seasons: [
+        {
+          id: "season-1",
+          title: "Season 1",
+          seasonNumber: 1,
+          episodeCount: 1,
+          playableCount: 1,
+          watchedCount: 1,
+        },
+      ],
+    });
+    expect(overview?.seasons[0]).not.toHaveProperty("episodes");
+    expect(overview).not.toHaveProperty("cast");
+  });
+
+  test("loads show credits with cast and creators", async () => {
+    const credits = await getShowCredits("show-1", "user-1");
+    expect(credits).toMatchObject({
+      show: { id: "show-1", title: "The Expanse" },
+      cast: [
+        {
+          provider: "tmdb",
+          providerId: "person-1",
+          name: "Shohreh Aghdashloo",
+          character: "Chrisjen Avasarala",
+        },
+      ],
+      creators: [],
+    });
+  });
+
+  test("loads one season by id or season number", async () => {
+    const byId = await getShowSeasonDetail("show-1", "season-1", "user-1");
+    expect(byId).toMatchObject({
+      show: { id: "show-1", title: "The Expanse" },
+      season: {
+        id: "season-1",
+        seasonNumber: 1,
+        episodes: [{ id: "episode-1", title: "Dulcinea", fileId: "file-1" }],
+      },
+      seasons: [{ id: "season-1", title: "Season 1", seasonNumber: 1 }],
+    });
+
+    const byNumber = await getShowSeasonDetail("show-1", "1", "user-1");
+    expect(byNumber?.season.id).toBe("season-1");
+    expect(await getShowSeasonDetail("show-1", "missing", "user-1")).toBeNull();
   });
 
   test("loads TV rails for continue, next up, recently aired shows, and popular", async () => {

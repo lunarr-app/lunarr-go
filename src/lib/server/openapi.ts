@@ -663,11 +663,45 @@ export const openApiDocument = {
     "/api/shows/{id}": {
       get: {
         tags: ["Catalog"],
-        summary: "Get show details.",
+        summary: "Get full show details with every season and episode.",
+        description:
+          "Returns the complete show tree. Mobile and third-party clients should prefer GET /api/shows/{id}/overview and GET /api/shows/{id}/seasons/{seasonId} for smaller payloads.",
         operationId: "getShow",
         parameters: [pathIdParameter()],
         responses: {
-          "200": jsonResponse(objectSchema("Show detail payload.")),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ShowFullResponse",
+          }),
+          ...commonErrors,
+        },
+      },
+    },
+    "/api/shows/{id}/overview": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get show metadata and season list without episode details.",
+        operationId: "getShowOverview",
+        parameters: [pathIdParameter()],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ShowOverviewResponse",
+          }),
+          ...commonErrors,
+        },
+      },
+    },
+    "/api/shows/{id}/credits": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get cast and creators for a show.",
+        description:
+          "Lazy-load people credits for the show landing screen. Mirrors TMDb aggregate credits split into cast and show creators.",
+        operationId: "getShowCredits",
+        parameters: [pathIdParameter()],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ShowCreditsResponse",
+          }),
           ...commonErrors,
         },
       },
@@ -718,6 +752,25 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/shows/{id}/seasons/{seasonId}": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get one season with episodes and watch progress.",
+        description:
+          "seasonId accepts the season UUID or season number (for example 1). Returns a lightweight season tab list for navigation.",
+        operationId: "getShowSeason",
+        parameters: [
+          pathIdParameter("id", "Show identifier."),
+          pathIdParameter("seasonId", "Season UUID or season number."),
+        ],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ShowSeasonDetailResponse",
+          }),
+          ...commonErrors,
+        },
+      },
+    },
     "/api/episodes/{id}": {
       get: {
         tags: ["Catalog"],
@@ -725,7 +778,9 @@ export const openApiDocument = {
         operationId: "getEpisode",
         parameters: [pathIdParameter()],
         responses: {
-          "200": jsonResponse(objectSchema("Episode detail payload.")),
+          "200": jsonResponse({
+            $ref: "#/components/schemas/EpisodeDetailResponse",
+          }),
           ...commonErrors,
         },
       },
@@ -1472,6 +1527,274 @@ export const openApiDocument = {
           latestFileCreatedAt: nullableStringSchema,
           latestEpisodeReleaseDate: nullableStringSchema,
           character: nullableStringSchema,
+        },
+      },
+      ShowCastCredit: {
+        type: "object",
+        required: ["name"],
+        properties: {
+          provider: nullableStringSchema,
+          providerId: nullableStringSchema,
+          name: stringSchema,
+          character: nullableStringSchema,
+          profilePath: nullableStringSchema,
+        },
+      },
+      ShowMetadata: {
+        type: "object",
+        required: ["id", "title", "genres"],
+        properties: {
+          id: stringSchema,
+          title: stringSchema,
+          originalTitle: nullableStringSchema,
+          year: nullableIntegerSchema,
+          overview: nullableStringSchema,
+          posterUrl: nullableStringSchema,
+          backdropUrl: nullableStringSchema,
+          releaseDate: nullableStringSchema,
+          status: nullableStringSchema,
+          voteAverage: nullableNumberSchema,
+          voteCount: nullableIntegerSchema,
+          popularity: nullableNumberSchema,
+          genres: {
+            type: "array",
+            items: stringSchema,
+          },
+          provider: nullableStringSchema,
+          providerId: nullableStringSchema,
+          updatedAt: nullableStringSchema,
+          certification: nullableStringSchema,
+          originalLanguage: nullableStringSchema,
+          trailerSite: nullableStringSchema,
+          trailerKey: nullableStringSchema,
+        },
+      },
+      SeasonEpisodeDetail: {
+        type: "object",
+        required: ["id", "title", "fileCount", "fileId", "progressSeconds", "durationSeconds", "completed"],
+        properties: {
+          id: stringSchema,
+          title: stringSchema,
+          overview: nullableStringSchema,
+          seasonNumber: nullableIntegerSchema,
+          episodeNumber: nullableIntegerSchema,
+          releaseDate: nullableStringSchema,
+          runtimeSeconds: nullableNumberSchema,
+          stillUrl: nullableStringSchema,
+          fileCount: { type: "integer", minimum: 0 },
+          fileId: nullableStringSchema,
+          progressSeconds: { type: "number", minimum: 0 },
+          durationSeconds: nullableNumberSchema,
+          completed: { type: "boolean" },
+        },
+      },
+      SeasonOverviewStub: {
+        type: "object",
+        required: ["id", "title", "episodeCount", "playableCount", "watchedCount"],
+        properties: {
+          id: stringSchema,
+          title: stringSchema,
+          seasonNumber: nullableIntegerSchema,
+          overview: nullableStringSchema,
+          posterUrl: nullableStringSchema,
+          episodeCount: { type: "integer", minimum: 0 },
+          playableCount: { type: "integer", minimum: 0 },
+          watchedCount: { type: "integer", minimum: 0 },
+        },
+      },
+      SeasonDetailWithEpisodes: {
+        type: "object",
+        required: ["id", "title", "episodes"],
+        properties: {
+          id: stringSchema,
+          title: stringSchema,
+          seasonNumber: nullableIntegerSchema,
+          overview: nullableStringSchema,
+          posterUrl: nullableStringSchema,
+          episodes: {
+            type: "array",
+            items: { $ref: "#/components/schemas/SeasonEpisodeDetail" },
+          },
+        },
+      },
+      SeasonTabSummary: {
+        type: "object",
+        required: ["id", "title"],
+        properties: {
+          id: stringSchema,
+          title: stringSchema,
+          seasonNumber: nullableIntegerSchema,
+        },
+      },
+      ShowOverviewResponse: {
+        type: "object",
+        required: ["show", "creators", "keywords", "productionCompanies", "seasons"],
+        properties: {
+          show: { $ref: "#/components/schemas/ShowMetadata" },
+          creators: {
+            type: "array",
+            items: stringSchema,
+          },
+          keywords: {
+            type: "array",
+            items: stringSchema,
+          },
+          productionCompanies: {
+            type: "array",
+            items: stringSchema,
+          },
+          seasons: {
+            type: "array",
+            items: { $ref: "#/components/schemas/SeasonOverviewStub" },
+          },
+        },
+      },
+      ShowCreditsResponse: {
+        type: "object",
+        required: ["show", "cast", "creators"],
+        properties: {
+          show: { $ref: "#/components/schemas/MediaHeader" },
+          cast: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowCastCredit" },
+          },
+          creators: {
+            type: "array",
+            items: stringSchema,
+          },
+        },
+      },
+      ShowSeasonDetailResponse: {
+        type: "object",
+        required: ["show", "season", "seasons"],
+        properties: {
+          show: {
+            type: "object",
+            required: ["id", "title"],
+            properties: {
+              id: stringSchema,
+              title: stringSchema,
+              posterUrl: nullableStringSchema,
+              backdropUrl: nullableStringSchema,
+            },
+          },
+          season: { $ref: "#/components/schemas/SeasonDetailWithEpisodes" },
+          seasons: {
+            type: "array",
+            items: { $ref: "#/components/schemas/SeasonTabSummary" },
+          },
+        },
+      },
+      ShowFullResponse: {
+        type: "object",
+        required: ["show", "creators", "keywords", "productionCompanies", "cast", "seasons"],
+        properties: {
+          show: { $ref: "#/components/schemas/ShowMetadata" },
+          creators: {
+            type: "array",
+            items: stringSchema,
+          },
+          keywords: {
+            type: "array",
+            items: stringSchema,
+          },
+          productionCompanies: {
+            type: "array",
+            items: stringSchema,
+          },
+          cast: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowCastCredit" },
+          },
+          seasons: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["id", "title", "episodes"],
+              properties: {
+                id: stringSchema,
+                title: stringSchema,
+                seasonNumber: nullableIntegerSchema,
+                overview: nullableStringSchema,
+                posterUrl: nullableStringSchema,
+                episodes: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/SeasonEpisodeDetail" },
+                },
+              },
+            },
+          },
+        },
+      },
+      EpisodeDetailResponse: {
+        type: "object",
+        required: ["show", "season", "episode", "files", "progress"],
+        properties: {
+          show: {
+            type: "object",
+            required: ["id", "title"],
+            properties: {
+              id: stringSchema,
+              title: stringSchema,
+              posterUrl: nullableStringSchema,
+              backdropUrl: nullableStringSchema,
+            },
+          },
+          season: {
+            type: "object",
+            required: ["id", "title"],
+            properties: {
+              id: stringSchema,
+              title: stringSchema,
+              seasonNumber: nullableIntegerSchema,
+            },
+          },
+          episode: {
+            type: "object",
+            required: ["id", "title"],
+            properties: {
+              id: stringSchema,
+              title: stringSchema,
+              overview: nullableStringSchema,
+              seasonNumber: nullableIntegerSchema,
+              episodeNumber: nullableIntegerSchema,
+              releaseDate: nullableStringSchema,
+              runtimeSeconds: nullableNumberSchema,
+              stillUrl: nullableStringSchema,
+              voteAverage: nullableNumberSchema,
+            },
+          },
+          files: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["id", "basename", "extension", "size_bytes"],
+              properties: {
+                id: stringSchema,
+                basename: stringSchema,
+                extension: stringSchema,
+                size_bytes: { type: "integer", minimum: 0 },
+                duration_seconds: nullableNumberSchema,
+                video_codec: nullableStringSchema,
+                audio_codec: nullableStringSchema,
+                container: nullableStringSchema,
+              },
+            },
+          },
+          progress: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["media_file_id", "position_seconds", "completed", "updated_at"],
+              properties: {
+                media_file_id: stringSchema,
+                position_seconds: { type: "number", minimum: 0 },
+                duration_seconds: nullableNumberSchema,
+                completed: { type: "boolean" },
+                updated_at: stringSchema,
+              },
+            },
+          },
         },
       },
       PersonDetailResponse: {

@@ -90,10 +90,35 @@ GET /api/movies/:id/similar
 GET /api/shows
 GET /api/shows/discover
 GET /api/shows/:id
+GET /api/shows/:id/overview
+GET /api/shows/:id/credits
+GET /api/shows/:id/seasons/:seasonId
 GET /api/shows/:id/similar
 GET /api/episodes/:id
 GET /api/people/:provider/:id
 ```
+
+### TV show detail tiers
+
+Lunarr exposes three show-detail levels. Mobile and third-party clients should prefer the smaller endpoints and load episodes lazily per season.
+
+| Endpoint                               | Returns                                                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `GET /api/shows/:id/overview`          | Show metadata and season stubs with counts (`episodeCount`, `playableCount`, `watchedCount`). No episode arrays. |
+| `GET /api/shows/:id/credits`           | Cast rail and show creators (`cast`, `creators`). Load separately when the UI needs people credits.              |
+| `GET /api/shows/:id/seasons/:seasonId` | Compact show header, one season with episodes and watch progress, plus a lightweight season tab list.            |
+| `GET /api/shows/:id`                   | Full tree with every season and episode. Use for bulk export or legacy clients.                                  |
+
+Recommended mobile flow:
+
+1. Browse with `GET /api/shows` (`continueWatching` and `nextUp` are episode summaries).
+2. Open a show with `GET /api/shows/:id/overview`.
+3. Optionally load `GET /api/shows/:id/credits` when rendering the cast section.
+4. Open a season with `GET /api/shows/:id/seasons/:seasonId`.
+5. Prepare playback with `GET /api/playback/:episodeId` (optionally prefetch files via `GET /api/episodes/:id`).
+6. Mark watched with `POST /api/episodes/:id/watched` or `POST /api/shows/:id/seasons/:seasonId/watched`.
+
+`seasonId` accepts the season UUID or the season number (for example `1`), matching the web app season URLs.
 
 Movie query parameters:
 
