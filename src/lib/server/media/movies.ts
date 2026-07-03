@@ -583,22 +583,12 @@ export async function getMovieCredits(id: string, userId: string) {
 }
 
 export async function getMovieDetail(id: string, userId: string) {
-  const detail = await fetchAccessibleMovieDetail(id, userId);
-  if (!detail) return null;
-
-  const [metadata, cast] = await Promise.all([fetchMovieOverviewMetadata(id), fetchMovieCast(id)]);
+  const overview = await getMovieOverview(id, userId);
+  if (!overview) return null;
 
   return {
-    movie: detail.movie,
-    files: detail.files,
-    progress: detail.progress,
-    genres: metadata.genres,
-    cast,
-    directors: metadata.directors,
-    writers: metadata.writers,
-    keywords: metadata.keywords,
-    productionCompanies: metadata.productionCompanies,
-    ...buildMovieImageUrls(detail.posterPath, detail.backdropPath),
+    ...overview,
+    cast: await fetchMovieCast(id),
   };
 }
 
