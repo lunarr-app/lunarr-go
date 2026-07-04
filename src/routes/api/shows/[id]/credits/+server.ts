@@ -1,6 +1,7 @@
 import { requireJsonUser } from "$lib/server/api";
+import { apiError, apiJson } from "$lib/server/api/json";
+import type { ShowCreditsResponse } from "$lib/server/api/types";
 import { getShowCredits } from "$lib/server/media/shows";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -8,7 +9,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   if (user instanceof Response) return user;
 
   const credits = await getShowCredits(params.id, user.id);
-  if (!credits) return json({ error: "Show not found." }, { status: 404 });
+  if (!credits) return apiError("Show not found.", 404);
 
-  return json(credits);
+  return apiJson<ShowCreditsResponse>(credits);
 };

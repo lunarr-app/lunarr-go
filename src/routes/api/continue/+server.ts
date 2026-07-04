@@ -1,7 +1,8 @@
 import { requireJsonUser } from "$lib/server/api";
+import { apiJson } from "$lib/server/api/json";
+import type { ContinueWatchingResponse } from "$lib/server/api/types";
 import { movieRows } from "$lib/server/media/movies";
 import { tvRows } from "$lib/server/media/shows";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -10,7 +11,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 
   const [movieResults, tvResults] = await Promise.all([movieRows(user.id), tvRows(user.id)]);
 
-  return json({
+  return apiJson<ContinueWatchingResponse>({
     movies: movieResults.continueWatching,
     episodes: tvResults.continueWatching,
     nextUp: tvResults.nextUp,

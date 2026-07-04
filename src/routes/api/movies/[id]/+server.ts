@@ -1,6 +1,7 @@
 import { requireJsonUser } from "$lib/server/api";
+import { apiError, apiJson } from "$lib/server/api/json";
+import type { MovieFullResponse } from "$lib/server/api/types";
 import { getMovieDetail } from "$lib/server/media/movies";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -8,7 +9,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   if (user instanceof Response) return user;
 
   const detail = await getMovieDetail(params.id, user.id);
-  if (!detail) return json({ error: "Movie not found." }, { status: 404 });
+  if (!detail) return apiError("Movie not found.", 404);
 
-  return json(detail);
+  return apiJson<MovieFullResponse>(detail);
 };

@@ -2,6 +2,7 @@ import { requireJsonUser } from "$lib/server/api";
 import { apiError, apiJson } from "$lib/server/api/json";
 import { normalizePage } from "$lib/server/media/catalog";
 import { getPersonDetail } from "$lib/server/media/people";
+import type { PersonDetailResponse } from "$lib/server/api/types";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals, url }) => {
@@ -14,5 +15,5 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
   });
   if (!detail) return apiError("Person not found.", 404);
 
-  return apiJson(detail);
+  return apiJson<PersonDetailResponse>(detail);
 };

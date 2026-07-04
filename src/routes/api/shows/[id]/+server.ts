@@ -1,6 +1,7 @@
 import { requireJsonUser } from "$lib/server/api";
+import { apiError, apiJson } from "$lib/server/api/json";
+import type { ShowFullResponse } from "$lib/server/api/types";
 import { getShowDetail } from "$lib/server/media/shows";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -8,7 +9,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   if (user instanceof Response) return user;
 
   const detail = await getShowDetail(params.id, user.id);
-  if (!detail) return json({ error: "Show not found." }, { status: 404 });
+  if (!detail) return apiError("Show not found.", 404);
 
-  return json(detail);
+  return apiJson<ShowFullResponse>(detail);
 };

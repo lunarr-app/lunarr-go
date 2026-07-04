@@ -1,6 +1,15 @@
 import type { RefreshMovieMetadataResult } from "$lib/server/metadata/movies";
 import type { RefreshTvShowMetadataResult } from "$lib/server/metadata/tv";
+import type { getMovieCredits, getMovieDetail, getMovieOverview } from "$lib/server/media/movies";
 import type { getPersonDetail } from "$lib/server/media/people";
+import type { loadSimilarMovies, loadSimilarShows } from "$lib/server/media/similar-page-load";
+import type {
+  getEpisodeDetail,
+  getShowCredits,
+  getShowDetail,
+  getShowOverview,
+  getShowSeasonDetail,
+} from "$lib/server/media/shows";
 import type { createLibrary, listLibrariesWithScanStatus, listLibraryShareUsers } from "$lib/server/libraries";
 import type { getScanJobSummary, listPlaybackSessions, listScanErrorsForJob, listScanJobs } from "$lib/server/jobs";
 import type { PlaybackData } from "$lib/server/playback";
@@ -12,6 +21,7 @@ import type {
   SharePageData,
   ShareSeasonData,
 } from "$lib/shares/types";
+import type { MovieRowsResponse, ShowRowsResponse } from "$lib/media/types";
 
 export type {
   CatalogPageInfo,
@@ -37,6 +47,24 @@ export type PersonDetailResponse = NonNullable<Awaited<ReturnType<typeof getPers
 export type PersonRecord = PersonDetailResponse["person"];
 
 export type { PersonFilmographyStats } from "$lib/server/media/people";
+
+export type MovieFullResponse = NonNullable<Awaited<ReturnType<typeof getMovieDetail>>>;
+export type MovieOverviewResponse = NonNullable<Awaited<ReturnType<typeof getMovieOverview>>>;
+export type MovieCreditsResponse = NonNullable<Awaited<ReturnType<typeof getMovieCredits>>>;
+export type SimilarMoviesResponse = NonNullable<Awaited<ReturnType<typeof loadSimilarMovies>>>;
+
+export type ShowFullResponse = NonNullable<Awaited<ReturnType<typeof getShowDetail>>>;
+export type ShowOverviewResponse = NonNullable<Awaited<ReturnType<typeof getShowOverview>>>;
+export type ShowCreditsResponse = NonNullable<Awaited<ReturnType<typeof getShowCredits>>>;
+export type ShowSeasonDetailResponse = NonNullable<Awaited<ReturnType<typeof getShowSeasonDetail>>>;
+export type EpisodeDetailResponse = NonNullable<Awaited<ReturnType<typeof getEpisodeDetail>>>;
+export type SimilarShowsResponse = NonNullable<Awaited<ReturnType<typeof loadSimilarShows>>>;
+
+export type ContinueWatchingResponse = {
+  movies: MovieRowsResponse["continueWatching"];
+  episodes: ShowRowsResponse["continueWatching"];
+  nextUp: ShowRowsResponse["nextUp"];
+};
 
 export type GuestSharePageResponse = {
   share: SharePageData;
@@ -113,8 +141,18 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "PersonDetailResponse",
   "MovieRowsResponse",
   "MovieBrowseRailResponse",
+  "MovieFullResponse",
+  "MovieOverviewResponse",
+  "MovieCreditsResponse",
+  "SimilarMoviesResponse",
   "ShowRowsResponse",
   "ShowBrowseRailResponse",
+  "ShowFullResponse",
+  "ShowOverviewResponse",
+  "ShowCreditsResponse",
+  "ShowSeasonDetailResponse",
+  "EpisodeDetailResponse",
+  "SimilarShowsResponse",
   "ContinueWatchingResponse",
   "GuestShareMoviePage",
   "GuestShareShowPage",
