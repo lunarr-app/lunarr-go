@@ -99,4 +99,4 @@ jobs:
           build-args: |
             LUNARR_APP_VERSION=${{ steps.edge.outputs.version }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=max,ignore-error=true
