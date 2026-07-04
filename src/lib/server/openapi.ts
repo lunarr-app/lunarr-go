@@ -1173,6 +1173,96 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/device-pairing": {
+      post: {
+        tags: ["Account"],
+        summary: "Start TV or mobile device pairing.",
+        description:
+          "Creates a short pairing code for a device to display. Poll with GET /api/device-pairing/poll until the signed-in user approves the code.",
+        operationId: "startDevicePairing",
+        security: [],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  deviceName: stringSchema,
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": jsonResponse({
+            $ref: "#/components/schemas/DevicePairingStartResponse",
+          }),
+          "429": errorResponse,
+          "503": errorResponse,
+        },
+      },
+    },
+    "/api/device-pairing/poll": {
+      get: {
+        tags: ["Account"],
+        summary: "Poll device pairing status.",
+        operationId: "pollDevicePairing",
+        security: [],
+        parameters: [
+          {
+            name: "deviceCode",
+            in: "query",
+            required: true,
+            schema: stringSchema,
+            description: "Secret device code returned by POST /api/device-pairing.",
+          },
+        ],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/DevicePairingPollResponse",
+          }),
+          "404": errorResponse,
+          "410": errorResponse,
+          "429": errorResponse,
+        },
+      },
+    },
+    "/api/device-pairing/approve": {
+      post: {
+        tags: ["Account"],
+        summary: "Approve a device pairing code.",
+        description:
+          "Creates a personal API key for the signed-in user and makes it available to the waiting device. Paired keys expire after 2 years.",
+        operationId: "approveDevicePairing",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["userCode"],
+                properties: {
+                  userCode: stringSchema,
+                  deviceName: stringSchema,
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/DevicePairingApproveResponse",
+          }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "404": errorResponse,
+          "409": errorResponse,
+          "410": errorResponse,
+          "429": errorResponse,
+        },
+      },
+    },
     "/api/openapi.json": {
       get: {
         tags: ["Docs"],
@@ -1467,6 +1557,57 @@ export const openApiDocument = {
             description: "True after the first admin account has been created during setup.",
           },
           version: stringSchema,
+        },
+      },
+      DevicePairingStartResponse: {
+        type: "object",
+        required: ["deviceCode", "userCode", "expiresAt", "expiresIn", "pollIntervalMs"],
+        properties: {
+          deviceCode: stringSchema,
+          userCode: stringSchema,
+          expiresAt: stringSchema,
+          expiresIn: { type: "integer" },
+          pollIntervalMs: { type: "integer" },
+        },
+      },
+      DevicePairingPollResponse: {
+        oneOf: [
+          {
+            type: "object",
+            required: ["status"],
+            properties: {
+              status: { type: "string", enum: ["pending"] },
+              expiresAt: stringSchema,
+              pollIntervalMs: { type: "integer" },
+            },
+          },
+          {
+            type: "object",
+            required: ["status", "apiKey", "apiKeyId", "name"],
+            properties: {
+              status: { type: "string", enum: ["approved"] },
+              apiKey: stringSchema,
+              apiKeyId: stringSchema,
+              name: stringSchema,
+            },
+          },
+          {
+            type: "object",
+            required: ["status"],
+            properties: {
+              status: { type: "string", enum: ["expired"] },
+            },
+          },
+        ],
+      },
+      DevicePairingApproveResponse: {
+        type: "object",
+        required: ["ok", "userCode", "deviceName", "apiKey"],
+        properties: {
+          ok: { type: "boolean", enum: [true] },
+          userCode: stringSchema,
+          deviceName: stringSchema,
+          apiKey: { $ref: "#/components/schemas/ApiKeySummary" },
         },
       },
       User: {

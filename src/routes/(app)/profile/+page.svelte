@@ -2,6 +2,7 @@
   import ProfileAccountPanel from "./_components/ProfileAccountPanel.svelte";
   import ProfileApiKeysPanel from "./_components/ProfileApiKeysPanel.svelte";
   import ProfileAppearancePanel from "./_components/ProfileAppearancePanel.svelte";
+  import ProfileDevicePairingPanel from "./_components/ProfileDevicePairingPanel.svelte";
   import ProfilePlaybackPanel from "./_components/ProfilePlaybackPanel.svelte";
 
   let { data, form } = $props();
@@ -27,6 +28,11 @@
     <ProfilePlaybackPanel
       transcodePolicy={data.transcodePolicy}
       playbackPreferenceError={form?.playbackPreferenceError}
+    />
+    <ProfileDevicePairingPanel
+      initialUserCode={data.initialUserCode}
+      pairingSuccess={form?.pairingSuccess}
+      pairingError={form?.pairingError}
     />
     <ProfileApiKeysPanel
       apiKeys={data.apiKeys}

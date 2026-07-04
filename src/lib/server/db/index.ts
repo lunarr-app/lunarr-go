@@ -10,6 +10,7 @@ import migration0002 from "./migrations/0002_webdav_library_source.sql?raw";
 import migration0003 from "./migrations/0003_playback_hls_cache.sql?raw";
 import migration0004 from "./migrations/0004_admin_user_fields.sql?raw";
 import migration0005 from "./migrations/0005_media_share.sql?raw";
+import migration0006 from "./migrations/0006_device_pairing.sql?raw";
 
 const MIGRATION_SOURCES = {
   "0001_initial": migration0001,
@@ -17,6 +18,7 @@ const MIGRATION_SOURCES = {
   "0003_playback_hls_cache": migration0003,
   "0004_admin_user_fields": migration0004,
   "0005_media_share": migration0005,
+  "0006_device_pairing": migration0006,
 } satisfies Record<string, string>;
 
 let sqlite: LibsqlDatabase.Database | undefined;

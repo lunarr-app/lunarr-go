@@ -1,0 +1,223 @@
+import {
+  DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS,
+  DEVICE_PAIRING_POLL_INTERVAL_MS,
+  DEVICE_PAIRING_TTL_MS,
+  DEVICE_PAIRING_USER_CODE_LENGTH,
+} from "$lib/device-pairing/constants";
+import { formatUserCode, generateUserCode, normalizeUserCode } from "$lib/device-pairing/format";
+import { randomUUID } from "node:crypto";
+import { getDb } from "../db";
+import type { DevicePairingStatus } from "../db/schema/device-pairing";
+import { createApiKeyForUserId } from "./api-keys";
+
+export class DevicePairingError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "DevicePairingError";
+    this.status = status;
+  }
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function normalizeDeviceName(value: unknown) {
+  const name = typeof value === "string" ? value.trim() : "";
+  return name.slice(0, 80) || "Linked device";
+}
+
+async function expireStalePairings(now = new Date()) {
+  const db = await getDb();
+  const nowText = now.toISOString();
+  await db
+    .updateTable("device_pairing")
+    .set({ status: "expired" })
+    .where("status", "=", "pending")
+    .where("expires_at", "<=", nowText)
+    .execute();
+}
+
+async function createUniqueUserCode() {
+  const db = await getDb();
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const userCode = generateUserCode(DEVICE_PAIRING_USER_CODE_LENGTH);
+    const existing = await db
+      .selectFrom("device_pairing")
+      .select("id")
+      .where("user_code", "=", userCode)
+      .where("status", "in", ["pending", "approved"])
+      .executeTakeFirst();
+    if (!existing) return userCode;
+  }
+  throw new DevicePairingError("Could not create a pairing code. Try again.", 503);
+}
+
+export async function startDevicePairing(input: { deviceName?: unknown } = {}) {
+  await expireStalePairings();
+
+  const db = await getDb();
+  const createdAt = nowIso();
+  const expiresAt = new Date(Date.now() + DEVICE_PAIRING_TTL_MS).toISOString();
+  const deviceName = normalizeDeviceName(input.deviceName);
+  const deviceCode = randomUUID();
+  const userCode = await createUniqueUserCode();
+
+  await db
+    .insertInto("device_pairing")
+    .values({
+      id: randomUUID(),
+      device_code: deviceCode,
+      user_code: userCode,
+      status: "pending",
+      device_name: deviceName,
+      approved_by_user_id: null,
+      api_key_id: null,
+      api_key_token: null,
+      expires_at: expiresAt,
+      approved_at: null,
+      created_at: createdAt,
+    })
+    .execute();
+
+  return {
+    deviceCode,
+    userCode: formatUserCode(userCode),
+    expiresAt,
+    expiresIn: Math.round(DEVICE_PAIRING_TTL_MS / 1000),
+    pollIntervalMs: DEVICE_PAIRING_POLL_INTERVAL_MS,
+  };
+}
+
+function pairingExpired(expiresAt: string, now = Date.now()) {
+  return Date.parse(expiresAt) <= now;
+}
+
+async function markExpired(id: string) {
+  const db = await getDb();
+  await db.updateTable("device_pairing").set({ status: "expired" }).where("id", "=", id).execute();
+}
+
+export async function pollDevicePairing(deviceCode: string) {
+  await expireStalePairings();
+
+  const normalizedDeviceCode = deviceCode.trim();
+  if (!normalizedDeviceCode) {
+    throw new DevicePairingError("Device code is required.", 400);
+  }
+
+  const db = await getDb();
+  const pairing = await db
+    .selectFrom("device_pairing")
+    .selectAll()
+    .where("device_code", "=", normalizedDeviceCode)
+    .executeTakeFirst();
+
+  if (!pairing) {
+    throw new DevicePairingError("Pairing request not found.", 404);
+  }
+
+  if (pairing.status === "consumed") {
+    throw new DevicePairingError("Pairing request already completed.", 410);
+  }
+
+  if (pairing.status === "expired" || pairingExpired(pairing.expires_at)) {
+    if (pairing.status === "pending") {
+      await markExpired(pairing.id);
+    }
+    return { status: "expired" as const };
+  }
+
+  if (pairing.status === "pending") {
+    return {
+      status: "pending" as const,
+      expiresAt: pairing.expires_at,
+      pollIntervalMs: DEVICE_PAIRING_POLL_INTERVAL_MS,
+    };
+  }
+
+  if (!pairing.api_key_token || !pairing.api_key_id) {
+    throw new DevicePairingError("Approved pairing is missing credentials.", 500);
+  }
+
+  const token = pairing.api_key_token;
+  await db
+    .updateTable("device_pairing")
+    .set({
+      status: "consumed",
+      api_key_token: null,
+    })
+    .where("id", "=", pairing.id)
+    .execute();
+
+  return {
+    status: "approved" as const,
+    apiKey: token,
+    apiKeyId: pairing.api_key_id,
+    name: pairing.device_name,
+  };
+}
+
+export async function approveDevicePairing(input: { userId: string; userCode: unknown; deviceName?: unknown }) {
+  await expireStalePairings();
+
+  const normalizedUserCode = normalizeUserCode(String(input.userCode ?? ""));
+  if (normalizedUserCode.length !== DEVICE_PAIRING_USER_CODE_LENGTH) {
+    throw new DevicePairingError("Enter the 8-character code shown on the device.", 400);
+  }
+
+  const db = await getDb();
+  const pairing = await db
+    .selectFrom("device_pairing")
+    .selectAll()
+    .where("user_code", "=", normalizedUserCode)
+    .executeTakeFirst();
+
+  if (!pairing) {
+    throw new DevicePairingError("Pairing code not found.", 404);
+  }
+
+  if (pairing.status !== "pending") {
+    throw new DevicePairingError("This pairing code is no longer active.", 409);
+  }
+
+  if (pairingExpired(pairing.expires_at)) {
+    await markExpired(pairing.id);
+    throw new DevicePairingError("This pairing code has expired.", 410);
+  }
+
+  const deviceName = normalizeDeviceName(input.deviceName ?? pairing.device_name);
+  const created = await createApiKeyForUserId({
+    userId: input.userId,
+    name: deviceName,
+    expiresIn: DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS,
+  });
+
+  const approvedAt = nowIso();
+  await db
+    .updateTable("device_pairing")
+    .set({
+      status: "approved" as DevicePairingStatus,
+      device_name: deviceName,
+      approved_by_user_id: input.userId,
+      api_key_id: created.apiKey.id,
+      api_key_token: created.token,
+      approved_at: approvedAt,
+    })
+    .where("id", "=", pairing.id)
+    .execute();
+
+  return {
+    ok: true as const,
+    userCode: formatUserCode(normalizedUserCode),
+    deviceName,
+    apiKey: created.apiKey,
+  };
+}
+
+export function devicePairingHttpStatus(error: unknown) {
+  if (error instanceof DevicePairingError) return error.status;
+  return 400;
+}

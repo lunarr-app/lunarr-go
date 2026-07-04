@@ -1,4 +1,5 @@
 import type { getHealthStatus } from "$lib/server/health";
+import type { approveDevicePairing, pollDevicePairing, startDevicePairing } from "$lib/server/auth/device-pairing";
 import type { runSettingsAction, getAdminSettingsResponse } from "$lib/server/settings-commands";
 import type { startAllLibraryScans } from "$lib/server/scanner";
 import type { startMovieMetadataRefreshJob } from "$lib/server/metadata/movies";
@@ -153,6 +154,9 @@ export type ScanAllLibrariesResponse = Awaited<ReturnType<typeof startAllLibrary
 export type SettingsJobStartResponse = Awaited<ReturnType<typeof startMovieMetadataRefreshJob>>;
 export type SettingsActionResponse = Awaited<ReturnType<typeof runSettingsAction>>;
 export type HealthResponse = Awaited<ReturnType<typeof getHealthStatus>>;
+export type DevicePairingStartResponse = Awaited<ReturnType<typeof startDevicePairing>>;
+export type DevicePairingPollResponse = Awaited<ReturnType<typeof pollDevicePairing>>;
+export type DevicePairingApproveResponse = Awaited<ReturnType<typeof approveDevicePairing>>;
 
 export type SettingsResponse = Awaited<ReturnType<typeof getAdminSettingsResponse>>;
 
@@ -180,6 +184,9 @@ export type { ApiKeySummary } from "$lib/server/auth/api-keys";
 export const OPENAPI_TYPED_SCHEMAS = [
   "ErrorResponse",
   "HealthResponse",
+  "DevicePairingStartResponse",
+  "DevicePairingPollResponse",
+  "DevicePairingApproveResponse",
   "OkResponse",
   "User",
   "MeResponse",

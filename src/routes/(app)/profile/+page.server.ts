@@ -6,6 +6,7 @@ import {
   revokeApiKey as revokePersonalApiKey,
   apiKeyHttpStatus,
 } from "$lib/server/auth/api-keys";
+import { approveDevicePairing, devicePairingHttpStatus } from "$lib/server/auth/device-pairing";
 import {
   getTranscodePolicy,
   normalizePlaybackPreference,
@@ -16,7 +17,7 @@ import {
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ locals, request }) => {
+export const load: PageServerLoad = async ({ locals, request, url }) => {
   if (!locals.user) throw error(401, "Unauthorized");
 
   let apiKeys;
@@ -31,6 +32,7 @@ export const load: PageServerLoad = async ({ locals, request }) => {
     user: locals.user,
     apiKeys,
     transcodePolicy: await getTranscodePolicy(locals.user.id),
+    initialUserCode: url.searchParams.get("code")?.trim() ?? "",
   };
 };
 
@@ -183,5 +185,32 @@ export const actions: Actions = {
     }
 
     throw redirect(303, "/profile");
+  },
+  approveDevicePairing: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, {
+        pairingError: "Sign in to link a device.",
+      });
+    }
+
+    const form = await request.formData();
+    const userCode = String(form.get("userCode") ?? "");
+    const deviceName = String(form.get("deviceName") ?? "").trim();
+
+    try {
+      const result = await approveDevicePairing({
+        userId: locals.user.id,
+        userCode,
+        deviceName: deviceName || undefined,
+      });
+
+      return {
+        pairingSuccess: `Linked ${result.deviceName}. The device can finish signing in now.`,
+      };
+    } catch (pairingError) {
+      return fail(devicePairingHttpStatus(pairingError), {
+        pairingError: pairingError instanceof Error ? pairingError.message : "Could not link device.",
+      });
+    }
   },
 };

@@ -126,6 +126,28 @@ export async function createApiKey(input: { name?: unknown; expiresIn?: unknown;
   }
 }
 
+export async function createApiKeyForUserId(input: { userId: string; name?: unknown; expiresIn?: number }) {
+  const name = normalizeApiKeyName(input.name);
+  const expiresIn = input.expiresIn == null ? undefined : normalizeExpiresIn(input.expiresIn);
+
+  try {
+    const created = await auth.api.createApiKey({
+      body: {
+        name,
+        userId: input.userId,
+        ...(expiresIn != null ? { expiresIn } : {}),
+      },
+    });
+
+    return {
+      token: created.key,
+      apiKey: toApiKeySummary(created),
+    };
+  } catch (error) {
+    throw mapAuthError(error, "Could not create API key.");
+  }
+}
+
 export async function listApiKeys(headers: Headers) {
   try {
     const result = await auth.api.listApiKeys({

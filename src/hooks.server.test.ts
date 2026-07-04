@@ -120,6 +120,16 @@ describe("server hook route boundaries", () => {
     expect(await response.text()).toBe("resolved");
   });
 
+  test("lets device pairing start resolve before setup", async () => {
+    const response = await handle({
+      event: eventFor("/api/device-pairing", { method: "POST" }) as never,
+      resolve: async () => new Response("resolved"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("resolved");
+  });
+
   test("redirects protected app pages to login after setup exists", async () => {
     const now = Date.now();
     await db
