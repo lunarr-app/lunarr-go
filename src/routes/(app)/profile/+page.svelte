@@ -2,7 +2,7 @@
   import ProfileAccountPanel from "./_components/ProfileAccountPanel.svelte";
   import ProfileApiKeysPanel from "./_components/ProfileApiKeysPanel.svelte";
   import ProfileAppearancePanel from "./_components/ProfileAppearancePanel.svelte";
-  import ProfileDevicePairingPanel from "./_components/ProfileDevicePairingPanel.svelte";
+  import ProfileLinkDevicePanel from "./_components/ProfileLinkDevicePanel.svelte";
   import ProfilePlaybackPanel from "./_components/ProfilePlaybackPanel.svelte";
 
   let { data, form } = $props();
@@ -21,18 +21,16 @@
 </div>
 
 <div class="profile-grid">
-  <ProfileAccountPanel user={data.user} accountError={form?.accountError} passwordError={form?.passwordError} />
+  <div class="profile-stack">
+    <ProfileAccountPanel user={data.user} accountError={form?.accountError} passwordError={form?.passwordError} />
+    <ProfileLinkDevicePanel />
+  </div>
 
   <div class="profile-stack">
     <ProfileAppearancePanel />
     <ProfilePlaybackPanel
       transcodePolicy={data.transcodePolicy}
       playbackPreferenceError={form?.playbackPreferenceError}
-    />
-    <ProfileDevicePairingPanel
-      initialUserCode={data.initialUserCode}
-      pairingSuccess={form?.pairingSuccess}
-      pairingError={form?.pairingError}
     />
     <ProfileApiKeysPanel
       apiKeys={data.apiKeys}

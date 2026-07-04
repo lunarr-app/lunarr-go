@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ProfileDevicePairingPanel from "../profile/_components/ProfileDevicePairingPanel.svelte";
+  import LinkDeviceForm from "./_components/LinkDeviceForm.svelte";
 
   let { data, form } = $props();
 </script>
@@ -9,15 +9,24 @@
   <meta name="description" content="Approve a TV or mobile app pairing code for Lunarr." />
 </svelte:head>
 
-<div class="ops-page-header">
-  <div>
-    <h1>Link device</h1>
-    <p class="muted">Approve the code shown on your TV or mobile app.</p>
+<div class="link-device-layout">
+  <div class="ops-page-header">
+    <div>
+      <h1>Link device</h1>
+      <p class="muted">Enter the code shown on your TV or mobile app.</p>
+    </div>
   </div>
+
+  <LinkDeviceForm
+    initialUserCode={data.initialUserCode}
+    pairingSuccess={form?.pairingSuccess}
+    pairingError={form?.pairingError}
+  />
 </div>
 
-<ProfileDevicePairingPanel
-  initialUserCode={data.initialUserCode}
-  pairingSuccess={form?.pairingSuccess}
-  pairingError={form?.pairingError}
-/>
+<style>
+  .link-device-layout {
+    display: grid;
+    gap: 0.8rem;
+  }
+</style>

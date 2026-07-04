@@ -43,7 +43,7 @@
     <div>
       <h2>API Keys</h2>
       <p class="muted">
-        Personal tokens for mobile apps and custom clients. Prefer <a href="/link-device">Link a device</a> for TVs.
+        Personal tokens for mobile apps and custom clients.
       </p>
     </div>
     <KeyRound size={18} aria-hidden="true" />

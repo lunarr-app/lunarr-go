@@ -48,7 +48,7 @@ Returns HTTP `200` when the database is reachable and HTTP `503` when it is not.
 TV and mobile apps can sign in without copying a long API key.
 
 1. The device calls `POST /api/device-pairing` and shows the returned `userCode`.
-2. A signed-in user approves that code from **Profile → Link a device** or `GET /link-device?code=<userCode>`.
+2. A signed-in user approves that code on **Link a device** (`/link-device`) or `GET /link-device?code=<userCode>`.
 3. The device polls `GET /api/device-pairing/poll?deviceCode=<deviceCode>` until it receives an API key.
 
 ```http

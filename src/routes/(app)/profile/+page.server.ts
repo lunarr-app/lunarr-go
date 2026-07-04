@@ -6,7 +6,6 @@ import {
   revokeApiKey as revokePersonalApiKey,
   apiKeyHttpStatus,
 } from "$lib/server/auth/api-keys";
-import { handleApproveDevicePairingForm } from "$lib/server/auth/device-pairing-form";
 import {
   getTranscodePolicy,
   normalizePlaybackPreference,
@@ -14,11 +13,17 @@ import {
   setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
+import { DEVICE_PAIRING_USER_CODE_QUERY_PARAM } from "$lib/device-pairing/constants";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, request, url }) => {
   if (!locals.user) throw error(401, "Unauthorized");
+
+  const code = url.searchParams.get(DEVICE_PAIRING_USER_CODE_QUERY_PARAM)?.trim();
+  if (code) {
+    throw redirect(303, `/link-device?${DEVICE_PAIRING_USER_CODE_QUERY_PARAM}=${encodeURIComponent(code)}`);
+  }
 
   let apiKeys;
   try {
@@ -32,7 +37,6 @@ export const load: PageServerLoad = async ({ locals, request, url }) => {
     user: locals.user,
     apiKeys,
     transcodePolicy: await getTranscodePolicy(locals.user.id),
-    initialUserCode: url.searchParams.get("code")?.trim() ?? "",
   };
 };
 
@@ -186,5 +190,4 @@ export const actions: Actions = {
 
     throw redirect(303, "/profile");
   },
-  approveDevicePairing: handleApproveDevicePairingForm,
 };
