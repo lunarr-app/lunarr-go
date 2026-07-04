@@ -1,4 +1,4 @@
-import { jsonError, requireJsonAdmin } from "$lib/server/api";
+import { apiErrorFrom, requireJsonAdmin } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { ShareRevokeResponse } from "$lib/server/api/types";
 import { revokeShare } from "$lib/server/shares";
@@ -12,7 +12,7 @@ export const DELETE: RequestHandler = async ({ locals, params }) => {
     const share = await revokeShare({ shareId: params.id });
     return apiJson<ShareRevokeResponse>({ share });
   } catch (error) {
-    return jsonError(
+    return apiErrorFrom(
       error,
       "Could not revoke share.",
       error instanceof Error && error.message === "Share not found." ? 404 : 400,

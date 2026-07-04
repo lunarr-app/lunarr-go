@@ -1,6 +1,7 @@
-import { booleanFromJson, jsonError, readJsonBody, requireJsonUser } from "$lib/server/api";
+import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
+import type { ApiOkResponse } from "$lib/server/api/types";
+import { booleanFromJson, readJsonBody, requireJsonUser } from "$lib/server/api";
 import { markSeasonWatched } from "$lib/server/playback/commands";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
@@ -20,10 +21,10 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     });
   } catch (error) {
     if (error instanceof Error && (error.message === "Show not found." || error.message === "Season not found.")) {
-      return json({ error: error.message }, { status: 404 });
+      return apiError(error.message, 404);
     }
-    return jsonError(error, "Could not update season watched status.");
+    return apiErrorFrom(error, "Could not update season watched status.");
   }
 
-  return json({ ok: true });
+  return apiJson<ApiOkResponse>({ ok: true });
 };

@@ -1,5 +1,5 @@
 import { createApiKey, listApiKeys, apiKeyHttpStatus } from "$lib/server/auth/api-keys";
-import { jsonError, readJsonBody, requireJsonUser } from "$lib/server/api";
+import { apiErrorFrom, readJsonBody, requireJsonUser } from "$lib/server/api";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ locals, request }) => {
   try {
     return json({ apiKeys: await listApiKeys(request.headers) });
   } catch (error) {
-    return jsonError(error, "Could not list API keys.", apiKeyHttpStatus(error));
+    return apiErrorFrom(error, "Could not list API keys.", apiKeyHttpStatus(error));
   }
 };
 
@@ -29,6 +29,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       { status: 201 },
     );
   } catch (error) {
-    return jsonError(error, "Could not create API key.", apiKeyHttpStatus(error));
+    return apiErrorFrom(error, "Could not create API key.", apiKeyHttpStatus(error));
   }
 };

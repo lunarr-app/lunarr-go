@@ -1,9 +1,10 @@
-import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
+import type { ApiOkResponse } from "$lib/server/api/types";
+import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { deleteLibrary, getLibrary, updateLibrary } from "$lib/server/libraries";
 import { parseUpdateLibraryInput } from "$lib/server/libraries/input";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -11,9 +12,9 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   if (user instanceof Response) return user;
 
   const library = await getLibrary(params.id);
-  if (!library) return json({ error: "Library not found." }, { status: 404 });
+  if (!library) return apiError("Library not found.", 404);
 
-  return json({ library });
+  return apiJson({ library });
 };
 
 export const PATCH: RequestHandler = async ({ params, request, locals }) => {
@@ -28,9 +29,9 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     );
     await syncLibraryWatchers();
     await syncScheduledLibraryScans();
-    return json({ library });
+    return apiJson({ library });
   } catch (error) {
-    return jsonError(error, "Could not update library.");
+    return apiErrorFrom(error, "Could not update library.");
   }
 };
 
@@ -42,8 +43,8 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     await deleteLibrary(params.id);
     await syncLibraryWatchers();
     await syncScheduledLibraryScans();
-    return json({ ok: true });
+    return apiJson<ApiOkResponse>({ ok: true });
   } catch (error) {
-    return jsonError(error, "Could not remove library.");
+    return apiErrorFrom(error, "Could not remove library.");
   }
 };

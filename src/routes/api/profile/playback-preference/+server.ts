@@ -1,4 +1,4 @@
-import { jsonError, readJsonBody, requireJsonUser } from "$lib/server/api";
+import { apiErrorFrom, readJsonBody, requireJsonUser } from "$lib/server/api";
 import {
   normalizePlaybackPreference,
   setUserPlaybackPreference,
@@ -34,6 +34,6 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     }
     return json({ ok: true });
   } catch (error) {
-    return jsonError(error, "Could not update playback preference.");
+    return apiErrorFrom(error, "Could not update playback preference.");
   }
 };

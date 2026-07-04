@@ -8,3 +8,8 @@ export function apiJson<T>(body: T, init?: ResponseInit) {
 export function apiError(message: string, status = 400) {
   return json({ error: message } satisfies ApiErrorResponse, { status });
 }
+
+export function apiErrorFrom(error: unknown, fallback: string, status = 400) {
+  const message = error instanceof Error ? error.message : fallback;
+  return apiError(message, status);
+}

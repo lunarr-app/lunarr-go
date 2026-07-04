@@ -6,7 +6,7 @@ import {
   parseMovieBrowseRails,
 } from "$lib/server/media/catalog";
 import { movieRows } from "$lib/server/media/movies";
-import { jsonError, requireJsonUser } from "$lib/server/api";
+import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { MovieBrowseRailResponse, MovieRowsResponse } from "$lib/server/api/types";
 import type { RequestHandler } from "./$types";
@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
   const rails = parseMovieBrowseRails(url.searchParams.get("rail"));
   if (rails === null) {
-    return jsonError(null, "Invalid rail. Expected one of: continueWatching, all, recent, latest, popular.");
+    return apiErrorFrom(null, "Invalid rail. Expected one of: continueWatching, all, recent, latest, popular.");
   }
 
   const search = url.searchParams.get("search") ?? "";

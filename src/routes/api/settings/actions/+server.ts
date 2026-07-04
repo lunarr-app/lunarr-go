@@ -1,4 +1,4 @@
-import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiErrorFrom, readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { runSettingsAction } from "$lib/server/settings-commands";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
@@ -15,6 +15,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       status: action === "testTmdb" || action === "cleanupPlaybackArtifacts" ? 200 : 202,
     });
   } catch (error) {
-    return jsonError(error, "Could not run settings action.");
+    return apiErrorFrom(error, "Could not run settings action.");
   }
 };

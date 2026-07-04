@@ -1,4 +1,4 @@
-import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiErrorFrom, readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { ShareCreateResponse, SharesListResponse } from "$lib/server/api/types";
 import { createShare, listAllShares, listSharesForMedia, parseCreateShareInput } from "$lib/server/shares";
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
         shares: await listAllShares(),
       });
     } catch (error) {
-      return jsonError(error, "Could not list shares.");
+      return apiErrorFrom(error, "Could not list shares.");
     }
   }
 
@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       shares: await listSharesForMedia(mediaItemId),
     });
   } catch (error) {
-    return jsonError(error, "Could not list shares.");
+    return apiErrorFrom(error, "Could not list shares.");
   }
 };
 
@@ -41,6 +41,6 @@ export const POST: RequestHandler = async ({ locals, request }) => {
     });
     return apiJson<ShareCreateResponse>({ share }, { status: 201 });
   } catch (error) {
-    return jsonError(error, "Could not create share.");
+    return apiErrorFrom(error, "Could not create share.");
   }
 };

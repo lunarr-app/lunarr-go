@@ -1,4 +1,4 @@
-import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiErrorFrom, readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { LibrariesResponse, LibraryResponse } from "$lib/server/api/types";
 import { createLibrary, listLibrariesWithScanStatus, listLibraryShareUsers } from "$lib/server/libraries";
@@ -32,6 +32,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     await syncScheduledLibraryScans();
     return apiJson<LibraryResponse>({ library }, { status: 201 });
   } catch (error) {
-    return jsonError(error, "Could not add library.");
+    return apiErrorFrom(error, "Could not add library.");
   }
 };

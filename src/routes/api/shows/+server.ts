@@ -1,6 +1,6 @@
 import { SHOW_PAGE_SIZE, normalizePage, normalizeShowSort, parseShowBrowseRails } from "$lib/server/media/catalog";
 import { tvRows } from "$lib/server/media/shows";
-import { jsonError, requireJsonUser } from "$lib/server/api";
+import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { ShowBrowseRailResponse, ShowRowsResponse } from "$lib/server/api/types";
 import type { RequestHandler } from "./$types";
@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
   const rails = parseShowBrowseRails(url.searchParams.get("rail"));
   if (rails === null) {
-    return jsonError(null, "Invalid rail. Expected one of: continueWatching, nextUp, all, recent, latest, popular.");
+    return apiErrorFrom(null, "Invalid rail. Expected one of: continueWatching, nextUp, all, recent, latest, popular.");
   }
 
   const search = url.searchParams.get("search") ?? "";

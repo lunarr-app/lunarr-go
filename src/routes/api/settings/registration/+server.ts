@@ -1,4 +1,4 @@
-import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiErrorFrom, readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { updateRegistrationSettings } from "$lib/server/settings-commands";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
@@ -12,6 +12,6 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     await updateRegistrationSettings(typeof body === "object" && body ? (body as Record<string, unknown>) : {});
     return json({ ok: true });
   } catch (error) {
-    return jsonError(error, "Could not update registration settings.");
+    return apiErrorFrom(error, "Could not update registration settings.");
   }
 };
