@@ -24,6 +24,7 @@
   const activeSeason = $derived(seasons.find((season) => season.id === selectedSeasonId) ?? seasons[0] ?? null);
   const activeEpisodes = $derived(activeSeason ? (loadedEpisodes[activeSeason.id] ?? []) : []);
   const isLoading = $derived(activeSeason ? loadingSeasonIds.has(activeSeason.id) : false);
+  const skeletonRowCount = $derived(activeSeason ? Math.min(Math.max(activeSeason.playableCount || 3, 1), 8) : 0);
 
   const seasonTabs = $derived(
     seasons.map((season) => ({
@@ -85,7 +86,23 @@
       {#if loadError}
         <p class="season-status error">{loadError}</p>
       {:else if isLoading}
-        <p class="season-status">Loading episodes…</p>
+        <div class="episodes skeleton" aria-busy="true" aria-label="Loading episodes">
+          <p class="visually-hidden">Loading episodes…</p>
+          {#each Array.from({ length: skeletonRowCount }) as _, index (index)}
+            <article class="episode-row skeleton-row" aria-hidden="true">
+              <div class="still skeleton-block"></div>
+              <div class="episode-main">
+                <div class="episode-heading">
+                  <span class="skeleton-block skeleton-line short"></span>
+                  <span class="skeleton-block skeleton-line title"></span>
+                </div>
+                <span class="skeleton-block skeleton-line runtime"></span>
+                <span class="skeleton-block skeleton-line overview"></span>
+              </div>
+              <span class="skeleton-block skeleton-button"></span>
+            </article>
+          {/each}
+        </div>
       {:else if activeEpisodes.length === 0}
         <p class="season-status">No playable episodes in this season.</p>
       {:else}
@@ -137,6 +154,75 @@
 
   .season-status.error {
     color: var(--color-danger, #c0392b);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skeleton-block {
+    display: block;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-border) 70%, transparent) 0%,
+      color-mix(in srgb, var(--color-border) 35%, transparent) 50%,
+      color-mix(in srgb, var(--color-border) 70%, transparent) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  }
+
+  .skeleton-row .still {
+    background: transparent;
+  }
+
+  .skeleton-line {
+    height: 0.78rem;
+  }
+
+  .skeleton-line.short {
+    width: 3.5rem;
+  }
+
+  .skeleton-line.title {
+    width: min(18rem, 70%);
+    height: 1rem;
+  }
+
+  .skeleton-line.runtime {
+    width: 4rem;
+    height: 0.84rem;
+  }
+
+  .skeleton-line.overview {
+    width: 100%;
+    max-width: 28rem;
+    height: 2.4rem;
+  }
+
+  .skeleton-button {
+    width: 4.75rem;
+    height: 2rem;
+    border-radius: 999px;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      background-position: 100% 0;
+    }
+
+    100% {
+      background-position: -100% 0;
+    }
   }
 
   .episodes {
@@ -230,7 +316,8 @@
       grid-template-columns: minmax(8rem, 10rem) minmax(0, 1fr);
     }
 
-    .play-button {
+    .play-button,
+    .skeleton-button {
       grid-column: 1 / -1;
       justify-self: start;
     }
