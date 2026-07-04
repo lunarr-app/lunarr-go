@@ -15,7 +15,11 @@ import {
   cleanupConfiguredPlaybackSessionArtifacts,
   recoverInterruptedTranscodeSessions,
 } from "$lib/server/transcoding/sessions";
-import { loginPathWithRedirect, sanitizePostLoginRedirect } from "$lib/server/auth/post-login-redirect";
+import {
+  loginPathWithRedirect,
+  POST_LOGIN_REDIRECT_QUERY_PARAM,
+  sanitizePostLoginRedirect,
+} from "$lib/auth/post-login-redirect";
 import { json, redirect, type Handle, type RequestEvent } from "@sveltejs/kit";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
@@ -108,7 +112,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   if (event.locals.user && (pathname === "/login" || pathname === "/signup" || pathname === "/setup")) {
-    const redirectTo = sanitizePostLoginRedirect(event.url.searchParams.get("redirectTo"));
+    const redirectTo = sanitizePostLoginRedirect(event.url.searchParams.get(POST_LOGIN_REDIRECT_QUERY_PARAM));
     throw redirect(303, redirectTo ?? "/movies");
   }
 

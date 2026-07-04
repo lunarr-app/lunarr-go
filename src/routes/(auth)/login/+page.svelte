@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { POST_LOGIN_REDIRECT_QUERY_PARAM } from "$lib/auth/post-login-redirect";
+
   let { data, form } = $props();
 
   const formData = $derived((form ?? {}) as Record<string, string>);
@@ -14,7 +16,7 @@
 
 <form method="POST" action="?/signIn">
   {#if data.redirectTo}
-    <input type="hidden" name="redirectTo" value={data.redirectTo} />
+    <input type="hidden" name={POST_LOGIN_REDIRECT_QUERY_PARAM} value={data.redirectTo} />
   {/if}
   <label>
     Email

@@ -6,6 +6,7 @@ import type { Handle } from "@sveltejs/kit";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
+import { loginPathWithRedirect } from "$lib/auth/post-login-redirect";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
 import { createApiKeyForUserId } from "$lib/server/auth/api-keys";
 import { resetAuthForTests } from "$lib/server/auth/test/setup";
@@ -154,7 +155,7 @@ describe("server hook route boundaries", () => {
       }),
       {
         status: 303,
-        location: "/login?redirectTo=%2Fmovies",
+        location: loginPathWithRedirect("/movies"),
       },
     );
   });
@@ -182,7 +183,7 @@ describe("server hook route boundaries", () => {
       }),
       {
         status: 303,
-        location: "/login?redirectTo=%2Flink-device%3Fcode%3DABCD-1234%26name%3DLiving%2520room%2520TV",
+        location: loginPathWithRedirect("/link-device?code=ABCD-1234&name=Living%20room%20TV"),
       },
     );
   });

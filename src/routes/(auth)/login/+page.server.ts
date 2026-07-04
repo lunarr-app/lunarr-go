@@ -1,5 +1,5 @@
 import { auth } from "$lib/server/auth";
-import { sanitizePostLoginRedirect } from "$lib/server/auth/post-login-redirect";
+import { POST_LOGIN_REDIRECT_QUERY_PARAM, sanitizePostLoginRedirect } from "$lib/auth/post-login-redirect";
 import { signupAllowed } from "$lib/server/auth/users";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
@@ -7,7 +7,7 @@ import type { Actions, PageServerLoad } from "./$types";
 export const load: PageServerLoad = async ({ url }) => {
   return {
     signupOpen: await signupAllowed(),
-    redirectTo: sanitizePostLoginRedirect(url.searchParams.get("redirectTo")) ?? "",
+    redirectTo: sanitizePostLoginRedirect(url.searchParams.get(POST_LOGIN_REDIRECT_QUERY_PARAM)) ?? "",
   };
 };
 
@@ -16,7 +16,7 @@ export const actions: Actions = {
     const form = await request.formData();
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "").trim();
-    const redirectTo = sanitizePostLoginRedirect(String(form.get("redirectTo") ?? ""));
+    const redirectTo = sanitizePostLoginRedirect(String(form.get(POST_LOGIN_REDIRECT_QUERY_PARAM) ?? ""));
 
     if (!email || !password) {
       return fail(400, {

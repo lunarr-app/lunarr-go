@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
+import { POST_LOGIN_REDIRECT_QUERY_PARAM } from "$lib/auth/post-login-redirect";
 import { setBooleanSetting } from "$lib/server/settings";
 import type * as LoginPageServer from "./+page.server";
 
@@ -84,7 +85,7 @@ describe("login page server", () => {
     await setBooleanSetting("signup_open", true);
     expect(
       await load({
-        url: new URL("http://localhost/login?redirectTo=%2Flink-device%3Fcode%3DABCD-1234"),
+        url: new URL(`http://localhost/login?${POST_LOGIN_REDIRECT_QUERY_PARAM}=%2Flink-device%3Fcode%3DABCD-1234`),
       } as never),
     ).toEqual({
       signupOpen: true,
@@ -121,7 +122,7 @@ describe("login page server", () => {
     const form = new FormData();
     form.set("email", "admin@example.com");
     form.set("password", "password123");
-    form.set("redirectTo", "/link-device?code=ABCD-1234&name=Living%20room%20TV");
+    form.set(POST_LOGIN_REDIRECT_QUERY_PARAM, "/link-device?code=ABCD-1234&name=Living%20room%20TV");
 
     await expectRedirect(
       actions.signIn({
