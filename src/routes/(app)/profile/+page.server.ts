@@ -8,6 +8,10 @@ import {
 } from "$lib/server/auth/api-keys";
 import { approveDevicePairing, devicePairingHttpStatus } from "$lib/server/auth/device-pairing";
 import {
+  DEVICE_PAIRING_RATE_LIMIT_MESSAGE,
+  isDevicePairingRateLimited,
+} from "$lib/server/auth/device-pairing-rate-limit";
+import {
   getTranscodePolicy,
   normalizePlaybackPreference,
   setUserPlaybackPreference,
@@ -186,10 +190,16 @@ export const actions: Actions = {
 
     throw redirect(303, "/profile");
   },
-  approveDevicePairing: async ({ request, locals }) => {
+  approveDevicePairing: async ({ request, locals, getClientAddress }) => {
     if (!locals.user) {
       return fail(401, {
         pairingError: "Sign in to link a device.",
+      });
+    }
+
+    if (isDevicePairingRateLimited(getClientAddress() || "unknown", "device-pairing:approve")) {
+      return fail(429, {
+        pairingError: DEVICE_PAIRING_RATE_LIMIT_MESSAGE,
       });
     }
 

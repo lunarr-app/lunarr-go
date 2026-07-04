@@ -39,6 +39,10 @@ function ensureStartup() {
   return startupPromise;
 }
 
+export function resetStartupForTests() {
+  startupPromise = undefined;
+}
+
 function isAuthApiPath(pathname: string) {
   return pathname === "/api/auth" || pathname.startsWith("/api/auth/");
 }
@@ -84,6 +88,17 @@ function canResolveUnauthenticatedMediaResource(event: RequestEvent) {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+  const pathname = event.url.pathname;
+
+  if (pathname === "/api/health") {
+    try {
+      await ensureStartup();
+    } catch {
+      // Health reports database readiness itself.
+    }
+    return resolve(event);
+  }
+
   await ensureStartup();
 
   const session = await auth.api.getSession({ headers: event.request.headers }).catch((error) => {
@@ -94,7 +109,6 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.session = session?.session ?? null;
   event.locals.user = session?.user ?? null;
 
-  const pathname = event.url.pathname;
   const hasUsers = await hasRegisteredUsers();
   const canResolveUnauthenticatedMedia = isMediaResourcePath(pathname) && canResolveUnauthenticatedMediaResource(event);
 

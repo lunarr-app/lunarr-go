@@ -64,17 +64,23 @@ export function setDevicePairingRateLimitOverridesForTests(
   testLimitOverrides = overrides;
 }
 
+export const DEVICE_PAIRING_RATE_LIMIT_MESSAGE = "Too many requests. Try again later.";
+
+export function isDevicePairingRateLimited(clientAddress: string, bucket: DevicePairingRateLimitBucket, scope = "") {
+  const key = scope ? `${bucket}:${scope}:${clientAddress}` : `${bucket}:${clientAddress}`;
+  return isRateLimited(key, limitForBucket(bucket));
+}
+
 export function enforceDevicePairingRateLimit(
   event: RequestEvent,
   bucket: DevicePairingRateLimitBucket,
   scope = "",
 ): Response | null {
   const clientAddress = event.getClientAddress() || "unknown";
-  const key = scope ? `${bucket}:${scope}:${clientAddress}` : `${bucket}:${clientAddress}`;
-  if (!isRateLimited(key, limitForBucket(bucket))) {
+  if (!isDevicePairingRateLimited(clientAddress, bucket, scope)) {
     return null;
   }
-  return new Response(JSON.stringify({ error: "Too many requests. Try again later." }), {
+  return new Response(JSON.stringify({ error: DEVICE_PAIRING_RATE_LIMIT_MESSAGE }), {
     status: 429,
     headers: { "content-type": "application/json" },
   });

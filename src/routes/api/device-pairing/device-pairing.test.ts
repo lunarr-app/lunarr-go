@@ -1,11 +1,16 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS } from "$lib/device-pairing/constants";
 import { mkdtemp, rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { resetAuthForTests } from "$lib/server/auth/test/setup";
-import { resetDevicePairingRateLimitsForTests } from "$lib/server/auth/device-pairing-rate-limit";
+import {
+  isDevicePairingRateLimited,
+  resetDevicePairingRateLimitsForTests,
+  setDevicePairingRateLimitOverridesForTests,
+} from "$lib/server/auth/device-pairing-rate-limit";
 import { POST as startPost } from "./+server";
 import { GET as pollGet } from "./poll/+server";
 import { POST as approvePost } from "./approve/+server";
@@ -210,5 +215,50 @@ describe("device pairing API", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  test("enforces shared approve rate limits", () => {
+    resetDevicePairingRateLimitsForTests();
+    setDevicePairingRateLimitOverridesForTests({ "device-pairing:approve": 2 });
+
+    expect(isDevicePairingRateLimited("10.0.0.1", "device-pairing:approve")).toBe(false);
+    expect(isDevicePairingRateLimited("10.0.0.1", "device-pairing:approve")).toBe(false);
+    expect(isDevicePairingRateLimited("10.0.0.1", "device-pairing:approve")).toBe(true);
+  });
+
+  test("starts pairing when historical rows already occupy a user code", async () => {
+    const db = await getDb();
+    const now = new Date(0).toISOString();
+    await db
+      .insertInto("device_pairing")
+      .values({
+        id: randomUUID(),
+        device_code: randomUUID(),
+        user_code: "BBBB2222",
+        status: "consumed",
+        device_name: "Old TV",
+        approved_by_user_id: "user-1",
+        api_key_id: "old-key",
+        api_key_token: null,
+        expires_at: now,
+        approved_at: now,
+        created_at: now,
+      })
+      .execute();
+
+    const startResponse = await startPost({
+      request: new Request("http://localhost/api/device-pairing", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deviceName: "Guest TV" }),
+      }),
+      locals: { user: null },
+      getClientAddress: () => "127.0.0.8",
+    } as never);
+
+    expect(startResponse.status).toBe(201);
+    expect(await startResponse.json()).toMatchObject({
+      userCode: expect.stringMatching(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/),
+    });
   });
 });

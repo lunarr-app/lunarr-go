@@ -1,4 +1,8 @@
 import { approveDevicePairing, devicePairingHttpStatus } from "$lib/server/auth/device-pairing";
+import {
+  DEVICE_PAIRING_RATE_LIMIT_MESSAGE,
+  isDevicePairingRateLimited,
+} from "$lib/server/auth/device-pairing-rate-limit";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -10,10 +14,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-  approveDevicePairing: async ({ request, locals }) => {
+  approveDevicePairing: async ({ request, locals, getClientAddress }) => {
     if (!locals.user) {
       return fail(401, {
         pairingError: "Sign in to link a device.",
+      });
+    }
+
+    if (isDevicePairingRateLimited(getClientAddress() || "unknown", "device-pairing:approve")) {
+      return fail(429, {
+        pairingError: DEVICE_PAIRING_RATE_LIMIT_MESSAGE,
       });
     }
 

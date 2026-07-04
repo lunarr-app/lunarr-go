@@ -48,11 +48,14 @@ async function createUniqueUserCode() {
       .selectFrom("device_pairing")
       .select("id")
       .where("user_code", "=", userCode)
-      .where("status", "in", ["pending", "approved"])
       .executeTakeFirst();
     if (!existing) return userCode;
   }
   throw new DevicePairingError("Could not create a pairing code. Try again.", 503);
+}
+
+function isSqliteUniqueViolation(error: unknown) {
+  return error instanceof Error && error.message.toLowerCase().includes("unique constraint failed");
 }
 
 export async function startDevicePairing(input: { deviceName?: unknown } = {}) {
@@ -63,32 +66,41 @@ export async function startDevicePairing(input: { deviceName?: unknown } = {}) {
   const expiresAt = new Date(Date.now() + DEVICE_PAIRING_TTL_MS).toISOString();
   const deviceName = normalizeDeviceName(input.deviceName);
   const deviceCode = randomUUID();
-  const userCode = await createUniqueUserCode();
 
-  await db
-    .insertInto("device_pairing")
-    .values({
-      id: randomUUID(),
-      device_code: deviceCode,
-      user_code: userCode,
-      status: "pending",
-      device_name: deviceName,
-      approved_by_user_id: null,
-      api_key_id: null,
-      api_key_token: null,
-      expires_at: expiresAt,
-      approved_at: null,
-      created_at: createdAt,
-    })
-    .execute();
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const userCode = await createUniqueUserCode();
 
-  return {
-    deviceCode,
-    userCode: formatUserCode(userCode),
-    expiresAt,
-    expiresIn: Math.round(DEVICE_PAIRING_TTL_MS / 1000),
-    pollIntervalMs: DEVICE_PAIRING_POLL_INTERVAL_MS,
-  };
+    try {
+      await db
+        .insertInto("device_pairing")
+        .values({
+          id: randomUUID(),
+          device_code: deviceCode,
+          user_code: userCode,
+          status: "pending",
+          device_name: deviceName,
+          approved_by_user_id: null,
+          api_key_id: null,
+          api_key_token: null,
+          expires_at: expiresAt,
+          approved_at: null,
+          created_at: createdAt,
+        })
+        .execute();
+
+      return {
+        deviceCode,
+        userCode: formatUserCode(userCode),
+        expiresAt,
+        expiresIn: Math.round(DEVICE_PAIRING_TTL_MS / 1000),
+        pollIntervalMs: DEVICE_PAIRING_POLL_INTERVAL_MS,
+      };
+    } catch (error) {
+      if (!isSqliteUniqueViolation(error)) throw error;
+    }
+  }
+
+  throw new DevicePairingError("Could not create a pairing code. Try again.", 503);
 }
 
 function pairingExpired(expiresAt: string, now = Date.now()) {
