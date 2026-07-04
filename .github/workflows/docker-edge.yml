@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: docker-edge-${{ github.event.workflow_run.head_branch || github.ref_name }}
