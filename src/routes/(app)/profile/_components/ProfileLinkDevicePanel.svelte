@@ -19,7 +19,7 @@
   <div class="ops-panel-body link-device-panel-body">
     <p class="muted link-device-summary">
       Pairing codes expire after {DEVICE_PAIRING_CODE_EXPIRY_MINUTES} minutes. Linked devices receive an API key that expires
-      after {DEVICE_PAIRING_API_KEY_EXPIRY_YEARS} years. You can revoke linked keys anytime in API Keys below.
+      after {DEVICE_PAIRING_API_KEY_EXPIRY_YEARS} years. Revoke linked keys in API Keys below.
     </p>
     <a class="button link-device-action" href={resolve("/link-device")}>
       <Link2 size={16} aria-hidden="true" />

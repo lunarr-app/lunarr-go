@@ -22,22 +22,35 @@
 
 <div class="profile-grid">
   <div class="profile-stack">
-    <ProfileAccountPanel user={data.user} accountError={form?.accountError} passwordError={form?.passwordError} />
-    <ProfileLinkDevicePanel />
+    <div class="profile-panel profile-panel--account">
+      <ProfileAccountPanel user={data.user} accountError={form?.accountError} passwordError={form?.passwordError} />
+    </div>
+
+    <div class="profile-panel profile-panel--link">
+      <ProfileLinkDevicePanel />
+    </div>
+
+    <div class="profile-panel profile-panel--api">
+      <ProfileApiKeysPanel
+        apiKeys={data.apiKeys}
+        createdApiKeyToken={form?.createdApiKeyToken}
+        apiKeySuccess={form?.apiKeySuccess}
+        apiKeyError={form?.apiKeyError}
+      />
+    </div>
   </div>
 
   <div class="profile-stack">
-    <ProfileAppearancePanel />
-    <ProfilePlaybackPanel
-      transcodePolicy={data.transcodePolicy}
-      playbackPreferenceError={form?.playbackPreferenceError}
-    />
-    <ProfileApiKeysPanel
-      apiKeys={data.apiKeys}
-      createdApiKeyToken={form?.createdApiKeyToken}
-      apiKeySuccess={form?.apiKeySuccess}
-      apiKeyError={form?.apiKeyError}
-    />
+    <div class="profile-panel profile-panel--appearance">
+      <ProfileAppearancePanel />
+    </div>
+
+    <div class="profile-panel profile-panel--playback">
+      <ProfilePlaybackPanel
+        transcodePolicy={data.transcodePolicy}
+        playbackPreferenceError={form?.playbackPreferenceError}
+      />
+    </div>
   </div>
 </div>
 
@@ -53,11 +66,53 @@
   .profile-stack {
     display: grid;
     gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .profile-panel {
+    min-width: 0;
   }
 
   @media (max-width: 920px) {
     .profile-grid {
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    .profile-stack {
+      display: contents;
+    }
+
+    .profile-panel {
+      width: 100%;
+      align-self: stretch;
+    }
+
+    .profile-panel :global(.ops-panel) {
+      width: 100%;
+    }
+
+    .profile-panel--account {
+      order: 1;
+    }
+
+    .profile-panel--appearance {
+      order: 2;
+    }
+
+    .profile-panel--link {
+      order: 3;
+    }
+
+    .profile-panel--api {
+      order: 4;
+    }
+
+    .profile-panel--playback {
+      order: 5;
     }
   }
 </style>
