@@ -6,11 +6,7 @@ import {
   revokeApiKey as revokePersonalApiKey,
   apiKeyHttpStatus,
 } from "$lib/server/auth/api-keys";
-import { approveDevicePairing, devicePairingHttpStatus } from "$lib/server/auth/device-pairing";
-import {
-  DEVICE_PAIRING_RATE_LIMIT_MESSAGE,
-  isDevicePairingRateLimited,
-} from "$lib/server/auth/device-pairing-rate-limit";
+import { handleApproveDevicePairingForm } from "$lib/server/auth/device-pairing-form";
 import {
   getTranscodePolicy,
   normalizePlaybackPreference,
@@ -190,37 +186,5 @@ export const actions: Actions = {
 
     throw redirect(303, "/profile");
   },
-  approveDevicePairing: async ({ request, locals, getClientAddress }) => {
-    if (!locals.user) {
-      return fail(401, {
-        pairingError: "Sign in to link a device.",
-      });
-    }
-
-    if (isDevicePairingRateLimited(getClientAddress() || "unknown", "device-pairing:approve")) {
-      return fail(429, {
-        pairingError: DEVICE_PAIRING_RATE_LIMIT_MESSAGE,
-      });
-    }
-
-    const form = await request.formData();
-    const userCode = String(form.get("userCode") ?? "");
-    const deviceName = String(form.get("deviceName") ?? "").trim();
-
-    try {
-      const result = await approveDevicePairing({
-        userId: locals.user.id,
-        userCode,
-        deviceName: deviceName || undefined,
-      });
-
-      return {
-        pairingSuccess: `Linked ${result.deviceName}. The device can finish signing in now.`,
-      };
-    } catch (pairingError) {
-      return fail(devicePairingHttpStatus(pairingError), {
-        pairingError: pairingError instanceof Error ? pairingError.message : "Could not link device.",
-      });
-    }
-  },
+  approveDevicePairing: handleApproveDevicePairingForm,
 };
