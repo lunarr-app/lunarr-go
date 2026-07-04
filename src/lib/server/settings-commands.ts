@@ -1,8 +1,10 @@
 import { startMovieMetadataRefreshJob } from "./metadata/movies";
 import { startTvMetadataRefreshJob } from "./metadata/tv";
+import { PUBLIC_TMDB_ACCESS_TOKEN } from "./metadata/public-token";
 import { testTmdbConnection, tmdbCredentialsConfigured } from "./metadata/tmdb";
 import { startAllLibraryScans } from "./scanner";
-import { deleteSetting, setBooleanSetting, setSetting } from "./settings";
+import { deleteSetting, getBooleanSetting, getSetting, setBooleanSetting, setSetting } from "./settings";
+import { getServerStatus } from "./status";
 import { cancelActivePlaybackSessions } from "./transcoding/manager";
 import { startMediaProbeRefreshJob } from "./transcoding/probe-jobs";
 import {
@@ -12,13 +14,22 @@ import {
   setHardwareAccelerationRequired,
   setTranscodeQualityPreset,
   setTranscodingEnabled,
+  getTranscodePolicy,
 } from "./transcoding/policy";
 import {
   cleanupConfiguredPlaybackSessionArtifacts,
   formatPlaybackArtifactsCleanupMessage,
+  getPlaybackSessionArtifactMaxBytes,
+  PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
   setPlaybackSessionArtifactMaxBytes,
 } from "./transcoding/sessions";
-import { setEncodeAheadSegmentCount, setPlaybackCacheTtlMs } from "./transcoding/cache";
+import {
+  getEncodeAheadSegmentCount,
+  getPlaybackCacheTtlMs,
+  setEncodeAheadSegmentCount,
+  setPlaybackCacheTtlMs,
+} from "./transcoding/cache";
+import { APP_VERSION } from "./version";
 
 type InputSource = Record<string, unknown> | FormData;
 
@@ -37,6 +48,28 @@ function stringInput(input: InputSource, key: string) {
 
 function hasInput(input: InputSource, key: string) {
   return valueFrom(input, key) !== null && valueFrom(input, key) !== undefined;
+}
+
+export async function getAdminSettingsResponse(userId: string) {
+  const savedAccessToken = await getSetting("tmdb_access_token");
+  const savedApiKey = await getSetting("tmdb_api_key");
+  const fallbackConfigured = Boolean(PUBLIC_TMDB_ACCESS_TOKEN);
+
+  return {
+    signupOpen: await getBooleanSetting("signup_open", false),
+    tmdbConfigured: Boolean(savedAccessToken || savedApiKey || fallbackConfigured),
+    tmdbAccessTokenConfigured: Boolean(savedAccessToken),
+    tmdbAccessTokenSaved: Boolean(savedAccessToken),
+    tmdbApiKeyConfigured: Boolean(savedApiKey),
+    tmdbApiKeySaved: Boolean(savedApiKey),
+    transcodePolicy: await getTranscodePolicy(userId),
+    playbackSessionArtifactMaxBytes: await getPlaybackSessionArtifactMaxBytes(),
+    playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
+    encodeAheadSegmentCount: await getEncodeAheadSegmentCount(),
+    playbackCacheTtlHours: (await getPlaybackCacheTtlMs()) / (60 * 60 * 1000),
+    version: APP_VERSION,
+    status: await getServerStatus(),
+  };
 }
 
 export async function updateRegistrationSettings(input: InputSource) {

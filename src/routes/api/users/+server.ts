@@ -1,7 +1,8 @@
-import { apiErrorFrom, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiErrorFrom, apiJson } from "$lib/server/api/json";
+import type { UserResponse, UsersResponse } from "$lib/server/api/types";
+import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { parseCreateUserInput } from "$lib/server/auth/users-input";
 import { createManagedUser, listManagedUsers, userManagementHttpStatus } from "$lib/server/auth/users-admin";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, request }) => {
@@ -9,7 +10,7 @@ export const GET: RequestHandler = async ({ locals, request }) => {
   if (user instanceof Response) return user;
 
   try {
-    return json({
+    return apiJson<UsersResponse>({
       users: await listManagedUsers(request.headers),
     });
   } catch (error) {
@@ -28,7 +29,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
       headers: request.headers,
       ...input,
     });
-    return json({ user: created }, { status: 201 });
+    return apiJson<UserResponse>({ user: created }, { status: 201 });
   } catch (error) {
     return apiErrorFrom(error, "Could not create user.", userManagementHttpStatus(error));
   }

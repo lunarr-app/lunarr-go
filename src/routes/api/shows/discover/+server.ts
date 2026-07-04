@@ -1,7 +1,8 @@
 import { requireJsonUser } from "$lib/server/api";
+import { apiJson } from "$lib/server/api/json";
+import type { DiscoverShowsResponse } from "$lib/server/api/types";
 import { normalizePage } from "$lib/server/media/catalog";
 import { listBecauseYouWatchedShows } from "$lib/server/media/shows";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -9,5 +10,5 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   if (user instanceof Response) return user;
 
   const page = normalizePage(url.searchParams.get("page"));
-  return json(await listBecauseYouWatchedShows(user.id, page));
+  return apiJson<DiscoverShowsResponse>(await listBecauseYouWatchedShows(user.id, page));
 };

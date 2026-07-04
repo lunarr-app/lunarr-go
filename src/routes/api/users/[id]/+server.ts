@@ -1,7 +1,8 @@
-import { apiErrorFrom, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiErrorFrom, apiJson } from "$lib/server/api/json";
+import type { ApiOkResponse, UserResponse } from "$lib/server/api/types";
+import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { parseUpdateUserRoleInput } from "$lib/server/auth/users-input";
 import { deleteManagedUser, updateManagedUserRole, userManagementHttpStatus } from "$lib/server/auth/users-admin";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const PATCH: RequestHandler = async ({ params, request, locals }) => {
@@ -16,7 +17,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
       userId: params.id,
       role,
     });
-    return json({ user: updated });
+    return apiJson<UserResponse>({ user: updated });
   } catch (error) {
     return apiErrorFrom(error, "Could not update user.", userManagementHttpStatus(error));
   }
@@ -31,7 +32,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
       headers: request.headers,
       userId: params.id,
     });
-    return json({ ok: true });
+    return apiJson<ApiOkResponse>({ ok: true });
   } catch (error) {
     return apiErrorFrom(error, "Could not delete user.", userManagementHttpStatus(error));
   }

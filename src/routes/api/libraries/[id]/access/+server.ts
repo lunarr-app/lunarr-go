@@ -1,6 +1,7 @@
-import { apiErrorFrom, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiErrorFrom, apiJson } from "$lib/server/api/json";
+import type { ApiOkResponse } from "$lib/server/api/types";
+import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { updateLibraryAccess } from "$lib/server/libraries";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
@@ -12,7 +13,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
     const input = typeof body === "object" && body ? (body as Record<string, unknown>) : {};
     const userIds = Array.isArray(input.userIds) ? input.userIds.map((id) => String(id)) : [];
     await updateLibraryAccess(params.id, String(input.accessMode ?? "all"), userIds);
-    return json({ ok: true });
+    return apiJson<ApiOkResponse>({ ok: true });
   } catch (error) {
     return apiErrorFrom(error, "Could not update library sharing.");
   }

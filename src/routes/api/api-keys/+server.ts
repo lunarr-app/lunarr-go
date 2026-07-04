@@ -1,6 +1,7 @@
 import { createApiKey, listApiKeys, apiKeyHttpStatus } from "$lib/server/auth/api-keys";
-import { apiErrorFrom, readJsonBody, requireJsonUser } from "$lib/server/api";
-import { json } from "@sveltejs/kit";
+import { apiErrorFrom, apiJson } from "$lib/server/api/json";
+import type { ApiKeyListResponse, CreateApiKeyResponse } from "$lib/server/api/types";
+import { readJsonBody, requireJsonUser } from "$lib/server/api";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, request }) => {
@@ -8,7 +9,7 @@ export const GET: RequestHandler = async ({ locals, request }) => {
   if (user instanceof Response) return user;
 
   try {
-    return json({ apiKeys: await listApiKeys(request.headers) });
+    return apiJson<ApiKeyListResponse>({ apiKeys: await listApiKeys(request.headers) });
   } catch (error) {
     return apiErrorFrom(error, "Could not list API keys.", apiKeyHttpStatus(error));
   }
@@ -20,7 +21,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   try {
     const body = await readJsonBody(request);
-    return json(
+    return apiJson<CreateApiKeyResponse>(
       await createApiKey({
         headers: request.headers,
         name: typeof body === "object" && body ? (body as { name?: unknown }).name : undefined,

@@ -1,11 +1,12 @@
-import { apiErrorFrom, readJsonBody, requireJsonUser } from "$lib/server/api";
+import { apiErrorFrom, apiJson } from "$lib/server/api/json";
+import type { ApiOkResponse } from "$lib/server/api/types";
+import { readJsonBody, requireJsonUser } from "$lib/server/api";
 import {
   normalizePlaybackPreference,
   setUserPlaybackPreference,
   setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const PUT: RequestHandler = async ({ request, locals }) => {
@@ -32,7 +33,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     if ("preferredSubtitleLanguage" in values) {
       await setUserPreferredSubtitleLanguage(user.id, String(values.preferredSubtitleLanguage ?? ""));
     }
-    return json({ ok: true });
+    return apiJson<ApiOkResponse>({ ok: true });
   } catch (error) {
     return apiErrorFrom(error, "Could not update playback preference.");
   }

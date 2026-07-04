@@ -1,10 +1,17 @@
-import type { runSettingsAction } from "$lib/server/settings-commands";
+import type { runSettingsAction, getAdminSettingsResponse } from "$lib/server/settings-commands";
 import type { startAllLibraryScans } from "$lib/server/scanner";
 import type { startMovieMetadataRefreshJob } from "$lib/server/metadata/movies";
 import type { listAllShares, listSharesForMedia } from "$lib/server/shares/index";
+import type { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
+import type { createManagedUser, listManagedUsers } from "$lib/server/auth/users-admin";
 import type { RefreshMovieMetadataResult } from "$lib/server/metadata/movies";
 import type { RefreshTvShowMetadataResult } from "$lib/server/metadata/tv";
-import type { getMovieCredits, getMovieDetail, getMovieOverview } from "$lib/server/media/movies";
+import type {
+  getMovieCredits,
+  getMovieDetail,
+  getMovieOverview,
+  listBecauseYouWatchedMovies,
+} from "$lib/server/media/movies";
 import type { getPersonDetail } from "$lib/server/media/people";
 import type { loadSimilarMovies, loadSimilarShows } from "$lib/server/media/similar-page-load";
 import type {
@@ -13,6 +20,7 @@ import type {
   getShowDetail,
   getShowOverview,
   getShowSeasonDetail,
+  listBecauseYouWatchedShows,
 } from "$lib/server/media/shows";
 import type { createLibrary, listLibrariesWithScanStatus, listLibraryShareUsers } from "$lib/server/libraries";
 import type { getScanJobSummary, listPlaybackSessions, listScanErrorsForJob, listScanJobs } from "$lib/server/jobs";
@@ -133,6 +141,27 @@ export type CreateShareRequest = CreateSharePayload;
 export type ScanAllLibrariesResponse = Awaited<ReturnType<typeof startAllLibraryScans>>;
 export type SettingsJobStartResponse = Awaited<ReturnType<typeof startMovieMetadataRefreshJob>>;
 export type SettingsActionResponse = Awaited<ReturnType<typeof runSettingsAction>>;
+export type SettingsResponse = Awaited<ReturnType<typeof getAdminSettingsResponse>>;
+
+export type DiscoverMoviesResponse = Awaited<ReturnType<typeof listBecauseYouWatchedMovies>>;
+export type DiscoverShowsResponse = Awaited<ReturnType<typeof listBecauseYouWatchedShows>>;
+
+export type UsersResponse = {
+  users: Awaited<ReturnType<typeof listManagedUsers>>;
+};
+
+export type UserResponse = {
+  user: Awaited<ReturnType<typeof createManagedUser>>;
+};
+
+export type ApiKeyListResponse = {
+  apiKeys: Awaited<ReturnType<typeof listApiKeys>>;
+};
+
+export type CreateApiKeyResponse = Awaited<ReturnType<typeof createApiKey>>;
+
+export type { ManagedUser } from "$lib/server/auth/users-admin";
+export type { ApiKeySummary } from "$lib/server/auth/api-keys";
 
 /** OpenAPI component schemas backed by concrete TypeScript contract types. */
 export const OPENAPI_TYPED_SCHEMAS = [
@@ -151,6 +180,8 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "MovieOverviewResponse",
   "MovieCreditsResponse",
   "SimilarMoviesResponse",
+  "DiscoverMoviesResponse",
+  "DiscoverShowsResponse",
   "ShowRowsResponse",
   "ShowBrowseRailResponse",
   "ShowFullResponse",
@@ -160,6 +191,13 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "EpisodeDetailResponse",
   "SimilarShowsResponse",
   "ContinueWatchingResponse",
+  "ManagedUser",
+  "UsersResponse",
+  "UserResponse",
+  "ApiKeySummary",
+  "ApiKeyListResponse",
+  "CreateApiKeyResponse",
+  "SettingsResponse",
   "GuestShareMoviePage",
   "GuestShareShowPage",
   "GuestSharePageData",
