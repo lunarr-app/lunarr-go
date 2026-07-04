@@ -18,13 +18,7 @@ import type { createLibrary, listLibrariesWithScanStatus, listLibraryShareUsers 
 import type { getScanJobSummary, listPlaybackSessions, listScanErrorsForJob, listScanJobs } from "$lib/server/jobs";
 import type { PlaybackData } from "$lib/server/playback";
 import type { TranscodePolicy } from "$lib/server/transcoding/policy";
-import type {
-  AdminShareRecord,
-  CreateSharePayload,
-  PublicShareRecord,
-  SharePageData,
-  ShareSeasonData,
-} from "$lib/shares/types";
+import type { CreateSharePayload, PublicShareRecord, SharePageData, ShareSeasonData } from "$lib/shares/types";
 import type { MovieRowsResponse, ShowRowsResponse } from "$lib/media/types";
 
 export type {

@@ -1,5 +1,4 @@
 import { sql } from "kysely";
-import type { CatalogPageInfo } from "$lib/media/types";
 import { getDb } from "../db";
 import { tmdbImageUrl } from "$lib/media/images";
 import { accessibleLibrarySql, catalogPageInfo, MOVIE_PAGE_SIZE, normalizePage } from "./catalog";
