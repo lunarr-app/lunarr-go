@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.6.0 - 2026-07-04
+
+### Added
+
+- Added tiered TV show API endpoints for mobile and third-party clients: `GET /api/shows/:id/overview`, `GET /api/shows/:id/credits`, `GET /api/shows/:id/seasons/:seasonId`, with `GET /api/shows/:id` retained for full season/episode trees.
+- Added tiered movie API endpoints: `GET /api/movies/:id/overview`, `GET /api/movies/:id/credits`, and a composed `GET /api/movies/:id` full-detail response built from overview plus cast.
+- Added lazy-loaded guest show share seasons via `GET /api/share/:token/seasons/:seasonId`, with overview-tier share pages that load episode lists per season on demand.
+- Added optional `rail` query support on `GET /api/movies` and `GET /api/shows`, including comma-separated multi-rail requests for lighter home-screen fetches.
+- Added a typed API contract layer with centralized response types in `src/lib/server/api/types.ts`, `apiJson()` response helpers, an OpenAPI schema manifest, and contract tests that keep handlers aligned with the published spec.
+- Added paginated person filmography on the person page and matching API responses.
+- Added `GET /api/health` for public readiness probes, including before first-run setup completes.
+- Added TV and mobile device pairing with `POST /api/device-pairing`, `GET /api/device-pairing/poll`, and `POST /api/device-pairing/approve`, including two-year paired API keys and a ready-made `pairingUrl` for QR codes.
+- Added a **Link a device** page at `/link-device` with optional `?code=` and `?name=` prefill for approving pairing codes outside Profile.
+
+### Changed
+
+- Loaded show browse and detail landing pages from overview tiers instead of full show trees with every episode.
+- Reworked season pages and guest share UIs to use tiered media helpers and lazy season loading.
+- Added skeleton loading placeholders for guest share episode lists and the share link modal while client data loads.
+- Showed next-up episodes on the Continue page for in-progress shows.
+- Unified JSON API error responses behind `apiError` and `apiErrorFrom` across `/api` handlers.
+- Migrated browse, catalog detail, continue, discover, settings, users, shares, playback, jobs, and guest-share routes to typed `apiJson` responses.
+- Split admin and media share list response types and tightened settings action OpenAPI schemas.
+- Typed library detail API responses separately from library create payloads.
+- Updated API documentation for detail tiers, browse rails, the shared contract layer, and guest share season loading.
+- Updated dependencies, including SvelteKit 2.67.0, Better Auth 1.6.23, `@lucide/svelte` 1.23.0, Playwright 1.61.1, and Prettier 3.9.4.
+- Bumped GitHub Actions `actions/checkout` from v6 to v7.
+- Moved device linking out of Profile into `/link-device`, with a profile teaser grouped alongside API keys.
+- Refined the Profile layout into access panels (account, device linking, API keys) and preference panels (appearance, playback), with Appearance second on mobile.
+- Reworked the Profile account panel into view and edit modes with a collapsible password section.
+- Preserved post-login `redirectTo` through sign-in so scanned pairing links work when users are logged out.
+- Updated Docker smoke tests and API documentation for `GET /api/health` and device pairing.
+
+### Fixed
+
+- Fixed a guest share season lazy-load race where switching tabs could show the wrong season's episodes or errors.
+- Fixed OpenAPI browse `rail` query documentation to allow comma-separated multi-rail values.
+- Fixed cast rail typing for nullable provider IDs.
+- Pruned idle guest share rate-limit keys after their window expires so long-running processes do not accumulate stale `bucket:ip` entries.
+- Removed unused imports caught by strict TypeScript checks.
+- Fixed device pairing races where concurrent approvals could create duplicate API keys.
+- Fixed approved pairings expiring before devices could poll their one-time API key.
+- Hardened device-pairing rate limits, pairing-code uniqueness, and cleanup of finished pairing rows after 30 days.
+- Fixed post-login open redirect via backslash-normalized `redirectTo` paths.
+
 ## 0.5.0 - 2026-06-20
 
 ### Added
