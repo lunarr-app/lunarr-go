@@ -28,6 +28,34 @@ export type AdminShareRecord = PublicShareRecord & {
   createdByEmail: string;
 };
 
+export type ShareEpisode = {
+  id: string;
+  title: string;
+  overview: string | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+  runtimeSeconds: number | null;
+  stillUrl: string | null;
+  fileId: string | null;
+};
+
+export type ShareSeasonStub = {
+  id: string;
+  title: string;
+  seasonNumber: number | null;
+  posterUrl: string | null;
+  episodeCount: number;
+  playableCount: number;
+};
+
+export type ShareSeasonData = {
+  id: string;
+  title: string;
+  seasonNumber: number | null;
+  posterUrl: string | null;
+  episodes: ShareEpisode[];
+};
+
 export type SharePageData =
   | {
       kind: "movie";
@@ -51,20 +79,5 @@ export type SharePageData =
       posterUrl: string | null;
       backdropUrl: string | null;
       showId: string;
-      seasons: Array<{
-        id: string;
-        title: string;
-        seasonNumber: number | null;
-        posterUrl: string | null;
-        episodes: Array<{
-          id: string;
-          title: string;
-          overview: string | null;
-          seasonNumber: number | null;
-          episodeNumber: number | null;
-          runtimeSeconds: number | null;
-          stillUrl: string | null;
-          fileId: string | null;
-        }>;
-      }>;
+      seasons: ShareSeasonStub[];
     };

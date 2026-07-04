@@ -908,6 +908,35 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/share/{token}/seasons/{seasonId}": {
+      get: {
+        tags: ["Shares"],
+        summary: "Get playable episodes for one shared show season.",
+        operationId: "getGuestShareSeason",
+        security: [],
+        parameters: [
+          {
+            name: "token",
+            in: "path",
+            required: true,
+            schema: stringSchema,
+            description: "Opaque guest share token.",
+          },
+          {
+            name: "seasonId",
+            in: "path",
+            required: true,
+            schema: stringSchema,
+            description: "Season UUID or season number.",
+          },
+        ],
+        responses: {
+          "200": jsonResponse(objectSchema("Guest share season payload with playable episodes.")),
+          "404": errorResponse,
+          "429": errorResponse,
+        },
+      },
+    },
     "/api/share/{token}/playback/{mediaItemId}": {
       get: {
         tags: ["Shares"],

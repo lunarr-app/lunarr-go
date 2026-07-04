@@ -1,4 +1,4 @@
-import type { AdminShareRecord, CreateSharePayload, PublicShareRecord } from "$lib/shares/types";
+import type { AdminShareRecord, CreateSharePayload, PublicShareRecord, ShareSeasonData } from "$lib/shares/types";
 
 async function readJsonError(response: Response, fallback: string) {
   const body = await response.json().catch(() => null);
@@ -49,4 +49,13 @@ export async function revokeShare(shareId: string) {
 
 export function shareLinkUrl(share: Pick<PublicShareRecord, "sharePath">) {
   return new URL(share.sharePath, window.location.origin).toString();
+}
+
+export async function fetchGuestShareSeason(token: string, seasonId: string) {
+  const response = await fetch(`/api/share/${encodeURIComponent(token)}/seasons/${encodeURIComponent(seasonId)}`);
+  if (!response.ok) {
+    await readJsonError(response, "Could not load shared season.");
+  }
+  const body = await response.json().catch(() => null);
+  return (body?.season ?? null) as ShareSeasonData | null;
 }

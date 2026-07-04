@@ -250,7 +250,8 @@ describe("guest share page server load", () => {
     if (result.share.kind === "show") {
       expect(result.share.seasons).toHaveLength(1);
       expect(result.share.seasons[0]?.id).toBe("season-1");
-      expect(result.share.seasons[0]?.episodes.map((episode: { id: string }) => episode.id)).toEqual(["episode-1"]);
+      expect(result.share.seasons[0]?.playableCount).toBe(1);
+      expect(result.share.seasons[0]).not.toHaveProperty("episodes");
     }
   });
 

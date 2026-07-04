@@ -10,6 +10,7 @@ import {
   setGuestShareRateLimitOverridesForTests,
 } from "$lib/server/shares/rate-limit";
 import { GET as shareGet } from "../share/[token]/+server";
+import { GET as shareSeasonGet } from "../share/[token]/seasons/[seasonId]/+server";
 import { GET as sharePlaybackGet } from "../share/[token]/playback/[mediaItemId]/+server";
 import { GET as sharesGet, POST as sharesPost } from "./+server";
 import { DELETE as shareDelete } from "./[id]/+server";
@@ -499,6 +500,29 @@ describe("guest share routes", () => {
     expect(page.status).toBe(200);
     const pageBody = await page.json();
     expect(pageBody.share.kind).toBe("movie");
+
+    const showPage = await shareGet({
+      params: { token: showToken },
+      ...guestEventBase,
+    } as never);
+    expect(showPage.status).toBe(200);
+    const showBody = await showPage.json();
+    expect(showBody.share.kind).toBe("show");
+    expect(showBody.share.seasons[0]).not.toHaveProperty("episodes");
+
+    const season = await shareSeasonGet({
+      params: { token: showToken, seasonId: "season-1" },
+      ...guestEventBase,
+    } as never);
+    expect(season.status).toBe(200);
+    const seasonBody = await season.json();
+    expect(seasonBody.season.episodes[0]?.id).toBe("episode-1");
+
+    const blockedSeason = await shareSeasonGet({
+      params: { token: showToken, seasonId: "season-2" },
+      ...guestEventBase,
+    } as never);
+    expect(blockedSeason.status).toBe(404);
 
     const playback = await sharePlaybackGet({
       params: { token, mediaItemId: "movie-1" },

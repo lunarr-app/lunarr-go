@@ -1,4 +1,10 @@
-import type { AdminShareRecord, PublicShareRecord, SharePageData } from "$lib/shares/types";
+import type {
+  AdminShareRecord,
+  PublicShareRecord,
+  ShareEpisode,
+  SharePageData,
+  ShareSeasonData,
+} from "$lib/shares/types";
 import { SHARE_LIST_RECENTLY_EXPIRED_MS, SHARE_PAGE_SIZE, type ShareListStatus } from "$lib/shares/constants";
 import { catalogPageInfo, catalogPageSize } from "../media/catalog";
 import { randomBytes } from "node:crypto";
@@ -264,6 +270,58 @@ export async function cleanupExpiredShares(options: { retentionMs?: number; now?
   return Number(result.numDeletedRows ?? 0);
 }
 
+function sharePlayableEpisode(episode: {
+  id: string;
+  title: string;
+  overview: string | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+  runtimeSeconds: number | null;
+  stillUrl: string | null;
+  fileCount: number;
+  fileId: string | null;
+}): ShareEpisode | null {
+  if (episode.fileCount <= 0 || !episode.fileId) return null;
+  return {
+    id: episode.id,
+    title: episode.title,
+    overview: episode.overview,
+    seasonNumber: episode.seasonNumber,
+    episodeNumber: episode.episodeNumber,
+    runtimeSeconds: episode.runtimeSeconds,
+    stillUrl: episode.stillUrl,
+    fileId: episode.fileId,
+  };
+}
+
+function allowedShareSeasonStubs(
+  seasons: Array<{
+    id: string;
+    title: string;
+    seasonNumber: number | null;
+    posterUrl: string | null;
+    episodeCount: number;
+    playableCount: number;
+  }>,
+  seasonIds: string[] | null,
+) {
+  const allowedSeasonIds = seasonIds ? new Set(seasonIds) : null;
+  return seasons
+    .filter((season) => (!allowedSeasonIds || allowedSeasonIds.has(season.id)) && season.playableCount > 0)
+    .map((season) => ({
+      id: season.id,
+      title: season.title,
+      seasonNumber: season.seasonNumber,
+      posterUrl: season.posterUrl,
+      episodeCount: season.episodeCount,
+      playableCount: season.playableCount,
+    }));
+}
+
+function seasonAllowedForShare(share: ResolvedMediaShare, seasonId: string) {
+  return share.seasonIds === null || share.seasonIds.includes(seasonId);
+}
+
 export async function getSharePageData(token: string): Promise<SharePageData | null> {
   const share = await resolveShare(token);
   if (!share) return null;
@@ -292,34 +350,7 @@ export async function getSharePageData(token: string): Promise<SharePageData | n
   const overview = await getShowOverview(share.media_item_id, userId);
   if (!overview) return null;
 
-  const allowedSeasonIds = share.seasonIds ? new Set(share.seasonIds) : null;
-  const seasonsToLoad = overview.seasons.filter((season) => !allowedSeasonIds || allowedSeasonIds.has(season.id));
-  const seasonDetails = await Promise.all(
-    seasonsToLoad.map((season) => getShowSeasonDetail(share.media_item_id, season.id, userId)),
-  );
-
-  const seasons = seasonDetails
-    .filter((detail) => detail !== null)
-    .map((detail) => ({
-      id: detail.season.id,
-      title: detail.season.title,
-      seasonNumber: detail.season.seasonNumber,
-      posterUrl: detail.season.posterUrl,
-      episodes: detail.season.episodes
-        .filter((episode) => episode.fileCount > 0 && episode.fileId)
-        .map((episode) => ({
-          id: episode.id,
-          title: episode.title,
-          overview: episode.overview,
-          seasonNumber: episode.seasonNumber,
-          episodeNumber: episode.episodeNumber,
-          runtimeSeconds: episode.runtimeSeconds,
-          stillUrl: episode.stillUrl,
-          fileId: episode.fileId,
-        })),
-    }))
-    .filter((season) => season.episodes.length > 0);
-
+  const seasons = allowedShareSeasonStubs(overview.seasons, share.seasonIds);
   if (seasons.length === 0) return null;
 
   return {
@@ -332,6 +363,27 @@ export async function getSharePageData(token: string): Promise<SharePageData | n
     backdropUrl: overview.show.backdropUrl,
     showId: overview.show.id,
     seasons,
+  };
+}
+
+export async function getShareSeasonData(token: string, seasonKey: string): Promise<ShareSeasonData | null> {
+  const share = await resolveShare(token);
+  if (!share || share.kind !== "show") return null;
+
+  const detail = await getShowSeasonDetail(share.media_item_id, seasonKey, share.created_by_user_id);
+  if (!detail || !seasonAllowedForShare(share, detail.season.id)) return null;
+
+  const episodes = detail.season.episodes
+    .map((episode) => sharePlayableEpisode(episode))
+    .filter((episode): episode is ShareEpisode => episode !== null);
+  if (episodes.length === 0) return null;
+
+  return {
+    id: detail.season.id,
+    title: detail.season.title,
+    seasonNumber: detail.season.seasonNumber,
+    posterUrl: detail.season.posterUrl,
+    episodes,
   };
 }
 

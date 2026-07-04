@@ -303,8 +303,26 @@ Public guest endpoints (no authentication):
 
 ```http
 GET /api/share/:token
+GET /api/share/:token/seasons/:seasonId
 GET /api/share/:token/playback/:mediaItemId
 ```
+
+### Guest share detail tiers
+
+Show shares use a two-step load so multi-season links stay small.
+
+| Endpoint                                  | Returns                                                                                                           |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `GET /api/share/:token`                   | Movie play metadata, or show metadata plus season stubs (`episodeCount`, `playableCount`). **No episode arrays.** |
+| `GET /api/share/:token/seasons/:seasonId` | Playable episodes for one allowed season. `seasonId` accepts the season UUID or season number.                    |
+
+Recommended guest flow for TV shares:
+
+1. Open the link with `GET /api/share/:token`.
+2. Load each season tab with `GET /api/share/:token/seasons/:seasonId`.
+3. Prepare playback with `GET /api/share/:token/playback/:mediaItemId`.
+
+Movie shares still include the playable file on the initial response.
 
 Guest share endpoints are rate limited per client IP (60 resolve requests/minute, 30 playback prep requests/minute). Excess requests return `429` with `{ "error": "Too many requests. Try again later." }`.
 

@@ -26,7 +26,7 @@
 
   const playableEpisodeCount = $derived.by(() => {
     if (data.share.kind !== "show") return 0;
-    return data.share.seasons.reduce((count, season) => count + season.episodes.length, 0);
+    return data.share.seasons.reduce((count, season) => count + season.playableCount, 0);
   });
 
   function closePlayer() {
@@ -124,7 +124,7 @@
     {#if data.share.kind === "show"}
       <main class="share-main">
         <div class="share-frame">
-          <GuestShareEpisodeList seasons={data.share.seasons} onPlay={openPlayer} />
+          <GuestShareEpisodeList token={data.share.token} seasons={data.share.seasons} onPlay={openPlayer} />
         </div>
       </main>
     {/if}

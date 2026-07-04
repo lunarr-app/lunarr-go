@@ -10,6 +10,7 @@ import {
   createShare,
   cleanupExpiredShares,
   getSharePageData,
+  getShareSeasonData,
   listSharesForMedia,
   resolveShare,
   revokeShare,
@@ -323,8 +324,14 @@ describe("media shares", () => {
     expect(showPage?.kind).toBe("show");
     if (showPage?.kind === "show") {
       expect(showPage.seasons).toHaveLength(1);
-      expect(showPage.seasons[0]?.episodes[0]?.id).toBe("episode-1");
+      expect(showPage.seasons[0]?.id).toBe("season-1");
+      expect(showPage.seasons[0]?.playableCount).toBe(1);
+      expect(showPage.seasons[0]).not.toHaveProperty("episodes");
     }
+
+    const seasonPage = await getShareSeasonData(showShare.token, "season-1");
+    expect(seasonPage?.episodes[0]?.id).toBe("episode-1");
+    expect(await getShareSeasonData(showShare.token, "season-2")).toBeNull();
   });
 
   test("lists shares for a media item", async () => {

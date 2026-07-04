@@ -1,22 +1,28 @@
 <script lang="ts">
   import SeasonTabs from "$lib/components/SeasonTabs.svelte";
   import { formatEpisodeCode, formatMediaDuration } from "$lib/media/format";
-  import type { SharePageData } from "$lib/shares/types";
+  import type { ShareEpisode, ShareSeasonStub } from "$lib/shares/types";
+  import { fetchGuestShareSeason } from "$lib/shares/client";
   import { CirclePlay } from "@lucide/svelte";
 
-  type ShareSeason = Extract<SharePageData, { kind: "show" }>["seasons"][number];
-
   let {
+    token,
     seasons,
     onPlay,
   }: {
-    seasons: ShareSeason[];
+    token: string;
+    seasons: ShareSeasonStub[];
     onPlay: (episodeId: string) => void;
   } = $props();
 
   let selectedSeasonId = $state("");
+  let loadedEpisodes = $state<Record<string, ShareEpisode[]>>({});
+  let loadingSeasonId = $state<string | null>(null);
+  let loadError = $state<string | null>(null);
 
   const activeSeason = $derived(seasons.find((season) => season.id === selectedSeasonId) ?? seasons[0] ?? null);
+  const activeEpisodes = $derived(activeSeason ? (loadedEpisodes[activeSeason.id] ?? []) : []);
+  const isLoading = $derived(activeSeason ? loadingSeasonId === activeSeason.id : false);
 
   const seasonTabs = $derived(
     seasons.map((season) => ({
@@ -31,46 +37,84 @@
       selectedSeasonId = seasons[0]?.id ?? "";
     }
   });
+
+  async function ensureSeasonLoaded(seasonId: string) {
+    if (loadedEpisodes[seasonId] || loadingSeasonId === seasonId) return;
+
+    loadingSeasonId = seasonId;
+    loadError = null;
+    try {
+      const season = await fetchGuestShareSeason(token, seasonId);
+      if (!season) {
+        throw new Error("Could not load shared season.");
+      }
+      loadedEpisodes = { ...loadedEpisodes, [seasonId]: season.episodes };
+    } catch (error) {
+      loadError = error instanceof Error ? error.message : "Could not load episodes.";
+    } finally {
+      if (loadingSeasonId === seasonId) {
+        loadingSeasonId = null;
+      }
+    }
+  }
+
+  $effect(() => {
+    const seasonId = activeSeason?.id;
+    if (seasonId) {
+      void ensureSeasonLoaded(seasonId);
+    }
+  });
 </script>
 
 <section class="episodes-section" aria-label="Episodes">
   <SeasonTabs
     seasons={seasonTabs}
     activeSeasonId={activeSeason?.id ?? ""}
-    onSelect={(seasonId) => (selectedSeasonId = seasonId)}
+    onSelect={(seasonId) => {
+      selectedSeasonId = seasonId;
+      loadError = null;
+    }}
   />
 
   {#if activeSeason}
     <div role="tabpanel">
-      <div class="episodes">
-        {#each activeSeason.episodes as episode (episode.id)}
-          <article class="episode-row">
-            <div class="still" aria-hidden="true">
-              {#if episode.stillUrl}
-                <img src={episode.stillUrl} alt="" loading="lazy" />
-              {:else}
-                <span>{formatEpisodeCode(episode, { style: "short" })}</span>
-              {/if}
-            </div>
-            <div class="episode-main">
-              <div class="episode-heading">
-                <span>{formatEpisodeCode(episode, { style: "short" })}</span>
-                <h3>{episode.title}</h3>
+      {#if loadError}
+        <p class="season-status error">{loadError}</p>
+      {:else if isLoading}
+        <p class="season-status">Loading episodes…</p>
+      {:else if activeEpisodes.length === 0}
+        <p class="season-status">No playable episodes in this season.</p>
+      {:else}
+        <div class="episodes">
+          {#each activeEpisodes as episode (episode.id)}
+            <article class="episode-row">
+              <div class="still" aria-hidden="true">
+                {#if episode.stillUrl}
+                  <img src={episode.stillUrl} alt="" loading="lazy" />
+                {:else}
+                  <span>{formatEpisodeCode(episode, { style: "short" })}</span>
+                {/if}
               </div>
-              {#if episode.runtimeSeconds}
-                <p class="episode-runtime">{formatMediaDuration(episode.runtimeSeconds)}</p>
-              {/if}
-              {#if episode.overview}
-                <p class="episode-overview">{episode.overview}</p>
-              {/if}
-            </div>
-            <button class="secondary compact play-button" type="button" onclick={() => onPlay(episode.id)}>
-              <CirclePlay size={15} aria-hidden="true" />
-              Play
-            </button>
-          </article>
-        {/each}
-      </div>
+              <div class="episode-main">
+                <div class="episode-heading">
+                  <span>{formatEpisodeCode(episode, { style: "short" })}</span>
+                  <h3>{episode.title}</h3>
+                </div>
+                {#if episode.runtimeSeconds}
+                  <p class="episode-runtime">{formatMediaDuration(episode.runtimeSeconds)}</p>
+                {/if}
+                {#if episode.overview}
+                  <p class="episode-overview">{episode.overview}</p>
+                {/if}
+              </div>
+              <button class="secondary compact play-button" type="button" onclick={() => onPlay(episode.id)}>
+                <CirclePlay size={15} aria-hidden="true" />
+                Play
+              </button>
+            </article>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 </section>
@@ -79,6 +123,16 @@
   .episodes-section {
     display: grid;
     gap: 1rem;
+  }
+
+  .season-status {
+    margin: 0;
+    color: var(--color-subtle);
+    font-size: 0.95rem;
+  }
+
+  .season-status.error {
+    color: var(--color-danger, #c0392b);
   }
 
   .episodes {
