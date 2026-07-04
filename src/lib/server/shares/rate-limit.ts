@@ -26,14 +26,25 @@ function pruneOldTimestamps(timestamps: number[], now: number) {
 }
 
 function isRateLimited(key: string, limit: number, now = Date.now()) {
-  const timestamps = requestTimestamps.get(key) ?? [];
-  pruneOldTimestamps(timestamps, now);
+  let timestamps = requestTimestamps.get(key);
+  if (timestamps) {
+    pruneOldTimestamps(timestamps, now);
+    if (timestamps.length === 0) {
+      requestTimestamps.delete(key);
+      timestamps = undefined;
+    }
+  }
+
+  if (!timestamps) {
+    requestTimestamps.set(key, [now]);
+    return false;
+  }
+
   if (timestamps.length >= limit) {
-    requestTimestamps.set(key, timestamps);
     return true;
   }
+
   timestamps.push(now);
-  requestTimestamps.set(key, timestamps);
   return false;
 }
 
