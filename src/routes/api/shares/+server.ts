@@ -1,6 +1,6 @@
 import { apiErrorFrom, readJsonBody, requireJsonAdmin } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
-import type { ShareCreateResponse, SharesListResponse } from "$lib/server/api/types";
+import type { AdminSharesListResponse, MediaSharesListResponse, ShareCreateResponse } from "$lib/server/api/types";
 import { createShare, listAllShares, listSharesForMedia, parseCreateShareInput } from "$lib/server/shares";
 import type { RequestHandler } from "./$types";
 
@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const mediaItemId = url.searchParams.get("mediaItemId")?.trim() ?? "";
   if (!mediaItemId) {
     try {
-      return apiJson<SharesListResponse>({
+      return apiJson<AdminSharesListResponse>({
         shares: await listAllShares(),
       });
     } catch (error) {
@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   }
 
   try {
-    return apiJson<SharesListResponse>({
+    return apiJson<MediaSharesListResponse>({
       shares: await listSharesForMedia(mediaItemId),
     });
   } catch (error) {

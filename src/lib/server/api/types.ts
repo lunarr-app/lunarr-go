@@ -1,3 +1,7 @@
+import type { runSettingsAction } from "$lib/server/settings-commands";
+import type { startAllLibraryScans } from "$lib/server/scanner";
+import type { startMovieMetadataRefreshJob } from "$lib/server/metadata/movies";
+import type { listAllShares, listSharesForMedia } from "$lib/server/shares/index";
 import type { RefreshMovieMetadataResult } from "$lib/server/metadata/movies";
 import type { RefreshTvShowMetadataResult } from "$lib/server/metadata/tv";
 import type { getMovieCredits, getMovieDetail, getMovieOverview } from "$lib/server/media/movies";
@@ -110,8 +114,12 @@ export type JobErrorsResponse = {
   limit: number;
 };
 
-export type SharesListResponse = {
-  shares: AdminShareRecord[] | PublicShareRecord[];
+export type AdminSharesListResponse = {
+  shares: Awaited<ReturnType<typeof listAllShares>>;
+};
+
+export type MediaSharesListResponse = {
+  shares: Awaited<ReturnType<typeof listSharesForMedia>>;
 };
 
 export type ShareCreateResponse = {
@@ -127,6 +135,10 @@ export type ScanStartResponse = string;
 export type PlaybackDataResponse = PlaybackData;
 
 export type CreateShareRequest = CreateSharePayload;
+
+export type ScanAllLibrariesResponse = Awaited<ReturnType<typeof startAllLibraryScans>>;
+export type SettingsJobStartResponse = Awaited<ReturnType<typeof startMovieMetadataRefreshJob>>;
+export type SettingsActionResponse = Awaited<ReturnType<typeof runSettingsAction>>;
 
 /** OpenAPI component schemas backed by concrete TypeScript contract types. */
 export const OPENAPI_TYPED_SCHEMAS = [
@@ -164,10 +176,16 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "ShareSeasonStub",
   "PublicShareRecord",
   "AdminShareRecord",
-  "SharesListResponse",
+  "AdminSharesListResponse",
+  "MediaSharesListResponse",
   "CreateShareRequest",
   "ShareCreateResponse",
   "ShareRevokeResponse",
+  "ScanAllLibrariesResponse",
+  "SettingsJobStartResponse",
+  "SettingsActionResponse",
+  "PlaybackArtifactsCleanupResponse",
+  "TmdbTestResponse",
   "PlaybackItem",
   "PlaybackDecision",
   "SubtitleTrack",

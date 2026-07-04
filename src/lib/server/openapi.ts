@@ -700,7 +700,12 @@ export const openApiDocument = {
           },
         ],
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/SharesListResponse" }),
+          "200": jsonResponse({
+            oneOf: [
+              { $ref: "#/components/schemas/AdminSharesListResponse" },
+              { $ref: "#/components/schemas/MediaSharesListResponse" },
+            ],
+          }),
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -2515,18 +2520,23 @@ export const openApiDocument = {
           },
         ],
       },
-      SharesListResponse: {
+      AdminSharesListResponse: {
         type: "object",
         required: ["shares"],
         properties: {
           shares: {
             type: "array",
-            items: {
-              oneOf: [
-                { $ref: "#/components/schemas/AdminShareRecord" },
-                { $ref: "#/components/schemas/PublicShareRecord" },
-              ],
-            },
+            items: { $ref: "#/components/schemas/AdminShareRecord" },
+          },
+        },
+      },
+      MediaSharesListResponse: {
+        type: "object",
+        required: ["shares"],
+        properties: {
+          shares: {
+            type: "array",
+            items: { $ref: "#/components/schemas/PublicShareRecord" },
           },
         },
       },
@@ -3140,8 +3150,41 @@ export const openApiDocument = {
         oneOf: [
           { $ref: "#/components/schemas/PlaybackArtifactsCleanupResponse" },
           { $ref: "#/components/schemas/TmdbTestResponse" },
-          objectSchema("Job action result."),
+          { $ref: "#/components/schemas/SettingsJobStartResponse" },
+          { $ref: "#/components/schemas/ScanAllLibrariesResponse" },
         ],
+      },
+      ScanAllLibrariesResponse: {
+        type: "object",
+        required: ["libraries", "jobIds"],
+        description: "Result of `scanAll`.",
+        properties: {
+          libraries: {
+            type: "integer",
+            minimum: 0,
+            description: "Number of libraries queued for scanning.",
+          },
+          jobIds: {
+            type: "array",
+            items: stringSchema,
+            description: "Scan job identifiers started or reused for each library.",
+          },
+        },
+      },
+      SettingsJobStartResponse: {
+        type: "object",
+        required: ["id", "existing"],
+        description: "Result of metadata refresh or media probe repair actions that enqueue a background job.",
+        properties: {
+          id: {
+            ...stringSchema,
+            description: "Background job identifier.",
+          },
+          existing: {
+            type: "boolean",
+            description: "Whether an active job was reused instead of creating a new one.",
+          },
+        },
       },
       PlaybackArtifactsCleanupResponse: {
         type: "object",
