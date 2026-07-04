@@ -74,7 +74,7 @@ Approve body:
 }
 ```
 
-Poll returns `status: "pending"` until approval, then `status: "approved"` with a one-time `apiKey` string. Pairing codes expire after 10 minutes. API keys created through pairing expire after 2 years (users can revoke them earlier from Profile).
+Poll returns `status: "pending"` until approval, then `status: "approved"` with a one-time `apiKey` string. Pairing codes expire after 10 minutes. API keys created through pairing expire after 2 years (users can revoke them earlier from Profile). Finished or expired pairing rows are deleted after 30 days.
 
 ## API Keys
 

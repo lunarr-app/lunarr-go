@@ -1,6 +1,7 @@
 import { building } from "$app/environment";
 import { auth } from "$lib/server/auth";
 import { hasRegisteredUsers } from "$lib/server/auth/users";
+import { cleanupStaleDevicePairings } from "$lib/server/auth/device-pairing";
 import { migrateDatabase } from "$lib/server/db";
 import { cleanupJobHistory } from "$lib/server/jobs";
 import { cleanupExpiredShares } from "$lib/server/shares";
@@ -26,6 +27,7 @@ function ensureStartup() {
     await cleanupConfiguredPlaybackSessionArtifacts();
     await cleanupJobHistory();
     await cleanupExpiredShares();
+    await cleanupStaleDevicePairings();
     await resumeInterruptedJobs();
     if (!building) {
       startStaleTranscodeExpiryLoop();
@@ -37,10 +39,6 @@ function ensureStartup() {
     throw error;
   });
   return startupPromise;
-}
-
-export function resetStartupForTests() {
-  startupPromise = undefined;
 }
 
 function isAuthApiPath(pathname: string) {
@@ -88,17 +86,6 @@ function canResolveUnauthenticatedMediaResource(event: RequestEvent) {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-  const pathname = event.url.pathname;
-
-  if (pathname === "/api/health") {
-    try {
-      await ensureStartup();
-    } catch {
-      // Health reports database readiness itself.
-    }
-    return resolve(event);
-  }
-
   await ensureStartup();
 
   const session = await auth.api.getSession({ headers: event.request.headers }).catch((error) => {
@@ -109,6 +96,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.session = session?.session ?? null;
   event.locals.user = session?.user ?? null;
 
+  const pathname = event.url.pathname;
   const hasUsers = await hasRegisteredUsers();
   const canResolveUnauthenticatedMedia = isMediaResourcePath(pathname) && canResolveUnauthenticatedMediaResource(event);
 

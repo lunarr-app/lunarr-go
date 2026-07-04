@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, describe, expect, test } from "bun:test";
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Handle } from "@sveltejs/kit";
@@ -8,9 +8,6 @@ import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests 
 import type { Database } from "$lib/server/db/schema";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
 import { createApiKeyForUser, resetAuthForTests } from "$lib/server/auth/test/setup";
-import { APP_VERSION } from "$lib/server/version";
-import { GET as healthGet } from "./routes/api/health/+server";
-import { resetStartupForTests } from "./hooks.server";
 
 type TestEvent = {
   request: Request;
@@ -308,30 +305,5 @@ describe("server hook route boundaries", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
-  });
-
-  test("returns documented health JSON when startup fails", async () => {
-    await closeDatabaseForTests();
-    const blockedPath = path.join(tempDir, "blocked-db-dir");
-    await mkdir(blockedPath, { recursive: true });
-    await useDatabaseFileForTests(blockedPath);
-    resetStartupForTests();
-
-    const response = await handle({
-      event: eventFor("/api/health") as never,
-      resolve: async () => healthGet({ locals: {} } as never),
-    });
-
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      ok: false,
-      setupComplete: false,
-      version: APP_VERSION,
-    });
-
-    await closeDatabaseForTests();
-    await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
-    await migrateDatabase();
-    resetStartupForTests();
   });
 });

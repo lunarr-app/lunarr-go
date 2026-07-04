@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
+import { cleanupStaleDevicePairings } from "$lib/server/auth/device-pairing";
 import { resetAuthForTests } from "$lib/server/auth/test/setup";
 import {
   isDevicePairingRateLimited,
@@ -260,5 +261,67 @@ describe("device pairing API", () => {
     expect(await startResponse.json()).toMatchObject({
       userCode: expect.stringMatching(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/),
     });
+  });
+
+  test("deletes finished pairing rows older than 30 days", async () => {
+    const db = await getDb();
+    const now = Date.now();
+    const old = new Date(now - 31 * 24 * 60 * 60 * 1000).toISOString();
+    const recent = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+
+    await db
+      .insertInto("device_pairing")
+      .values([
+        {
+          id: randomUUID(),
+          device_code: randomUUID(),
+          user_code: "CCCC3333",
+          status: "consumed",
+          device_name: "Old TV",
+          approved_by_user_id: "user-1",
+          api_key_id: "old-key-1",
+          api_key_token: null,
+          expires_at: old,
+          approved_at: old,
+          created_at: old,
+        },
+        {
+          id: randomUUID(),
+          device_code: randomUUID(),
+          user_code: "DDDD4444",
+          status: "expired",
+          device_name: "Expired TV",
+          approved_by_user_id: null,
+          api_key_id: null,
+          api_key_token: null,
+          expires_at: old,
+          approved_at: null,
+          created_at: old,
+        },
+        {
+          id: randomUUID(),
+          device_code: randomUUID(),
+          user_code: "EEEE5555",
+          status: "consumed",
+          device_name: "Recent TV",
+          approved_by_user_id: "user-1",
+          api_key_id: "old-key-2",
+          api_key_token: null,
+          expires_at: recent,
+          approved_at: recent,
+          created_at: recent,
+        },
+      ])
+      .execute();
+
+    const deleted = await cleanupStaleDevicePairings({ now });
+    expect(deleted).toBeGreaterThanOrEqual(2);
+
+    const remainingCodes = await db
+      .selectFrom("device_pairing")
+      .select(["user_code"])
+      .where("user_code", "in", ["CCCC3333", "DDDD4444", "EEEE5555"])
+      .execute();
+    expect(remainingCodes.map((row) => row.user_code)).toEqual(["EEEE5555"]);
   });
 });

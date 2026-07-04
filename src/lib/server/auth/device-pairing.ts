@@ -1,6 +1,7 @@
 import {
   DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS,
   DEVICE_PAIRING_POLL_INTERVAL_MS,
+  DEVICE_PAIRING_RETENTION_MS,
   DEVICE_PAIRING_TTL_MS,
   DEVICE_PAIRING_USER_CODE_LENGTH,
 } from "$lib/device-pairing/constants";
@@ -38,6 +39,27 @@ async function expireStalePairings(now = new Date()) {
     .where("status", "=", "pending")
     .where("expires_at", "<=", nowText)
     .execute();
+}
+
+export async function cleanupStaleDevicePairings(options: { retentionMs?: number; now?: number } = {}) {
+  const retentionMs = options.retentionMs ?? DEVICE_PAIRING_RETENTION_MS;
+  const cutoff = new Date((options.now ?? Date.now()) - retentionMs).toISOString();
+  const db = await getDb();
+
+  const terminalResult = await db
+    .deleteFrom("device_pairing")
+    .where("status", "in", ["consumed", "expired"])
+    .where("created_at", "<", cutoff)
+    .executeTakeFirst();
+
+  const staleApprovedResult = await db
+    .deleteFrom("device_pairing")
+    .where("status", "=", "approved")
+    .where("approved_at", "is not", null)
+    .where("approved_at", "<", cutoff)
+    .executeTakeFirst();
+
+  return Number(terminalResult.numDeletedRows ?? 0) + Number(staleApprovedResult.numDeletedRows ?? 0);
 }
 
 async function createUniqueUserCode() {
