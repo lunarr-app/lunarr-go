@@ -15,7 +15,7 @@ describe("post-login redirect", () => {
   test("rejects external and protocol-relative URLs", () => {
     expect(sanitizePostLoginRedirect("https://evil.test/link-device")).toBeNull();
     expect(sanitizePostLoginRedirect("//evil.test/link-device")).toBeNull();
-    expect(sanitizePostLoginRedirect("/\\evil.test")).toBe("/\\evil.test");
+    expect(sanitizePostLoginRedirect("/\\evil.test")).toBeNull();
   });
 
   test("rejects login redirect loops", () => {

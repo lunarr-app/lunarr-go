@@ -6,6 +6,7 @@ export function sanitizePostLoginRedirect(value: string | null | undefined): str
   const trimmed = value.trim();
   if (!trimmed.startsWith("/")) return null;
   if (trimmed.startsWith("//")) return null;
+  if (trimmed.includes("\\")) return null;
   if (trimmed.includes("://")) return null;
   if (trimmed === "/login" || trimmed.startsWith("/login?")) return null;
 
