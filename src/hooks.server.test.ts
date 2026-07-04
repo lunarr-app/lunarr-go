@@ -7,7 +7,8 @@ import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
-import { createApiKeyForUser, resetAuthForTests } from "$lib/server/auth/test/setup";
+import { createApiKeyForUserId } from "$lib/server/auth/api-keys";
+import { resetAuthForTests } from "$lib/server/auth/test/setup";
 
 type TestEvent = {
   request: Request;
@@ -230,7 +231,7 @@ describe("server hook route boundaries", () => {
   });
 
   test("accepts an API key header for protected API requests", async () => {
-    const { token } = await createApiKeyForUser({
+    const { token } = await createApiKeyForUserId({
       userId: "admin-1",
       name: "Mobile",
     });
@@ -263,7 +264,7 @@ describe("server hook route boundaries", () => {
 
   test("keeps expiring api keys after repeated session lookup", async () => {
     const before = Date.now();
-    const { token, apiKey } = await createApiKeyForUser({
+    const { token, apiKey } = await createApiKeyForUserId({
       userId: "admin-1",
       name: "Expiring mobile",
       expiresIn: 7200,

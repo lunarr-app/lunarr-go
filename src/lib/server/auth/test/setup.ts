@@ -4,4 +4,3 @@ export async function resetAuthForTests() {
 }
 
 export { sessionHeadersFor } from "./session-headers";
-export { createApiKeyForUser } from "./create-api-key-for-user";

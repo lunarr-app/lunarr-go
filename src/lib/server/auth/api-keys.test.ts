@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { createApiKey, listApiKeys, apiKeyHttpStatus, ApiKeyError } from "./api-keys";
-import { createApiKeyForUser, resetAuthForTests, sessionHeadersFor } from "./test/setup";
+import { createApiKeyForUserId } from "$lib/server/auth/api-keys";
+import { resetAuthForTests, sessionHeadersFor } from "./test/setup";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 
 describe("API keys", () => {
@@ -40,7 +41,7 @@ describe("API keys", () => {
   test("creates expiring keys through Better Auth with adapter-safe expiry timestamps", async () => {
     const db = await getDb();
     const before = Date.now();
-    const { apiKey } = await createApiKeyForUser({
+    const { apiKey } = await createApiKeyForUserId({
       userId: "user-1",
       expiresIn: 7200,
     });

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { auth } from "$lib/server/auth";
-import { listApiKeys } from "$lib/server/auth/api-keys";
-import { createApiKeyForUser, resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
+import { createApiKeyForUserId, listApiKeys } from "$lib/server/auth/api-keys";
+import { resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
 
 const testUser = {
@@ -73,6 +73,7 @@ describe("profile page server", () => {
       request: new Request("http://localhost/profile", {
         headers: sessionHeaders,
       }),
+      url: new URL("http://localhost/profile"),
     } as never);
 
     expect(data).toMatchObject({
@@ -93,7 +94,7 @@ describe("profile page server", () => {
   });
 
   test("loads the signed-in user's API keys", async () => {
-    const created = await createApiKeyForUser({
+    const created = await createApiKeyForUserId({
       userId: "user-1",
       name: "iPhone",
       expiresIn: 60,
@@ -104,6 +105,7 @@ describe("profile page server", () => {
       request: new Request("http://localhost/profile", {
         headers: sessionHeaders,
       }),
+      url: new URL("http://localhost/profile"),
     } as never);
 
     expect(data).toMatchObject({
@@ -272,7 +274,7 @@ describe("profile page server", () => {
   });
 
   test("revokes an API key from profile", async () => {
-    const created = await createApiKeyForUser({
+    const created = await createApiKeyForUserId({
       userId: "user-1",
       name: "Tablet",
     });

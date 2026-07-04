@@ -3,7 +3,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { createApiKeyForUser, resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
+import { createApiKeyForUserId } from "$lib/server/auth/api-keys";
+import { resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
 
 describe("API key routes", () => {
   let tempDir: string | undefined;
@@ -149,7 +150,7 @@ describe("API key routes", () => {
     const user = await setupUser();
     const other = await setupSecondUser();
     const { DELETE } = await import("./[id]/+server");
-    const created = await createApiKeyForUser({
+    const created = await createApiKeyForUserId({
       userId: user.id,
       name: "Mine",
     });
