@@ -123,14 +123,16 @@ export async function pollDevicePairing(deviceCode: string) {
     throw new DevicePairingError("Pairing request already completed.", 410);
   }
 
-  if (pairing.status === "expired" || pairingExpired(pairing.expires_at)) {
-    if (pairing.status === "pending") {
-      await markExpired(pairing.id);
-    }
+  if (pairing.status === "expired") {
     return { status: "expired" as const };
   }
 
   if (pairing.status === "pending") {
+    if (pairingExpired(pairing.expires_at)) {
+      await markExpired(pairing.id);
+      return { status: "expired" as const };
+    }
+
     return {
       status: "pending" as const,
       expiresAt: pairing.expires_at,
@@ -139,7 +141,11 @@ export async function pollDevicePairing(deviceCode: string) {
   }
 
   if (!pairing.api_key_token || !pairing.api_key_id) {
-    throw new DevicePairingError("Approved pairing is missing credentials.", 500);
+    return {
+      status: "pending" as const,
+      expiresAt: pairing.expires_at,
+      pollIntervalMs: DEVICE_PAIRING_POLL_INTERVAL_MS,
+    };
   }
 
   const token = pairing.api_key_token;
@@ -189,24 +195,54 @@ export async function approveDevicePairing(input: { userId: string; userCode: un
   }
 
   const deviceName = normalizeDeviceName(input.deviceName ?? pairing.device_name);
-  const created = await createApiKeyForUserId({
-    userId: input.userId,
-    name: deviceName,
-    expiresIn: DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS,
-  });
-
   const approvedAt = nowIso();
-  await db
+  const claimResult = await db
     .updateTable("device_pairing")
     .set({
       status: "approved" as DevicePairingStatus,
       device_name: deviceName,
       approved_by_user_id: input.userId,
-      api_key_id: created.apiKey.id,
-      api_key_token: created.token,
       approved_at: approvedAt,
     })
     .where("id", "=", pairing.id)
+    .where("status", "=", "pending")
+    .executeTakeFirst();
+
+  if (Number(claimResult.numUpdatedRows ?? 0) === 0) {
+    throw new DevicePairingError("This pairing code is no longer active.", 409);
+  }
+
+  let created;
+  try {
+    created = await createApiKeyForUserId({
+      userId: input.userId,
+      name: deviceName,
+      expiresIn: DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS,
+    });
+  } catch (error) {
+    await db
+      .updateTable("device_pairing")
+      .set({
+        status: "pending",
+        device_name: pairing.device_name,
+        approved_by_user_id: null,
+        approved_at: null,
+      })
+      .where("id", "=", pairing.id)
+      .where("status", "=", "approved")
+      .where("api_key_id", "is", null)
+      .execute();
+    throw error;
+  }
+
+  await db
+    .updateTable("device_pairing")
+    .set({
+      api_key_id: created.apiKey.id,
+      api_key_token: created.token,
+    })
+    .where("id", "=", pairing.id)
+    .where("status", "=", "approved")
     .execute();
 
   return {

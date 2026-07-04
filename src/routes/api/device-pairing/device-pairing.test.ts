@@ -111,6 +111,92 @@ describe("device pairing API", () => {
     expect(consumedResponse.status).toBe(410);
   });
 
+  test("delivers the API key after approval even when the pairing window has passed", async () => {
+    const startResponse = await startPost({
+      request: new Request("http://localhost/api/device-pairing", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deviceName: "Bedroom TV" }),
+      }),
+      locals: { user: null },
+      getClientAddress: () => "127.0.0.4",
+    } as never);
+    const started = await startResponse.json();
+
+    const approveResponse = await approvePost({
+      request: new Request("http://localhost/api/device-pairing/approve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userCode: started.userCode, deviceName: "Bedroom TV" }),
+      }),
+      locals: { user: { id: "user-1", role: "user", name: "User", email: "user@example.com" } },
+      getClientAddress: () => "127.0.0.5",
+    } as never);
+    expect(approveResponse.status).toBe(200);
+
+    const db = await getDb();
+    await db
+      .updateTable("device_pairing")
+      .set({ expires_at: new Date(Date.now() - 60_000).toISOString() })
+      .where("device_code", "=", started.deviceCode)
+      .execute();
+
+    const completedResponse = await pollGet({
+      url: new URL(`http://localhost/api/device-pairing/poll?deviceCode=${encodeURIComponent(started.deviceCode)}`),
+      locals: { user: null },
+      getClientAddress: () => "127.0.0.4",
+    } as never);
+    expect(completedResponse.status).toBe(200);
+    expect(await completedResponse.json()).toMatchObject({
+      status: "approved",
+      name: "Bedroom TV",
+    });
+  });
+
+  test("rejects concurrent approve requests for the same pairing code", async () => {
+    const startResponse = await startPost({
+      request: new Request("http://localhost/api/device-pairing", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deviceName: "Office TV" }),
+      }),
+      locals: { user: null },
+      getClientAddress: () => "127.0.0.6",
+    } as never);
+    const started = await startResponse.json();
+
+    const approveRequest = () =>
+      approvePost({
+        request: new Request("http://localhost/api/device-pairing/approve", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ userCode: started.userCode, deviceName: "Office TV" }),
+        }),
+        locals: { user: { id: "user-1", role: "user", name: "User", email: "user@example.com" } },
+        getClientAddress: () => "127.0.0.7",
+      } as never);
+
+    const [first, second] = await Promise.all([approveRequest(), approveRequest()]);
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([200, 409]);
+
+    const db = await getDb();
+    const pairing = await db
+      .selectFrom("device_pairing")
+      .select(["api_key_id"])
+      .where("device_code", "=", started.deviceCode)
+      .executeTakeFirstOrThrow();
+    expect(pairing.api_key_id).toBeTruthy();
+
+    const apiKeys = await db
+      .selectFrom("apikey")
+      .select(["id"])
+      .where("reference_id", "=", "user-1")
+      .where("name", "=", "Office TV")
+      .execute();
+    expect(apiKeys).toHaveLength(1);
+  });
+
   test("requires authentication to approve", async () => {
     const response = await approvePost({
       request: new Request("http://localhost/api/device-pairing/approve", {
