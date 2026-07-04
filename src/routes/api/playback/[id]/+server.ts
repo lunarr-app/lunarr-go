@@ -1,11 +1,12 @@
 import { getPlaybackData, parsePlaybackProgressBody, saveProgress } from "$lib/server/playback";
 import { PlaybackSourceRequestError, withSignedPlaybackSource } from "$lib/server/playback/signed-source";
-import { json } from "@sveltejs/kit";
+import { apiError, apiJson } from "$lib/server/api/json";
+import type { ApiOkResponse, PlaybackDataResponse } from "$lib/server/api/types";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {
   if (!locals.user) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const playback = await getPlaybackData({
@@ -15,11 +16,11 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
   });
 
   if (!playback) {
-    return json({ error: "Playable item not found." }, { status: 404 });
+    return apiError("Playable item not found.", 404);
   }
 
   try {
-    return json(
+    return apiJson<PlaybackDataResponse>(
       await withSignedPlaybackSource({
         data: playback,
         userId: locals.user.id,
@@ -28,15 +29,15 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
     );
   } catch (error) {
     if (error instanceof PlaybackSourceRequestError) {
-      return json({ error: error.message }, { status: error.status });
+      return apiError(error.message, error.status);
     }
-    return json({ error: "Could not prepare playback source." }, { status: 500 });
+    return apiError("Could not prepare playback source.", 500);
   }
 };
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
   if (!locals.user) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   try {
@@ -44,7 +45,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     try {
       jsonBody = await request.json();
     } catch {
-      return json({ error: "Request body must be valid JSON." }, { status: 400 });
+      return apiError("Request body must be valid JSON.", 400);
     }
 
     const body = parsePlaybackProgressBody(jsonBody);
@@ -54,13 +55,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
       ...body,
     });
   } catch (error) {
-    return json(
-      {
-        error: error instanceof Error ? error.message : "Could not save progress.",
-      },
-      { status: 400 },
-    );
+    return apiError(error instanceof Error ? error.message : "Could not save progress.", 400);
   }
 
-  return json({ ok: true });
+  return apiJson<ApiOkResponse>({ ok: true });
 };

@@ -1,7 +1,7 @@
 import { requireJsonUser } from "$lib/server/api";
+import { apiError, apiJson } from "$lib/server/api/json";
 import { normalizePage } from "$lib/server/media/catalog";
 import { getPersonDetail } from "$lib/server/media/people";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals, url }) => {
@@ -12,7 +12,7 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
     moviePage: normalizePage(url.searchParams.get("moviesPage")),
     showPage: normalizePage(url.searchParams.get("showsPage")),
   });
-  if (!detail) return json({ error: "Person not found." }, { status: 404 });
+  if (!detail) return apiError("Person not found.", 404);
 
-  return json(detail);
+  return apiJson(detail);
 };

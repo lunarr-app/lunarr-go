@@ -1,8 +1,9 @@
 import { getPlaybackData } from "$lib/server/playback";
 import { PlaybackSourceRequestError, withSignedPlaybackSource } from "$lib/server/playback/signed-source";
+import { apiError, apiJson } from "$lib/server/api/json";
+import type { PlaybackDataResponse } from "$lib/server/api/types";
 import { assertShareAllowsPlayableItem, resolveShare } from "$lib/server/shares";
 import { enforceGuestShareRateLimit } from "$lib/server/shares/rate-limit";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async (event) => {
@@ -12,16 +13,13 @@ export const GET: RequestHandler = async (event) => {
   const { params, url } = event;
   const share = await resolveShare(params.token);
   if (!share) {
-    return json({ error: "Share not found or no longer available." }, { status: 404 });
+    return apiError("Share not found or no longer available.", 404);
   }
 
   try {
     await assertShareAllowsPlayableItem(share, params.mediaItemId);
   } catch (error) {
-    return json(
-      { error: error instanceof Error ? error.message : "This share does not include the requested item." },
-      { status: 403 },
-    );
+    return apiError(error instanceof Error ? error.message : "This share does not include the requested item.", 403);
   }
 
   const playback = await getPlaybackData({
@@ -33,11 +31,11 @@ export const GET: RequestHandler = async (event) => {
   });
 
   if (!playback) {
-    return json({ error: "Playable item not found." }, { status: 404 });
+    return apiError("Playable item not found.", 404);
   }
 
   try {
-    return json(
+    return apiJson<PlaybackDataResponse>(
       await withSignedPlaybackSource({
         data: playback,
         userId: share.created_by_user_id,
@@ -47,8 +45,8 @@ export const GET: RequestHandler = async (event) => {
     );
   } catch (error) {
     if (error instanceof PlaybackSourceRequestError) {
-      return json({ error: error.message }, { status: error.status });
+      return apiError(error.message, error.status);
     }
-    return json({ error: "Could not prepare playback source." }, { status: 500 });
+    return apiError("Could not prepare playback source.", 500);
   }
 };

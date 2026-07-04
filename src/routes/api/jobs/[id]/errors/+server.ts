@@ -1,6 +1,7 @@
 import { requireJsonAdmin } from "$lib/server/api";
+import { apiJson } from "$lib/server/api/json";
+import type { JobErrorsResponse } from "$lib/server/api/types";
 import { listScanErrorsForJob, SCAN_ERROR_PER_JOB_LIMIT } from "$lib/server/jobs";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -9,7 +10,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
   const errors = await listScanErrorsForJob(params.id);
 
-  return json({
+  return apiJson<JobErrorsResponse>({
     errors,
     limit: SCAN_ERROR_PER_JOB_LIMIT,
   });

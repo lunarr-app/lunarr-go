@@ -1,6 +1,7 @@
 import { jsonError, requireJsonAdmin } from "$lib/server/api";
+import { apiJson } from "$lib/server/api/json";
+import type { ShareRevokeResponse } from "$lib/server/api/types";
 import { revokeShare } from "$lib/server/shares";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const DELETE: RequestHandler = async ({ locals, params }) => {
@@ -9,7 +10,7 @@ export const DELETE: RequestHandler = async ({ locals, params }) => {
 
   try {
     const share = await revokeShare({ shareId: params.id });
-    return json({ share });
+    return apiJson<ShareRevokeResponse>({ share });
   } catch (error) {
     return jsonError(
       error,

@@ -2,6 +2,8 @@
 
 Lunarr uses the same authorization model for the web app and JSON API. A request is authenticated by either a Better Auth browser session cookie or a personal API key backed by the Better Auth API Key plugin.
 
+The machine-readable contract lives at `GET /api/openapi.json` and `GET /api/openapi.yaml`. TypeScript response shapes for the public API are centralized in `src/lib/server/api/types.ts`; route handlers use `apiJson()` from `src/lib/server/api/json.ts` so JSON responses stay aligned with that contract. A test in `src/lib/server/api/contract.test.ts` verifies that every strongly typed schema name in that module is declared in OpenAPI.
+
 Machine-readable API docs are available from a running Lunarr server:
 
 ```http

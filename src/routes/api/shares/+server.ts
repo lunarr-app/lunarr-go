@@ -1,6 +1,7 @@
 import { jsonError, readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { apiJson } from "$lib/server/api/json";
+import type { ShareCreateResponse, SharesListResponse } from "$lib/server/api/types";
 import { createShare, listAllShares, listSharesForMedia, parseCreateShareInput } from "$lib/server/shares";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -10,7 +11,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const mediaItemId = url.searchParams.get("mediaItemId")?.trim() ?? "";
   if (!mediaItemId) {
     try {
-      return json({
+      return apiJson<SharesListResponse>({
         shares: await listAllShares(),
       });
     } catch (error) {
@@ -19,7 +20,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   }
 
   try {
-    return json({
+    return apiJson<SharesListResponse>({
       shares: await listSharesForMedia(mediaItemId),
     });
   } catch (error) {
@@ -38,7 +39,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
       userId: user.id,
       ...input,
     });
-    return json({ share }, { status: 201 });
+    return apiJson<ShareCreateResponse>({ share }, { status: 201 });
   } catch (error) {
     return jsonError(error, "Could not create share.");
   }

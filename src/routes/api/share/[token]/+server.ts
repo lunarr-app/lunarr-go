@@ -1,6 +1,7 @@
+import { apiError, apiJson } from "$lib/server/api/json";
+import type { GuestSharePageResponse } from "$lib/server/api/types";
 import { getSharePageData } from "$lib/server/shares";
 import { enforceGuestShareRateLimit } from "$lib/server/shares/rate-limit";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async (event) => {
@@ -9,7 +10,7 @@ export const GET: RequestHandler = async (event) => {
 
   const data = await getSharePageData(event.params.token);
   if (!data) {
-    return json({ error: "Share not found or no longer available." }, { status: 404 });
+    return apiError("Share not found or no longer available.", 404);
   }
-  return json({ share: data });
+  return apiJson<GuestSharePageResponse>({ share: data });
 };

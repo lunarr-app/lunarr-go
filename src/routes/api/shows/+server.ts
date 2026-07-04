@@ -1,7 +1,8 @@
 import { SHOW_PAGE_SIZE, normalizePage, normalizeShowSort, parseShowBrowseRails } from "$lib/server/media/catalog";
 import { tvRows } from "$lib/server/media/shows";
 import { jsonError, requireJsonUser } from "$lib/server/api";
-import { json } from "@sveltejs/kit";
+import { apiJson } from "$lib/server/api/json";
+import type { ShowBrowseRailResponse, ShowRowsResponse } from "$lib/server/api/types";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -18,8 +19,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const page = normalizePage(url.searchParams.get("page"));
 
   if (rails && rails.length > 0) {
-    return json(await tvRows(user.id, search, sort, page, SHOW_PAGE_SIZE, rails));
+    return apiJson<ShowBrowseRailResponse>(await tvRows(user.id, search, sort, page, SHOW_PAGE_SIZE, rails));
   }
 
-  return json(await tvRows(user.id, search, sort, page));
+  return apiJson<ShowRowsResponse>(await tvRows(user.id, search, sort, page));
 };

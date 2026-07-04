@@ -1,6 +1,7 @@
+import { apiError, apiJson } from "$lib/server/api/json";
+import type { GuestShareSeasonResponse } from "$lib/server/api/types";
 import { getShareSeasonData } from "$lib/server/shares";
 import { enforceGuestShareRateLimit } from "$lib/server/shares/rate-limit";
-import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async (event) => {
@@ -9,8 +10,8 @@ export const GET: RequestHandler = async (event) => {
 
   const season = await getShareSeasonData(event.params.token, event.params.seasonId);
   if (!season) {
-    return json({ error: "Share season not found or no longer available." }, { status: 404 });
+    return apiError("Share season not found or no longer available.", 404);
   }
 
-  return json({ season });
+  return apiJson<GuestShareSeasonResponse>({ season });
 };

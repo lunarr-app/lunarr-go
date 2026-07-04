@@ -7,7 +7,8 @@ import {
 } from "$lib/server/media/catalog";
 import { movieRows } from "$lib/server/media/movies";
 import { jsonError, requireJsonUser } from "$lib/server/api";
-import { json } from "@sveltejs/kit";
+import { apiJson } from "$lib/server/api/json";
+import type { MovieBrowseRailResponse, MovieRowsResponse } from "$lib/server/api/types";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -25,8 +26,10 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const page = normalizePage(url.searchParams.get("page"));
 
   if (rails && rails.length > 0) {
-    return json(await movieRows(user.id, search, status, sort, page, MOVIE_PAGE_SIZE, rails));
+    return apiJson<MovieBrowseRailResponse>(
+      await movieRows(user.id, search, status, sort, page, MOVIE_PAGE_SIZE, rails),
+    );
   }
 
-  return json(await movieRows(user.id, search, status, sort, page));
+  return apiJson<MovieRowsResponse>(await movieRows(user.id, search, status, sort, page));
 };
