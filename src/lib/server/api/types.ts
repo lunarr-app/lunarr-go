@@ -1,3 +1,4 @@
+import type { getHealthStatus } from "$lib/server/health";
 import type { runSettingsAction, getAdminSettingsResponse } from "$lib/server/settings-commands";
 import type { startAllLibraryScans } from "$lib/server/scanner";
 import type { startMovieMetadataRefreshJob } from "$lib/server/metadata/movies";
@@ -151,6 +152,8 @@ export type CreateShareRequest = CreateSharePayload;
 export type ScanAllLibrariesResponse = Awaited<ReturnType<typeof startAllLibraryScans>>;
 export type SettingsJobStartResponse = Awaited<ReturnType<typeof startMovieMetadataRefreshJob>>;
 export type SettingsActionResponse = Awaited<ReturnType<typeof runSettingsAction>>;
+export type HealthResponse = Awaited<ReturnType<typeof getHealthStatus>>;
+
 export type SettingsResponse = Awaited<ReturnType<typeof getAdminSettingsResponse>>;
 
 export type DiscoverMoviesResponse = Awaited<ReturnType<typeof listBecauseYouWatchedMovies>>;
@@ -176,6 +179,7 @@ export type { ApiKeySummary } from "$lib/server/auth/api-keys";
 /** OpenAPI component schemas backed by concrete TypeScript contract types. */
 export const OPENAPI_TYPED_SCHEMAS = [
   "ErrorResponse",
+  "HealthResponse",
   "OkResponse",
   "User",
   "MeResponse",

@@ -45,6 +45,7 @@ function isAuthApiPath(pathname: string) {
 
 function isPublicApiPath(pathname: string) {
   return (
+    pathname === "/api/health" ||
     pathname === "/api/openapi.json" ||
     pathname === "/api/openapi.yaml" ||
     pathname === "/api/share" ||

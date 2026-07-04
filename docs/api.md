@@ -21,6 +21,28 @@ X-API-Key: lunarr_...
 
 API keys are scoped to the user that created them. Admin keys can manage the server. Regular-user keys can browse and play only libraries shared with that user.
 
+## Health
+
+Public readiness probe for load balancers, Docker health checks, and monitoring:
+
+```http
+GET /api/health
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "setupComplete": true,
+  "version": "<app version>"
+}
+```
+
+`version` comes from `LUNARR_APP_VERSION` at runtime, or `package.json` when that env var is unset. `setupComplete` is `false` until the first admin account is created at `/setup`.
+
+Returns HTTP `200` when the database is reachable and HTTP `503` when it is not. No authentication is required. The endpoint is available before first-run setup completes.
+
 ## API Keys
 
 Create and manage keys for the signed-in user:

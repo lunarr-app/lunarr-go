@@ -110,6 +110,16 @@ describe("server hook route boundaries", () => {
     expect(await response.text()).toBe("resolved");
   });
 
+  test("lets health checks resolve before setup", async () => {
+    const response = await handle({
+      event: eventFor("/api/health") as never,
+      resolve: async () => new Response("resolved"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("resolved");
+  });
+
   test("redirects protected app pages to login after setup exists", async () => {
     const now = Date.now();
     await db

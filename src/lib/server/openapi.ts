@@ -164,6 +164,7 @@ export const openApiDocument = {
     { name: "Media" },
     { name: "Admin" },
     { name: "Shares" },
+    { name: "System" },
     { name: "Docs" },
   ],
   security: [{ sessionCookie: [] }, { apiKey: [] }],
@@ -1154,6 +1155,24 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/health": {
+      get: {
+        tags: ["System"],
+        summary: "Check Lunarr health and app version.",
+        description:
+          "Public readiness probe for load balancers and orchestrators. Returns HTTP 200 when the database is reachable and HTTP 503 otherwise.",
+        operationId: "getHealth",
+        security: [],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/HealthResponse",
+          }),
+          "503": jsonResponse({
+            $ref: "#/components/schemas/HealthResponse",
+          }),
+        },
+      },
+    },
     "/api/openapi.json": {
       get: {
         tags: ["Docs"],
@@ -1437,6 +1456,18 @@ export const openApiDocument = {
         type: "object",
         required: ["ok"],
         properties: { ok: { type: "boolean" } },
+      },
+      HealthResponse: {
+        type: "object",
+        required: ["ok", "setupComplete", "version"],
+        properties: {
+          ok: { type: "boolean" },
+          setupComplete: {
+            type: "boolean",
+            description: "True after the first admin account has been created during setup.",
+          },
+          version: stringSchema,
+        },
       },
       User: {
         type: "object",
