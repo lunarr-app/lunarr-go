@@ -1,23 +1,33 @@
 import { sql } from "kysely";
+import type { CatalogPageInfo } from "$lib/media/types";
 import { getDb } from "../db";
 import { tmdbImageUrl } from "$lib/media/images";
-import { accessibleLibrarySql } from "./catalog";
+import { accessibleLibrarySql, catalogPageInfo, MOVIE_PAGE_SIZE, normalizePage } from "./catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "./progress";
 import { publicShowSummary } from "./shows";
 
-export async function getPersonDetail(provider: string, providerId: string, userId: string) {
-  const db = await getDb();
-  const person = await db
-    .selectFrom("media_item_credit")
-    .select(["provider", "provider_id", "name", "original_name", "profile_path"])
-    .where("provider", "=", provider)
-    .where("provider_id", "=", providerId)
-    .orderBy("profile_path", "desc")
-    .executeTakeFirst();
+export const PERSON_FILMOGRAPHY_PAGE_SIZE = MOVIE_PAGE_SIZE;
 
-  if (!person) return null;
+export type PersonFilmographyStats = {
+  movieCount: number;
+  showCount: number;
+  yearMin: number | null;
+  yearMax: number | null;
+  characters: string[];
+};
 
-  const rows = await db
+export type PersonDetailOptions = {
+  moviePage?: number;
+  showPage?: number;
+};
+
+function personMovieCreditsQuery(
+  db: Awaited<ReturnType<typeof getDb>>,
+  provider: string,
+  providerId: string,
+  userId: string,
+) {
+  return db
     .selectFrom("media_item_credit")
     .innerJoin("media_item", "media_item.id", "media_item_credit.media_item_id")
     .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
@@ -42,9 +52,16 @@ export async function getPersonDetail(provider: string, providerId: string, user
     .groupBy("media_item.id")
     .groupBy("media_item_credit.character_name")
     .orderBy("media_item.release_date", "desc")
-    .orderBy("media_item.sort_title", "asc")
-    .execute();
-  const showRows = await db
+    .orderBy("media_item.sort_title", "asc");
+}
+
+function personShowCreditsQuery(
+  db: Awaited<ReturnType<typeof getDb>>,
+  provider: string,
+  providerId: string,
+  userId: string,
+) {
+  return db
     .selectFrom("media_item_credit")
     .innerJoin("media_item as show", "show.id", "media_item_credit.media_item_id")
     .innerJoin("media_item as season", "season.parent_id", "show.id")
@@ -77,8 +94,104 @@ export async function getPersonDetail(provider: string, providerId: string, user
     .groupBy("show.id")
     .groupBy("media_item_credit.character_name")
     .orderBy(sql<string | null>`max(episode.release_date)`, "desc")
-    .orderBy("show.sort_title", "asc")
-    .execute();
+    .orderBy("show.sort_title", "asc");
+}
+
+async function countPersonMovieCredits(
+  db: Awaited<ReturnType<typeof getDb>>,
+  provider: string,
+  providerId: string,
+  userId: string,
+) {
+  const grouped = personMovieCreditsQuery(db, provider, providerId, userId);
+  const row = await db
+    .selectFrom(grouped.as("credits"))
+    .select(sql<number>`count(*)`.as("total"))
+    .executeTakeFirst();
+  return Number(row?.total ?? 0);
+}
+
+async function countPersonShowCredits(
+  db: Awaited<ReturnType<typeof getDb>>,
+  provider: string,
+  providerId: string,
+  userId: string,
+) {
+  const grouped = personShowCreditsQuery(db, provider, providerId, userId);
+  const row = await db
+    .selectFrom(grouped.as("credits"))
+    .select(sql<number>`count(*)`.as("total"))
+    .executeTakeFirst();
+  return Number(row?.total ?? 0);
+}
+
+async function fetchPersonFilmographyStats(
+  db: Awaited<ReturnType<typeof getDb>>,
+  provider: string,
+  providerId: string,
+  userId: string,
+): Promise<PersonFilmographyStats> {
+  const [movieCount, showCount, movieYears, showYears, movieCharacters, showCharacters] = await Promise.all([
+    countPersonMovieCredits(db, provider, providerId, userId),
+    countPersonShowCredits(db, provider, providerId, userId),
+    personMovieCreditsQuery(db, provider, providerId, userId).clearSelect().select("media_item.year as year").execute(),
+    personShowCreditsQuery(db, provider, providerId, userId).clearSelect().select("show.year as year").execute(),
+    personMovieCreditsQuery(db, provider, providerId, userId)
+      .clearSelect()
+      .select("media_item_credit.character_name as character")
+      .execute(),
+    personShowCreditsQuery(db, provider, providerId, userId)
+      .clearSelect()
+      .select("media_item_credit.character_name as character")
+      .execute(),
+  ]);
+
+  const years = [...movieYears, ...showYears]
+    .map((row) => row.year)
+    .filter((year): year is number => typeof year === "number");
+  const characters = [...movieCharacters, ...showCharacters]
+    .map((row) => row.character)
+    .filter((character): character is string => Boolean(character));
+
+  return {
+    movieCount,
+    showCount,
+    yearMin: years.length > 0 ? Math.min(...years) : null,
+    yearMax: years.length > 0 ? Math.max(...years) : null,
+    characters: [...new Set(characters)].slice(0, 6),
+  };
+}
+
+export async function getPersonDetail(
+  provider: string,
+  providerId: string,
+  userId: string,
+  options: PersonDetailOptions = {},
+) {
+  const db = await getDb();
+  const person = await db
+    .selectFrom("media_item_credit")
+    .select(["provider", "provider_id", "name", "original_name", "profile_path"])
+    .where("provider", "=", provider)
+    .where("provider_id", "=", providerId)
+    .orderBy("profile_path", "desc")
+    .executeTakeFirst();
+
+  if (!person) return null;
+
+  const moviePageInput = normalizePage(options.moviePage);
+  const showPageInput = normalizePage(options.showPage);
+
+  const stats = await fetchPersonFilmographyStats(db, provider, providerId, userId);
+  const moviePage = catalogPageInfo(moviePageInput, PERSON_FILMOGRAPHY_PAGE_SIZE, stats.movieCount);
+  const showPage = catalogPageInfo(showPageInput, PERSON_FILMOGRAPHY_PAGE_SIZE, stats.showCount);
+  const movieOffset = (moviePage.page - 1) * moviePage.pageSize;
+  const showOffset = (showPage.page - 1) * showPage.pageSize;
+
+  const [rows, showRows] = await Promise.all([
+    personMovieCreditsQuery(db, provider, providerId, userId).limit(moviePage.pageSize).offset(movieOffset).execute(),
+    personShowCreditsQuery(db, provider, providerId, userId).limit(showPage.pageSize).offset(showOffset).execute(),
+  ]);
 
   const movieIds = rows.map((movie) => movie.id);
   const progressRows =
@@ -101,10 +214,13 @@ export async function getPersonDetail(provider: string, providerId: string, user
       originalName: person.original_name,
       profileUrl: tmdbImageUrl(person.profile_path, "w342"),
     },
+    stats,
     movies: rows.map((movie) => publicMovieSummary(movie, progress)),
     shows: showRows.map((show) => ({
       ...publicShowSummary(show),
       character: show.character,
     })),
+    moviePage,
+    showPage,
   };
 }

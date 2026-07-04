@@ -1,28 +1,34 @@
 <script lang="ts">
+  import { page } from "$app/state";
   import MovieCard from "$lib/components/MovieCard.svelte";
+  import Pagination from "$lib/components/Pagination.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
   import { Clapperboard, Film, Star, User } from "@lucide/svelte";
 
   let { data } = $props();
 
-  const movieCountLabel = $derived(`${data.movies.length} ${data.movies.length === 1 ? "movie" : "movies"}`);
-  const showCountLabel = $derived(`${data.shows.length} ${data.shows.length === 1 ? "show" : "shows"}`);
+  const movieCountLabel = $derived(`${data.stats.movieCount} ${data.stats.movieCount === 1 ? "movie" : "movies"}`);
+  const showCountLabel = $derived(`${data.stats.showCount} ${data.stats.showCount === 1 ? "show" : "shows"}`);
   const yearSpan = $derived.by(() => {
-    const years = [...data.movies, ...data.shows]
-      .map((title) => title.year)
-      .filter((year): year is number => typeof year === "number")
-      .sort((left, right) => left - right);
-    if (years.length === 0) return "Unknown years";
-    const first = years[0];
-    const last = years[years.length - 1];
-    return first === last ? String(first) : `${first}-${last}`;
+    const { yearMin, yearMax } = data.stats;
+    if (yearMin === null || yearMax === null) return "Unknown years";
+    return yearMin === yearMax ? String(yearMin) : `${yearMin}-${yearMax}`;
   });
-  const characters = $derived(
-    [...data.movies, ...data.shows]
-      .map((title) => title.character)
-      .filter(Boolean)
-      .slice(0, 6),
-  );
+  const characters = $derived(data.stats.characters);
+
+  function personHref(next: { moviesPage?: number; showsPage?: number }) {
+    const url = new URL(page.url);
+    if (next.moviesPage !== undefined) {
+      if (next.moviesPage <= 1) url.searchParams.delete("moviesPage");
+      else url.searchParams.set("moviesPage", String(next.moviesPage));
+    }
+    if (next.showsPage !== undefined) {
+      if (next.showsPage <= 1) url.searchParams.delete("showsPage");
+      else url.searchParams.set("showsPage", String(next.showsPage));
+    }
+    const search = url.searchParams.toString();
+    return search ? `${url.pathname}?${search}` : url.pathname;
+  }
 </script>
 
 <svelte:head>
@@ -78,6 +84,17 @@
         </div>
       {/each}
     </div>
+    {#if data.moviePage.totalPages > 1}
+      <Pagination
+        page={data.moviePage.page}
+        totalPages={data.moviePage.totalPages}
+        hasPrevious={data.moviePage.hasPrevious}
+        hasNext={data.moviePage.hasNext}
+        hrefForPage={(nextPage) => personHref({ moviesPage: nextPage })}
+        summary={`Page ${data.moviePage.page} of ${data.moviePage.totalPages}`}
+        ariaLabel="Movie credits pagination"
+      />
+    {/if}
   {:else}
     <p class="muted">No movies found for this cast member.</p>
   {/if}
@@ -98,6 +115,17 @@
         </div>
       {/each}
     </div>
+    {#if data.showPage.totalPages > 1}
+      <Pagination
+        page={data.showPage.page}
+        totalPages={data.showPage.totalPages}
+        hasPrevious={data.showPage.hasPrevious}
+        hasNext={data.showPage.hasNext}
+        hrefForPage={(nextPage) => personHref({ showsPage: nextPage })}
+        summary={`Page ${data.showPage.page} of ${data.showPage.totalPages}`}
+        ariaLabel="TV credits pagination"
+      />
+    {/if}
   {:else}
     <p class="muted">No shows found for this cast member.</p>
   {/if}

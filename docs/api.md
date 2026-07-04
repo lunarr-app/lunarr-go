@@ -100,6 +100,15 @@ GET /api/episodes/:id
 GET /api/people/:provider/:id
 ```
 
+Person query parameters:
+
+```text
+moviesPage
+showsPage
+```
+
+`GET /api/people/:provider/:id` returns person metadata, aggregate filmography `stats`, paginated `movies` and `shows` credit lists, and separate `moviePage` / `showPage` metadata. Hero counts and year span use `stats` so clients do not need to load every credit up front.
+
 ### Continue watching
 
 `GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). The web Continue page surfaces all three sections.

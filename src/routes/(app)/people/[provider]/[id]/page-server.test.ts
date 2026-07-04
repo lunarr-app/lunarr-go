@@ -15,6 +15,13 @@ type PersonPageLoadResult = {
     originalName: string | null;
     profileUrl: string | null;
   };
+  stats: {
+    movieCount: number;
+    showCount: number;
+    yearMin: number | null;
+    yearMax: number | null;
+    characters: string[];
+  };
   movies: Array<{
     id: string;
     title: string;
@@ -40,6 +47,16 @@ type PersonPageLoadResult = {
     latestFileCreatedAt: string | null;
     latestEpisodeReleaseDate: string | null;
   }>;
+  moviePage: {
+    page: number;
+    total: number;
+    totalPages: number;
+  };
+  showPage: {
+    page: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 describe("person page server", () => {
@@ -314,6 +331,7 @@ describe("person page server", () => {
     const result = (await load({
       params: { provider: "tmdb", id: "person-1" },
       locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/people/tmdb/person-1"),
     } as never)) as PersonPageLoadResult;
 
     expect(result.person).toEqual({
@@ -323,6 +341,15 @@ describe("person page server", () => {
       originalName: "Actor Original",
       profileUrl: "https://image.tmdb.org/t/p/w342/actor.jpg",
     });
+    expect(result.stats).toMatchObject({
+      movieCount: 2,
+      showCount: 1,
+      yearMin: 2024,
+      yearMax: 2026,
+      characters: ["Lead", "Cameo", "Series Lead"],
+    });
+    expect(result.moviePage).toMatchObject({ page: 1, total: 2, totalPages: 1 });
+    expect(result.showPage).toMatchObject({ page: 1, total: 1, totalPages: 1 });
     expect(result.movies.map((movie) => [movie.title, movie.character])).toEqual([
       ["Cast Movie", "Lead"],
       ["Another Cast Movie", "Cameo"],
@@ -358,6 +385,7 @@ describe("person page server", () => {
       load({
         params: { provider: "tmdb", id: "missing" },
         locals: { user: { id: "user-1", role: "user" } },
+        url: new URL("http://localhost/people/tmdb/missing"),
       } as never),
       { status: 404 },
     );

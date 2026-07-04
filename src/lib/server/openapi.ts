@@ -417,6 +417,20 @@ export const openApiDocument = {
         parameters: [
           pathIdParameter("provider", "Metadata provider."),
           pathIdParameter("id", "Provider person identifier."),
+          {
+            name: "moviesPage",
+            in: "query",
+            required: false,
+            schema: { type: "integer", minimum: 1 },
+            description: "Page number for the person's movie credits.",
+          },
+          {
+            name: "showsPage",
+            in: "query",
+            required: false,
+            schema: { type: "integer", minimum: 1 },
+            description: "Page number for the person's TV credits.",
+          },
         ],
         responses: {
           "200": jsonResponse({
@@ -2029,9 +2043,10 @@ export const openApiDocument = {
       },
       PersonDetailResponse: {
         type: "object",
-        required: ["person", "movies", "shows"],
+        required: ["person", "stats", "movies", "shows", "moviePage", "showPage"],
         properties: {
           person: objectSchema("Person metadata."),
+          stats: objectSchema("Aggregate filmography counts, year span, and featured characters."),
           movies: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
@@ -2040,6 +2055,8 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
+          moviePage: { $ref: "#/components/schemas/PageMetadata" },
+          showPage: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
       MediaHeader: {
