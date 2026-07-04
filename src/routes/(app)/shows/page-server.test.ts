@@ -259,20 +259,18 @@ describe("shows page server", () => {
       seasons: [
         {
           id: "season-1",
-          episodes: [
-            {
-              id: "episode-1",
-              title: "Dulcinea",
-              fileId: "file-1",
-            },
-            {
-              id: "episode-2",
-              title: "The Big Empty",
-              fileId: "file-2",
-            },
-          ],
+          seasonNumber: 1,
+          title: "Season 1",
+          episodeCount: 2,
+          playableCount: 2,
         },
       ],
+      nextEpisode: {
+        id: "episode-1",
+        fileId: "file-1",
+        seasonNumber: 1,
+        episodeNumber: 1,
+      },
     });
     const seasonResult = await seasonLoad({
       params: { id: "show-1", seasonId: "1" },
