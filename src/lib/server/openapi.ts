@@ -552,7 +552,7 @@ export const openApiDocument = {
         operationId: "getLibrary",
         parameters: [pathIdParameter()],
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/LibraryResponse" }),
+          "200": jsonResponse({ $ref: "#/components/schemas/LibraryDetailResponse" }),
           "401": errorResponse,
           "403": errorResponse,
           "404": errorResponse,
@@ -565,7 +565,7 @@ export const openApiDocument = {
         parameters: [pathIdParameter()],
         requestBody: { $ref: "#/components/requestBodies/LibraryInput" },
         responses: {
-          "200": jsonResponse({ $ref: "#/components/schemas/LibraryResponse" }),
+          "200": jsonResponse({ $ref: "#/components/schemas/LibraryDetailResponse" }),
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -2881,6 +2881,31 @@ export const openApiDocument = {
           name: nullableStringSchema,
           email: stringSchema,
           role: stringSchema,
+        },
+      },
+      LibraryDetail: {
+        type: "object",
+        required: ["id", "name", "kind", "source", "access_mode", "path", "watch_enabled", "created_at", "updated_at"],
+        properties: {
+          id: stringSchema,
+          name: stringSchema,
+          kind: { type: "string", enum: ["movie", "tv"] },
+          source: { type: "string", enum: ["local", "sftp", "webdav"] },
+          access_mode: { type: "string", enum: ["all", "shared"] },
+          path: stringSchema,
+          config_json: nullableStringSchema,
+          watch_enabled: { type: "integer" },
+          scan_interval_minutes: nullableIntegerSchema,
+          last_scheduled_scan_at: nullableStringSchema,
+          created_at: stringSchema,
+          updated_at: stringSchema,
+        },
+      },
+      LibraryDetailResponse: {
+        type: "object",
+        required: ["library"],
+        properties: {
+          library: { $ref: "#/components/schemas/LibraryDetail" },
         },
       },
       LibraryResponse: {

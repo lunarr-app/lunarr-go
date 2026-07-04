@@ -22,7 +22,12 @@ import type {
   getShowSeasonDetail,
   listBecauseYouWatchedShows,
 } from "$lib/server/media/shows";
-import type { createLibrary, listLibrariesWithScanStatus, listLibraryShareUsers } from "$lib/server/libraries";
+import type {
+  createLibrary,
+  getLibrary,
+  listLibrariesWithScanStatus,
+  listLibraryShareUsers,
+} from "$lib/server/libraries";
 import type { getScanJobSummary, listPlaybackSessions, listScanErrorsForJob, listScanJobs } from "$lib/server/jobs";
 import type { PlaybackData } from "$lib/server/playback";
 import type { TranscodePolicy } from "$lib/server/transcoding/policy";
@@ -88,9 +93,14 @@ export type MeResponse = {
 export type LibraryListItem = Awaited<ReturnType<typeof listLibrariesWithScanStatus>>[number];
 export type LibraryShareUser = Awaited<ReturnType<typeof listLibraryShareUsers>>[number];
 export type LibraryRecord = Awaited<ReturnType<typeof createLibrary>>;
+export type LibraryDetail = NonNullable<Awaited<ReturnType<typeof getLibrary>>>;
 
 export type LibraryResponse = {
   library: LibraryRecord;
+};
+
+export type LibraryDetailResponse = {
+  library: LibraryDetail;
 };
 
 export type LibrariesResponse = {
@@ -228,7 +238,9 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "JobsResponse",
   "JobErrorsResponse",
   "LibraryListItem",
+  "LibraryDetail",
   "LibraryResponse",
+  "LibraryDetailResponse",
   "LibrariesResponse",
   "MetadataRefreshResponse",
   "ScanStartResponse",
