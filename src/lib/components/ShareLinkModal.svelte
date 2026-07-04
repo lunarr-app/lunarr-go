@@ -47,6 +47,8 @@
   let allSeasons = $state(true);
   let selectedSeasonIds = $state<string[]>([]);
 
+  const skeletonShareRowCount = 3;
+
   async function loadShares() {
     loading = true;
     error = null;
@@ -241,7 +243,22 @@
     <section class="share-list">
       <h3 class="section-title">Links for this title</h3>
       {#if loading}
-        <p class="muted">Loading share links…</p>
+        <p class="visually-hidden">Loading share links…</p>
+        <ul aria-busy="true" aria-label="Loading share links">
+          {#each Array.from({ length: skeletonShareRowCount }) as _, index (index)}
+            <li class="skeleton-row" aria-hidden="true">
+              <div class="share-copy">
+                <span class="skeleton-block skeleton-line strong"></span>
+                <span class="skeleton-block skeleton-line muted"></span>
+                <span class="skeleton-block skeleton-line muted short"></span>
+              </div>
+              <div class="share-actions">
+                <span class="skeleton-block skeleton-button"></span>
+                <span class="skeleton-block skeleton-button"></span>
+              </div>
+            </li>
+          {/each}
+        </ul>
       {:else if shares.length === 0}
         <p class="muted">No share links yet.</p>
       {:else}
@@ -400,6 +417,61 @@
     font-size: 0.84rem;
     font-weight: 700;
     color: var(--color-subtle);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skeleton-block {
+    display: block;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-border) 70%, transparent) 0%,
+      color-mix(in srgb, var(--color-border) 35%, transparent) 50%,
+      color-mix(in srgb, var(--color-border) 70%, transparent) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  }
+
+  .skeleton-line.strong {
+    width: 4.5rem;
+    height: 0.84rem;
+  }
+
+  .skeleton-line.muted {
+    width: min(12rem, 100%);
+    height: 0.78rem;
+  }
+
+  .skeleton-line.short {
+    width: 5rem;
+  }
+
+  .skeleton-button {
+    width: 4.35rem;
+    height: 1.75rem;
+    border-radius: 999px;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      background-position: 100% 0;
+    }
+
+    100% {
+      background-position: -100% 0;
+    }
   }
 
   .share-list ul {
