@@ -41,14 +41,12 @@
   }
 
   const seasonTabs = $derived(
-    data.seasons.map(
-      (season): SeasonTab => ({
-        id: season.id,
-        title: season.title,
-        seasonNumber: season.seasonNumber,
-        href: showSeasonHref(data.show.id, season),
-      }),
-    ),
+    data.seasons.map((season): SeasonTab => ({
+      id: season.id,
+      title: season.title,
+      seasonNumber: season.seasonNumber,
+      href: showSeasonHref(data.show.id, season),
+    })),
   );
 </script>
 

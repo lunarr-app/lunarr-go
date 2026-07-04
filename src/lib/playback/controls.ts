@@ -1,13 +1,7 @@
 import { absolutePlaybackSeconds, streamRelativePlaybackSeconds } from "./seek";
 
 export type PlayerControlUiState =
-  | "starting"
-  | "playing"
-  | "paused"
-  | "buffering"
-  | "seeking"
-  | "autoplayBlocked"
-  | "error";
+  "starting" | "playing" | "paused" | "buffering" | "seeking" | "autoplayBlocked" | "error";
 
 export function formatPlaybackTime(seconds: number | null | undefined) {
   const totalSeconds = Number.isFinite(seconds) ? Math.max(0, Math.floor(Number(seconds))) : 0;

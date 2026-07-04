@@ -11,14 +11,12 @@ type MockWebdavStat = {
   lastmod: string;
 };
 
-const mockStat = mock(
-  async (_path: string): Promise<MockWebdavStat> => ({
-    type: "directory",
-    basename: "movies",
-    size: 0,
-    lastmod: new Date(0).toUTCString(),
-  }),
-);
+const mockStat = mock(async (_path: string): Promise<MockWebdavStat> => ({
+  type: "directory",
+  basename: "movies",
+  size: 0,
+  lastmod: new Date(0).toUTCString(),
+}));
 const mockGetDirectoryContents = mock(
   async () =>
     [] as Array<{
