@@ -497,7 +497,7 @@ describe("showRows", () => {
     });
     expect(rows.all[0]).toMatchObject({ id: "show-1", episodeCount: 3 });
 
-    const nextUpOnly = await tvRows("user-1", "", "title", 1, SHOW_PAGE_SIZE, "nextUp");
+    const nextUpOnly = await tvRows("user-1", "", "title", 1, SHOW_PAGE_SIZE, ["nextUp"]);
     expect(nextUpOnly.nextUp?.map((episode) => episode.id)).toEqual(["episode-3"]);
     expect(nextUpOnly).not.toHaveProperty("all");
     expect(nextUpOnly).not.toHaveProperty("continueWatching");

@@ -4,8 +4,8 @@ import {
   normalizeMovieStatusFilter,
   normalizePage,
   normalizeShowSort,
-  parseMovieBrowseRail,
-  parseShowBrowseRail,
+  parseMovieBrowseRails,
+  parseShowBrowseRails,
 } from "./catalog";
 
 describe("movie browse parameters", () => {
@@ -45,15 +45,19 @@ describe("movie browse parameters", () => {
   });
 
   test("parses browse rail query params", () => {
-    expect(parseMovieBrowseRail(null)).toBeUndefined();
-    expect(parseMovieBrowseRail("")).toBeUndefined();
-    expect(parseMovieBrowseRail("recent")).toBe("recent");
-    expect(parseMovieBrowseRail("continueWatching")).toBe("continueWatching");
-    expect(parseMovieBrowseRail("nextUp")).toBeNull();
+    expect(parseMovieBrowseRails(null)).toBeUndefined();
+    expect(parseMovieBrowseRails("")).toBeUndefined();
+    expect(parseMovieBrowseRails("recent")).toEqual(["recent"]);
+    expect(parseMovieBrowseRails("continueWatching")).toEqual(["continueWatching"]);
+    expect(parseMovieBrowseRails("continueWatching,recent")).toEqual(["continueWatching", "recent"]);
+    expect(parseMovieBrowseRails("recent, recent")).toEqual(["recent"]);
+    expect(parseMovieBrowseRails("nextUp")).toBeNull();
+    expect(parseMovieBrowseRails("recent,bogus")).toBeNull();
 
-    expect(parseShowBrowseRail(null)).toBeUndefined();
-    expect(parseShowBrowseRail("nextUp")).toBe("nextUp");
-    expect(parseShowBrowseRail("continueWatching")).toBe("continueWatching");
-    expect(parseShowBrowseRail("bogus")).toBeNull();
+    expect(parseShowBrowseRails(null)).toBeUndefined();
+    expect(parseShowBrowseRails("nextUp")).toEqual(["nextUp"]);
+    expect(parseShowBrowseRails("continueWatching")).toEqual(["continueWatching"]);
+    expect(parseShowBrowseRails("nextUp,popular")).toEqual(["nextUp", "popular"]);
+    expect(parseShowBrowseRails("bogus")).toBeNull();
   });
 });

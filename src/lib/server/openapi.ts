@@ -254,7 +254,7 @@ export const openApiDocument = {
               enum: ["continueWatching", "all", "recent", "latest", "popular"],
             },
             description:
-              "When set, returns only the requested rail. `all` also returns `allPage`. Omit for the full bundled response.",
+              "When set, returns only the requested rail(s). Comma-separate multiple rails. `all` also returns `allPage`. Omit for the full bundled response.",
           },
           {
             name: "status",
@@ -397,7 +397,7 @@ export const openApiDocument = {
               enum: ["continueWatching", "nextUp", "all", "recent", "latest", "popular"],
             },
             description:
-              "When set, returns only the requested rail. Episode rails return `EpisodeSummary` items; show rails return `ShowSummary` items. `all` also returns `allPage`.",
+              "When set, returns only the requested rail(s). Comma-separate multiple rails. Episode rails return `EpisodeSummary` items; show rails return `ShowSummary` items. `all` also returns `allPage`.",
           },
           {
             name: "sort",

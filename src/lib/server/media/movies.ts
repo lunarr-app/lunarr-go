@@ -188,7 +188,7 @@ export async function movieRows(
   sort?: MovieSort,
   pageInput?: number,
   pageSize?: number,
-  rail?: null,
+  rails?: null,
 ): Promise<MovieRowsResponse>;
 export async function movieRows(
   userId: string,
@@ -197,7 +197,7 @@ export async function movieRows(
   sort: MovieSort,
   pageInput: number,
   pageSize: number,
-  rail: MovieBrowseRail,
+  rails: readonly MovieBrowseRail[],
 ): Promise<MovieBrowseRailResponse>;
 export async function movieRows(
   userId: string,
@@ -206,7 +206,7 @@ export async function movieRows(
   sort: MovieSort = "title",
   pageInput = 1,
   pageSize = MOVIE_PAGE_SIZE,
-  rail: MovieBrowseRail | null = null,
+  rails: readonly MovieBrowseRail[] | null = null,
 ): Promise<MovieRowsResponse | MovieBrowseRailResponse> {
   const db = await getDb();
   const searchPattern = search.trim();
@@ -358,27 +358,27 @@ export async function movieRows(
     return rows.map(mapMovie).map(publicMovieListItem);
   };
 
-  if (rail === "continueWatching") {
-    const continueRows = await continueOrder().limit(24).execute();
-    return { continueWatching: await mapPublicMovies(continueRows) };
-  }
+  const fetchRail = async (rail: MovieBrowseRail): Promise<MovieBrowseRailResponse> => {
+    if (rail === "continueWatching") {
+      const continueRows = await continueOrder().limit(24).execute();
+      return { continueWatching: await mapPublicMovies(continueRows) };
+    }
 
-  if (rail === "recent") {
-    const recentRows = await recentOrder(movieSelect()).limit(24).execute();
-    return { recent: await mapPublicMovies(recentRows) };
-  }
+    if (rail === "recent") {
+      const recentRows = await recentOrder(movieSelect()).limit(24).execute();
+      return { recent: await mapPublicMovies(recentRows) };
+    }
 
-  if (rail === "latest") {
-    const latestRows = await latestOrder(movieSelect()).limit(24).execute();
-    return { latest: await mapPublicMovies(latestRows) };
-  }
+    if (rail === "latest") {
+      const latestRows = await latestOrder(movieSelect()).limit(24).execute();
+      return { latest: await mapPublicMovies(latestRows) };
+    }
 
-  if (rail === "popular") {
-    const popularRows = await popularOrder(movieSelect()).limit(24).execute();
-    return { popular: await mapPublicMovies(popularRows) };
-  }
+    if (rail === "popular") {
+      const popularRows = await popularOrder(movieSelect()).limit(24).execute();
+      return { popular: await mapPublicMovies(popularRows) };
+    }
 
-  if (rail === "all") {
     const totalRow = await filteredMovies()
       .select(sql<number>`count(distinct media_item.id)`.as("total"))
       .executeTakeFirst();
@@ -398,6 +398,11 @@ export async function movieRows(
         hasNext: currentPage < totalPages,
       },
     };
+  };
+
+  if (rails && rails.length > 0) {
+    const parts = await Promise.all(rails.map((rail) => fetchRail(rail)));
+    return Object.assign({}, ...parts);
   }
 
   const totalRow = await filteredMovies()

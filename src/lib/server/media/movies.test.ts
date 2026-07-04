@@ -336,9 +336,18 @@ describe("movieRows", () => {
   });
 
   test("can return a single browse rail", async () => {
-    const rows = await movieRows("user-1", "", "all", "title", 1, MOVIE_PAGE_SIZE, "recent");
+    const rows = await movieRows("user-1", "", "all", "title", 1, MOVIE_PAGE_SIZE, ["recent"]);
 
     expect(rows.recent?.map((movie) => movie.title)).toEqual(["Alpha", "Bravo"]);
+    expect(rows).not.toHaveProperty("all");
+    expect(rows).not.toHaveProperty("continueWatching");
+  });
+
+  test("can return multiple browse rails", async () => {
+    const rows = await movieRows("user-1", "", "all", "title", 1, MOVIE_PAGE_SIZE, ["recent", "popular"]);
+
+    expect(rows.recent?.map((movie) => movie.title)).toEqual(["Alpha", "Bravo"]);
+    expect(rows.popular?.map((movie) => movie.title)).toEqual(["Bravo", "Alpha"]);
     expect(rows).not.toHaveProperty("all");
     expect(rows).not.toHaveProperty("continueWatching");
   });

@@ -243,7 +243,7 @@ export async function showBrowseRows(
   sort?: ShowSort,
   pageInput?: number,
   pageSize?: number,
-  rail?: null,
+  rails?: null,
 ): Promise<ShowBrowseRowsResponse>;
 export async function showBrowseRows(
   userId: string,
@@ -251,7 +251,7 @@ export async function showBrowseRows(
   sort: ShowSort,
   pageInput: number,
   pageSize: number,
-  rail: Exclude<ShowBrowseRail, "continueWatching" | "nextUp">,
+  rails: readonly Exclude<ShowBrowseRail, "continueWatching" | "nextUp">[],
 ): Promise<ShowBrowseRailResponse>;
 export async function showBrowseRows(
   userId: string,
@@ -259,29 +259,31 @@ export async function showBrowseRows(
   sort: ShowSort = "title",
   pageInput = 1,
   pageSize = SHOW_PAGE_SIZE,
-  rail: Exclude<ShowBrowseRail, "continueWatching" | "nextUp"> | null = null,
+  rails: readonly Exclude<ShowBrowseRail, "continueWatching" | "nextUp">[] | null = null,
 ): Promise<ShowBrowseRowsResponse | ShowBrowseRailResponse> {
   const page = normalizePage(pageInput);
   const cleanPageSize = Math.max(1, Math.min(Math.floor(pageSize), 200));
   const filtered = await filteredShows(userId, search);
   const mapShow = (show: ShowBrowseRow) => publicShowSummary(show);
 
-  if (rail === "recent") {
-    const recentRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "recent").limit(24).execute();
-    return { recent: recentRows.map(mapShow) };
-  }
+  const fetchRail = async (
+    rail: Exclude<ShowBrowseRail, "continueWatching" | "nextUp">,
+  ): Promise<ShowBrowseRailResponse> => {
+    if (rail === "recent") {
+      const recentRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "recent").limit(24).execute();
+      return { recent: recentRows.map(mapShow) };
+    }
 
-  if (rail === "latest") {
-    const latestRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "latest").limit(24).execute();
-    return { latest: latestRows.map(mapShow) };
-  }
+    if (rail === "latest") {
+      const latestRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "latest").limit(24).execute();
+      return { latest: latestRows.map(mapShow) };
+    }
 
-  if (rail === "popular") {
-    const popularRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "popular").limit(24).execute();
-    return { popular: popularRows.map(mapShow) };
-  }
+    if (rail === "popular") {
+      const popularRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "popular").limit(24).execute();
+      return { popular: popularRows.map(mapShow) };
+    }
 
-  if (rail === "all") {
     const totalRow = await filtered.select(sql<number>`count(distinct show.id)`.as("total")).executeTakeFirst();
     const total = Number(totalRow?.total ?? 0);
     const totalPages = Math.max(1, Math.ceil(total / cleanPageSize));
@@ -302,6 +304,11 @@ export async function showBrowseRows(
         hasNext: currentPage < totalPages,
       },
     };
+  };
+
+  if (rails && rails.length > 0) {
+    const parts = await Promise.all(rails.map((rail) => fetchRail(rail)));
+    return Object.assign({}, ...parts);
   }
 
   const totalRow = await filtered.select(sql<number>`count(distinct show.id)`.as("total")).executeTakeFirst();
@@ -481,7 +488,7 @@ export async function tvRows(
   sort?: ShowSort,
   pageInput?: number,
   pageSize?: number,
-  rail?: null,
+  rails?: null,
 ): Promise<ShowRowsResponse>;
 export async function tvRows(
   userId: string,
@@ -489,7 +496,7 @@ export async function tvRows(
   sort: ShowSort,
   pageInput: number,
   pageSize: number,
-  rail: ShowBrowseRail,
+  rails: readonly ShowBrowseRail[],
 ): Promise<Partial<ShowRowsResponse>>;
 export async function tvRows(
   userId: string,
@@ -497,30 +504,35 @@ export async function tvRows(
   sort: ShowSort = "title",
   pageInput = 1,
   pageSize = SHOW_PAGE_SIZE,
-  rail: ShowBrowseRail | null = null,
+  rails: readonly ShowBrowseRail[] | null = null,
 ): Promise<ShowRowsResponse | Partial<ShowRowsResponse>> {
-  if (rail === "continueWatching") {
-    const continueEpisodeRows = await tvEpisodeRows(userId, "continue");
-    const progress = await tvEpisodeProgress(
-      userId,
-      continueEpisodeRows.map((episode) => episode.id),
-    );
-    return {
-      continueWatching: continueEpisodeRows.map((episode) => publicEpisodeSummary(episode, progress)),
-    };
-  }
+  const fetchRail = async (rail: ShowBrowseRail): Promise<Partial<ShowRowsResponse>> => {
+    if (rail === "continueWatching") {
+      const continueEpisodeRows = await tvEpisodeRows(userId, "continue");
+      const progress = await tvEpisodeProgress(
+        userId,
+        continueEpisodeRows.map((episode) => episode.id),
+      );
+      return {
+        continueWatching: continueEpisodeRows.map((episode) => publicEpisodeSummary(episode, progress)),
+      };
+    }
 
-  if (rail === "nextUp") {
-    const nextRows = await nextUpEpisodeRows(userId);
-    const progress = await tvEpisodeProgress(
-      userId,
-      nextRows.map((episode) => episode.id),
-    );
-    return { nextUp: nextRows.map((episode) => publicEpisodeSummary(episode, progress)) };
-  }
+    if (rail === "nextUp") {
+      const nextRows = await nextUpEpisodeRows(userId);
+      const progress = await tvEpisodeProgress(
+        userId,
+        nextRows.map((episode) => episode.id),
+      );
+      return { nextUp: nextRows.map((episode) => publicEpisodeSummary(episode, progress)) };
+    }
 
-  if (rail === "all" || rail === "recent" || rail === "latest" || rail === "popular") {
-    return showBrowseRows(userId, search, sort, pageInput, pageSize, rail);
+    return showBrowseRows(userId, search, sort, pageInput, pageSize, [rail]);
+  };
+
+  if (rails && rails.length > 0) {
+    const parts = await Promise.all(rails.map((rail) => fetchRail(rail)));
+    return Object.assign({}, ...parts);
   }
 
   const [browse, continueEpisodeRows, nextRows] = await Promise.all([

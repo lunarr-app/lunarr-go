@@ -118,15 +118,17 @@ To fetch a single rail without downloading every other section, pass `rail`:
 ```text
 GET /api/movies?rail=continueWatching
 GET /api/movies?rail=all&page=2&sort=title&status=all
+GET /api/movies?rail=continueWatching,recent
 GET /api/shows?rail=nextUp
 GET /api/shows?rail=popular
+GET /api/shows?rail=continueWatching,nextUp
 ```
 
 Valid movie rails: `continueWatching`, `all`, `recent`, `latest`, `popular`.
 
 Valid show rails: `continueWatching`, `nextUp`, `all`, `recent`, `latest`, `popular`.
 
-When `rail` is set, the response includes only the requested keys (for example `{ "recent": [...] }` or `{ "all": [...], "allPage": {...} }`). Omit `rail` for the full bundled payload. Invalid `rail` values return `400`.
+When `rail` is set, the response includes only the requested keys (for example `{ "recent": [...] }`, `{ "all": [...], "allPage": {...} }`, or `{ "continueWatching": [...], "recent": [...] }` when multiple rails are comma-separated). Omit `rail` for the full bundled payload. Invalid `rail` values return `400`.
 
 ### Continue watching
 

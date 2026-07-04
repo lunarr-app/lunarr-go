@@ -27,18 +27,31 @@ export function normalizeShowSort(value: string | null | undefined): ShowSort {
   return SHOW_SORTS.includes(value as ShowSort) ? (value as ShowSort) : "title";
 }
 
-export function parseMovieBrowseRail(value: string | null): MovieBrowseRail | null | undefined {
+export function parseBrowseRails<T extends string>(
+  value: string | null,
+  allowed: readonly T[],
+): T[] | null | undefined {
   if (value === null) return undefined;
   const trimmed = value.trim();
   if (!trimmed) return undefined;
-  return MOVIE_BROWSE_RAILS.includes(trimmed as MovieBrowseRail) ? (trimmed as MovieBrowseRail) : null;
+  const rails: T[] = [];
+  for (const token of trimmed
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)) {
+    if (!allowed.includes(token as T)) return null;
+    const rail = token as T;
+    if (!rails.includes(rail)) rails.push(rail);
+  }
+  return rails;
 }
 
-export function parseShowBrowseRail(value: string | null): ShowBrowseRail | null | undefined {
-  if (value === null) return undefined;
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  return SHOW_BROWSE_RAILS.includes(trimmed as ShowBrowseRail) ? (trimmed as ShowBrowseRail) : null;
+export function parseMovieBrowseRails(value: string | null): MovieBrowseRail[] | null | undefined {
+  return parseBrowseRails(value, MOVIE_BROWSE_RAILS);
+}
+
+export function parseShowBrowseRails(value: string | null): ShowBrowseRail[] | null | undefined {
+  return parseBrowseRails(value, SHOW_BROWSE_RAILS);
 }
 
 export function normalizePage(value: string | number | null | undefined) {
