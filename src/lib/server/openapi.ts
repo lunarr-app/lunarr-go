@@ -119,6 +119,30 @@ const pageParameter = {
   schema: { type: "integer", minimum: 1 },
 };
 
+function browseRailParameter(rails: readonly string[], description: string) {
+  const railPattern = rails.join("|");
+  return {
+    name: "rail",
+    in: "query" as const,
+    required: false,
+    schema: {
+      type: "string",
+      pattern: `^(${railPattern})(,(${railPattern}))*$`,
+    },
+    description,
+  };
+}
+
+const movieBrowseRailParameter = browseRailParameter(
+  ["continueWatching", "all", "recent", "latest", "popular"],
+  "When set, returns only the requested rail(s). Comma-separate multiple rails. `all` also returns `allPage`. Omit for the full bundled response.",
+);
+
+const showBrowseRailParameter = browseRailParameter(
+  ["continueWatching", "nextUp", "all", "recent", "latest", "popular"],
+  "When set, returns only the requested rail(s). Comma-separate multiple rails. Episode rails return `EpisodeSummary` items; show rails return `ShowSummary` items. `all` also returns `allPage`.",
+);
+
 const commonErrors = {
   "401": errorResponse,
   "403": errorResponse,
@@ -245,17 +269,7 @@ export const openApiDocument = {
         operationId: "getMovies",
         parameters: [
           searchParameter,
-          {
-            name: "rail",
-            in: "query",
-            required: false,
-            schema: {
-              type: "string",
-              enum: ["continueWatching", "all", "recent", "latest", "popular"],
-            },
-            description:
-              "When set, returns only the requested rail(s). Comma-separate multiple rails. `all` also returns `allPage`. Omit for the full bundled response.",
-          },
+          movieBrowseRailParameter,
           {
             name: "status",
             in: "query",
@@ -388,17 +402,7 @@ export const openApiDocument = {
         operationId: "getShows",
         parameters: [
           searchParameter,
-          {
-            name: "rail",
-            in: "query",
-            required: false,
-            schema: {
-              type: "string",
-              enum: ["continueWatching", "nextUp", "all", "recent", "latest", "popular"],
-            },
-            description:
-              "When set, returns only the requested rail(s). Comma-separate multiple rails. Episode rails return `EpisodeSummary` items; show rails return `ShowSummary` items. `all` also returns `allPage`.",
-          },
+          showBrowseRailParameter,
           {
             name: "sort",
             in: "query",

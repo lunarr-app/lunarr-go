@@ -17,12 +17,13 @@
 
   let selectedSeasonId = $state("");
   let loadedEpisodes = $state<Record<string, ShareEpisode[]>>({});
-  let loadingSeasonId = $state<string | null>(null);
+  let loadedSeasonIds = $state(new Set<string>());
+  let loadingSeasonIds = $state(new Set<string>());
   let loadError = $state<string | null>(null);
 
   const activeSeason = $derived(seasons.find((season) => season.id === selectedSeasonId) ?? seasons[0] ?? null);
   const activeEpisodes = $derived(activeSeason ? (loadedEpisodes[activeSeason.id] ?? []) : []);
-  const isLoading = $derived(activeSeason ? loadingSeasonId === activeSeason.id : false);
+  const isLoading = $derived(activeSeason ? loadingSeasonIds.has(activeSeason.id) : false);
 
   const seasonTabs = $derived(
     seasons.map((season) => ({
@@ -39,22 +40,25 @@
   });
 
   async function ensureSeasonLoaded(seasonId: string) {
-    if (loadedEpisodes[seasonId] || loadingSeasonId === seasonId) return;
+    if (loadedSeasonIds.has(seasonId) || loadingSeasonIds.has(seasonId)) return;
 
-    loadingSeasonId = seasonId;
+    loadingSeasonIds = new Set(loadingSeasonIds).add(seasonId);
     loadError = null;
     try {
       const season = await fetchGuestShareSeason(token, seasonId);
       if (!season) {
         throw new Error("Could not load shared season.");
       }
-      loadedEpisodes = { ...loadedEpisodes, [seasonId]: season.episodes };
+      loadedEpisodes[seasonId] = season.episodes;
+      loadedSeasonIds = new Set(loadedSeasonIds).add(seasonId);
     } catch (error) {
-      loadError = error instanceof Error ? error.message : "Could not load episodes.";
-    } finally {
-      if (loadingSeasonId === seasonId) {
-        loadingSeasonId = null;
+      if (activeSeason?.id === seasonId) {
+        loadError = error instanceof Error ? error.message : "Could not load episodes.";
       }
+    } finally {
+      const nextLoading = new Set(loadingSeasonIds);
+      nextLoading.delete(seasonId);
+      loadingSeasonIds = nextLoading;
     }
   }
 
