@@ -19,6 +19,7 @@
 
   <LinkDeviceForm
     initialUserCode={data.initialUserCode}
+    initialDeviceName={data.initialDeviceName}
     pairingSuccess={form?.pairingSuccess}
     pairingError={form?.pairingError}
   />

@@ -8,10 +8,12 @@
 
   let {
     initialUserCode = "",
+    initialDeviceName = "",
     pairingSuccess,
     pairingError,
   }: {
     initialUserCode?: string;
+    initialDeviceName?: string;
     pairingSuccess?: string;
     pairingError?: string;
   } = $props();
@@ -21,6 +23,7 @@
 
   $effect(() => {
     userCodeInput = initialUserCode;
+    deviceName = initialDeviceName;
   });
 </script>
 

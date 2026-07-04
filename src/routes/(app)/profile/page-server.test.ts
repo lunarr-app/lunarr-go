@@ -93,6 +93,19 @@ describe("profile page server", () => {
     });
   });
 
+  test("redirects pairing query params to link-device", async () => {
+    await expectRedirect(
+      load({
+        locals: { user: testUser },
+        request: new Request("http://localhost/profile?code=ABCD-1234&name=Living%20room%20TV", {
+          headers: sessionHeaders,
+        }),
+        url: new URL("http://localhost/profile?code=ABCD-1234&name=Living%20room%20TV"),
+      } as never),
+      "/link-device?code=ABCD-1234&name=Living+room+TV",
+    );
+  });
+
   test("loads the signed-in user's API keys", async () => {
     const created = await createApiKeyForUserId({
       userId: "user-1",

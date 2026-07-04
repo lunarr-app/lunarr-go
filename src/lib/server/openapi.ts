@@ -1178,7 +1178,7 @@ export const openApiDocument = {
         tags: ["Account"],
         summary: "Start TV or mobile device pairing.",
         description:
-          "Creates a short pairing code for a device to display. Poll with GET /api/device-pairing/poll until the signed-in user approves the code.",
+          "Creates a short pairing code for a device to display. Returns a pairingUrl for QR codes. Poll with GET /api/device-pairing/poll until the signed-in user approves the code.",
         operationId: "startDevicePairing",
         security: [],
         requestBody: {
@@ -1561,13 +1561,14 @@ export const openApiDocument = {
       },
       DevicePairingStartResponse: {
         type: "object",
-        required: ["deviceCode", "userCode", "expiresAt", "expiresIn", "pollIntervalMs"],
+        required: ["deviceCode", "userCode", "expiresAt", "expiresIn", "pollIntervalMs", "pairingUrl"],
         properties: {
           deviceCode: stringSchema,
           userCode: stringSchema,
           expiresAt: stringSchema,
           expiresIn: { type: "integer" },
           pollIntervalMs: { type: "integer" },
+          pairingUrl: stringSchema,
         },
       },
       DevicePairingPollResponse: {

@@ -13,6 +13,9 @@
 <p class="muted">Use your Lunarr account to manage and watch this local library.</p>
 
 <form method="POST" action="?/signIn">
+  {#if data.redirectTo}
+    <input type="hidden" name="redirectTo" value={data.redirectTo} />
+  {/if}
   <label>
     Email
     <input name="email" type="email" autocomplete="email" value={formData.email ?? ""} required />

@@ -13,16 +13,22 @@ import {
   setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
-import { DEVICE_PAIRING_USER_CODE_QUERY_PARAM } from "$lib/device-pairing/constants";
+import { buildLinkDevicePath, readLinkDevicePrefill } from "$lib/device-pairing/url";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, request, url }) => {
   if (!locals.user) throw error(401, "Unauthorized");
 
-  const code = url.searchParams.get(DEVICE_PAIRING_USER_CODE_QUERY_PARAM)?.trim();
-  if (code) {
-    throw redirect(303, `/link-device?${DEVICE_PAIRING_USER_CODE_QUERY_PARAM}=${encodeURIComponent(code)}`);
+  const prefill = readLinkDevicePrefill(url);
+  if (prefill.initialUserCode) {
+    throw redirect(
+      303,
+      buildLinkDevicePath({
+        userCode: prefill.initialUserCode,
+        deviceName: prefill.initialDeviceName,
+      }),
+    );
   }
 
   let apiKeys;

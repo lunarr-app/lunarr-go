@@ -70,13 +70,26 @@ describe("login page server", () => {
   }
 
   test("reports signup open only during first run or when enabled", async () => {
-    expect(await load({} as never)).toEqual({ signupOpen: true });
+    expect(await load({ url: new URL("http://localhost/login") } as never)).toEqual({
+      signupOpen: true,
+      redirectTo: "",
+    });
 
     await insertAdmin();
-    expect(await load({} as never)).toEqual({ signupOpen: false });
+    expect(await load({ url: new URL("http://localhost/login") } as never)).toEqual({
+      signupOpen: false,
+      redirectTo: "",
+    });
 
     await setBooleanSetting("signup_open", true);
-    expect(await load({} as never)).toEqual({ signupOpen: true });
+    expect(
+      await load({
+        url: new URL("http://localhost/login?redirectTo=%2Flink-device%3Fcode%3DABCD-1234"),
+      } as never),
+    ).toEqual({
+      signupOpen: true,
+      redirectTo: "/link-device?code=ABCD-1234",
+    });
   });
 
   test("signs in with email and password", async () => {
@@ -102,5 +115,22 @@ describe("login page server", () => {
         rememberMe: true,
       },
     });
+  });
+
+  test("redirects to a safe post-login path", async () => {
+    const form = new FormData();
+    form.set("email", "admin@example.com");
+    form.set("password", "password123");
+    form.set("redirectTo", "/link-device?code=ABCD-1234&name=Living%20room%20TV");
+
+    await expectRedirect(
+      actions.signIn({
+        request: new Request("http://localhost/login", {
+          method: "POST",
+          body: form,
+        }),
+      } as never),
+      "/link-device?code=ABCD-1234&name=Living%20room%20TV",
+    );
   });
 });

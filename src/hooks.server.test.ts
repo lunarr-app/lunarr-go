@@ -154,7 +154,35 @@ describe("server hook route boundaries", () => {
       }),
       {
         status: 303,
-        location: "/login",
+        location: "/login?redirectTo=%2Fmovies",
+      },
+    );
+  });
+
+  test("preserves link-device query params in the login redirect", async () => {
+    const now = Date.now();
+    await db
+      .insertInto("user")
+      .values({
+        id: "admin-2",
+        name: "Admin",
+        email: "admin2@example.com",
+        role: "admin",
+        email_verified: 0,
+        image: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    await expectRejectsToMatchObject(
+      handle({
+        event: eventFor("/link-device?code=ABCD-1234&name=Living%20room%20TV") as never,
+        resolve: async () => new Response("resolved"),
+      }),
+      {
+        status: 303,
+        location: "/login?redirectTo=%2Flink-device%3Fcode%3DABCD-1234%26name%3DLiving%2520room%2520TV",
       },
     );
   });

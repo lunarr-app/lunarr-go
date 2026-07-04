@@ -5,6 +5,7 @@ import {
   DEVICE_PAIRING_TTL_MS,
   DEVICE_PAIRING_USER_CODE_LENGTH,
 } from "$lib/device-pairing/constants";
+import { buildLinkDeviceUrl } from "$lib/device-pairing/url";
 import { formatUserCode, generateUserCode, normalizeUserCode } from "$lib/device-pairing/format";
 import { randomUUID } from "node:crypto";
 import { getDb } from "../db";
@@ -80,12 +81,13 @@ function isSqliteUniqueViolation(error: unknown) {
   return error instanceof Error && error.message.toLowerCase().includes("unique constraint failed");
 }
 
-export async function startDevicePairing(input: { deviceName?: unknown } = {}) {
+export async function startDevicePairing(input: { origin: string; deviceName?: unknown }) {
   await expireStalePairings();
 
   const db = await getDb();
   const createdAt = nowIso();
   const expiresAt = new Date(Date.now() + DEVICE_PAIRING_TTL_MS).toISOString();
+  const rawDeviceName = typeof input.deviceName === "string" ? input.deviceName.trim() : "";
   const deviceName = normalizeDeviceName(input.deviceName);
   const deviceCode = randomUUID();
 
@@ -110,12 +112,18 @@ export async function startDevicePairing(input: { deviceName?: unknown } = {}) {
         })
         .execute();
 
+      const formattedUserCode = formatUserCode(userCode);
+
       return {
         deviceCode,
-        userCode: formatUserCode(userCode),
+        userCode: formattedUserCode,
         expiresAt,
         expiresIn: Math.round(DEVICE_PAIRING_TTL_MS / 1000),
         pollIntervalMs: DEVICE_PAIRING_POLL_INTERVAL_MS,
+        pairingUrl: buildLinkDeviceUrl(input.origin, {
+          userCode: formattedUserCode,
+          deviceName: rawDeviceName || undefined,
+        }),
       };
     } catch (error) {
       if (!isSqliteUniqueViolation(error)) throw error;

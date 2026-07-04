@@ -15,6 +15,7 @@ import {
   cleanupConfiguredPlaybackSessionArtifacts,
   recoverInterruptedTranscodeSessions,
 } from "$lib/server/transcoding/sessions";
+import { loginPathWithRedirect, sanitizePostLoginRedirect } from "$lib/server/auth/post-login-redirect";
 import { json, redirect, type Handle, type RequestEvent } from "@sveltejs/kit";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
@@ -107,7 +108,8 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   if (event.locals.user && (pathname === "/login" || pathname === "/signup" || pathname === "/setup")) {
-    throw redirect(303, "/movies");
+    const redirectTo = sanitizePostLoginRedirect(event.url.searchParams.get("redirectTo"));
+    throw redirect(303, redirectTo ?? "/movies");
   }
 
   if (pathname.startsWith("/api/") && !isAuthApiPath(pathname) && !isPublicApiPath(pathname) && !event.locals.user) {
@@ -119,7 +121,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   if (hasUsers && !event.locals.user && !isPublicPath(pathname) && !canResolveUnauthenticatedMedia) {
-    throw redirect(303, "/login");
+    throw redirect(303, loginPathWithRedirect(`${pathname}${event.url.search}`));
   }
 
   return svelteKitHandler({ event, resolve, auth, building });

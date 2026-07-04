@@ -47,8 +47,8 @@ Returns HTTP `200` when the database is reachable and HTTP `503` when it is not.
 
 TV and mobile apps can sign in without copying a long API key.
 
-1. The device calls `POST /api/device-pairing` and shows the returned `userCode`.
-2. A signed-in user approves that code on **Link a device** (`/link-device`) or `GET /link-device?code=<userCode>`.
+1. The device calls `POST /api/device-pairing` and shows the returned `userCode` (or encodes the returned `pairingUrl` in a QR code).
+2. A signed-in user approves that code on **Link a device** (`/link-device`) or `GET /link-device?code=<userCode>&name=<deviceName>` (`name` is optional).
 3. The device polls `GET /api/device-pairing/poll?deviceCode=<deviceCode>` until it receives an API key.
 
 ```http
@@ -74,7 +74,7 @@ Approve body:
 }
 ```
 
-Poll returns `status: "pending"` until approval, then `status: "approved"` with a one-time `apiKey` string. Pairing codes expire after 10 minutes. API keys created through pairing expire after 2 years (users can revoke them earlier from Profile). Finished or expired pairing rows are deleted after 30 days.
+Poll returns `status: "pending"` until approval, then `status: "approved"` with a one-time `apiKey` string. `POST /api/device-pairing` also returns `pairingUrl`, a ready-made `/link-device?code=...&name=...` URL for QR codes (`name` is omitted when the device did not provide one). Pairing codes expire after 10 minutes. API keys created through pairing expire after 2 years (users can revoke them earlier from Profile). Finished or expired pairing rows are deleted after 30 days.
 
 ## API Keys
 

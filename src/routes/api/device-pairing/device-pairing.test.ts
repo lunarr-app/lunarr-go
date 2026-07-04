@@ -16,6 +16,19 @@ import { POST as startPost } from "./+server";
 import { GET as pollGet } from "./poll/+server";
 import { POST as approvePost } from "./approve/+server";
 
+function startEvent(body?: object, clientAddress = "127.0.0.1") {
+  return {
+    url: new URL("http://localhost/api/device-pairing"),
+    request: new Request("http://localhost/api/device-pairing", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body ?? {}),
+    }),
+    locals: { user: null },
+    getClientAddress: () => clientAddress,
+  } as never;
+}
+
 describe("device pairing API", () => {
   let tempDir: string;
 
@@ -49,20 +62,15 @@ describe("device pairing API", () => {
   });
 
   test("starts pairing, approves from a signed-in user, and returns the API key once", async () => {
-    const startResponse = await startPost({
-      request: new Request("http://localhost/api/device-pairing", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deviceName: "Living room TV" }),
-      }),
-      locals: { user: null },
-      getClientAddress: () => "127.0.0.1",
-    } as never);
+    const startResponse = await startPost(startEvent({ deviceName: "Living room TV" }));
 
     expect(startResponse.status).toBe(201);
     const started = await startResponse.json();
     expect(started.deviceCode).toBeTruthy();
     expect(started.userCode).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+    expect(started.pairingUrl).toBe(
+      `http://localhost/link-device?code=${encodeURIComponent(started.userCode)}&name=Living+room+TV`,
+    );
 
     const pendingResponse = await pollGet({
       url: new URL(`http://localhost/api/device-pairing/poll?deviceCode=${encodeURIComponent(started.deviceCode)}`),
@@ -118,15 +126,7 @@ describe("device pairing API", () => {
   });
 
   test("delivers the API key after approval even when the pairing window has passed", async () => {
-    const startResponse = await startPost({
-      request: new Request("http://localhost/api/device-pairing", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deviceName: "Bedroom TV" }),
-      }),
-      locals: { user: null },
-      getClientAddress: () => "127.0.0.4",
-    } as never);
+    const startResponse = await startPost(startEvent({ deviceName: "Bedroom TV" }, "127.0.0.4"));
     const started = await startResponse.json();
 
     const approveResponse = await approvePost({
@@ -160,15 +160,7 @@ describe("device pairing API", () => {
   });
 
   test("rejects concurrent approve requests for the same pairing code", async () => {
-    const startResponse = await startPost({
-      request: new Request("http://localhost/api/device-pairing", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deviceName: "Office TV" }),
-      }),
-      locals: { user: null },
-      getClientAddress: () => "127.0.0.6",
-    } as never);
+    const startResponse = await startPost(startEvent({ deviceName: "Office TV" }, "127.0.0.6"));
     const started = await startResponse.json();
 
     const approveRequest = () =>
@@ -247,15 +239,7 @@ describe("device pairing API", () => {
       })
       .execute();
 
-    const startResponse = await startPost({
-      request: new Request("http://localhost/api/device-pairing", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deviceName: "Guest TV" }),
-      }),
-      locals: { user: null },
-      getClientAddress: () => "127.0.0.8",
-    } as never);
+    const startResponse = await startPost(startEvent({ deviceName: "Guest TV" }, "127.0.0.8"));
 
     expect(startResponse.status).toBe(201);
     expect(await startResponse.json()).toMatchObject({

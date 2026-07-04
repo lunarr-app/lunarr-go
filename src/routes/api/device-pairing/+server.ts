@@ -15,7 +15,15 @@ export const POST: RequestHandler = async (event) => {
       typeof body === "object" && body && "deviceName" in body
         ? (body as { deviceName?: unknown }).deviceName
         : undefined;
-    return apiJson<DevicePairingStartResponse>(await startDevicePairing({ deviceName }), { status: 201 });
+    const trimmedDeviceName = typeof deviceName === "string" ? deviceName.trim() : "";
+
+    return apiJson<DevicePairingStartResponse>(
+      await startDevicePairing({
+        origin: event.url.origin,
+        deviceName: trimmedDeviceName || undefined,
+      }),
+      { status: 201 },
+    );
   } catch (error) {
     return apiErrorFrom(error, "Could not start device pairing.", devicePairingHttpStatus(error));
   }
