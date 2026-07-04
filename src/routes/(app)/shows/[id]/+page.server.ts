@@ -1,5 +1,5 @@
 import { isAdmin } from "$lib/server/auth/users";
-import { getShowDetail } from "$lib/server/media/shows";
+import { getShowCredits, getShowOverview, getShowResumeEpisode } from "$lib/server/media/shows";
 import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
 import { refreshTvShowMetadataResult } from "$lib/server/metadata/tv";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
@@ -7,10 +7,18 @@ import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-  const detail = await getShowDetail(params.id, locals.user!.id);
-  if (!detail) throw error(404, "Show not found");
+  const userId = locals.user!.id;
+  const [overview, credits, nextEpisode] = await Promise.all([
+    getShowOverview(params.id, userId),
+    getShowCredits(params.id, userId),
+    getShowResumeEpisode(params.id, userId),
+  ]);
+  if (!overview || !credits) throw error(404, "Show not found");
+
   return {
-    ...detail,
+    ...overview,
+    cast: credits.cast,
+    nextEpisode,
     canManageMetadata: isAdmin(locals.user),
     canManageShares: isAdmin(locals.user),
     tmdbConfigured: await tmdbCredentialsConfigured(),

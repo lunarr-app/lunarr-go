@@ -724,6 +724,60 @@ function groupEpisodesBySeason(episodeRows: ShowEpisodeRow[]) {
   return episodesBySeason;
 }
 
+function pickShowResumeEpisode(
+  episodes: Array<{
+    id: string;
+    fileId: string | null;
+    progressSeconds: number;
+    completed: boolean;
+    seasonNumber: number | null;
+    episodeNumber: number | null;
+  }>,
+) {
+  const playable = episodes.filter((episode) => episode.fileId);
+  const inProgress = playable.find((episode) => !episode.completed && episode.progressSeconds > 0);
+  const next = inProgress ?? playable.find((episode) => !episode.completed) ?? playable[0];
+  if (!next) return null;
+
+  return {
+    id: next.id,
+    fileId: next.fileId,
+    progressSeconds: next.progressSeconds,
+    seasonNumber: next.seasonNumber,
+    episodeNumber: next.episodeNumber,
+  };
+}
+
+export async function getShowResumeEpisode(showId: string, userId: string) {
+  const show = await fetchAccessibleShowRecord(showId, userId);
+  if (!show) return null;
+
+  const seasonRows = await fetchShowSeasonRecords(showId);
+  const episodeRows = await fetchShowEpisodeRows(
+    seasonRows.map((season) => season.id),
+    userId,
+  );
+  if (episodeRows.length === 0) return null;
+
+  const progress = await tvEpisodeProgress(
+    userId,
+    episodeRows.map((episode) => episode.id),
+  );
+  return pickShowResumeEpisode(
+    episodeRows.map((episode) => {
+      const detail = publicShowEpisodeDetail(episode, progress);
+      return {
+        id: detail.id,
+        fileId: detail.fileId,
+        progressSeconds: detail.progressSeconds,
+        completed: detail.completed,
+        seasonNumber: detail.seasonNumber,
+        episodeNumber: detail.episodeNumber,
+      };
+    }),
+  );
+}
+
 export async function getShowOverview(id: string, userId: string) {
   const show = await fetchAccessibleShowRecord(id, userId);
   if (!show) return null;

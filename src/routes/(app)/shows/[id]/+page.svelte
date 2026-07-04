@@ -11,21 +11,10 @@
   let { data, form } = $props();
   let shareModalOpen = $state(false);
 
-  type Season = (typeof data.seasons)[number];
-  type Episode = Season["episodes"][number];
-
-  const allEpisodes = $derived(data.seasons.flatMap((season) => season.episodes));
-  const watchedCount = $derived(allEpisodes.filter((episode) => episode.completed).length);
-  const totalEpisodes = $derived(allEpisodes.length);
+  const totalEpisodes = $derived(data.seasons.reduce((count, season) => count + season.episodeCount, 0));
+  const watchedCount = $derived(data.seasons.reduce((count, season) => count + season.watchedCount, 0));
   const progressPercent = $derived(totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0);
-  const inProgressEpisode = $derived(
-    allEpisodes.find((episode) => !episode.completed && episode.progressSeconds > 0 && episode.fileId),
-  );
-  const nextEpisode = $derived(
-    inProgressEpisode ??
-      allEpisodes.find((episode) => !episode.completed && episode.fileId) ??
-      allEpisodes.find((episode) => episode.fileId),
-  );
+  const nextEpisode = $derived(data.nextEpisode ?? undefined);
   const seasonCount = $derived(data.seasons.length);
   const episodeCountLabel = $derived(`${totalEpisodes} ${totalEpisodes === 1 ? "episode" : "episodes"}`);
   const seasonCountLabel = $derived(`${seasonCount} ${seasonCount === 1 ? "season" : "seasons"}`);
@@ -47,7 +36,7 @@
       : null,
   );
 
-  function watchHref(episode: Pick<Episode, "id" | "fileId">) {
+  function watchHref(episode: Pick<NonNullable<typeof data.nextEpisode>, "id" | "fileId">) {
     return playbackModalHref({
       currentUrl: page.url,
       mediaItemId: episode.id,

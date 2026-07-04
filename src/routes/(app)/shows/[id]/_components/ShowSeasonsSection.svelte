@@ -5,10 +5,9 @@
     id: string;
     title: string;
     posterUrl: string | null;
-    episodes: Array<{
-      fileId: string | null;
-      completed: boolean;
-    }>;
+    episodeCount: number;
+    playableCount: number;
+    watchedCount: number;
   };
 
   let {
@@ -22,10 +21,9 @@
   } = $props();
 
   function seasonStats(season: Season) {
-    const episodes = season.episodes;
-    const total = episodes.length;
-    const playable = episodes.filter((episode) => episode.fileId).length;
-    const watched = episodes.filter((episode) => episode.completed).length;
+    const total = season.episodeCount;
+    const playable = season.playableCount;
+    const watched = season.watchedCount;
     const missing = total - playable;
     return {
       total,

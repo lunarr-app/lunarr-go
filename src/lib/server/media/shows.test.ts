@@ -3,7 +3,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { getShowCredits, getShowDetail, getShowOverview, getShowSeasonDetail, showRows, tvRows } from "./shows";
+import {
+  getShowCredits,
+  getShowDetail,
+  getShowOverview,
+  getShowResumeEpisode,
+  getShowSeasonDetail,
+  showRows,
+  tvRows,
+} from "./shows";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 
@@ -307,6 +315,29 @@ describe("showRows", () => {
     });
     expect(overview?.seasons[0]).not.toHaveProperty("episodes");
     expect(overview).not.toHaveProperty("cast");
+  });
+
+  test("picks the resume episode without loading the full show tree", async () => {
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "episode-1",
+        media_file_id: "file-1",
+        position_seconds: 120,
+        duration_seconds: 2700,
+        completed: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .execute();
+
+    expect(await getShowResumeEpisode("show-1", "user-1")).toMatchObject({
+      id: "episode-1",
+      fileId: "file-1",
+      progressSeconds: 120,
+      seasonNumber: 1,
+      episodeNumber: 1,
+    });
   });
 
   test("loads show credits with cast and creators", async () => {
