@@ -1,6 +1,6 @@
-import { normalizePage, normalizeShowSort } from "$lib/server/media/catalog";
+import { SHOW_PAGE_SIZE, normalizePage, normalizeShowSort, parseShowBrowseRail } from "$lib/server/media/catalog";
 import { tvRows } from "$lib/server/media/shows";
-import { requireJsonUser } from "$lib/server/api";
+import { jsonError, requireJsonUser } from "$lib/server/api";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
@@ -8,12 +8,18 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
-  return json(
-    await tvRows(
-      user.id,
-      url.searchParams.get("search") ?? "",
-      normalizeShowSort(url.searchParams.get("sort")),
-      normalizePage(url.searchParams.get("page")),
-    ),
-  );
+  const rail = parseShowBrowseRail(url.searchParams.get("rail"));
+  if (rail === null) {
+    return jsonError(null, "Invalid rail. Expected one of: continueWatching, nextUp, all, recent, latest, popular.");
+  }
+
+  const search = url.searchParams.get("search") ?? "";
+  const sort = normalizeShowSort(url.searchParams.get("sort"));
+  const page = normalizePage(url.searchParams.get("page"));
+
+  if (rail) {
+    return json(await tvRows(user.id, search, sort, page, SHOW_PAGE_SIZE, rail));
+  }
+
+  return json(await tvRows(user.id, search, sort, page));
 };

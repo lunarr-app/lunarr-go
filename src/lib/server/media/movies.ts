@@ -1,3 +1,4 @@
+import type { MovieBrowseRailResponse, MovieRowsResponse } from "$lib/media/types";
 import { sql } from "kysely";
 import { getDb } from "../db";
 import { tmdbImageUrl } from "$lib/media/images";
@@ -10,6 +11,7 @@ import {
   searchLikePattern,
   type MovieSort,
   type MovieStatusFilter,
+  type MovieBrowseRail,
 } from "./catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "./progress";
 import {
@@ -181,12 +183,31 @@ export async function listBecauseYouWatchedMovies(userId: string, pageInput = 1,
 
 export async function movieRows(
   userId: string,
+  search?: string,
+  status?: MovieStatusFilter,
+  sort?: MovieSort,
+  pageInput?: number,
+  pageSize?: number,
+  rail?: null,
+): Promise<MovieRowsResponse>;
+export async function movieRows(
+  userId: string,
+  search: string,
+  status: MovieStatusFilter,
+  sort: MovieSort,
+  pageInput: number,
+  pageSize: number,
+  rail: MovieBrowseRail,
+): Promise<MovieBrowseRailResponse>;
+export async function movieRows(
+  userId: string,
   search = "",
   status: MovieStatusFilter = "all",
   sort: MovieSort = "title",
   pageInput = 1,
   pageSize = MOVIE_PAGE_SIZE,
-) {
+  rail: MovieBrowseRail | null = null,
+): Promise<MovieRowsResponse | MovieBrowseRailResponse> {
   const db = await getDb();
   const searchPattern = search.trim();
   const page = normalizePage(pageInput);
@@ -306,6 +327,79 @@ export async function movieRows(
         ),
     );
 
+  const mapPublicMovies = async (rows: MovieBrowseRow[]) => {
+    const movieIds = [...new Set(rows.map((movie) => movie.id))];
+    const progressRows =
+      movieIds.length === 0
+        ? []
+        : await db
+            .selectFrom("watch_progress")
+            .select([
+              "media_item_id",
+              "media_file_id",
+              "position_seconds",
+              "duration_seconds",
+              "completed",
+              "updated_at",
+            ])
+            .where("user_id", "=", userId)
+            .where("media_item_id", "in", movieIds)
+            .orderBy("updated_at", "desc")
+            .execute();
+    const progress = summarizeMovieProgress(progressRows);
+    const mapMovie = (movie: MovieBrowseRow) => {
+      const summary = publicMovieSummary(movie, progress);
+      return {
+        ...summary,
+        sortTitle: movie.sort_title,
+        latestFileCreatedAt: movie.latest_file_created_at,
+      };
+    };
+    return rows.map(mapMovie).map(publicMovieListItem);
+  };
+
+  if (rail === "continueWatching") {
+    const continueRows = await continueOrder().limit(24).execute();
+    return { continueWatching: await mapPublicMovies(continueRows) };
+  }
+
+  if (rail === "recent") {
+    const recentRows = await recentOrder(movieSelect()).limit(24).execute();
+    return { recent: await mapPublicMovies(recentRows) };
+  }
+
+  if (rail === "latest") {
+    const latestRows = await latestOrder(movieSelect()).limit(24).execute();
+    return { latest: await mapPublicMovies(latestRows) };
+  }
+
+  if (rail === "popular") {
+    const popularRows = await popularOrder(movieSelect()).limit(24).execute();
+    return { popular: await mapPublicMovies(popularRows) };
+  }
+
+  if (rail === "all") {
+    const totalRow = await filteredMovies()
+      .select(sql<number>`count(distinct media_item.id)`.as("total"))
+      .executeTakeFirst();
+    const total = Number(totalRow?.total ?? 0);
+    const totalPages = Math.max(1, Math.ceil(total / cleanPageSize));
+    const currentPage = Math.min(page, totalPages);
+    const offset = (currentPage - 1) * cleanPageSize;
+    const allRows = await withBrowseOrder(movieSelect()).limit(cleanPageSize).offset(offset).execute();
+    return {
+      all: await mapPublicMovies(allRows),
+      allPage: {
+        page: currentPage,
+        pageSize: cleanPageSize,
+        total,
+        totalPages,
+        hasPrevious: currentPage > 1,
+        hasNext: currentPage < totalPages,
+      },
+    };
+  }
+
   const totalRow = await filteredMovies()
     .select(sql<number>`count(distinct media_item.id)`.as("total"))
     .executeTakeFirst();
@@ -360,7 +454,7 @@ export async function movieRows(
     recent: recentRows.map(mapMovie).map(publicMovie),
     latest: latestRows.map(mapMovie).map(publicMovie),
     popular: popularRows.map(mapMovie).map(publicMovie),
-  };
+  } satisfies MovieRowsResponse;
 }
 
 const MOVIE_DETAIL_SELECT = [

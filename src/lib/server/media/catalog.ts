@@ -6,10 +6,14 @@ const MOVIE_SORTS = ["title", "recent", "year_desc", "rating", "release_date"] a
 export const MOVIE_PAGE_SIZE = 36;
 export const SHOW_PAGE_SIZE = 36;
 const SHOW_SORTS = ["title", "recent", "latest", "popular"] as const;
+export const MOVIE_BROWSE_RAILS = ["continueWatching", "all", "recent", "latest", "popular"] as const;
+export const SHOW_BROWSE_RAILS = ["continueWatching", "nextUp", "all", "recent", "latest", "popular"] as const;
 
 export type MovieStatusFilter = (typeof MOVIE_STATUS_FILTERS)[number];
 export type MovieSort = (typeof MOVIE_SORTS)[number];
 export type ShowSort = (typeof SHOW_SORTS)[number];
+export type MovieBrowseRail = (typeof MOVIE_BROWSE_RAILS)[number];
+export type ShowBrowseRail = (typeof SHOW_BROWSE_RAILS)[number];
 
 export function normalizeMovieStatusFilter(value: string | null | undefined): MovieStatusFilter {
   return MOVIE_STATUS_FILTERS.includes(value as MovieStatusFilter) ? (value as MovieStatusFilter) : "all";
@@ -21,6 +25,20 @@ export function normalizeMovieSort(value: string | null | undefined): MovieSort 
 
 export function normalizeShowSort(value: string | null | undefined): ShowSort {
   return SHOW_SORTS.includes(value as ShowSort) ? (value as ShowSort) : "title";
+}
+
+export function parseMovieBrowseRail(value: string | null): MovieBrowseRail | null | undefined {
+  if (value === null) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return MOVIE_BROWSE_RAILS.includes(trimmed as MovieBrowseRail) ? (trimmed as MovieBrowseRail) : null;
+}
+
+export function parseShowBrowseRail(value: string | null): ShowBrowseRail | null | undefined {
+  if (value === null) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return SHOW_BROWSE_RAILS.includes(trimmed as ShowBrowseRail) ? (trimmed as ShowBrowseRail) : null;
 }
 
 export function normalizePage(value: string | number | null | undefined) {

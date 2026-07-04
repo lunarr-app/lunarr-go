@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
+import { MOVIE_PAGE_SIZE } from "./catalog";
 import { getMediaFile } from "./files";
 import { getMovieCredits, getMovieDetail, getMovieOverview, movieRows } from "./movies";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
@@ -332,6 +333,14 @@ describe("movieRows", () => {
       hasPrevious: true,
       hasNext: false,
     });
+  });
+
+  test("can return a single browse rail", async () => {
+    const rows = await movieRows("user-1", "", "all", "title", 1, MOVIE_PAGE_SIZE, "recent");
+
+    expect(rows.recent?.map((movie) => movie.title)).toEqual(["Alpha", "Bravo"]);
+    expect(rows).not.toHaveProperty("all");
+    expect(rows).not.toHaveProperty("continueWatching");
   });
 
   test("marks a movie watched when any file is completed", async () => {

@@ -240,9 +240,22 @@ export const openApiDocument = {
       get: {
         tags: ["Catalog"],
         summary: "Browse movie rails and paged movie results.",
+        description:
+          "Without `rail`, returns every browse rail in one response for home screens. Pass `rail` to fetch a single rail and avoid over-fetching on mobile clients.",
         operationId: "getMovies",
         parameters: [
           searchParameter,
+          {
+            name: "rail",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["continueWatching", "all", "recent", "latest", "popular"],
+            },
+            description:
+              "When set, returns only the requested rail. `all` also returns `allPage`. Omit for the full bundled response.",
+          },
           {
             name: "status",
             in: "query",
@@ -267,8 +280,12 @@ export const openApiDocument = {
         ],
         responses: {
           "200": jsonResponse({
-            $ref: "#/components/schemas/MovieRowsResponse",
+            oneOf: [
+              { $ref: "#/components/schemas/MovieRowsResponse" },
+              { $ref: "#/components/schemas/MovieBrowseRailResponse" },
+            ],
           }),
+          "400": errorResponse,
           "401": errorResponse,
         },
       },
@@ -366,9 +383,22 @@ export const openApiDocument = {
       get: {
         tags: ["Catalog"],
         summary: "Browse show rails and paged show results.",
+        description:
+          "Without `rail`, returns every browse rail in one response for home screens. Pass `rail` to fetch a single rail and avoid over-fetching on mobile clients.",
         operationId: "getShows",
         parameters: [
           searchParameter,
+          {
+            name: "rail",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["continueWatching", "nextUp", "all", "recent", "latest", "popular"],
+            },
+            description:
+              "When set, returns only the requested rail. Episode rails return `EpisodeSummary` items; show rails return `ShowSummary` items. `all` also returns `allPage`.",
+          },
           {
             name: "sort",
             in: "query",
@@ -387,8 +417,12 @@ export const openApiDocument = {
         ],
         responses: {
           "200": jsonResponse({
-            $ref: "#/components/schemas/ShowRowsResponse",
+            oneOf: [
+              { $ref: "#/components/schemas/ShowRowsResponse" },
+              { $ref: "#/components/schemas/ShowBrowseRailResponse" },
+            ],
           }),
+          "400": errorResponse,
           "401": errorResponse,
         },
       },
@@ -2118,6 +2152,33 @@ export const openApiDocument = {
           },
         },
       },
+      MovieBrowseRailResponse: {
+        type: "object",
+        description: "Partial browse payload returned when `rail` is set on GET /api/movies.",
+        properties: {
+          continueWatching: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          all: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          allPage: { $ref: "#/components/schemas/PageMetadata" },
+          recent: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          latest: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          popular: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+        },
+      },
       PageMetadata: {
         type: "object",
         required: ["page", "pageSize", "total", "totalPages", "hasPrevious", "hasNext"],
@@ -2173,6 +2234,37 @@ export const openApiDocument = {
       ShowRowsResponse: {
         type: "object",
         required: ["continueWatching", "nextUp", "all", "allPage", "recent", "latest", "popular"],
+        properties: {
+          continueWatching: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EpisodeSummary" },
+          },
+          nextUp: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EpisodeSummary" },
+          },
+          all: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          allPage: { $ref: "#/components/schemas/PageMetadata" },
+          recent: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          latest: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          popular: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+        },
+      },
+      ShowBrowseRailResponse: {
+        type: "object",
+        description: "Partial browse payload returned when `rail` is set on GET /api/shows.",
         properties: {
           continueWatching: {
             type: "array",

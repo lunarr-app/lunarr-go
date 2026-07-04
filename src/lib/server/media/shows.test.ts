@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
+import { SHOW_PAGE_SIZE } from "./catalog";
 import {
   getShowCredits,
   getShowDetail,
@@ -495,5 +496,10 @@ describe("showRows", () => {
       popularity: 42,
     });
     expect(rows.all[0]).toMatchObject({ id: "show-1", episodeCount: 3 });
+
+    const nextUpOnly = await tvRows("user-1", "", "title", 1, SHOW_PAGE_SIZE, "nextUp");
+    expect(nextUpOnly.nextUp?.map((episode) => episode.id)).toEqual(["episode-3"]);
+    expect(nextUpOnly).not.toHaveProperty("all");
+    expect(nextUpOnly).not.toHaveProperty("continueWatching");
   });
 });

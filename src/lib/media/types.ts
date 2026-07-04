@@ -58,3 +58,29 @@ export type CatalogPageInfo = {
   hasPrevious: boolean;
   hasNext: boolean;
 };
+
+export type MovieRowsResponse = {
+  continueWatching: MovieSummary[];
+  all: MovieSummary[];
+  allPage: CatalogPageInfo;
+  recent: MovieSummary[];
+  latest: MovieSummary[];
+  popular: MovieSummary[];
+};
+
+export type MovieBrowseRailResponse = Partial<MovieRowsResponse>;
+
+export type ShowBrowseRowsResponse = {
+  all: ShowSummary[];
+  allPage: CatalogPageInfo;
+  recent: ShowSummary[];
+  latest: ShowSummary[];
+  popular: ShowSummary[];
+};
+
+export type ShowBrowseRailResponse = Partial<ShowBrowseRowsResponse>;
+
+export type ShowRowsResponse = {
+  continueWatching: EpisodeSummary[];
+  nextUp: EpisodeSummary[];
+} & ShowBrowseRowsResponse;

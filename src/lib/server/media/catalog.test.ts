@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeMovieSort, normalizeMovieStatusFilter, normalizePage, normalizeShowSort } from "./catalog";
+import {
+  normalizeMovieSort,
+  normalizeMovieStatusFilter,
+  normalizePage,
+  normalizeShowSort,
+  parseMovieBrowseRail,
+  parseShowBrowseRail,
+} from "./catalog";
 
 describe("movie browse parameters", () => {
   test("normalizes watch-status filters", () => {
@@ -35,5 +42,18 @@ describe("movie browse parameters", () => {
     expect(normalizePage("1.5")).toBe(1);
     expect(normalizePage("bad")).toBe(1);
     expect(normalizePage(null)).toBe(1);
+  });
+
+  test("parses browse rail query params", () => {
+    expect(parseMovieBrowseRail(null)).toBeUndefined();
+    expect(parseMovieBrowseRail("")).toBeUndefined();
+    expect(parseMovieBrowseRail("recent")).toBe("recent");
+    expect(parseMovieBrowseRail("continueWatching")).toBe("continueWatching");
+    expect(parseMovieBrowseRail("nextUp")).toBeNull();
+
+    expect(parseShowBrowseRail(null)).toBeUndefined();
+    expect(parseShowBrowseRail("nextUp")).toBe("nextUp");
+    expect(parseShowBrowseRail("continueWatching")).toBe("continueWatching");
+    expect(parseShowBrowseRail("bogus")).toBeNull();
   });
 });

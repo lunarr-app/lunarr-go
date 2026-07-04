@@ -109,6 +109,25 @@ showsPage
 
 `GET /api/people/:provider/:id` returns person metadata, aggregate filmography `stats`, paginated `movies` and `shows` credit lists, and separate `moviePage` / `showPage` metadata. Hero counts and year span use `stats` so clients do not need to load every credit up front.
 
+### Browse rails
+
+`GET /api/movies` and `GET /api/shows` return multiple home-screen rails in one response by default (`continueWatching`, `nextUp` on shows, `all` / `allPage`, `recent`, `latest`, `popular`). That matches the Lunarr web browse pages and keeps home screens to one round trip.
+
+To fetch a single rail without downloading every other section, pass `rail`:
+
+```text
+GET /api/movies?rail=continueWatching
+GET /api/movies?rail=all&page=2&sort=title&status=all
+GET /api/shows?rail=nextUp
+GET /api/shows?rail=popular
+```
+
+Valid movie rails: `continueWatching`, `all`, `recent`, `latest`, `popular`.
+
+Valid show rails: `continueWatching`, `nextUp`, `all`, `recent`, `latest`, `popular`.
+
+When `rail` is set, the response includes only the requested keys (for example `{ "recent": [...] }` or `{ "all": [...], "allPage": {...} }`). Omit `rail` for the full bundled payload. Invalid `rail` values return `400`.
+
 ### Continue watching
 
 `GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). The web Continue page surfaces all three sections.

@@ -136,4 +136,31 @@ describe("catalog API access", () => {
       all: [],
     });
   });
+
+  test("movie API can return a single browse rail", async () => {
+    await setupCatalog();
+
+    const response = await moviesGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/api/movies?rail=popular"),
+    } as never);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      popular: [{ id: "movie-1", title: "Shared Movie" }],
+    });
+    expect(body).not.toHaveProperty("all");
+    expect(body).not.toHaveProperty("continueWatching");
+  });
+
+  test("movie API rejects invalid browse rails", async () => {
+    await setupCatalog();
+
+    const response = await moviesGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/api/movies?rail=nextUp"),
+    } as never);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining("Invalid rail") });
+  });
 });
