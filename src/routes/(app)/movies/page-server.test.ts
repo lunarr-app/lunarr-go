@@ -211,7 +211,7 @@ describe("movies page server", () => {
           user_id: "user-1",
           media_item_id: "movie-bravo",
           media_file_id: "file-bravo",
-          position_seconds: 45,
+          position_seconds: 90,
           duration_seconds: 100,
           completed: 0,
           updated_at: new Date(nowMs + 1000).toISOString(),
@@ -242,7 +242,7 @@ describe("movies page server", () => {
       id: "movie-bravo",
       title: "Bravo",
       resumeFileId: "file-bravo",
-      progressSeconds: 45,
+      progressSeconds: 90,
       completed: false,
     });
     expect(result.rows.all[0].path).toBeUndefined();
@@ -284,7 +284,7 @@ describe("movies page server", () => {
     expect(result.movies[0]).toMatchObject({
       id: "movie-bravo",
       resumeFileId: "file-bravo",
-      progressSeconds: 45,
+      progressSeconds: 90,
       completed: false,
     });
     expect(result.episodes).toEqual([]);
