@@ -38,12 +38,22 @@ describe("formatMediaDuration", () => {
     expect(formatMediaDuration(125)).toBe("2m 05s");
     expect(formatMediaDuration(3665)).toBe("1h 01m");
   });
+
+  test("floors probed fractional seconds for display", () => {
+    expect(formatMediaDuration(3174.1)).toBe("52m 54s");
+    expect(formatMediaDuration(125.9)).toBe("2m 05s");
+  });
 });
 
 describe("formatClockDuration", () => {
   test("formats playback clock positions", () => {
     expect(formatClockDuration(75)).toBe("1:15");
     expect(formatClockDuration(3665)).toBe("1:01");
+  });
+
+  test("floors probed fractional seconds for display", () => {
+    expect(formatClockDuration(3174.1)).toBe("52:54");
+    expect(formatClockDuration(3665.9)).toBe("1:01");
   });
 });
 
