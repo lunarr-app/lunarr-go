@@ -303,7 +303,7 @@ The `target` query parameter selects the client capability profile. See [Playbac
 | Native  | `target=native`      | VLC, mobile apps, other native players |
 
 - **Web** — uses browser codec hints and user playback preferences.
-- **Cast / AirPlay** — tuned for remote receivers; returns signed `streamUrl` and subtitle URLs with an 8-hour `remoteToken`.
+- **Cast / AirPlay** — tuned for remote receivers; returns signed `streamUrl` and subtitle URLs with a `remoteToken` (8-hour default, configurable).
 - **Native** — always returns a signed direct file stream unless `transcode=1` is set. Ignores `prefer_transcode`.
 
 ### Query parameters
@@ -330,7 +330,7 @@ hlsNative=1
 - `target` — select the playback target profile (see table above).
 - `hevc`, `av1`, `webm`, `vp9`, `vp8`, `opus`, `vorbis`, `hlsFmp4`, `hlsNative` — optional client capability hints for `web`, `cast`, and `airplay`. The Lunarr web player sets these automatically from `video.canPlayType()`. Omit them for `target=native`.
 
-Signed responses include absolute URLs. Re-request playback before `remoteToken` expires after eight hours on long sessions.
+Signed responses include absolute URLs. Re-request playback before `remoteToken` expires on long sessions (default TTL: 8 hours, see `LUNARR_SIGNED_PLAYBACK_TOKEN_TTL_SECONDS` in [Configuration](configuration.md)).
 
 ## Watched State
 

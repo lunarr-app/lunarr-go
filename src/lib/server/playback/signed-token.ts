@@ -2,7 +2,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { appEnv } from "$lib/server/config/env";
 
 export const SIGNED_PLAYBACK_TOKEN_QUERY_PARAM = "remoteToken";
-const SIGNED_PLAYBACK_TOKEN_TTL_SECONDS = 8 * 60 * 60;
 
 export type SignedPlaybackRoute = "direct" | "hls" | "subtitle";
 
@@ -67,7 +66,7 @@ export function createSignedPlaybackToken(input: SignedPlaybackTokenInput) {
     mediaFileId: input.mediaFileId,
     playbackSessionId: input.playbackSessionId,
     subtitleTrackId: input.subtitleTrackId,
-    exp: Math.floor(Date.now() / 1000) + (input.expiresInSeconds ?? SIGNED_PLAYBACK_TOKEN_TTL_SECONDS),
+    exp: Math.floor(Date.now() / 1000) + (input.expiresInSeconds ?? appEnv.LUNARR_SIGNED_PLAYBACK_TOKEN_TTL_SECONDS),
   };
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
   return `${encodedPayload}.${sign(encodedPayload)}`;

@@ -80,9 +80,11 @@ User playback preferences such as `prefer_transcode` do not override `target=nat
 
 ### Signed stream URLs
 
-When playback leaves the browser cookie session, `GET /api/playback/:mediaItemId` returns absolute `streamUrl` and subtitle `src` values with an 8-hour `remoteToken` query parameter. Cast, AirPlay, VLC, and other receivers or native players load media with that token. They do not need Lunarr session cookies for stream, subtitle, or HLS segment requests.
+When playback leaves the browser cookie session, `GET /api/playback/:mediaItemId` returns absolute `streamUrl` and subtitle `src` values with a `remoteToken` query parameter. Cast, AirPlay, VLC, and other receivers or native players load media with that token. They do not need Lunarr session cookies for stream, subtitle, or HLS segment requests.
 
-Authenticate the playback API call with a session cookie or `X-API-Key`. Re-request playback before the token expires if a session runs longer than eight hours.
+Tokens default to 8 hours. Override with `LUNARR_SIGNED_PLAYBACK_TOKEN_TTL_SECONDS` (see [Configuration](configuration.md)).
+
+Authenticate the playback API call with a session cookie or `X-API-Key`. Re-request playback before the token expires on long sessions.
 
 Remote receivers must reach Lunarr by its configured public origin, not only from the browser that opened the player. Use HTTPS in production. Chrome and Edge rely on Google's Cast Web Sender SDK, and secure origins are required for reliable Cast discovery.
 

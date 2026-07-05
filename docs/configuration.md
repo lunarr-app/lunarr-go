@@ -154,3 +154,19 @@ LUNARR_WATCH_WRITE_STABILITY_MS: 1000-300000
 ```
 
 Polling is best-effort and can still miss remote-side cache changes. Manual scans or scheduled rescans remain the source of truth.
+
+## Advanced Playback
+
+Signed `remoteToken` URLs for Cast, AirPlay, and native clients expire after a configurable TTL. The default is 8 hours.
+
+```sh
+LUNARR_SIGNED_PLAYBACK_TOKEN_TTL_SECONDS=28800
+```
+
+Limits:
+
+```text
+LUNARR_SIGNED_PLAYBACK_TOKEN_TTL_SECONDS: 300-604800
+```
+
+Re-request playback before the token expires on sessions longer than the configured TTL.

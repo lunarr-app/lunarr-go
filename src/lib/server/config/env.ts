@@ -63,6 +63,15 @@ const envSchema = z.object({
     (value) => (value === undefined || value === "" ? undefined : value),
     z.coerce.number().int().min(1_000).max(300_000).default(10_000),
   ),
+  LUNARR_SIGNED_PLAYBACK_TOKEN_TTL_SECONDS: z.preprocess(
+    (value) => (value === undefined || value === "" ? undefined : value),
+    z.coerce
+      .number()
+      .int()
+      .min(300)
+      .max(604_800)
+      .default(8 * 60 * 60),
+  ),
 });
 
 export function appEnvDefaultsForEnvironment(env: NodeJS.ProcessEnv) {

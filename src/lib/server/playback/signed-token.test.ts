@@ -28,6 +28,22 @@ describe("signed playback tokens", () => {
     });
   });
 
+  test("defaults token expiry to configured TTL", () => {
+    const token = createSignedPlaybackToken({
+      route: "direct",
+      userId: "user-1",
+      mediaFileId: "file-1",
+    });
+    const payload = verifySignedPlaybackToken(token, {
+      route: "direct",
+      mediaFileId: "file-1",
+    });
+    expect(payload).not.toBeNull();
+    const ttl = payload!.exp - Math.floor(Date.now() / 1000);
+    expect(ttl).toBeGreaterThan(8 * 60 * 60 - 5);
+    expect(ttl).toBeLessThanOrEqual(8 * 60 * 60);
+  });
+
   test("rejects mismatched, expired, and tampered tokens", () => {
     const token = createSignedPlaybackToken({
       route: "direct",

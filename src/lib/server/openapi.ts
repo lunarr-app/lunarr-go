@@ -894,7 +894,7 @@ export const openApiDocument = {
         tags: ["Playback"],
         summary: "Prepare playback data for a media item.",
         description:
-          "Returns playback mode, subtitle tracks, and a signed stream URL when ready. Cast, AirPlay, and native clients receive absolute URLs with an 8-hour remoteToken.",
+          "Returns playback mode, subtitle tracks, and a signed stream URL when ready. Cast, AirPlay, and native clients receive absolute URLs with a remoteToken (8-hour default, configurable via LUNARR_SIGNED_PLAYBACK_TOKEN_TTL_SECONDS).",
         operationId: "getPlayback",
         parameters: [
           pathIdParameter(),
