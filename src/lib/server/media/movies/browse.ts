@@ -22,6 +22,10 @@ const MOVIE_BROWSE_SEARCH_LIKE_EXPRESSIONS = [
   "media_file.basename",
 ] as const;
 
+function mapBrowsableMovie(movie: MovieBrowseRow, progress: ReturnType<typeof summarizeMovieProgress>) {
+  return publicMovieListItem(publicMovieSummary(movie, progress));
+}
+
 export async function movieRows(
   userId: string,
   search?: string,
@@ -177,35 +181,23 @@ export async function movieRows(
       ),
     );
 
+  const loadMovieBrowseProgress = async (movieIds: string[]) => {
+    if (movieIds.length === 0) return summarizeMovieProgress([]);
+
+    const progressRows = await db
+      .selectFrom("watch_progress")
+      .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
+      .where("user_id", "=", userId)
+      .where("media_item_id", "in", movieIds)
+      .orderBy("updated_at", "desc")
+      .execute();
+
+    return summarizeMovieProgress(progressRows);
+  };
+
   const mapPublicMovies = async (rows: MovieBrowseRow[]) => {
-    const movieIds = [...new Set(rows.map((movie) => movie.id))];
-    const progressRows =
-      movieIds.length === 0
-        ? []
-        : await db
-            .selectFrom("watch_progress")
-            .select([
-              "media_item_id",
-              "media_file_id",
-              "position_seconds",
-              "duration_seconds",
-              "completed",
-              "updated_at",
-            ])
-            .where("user_id", "=", userId)
-            .where("media_item_id", "in", movieIds)
-            .orderBy("updated_at", "desc")
-            .execute();
-    const progress = summarizeMovieProgress(progressRows);
-    const mapMovie = (movie: MovieBrowseRow) => {
-      const summary = publicMovieSummary(movie, progress);
-      return {
-        ...summary,
-        sortTitle: movie.sort_title,
-        latestFileCreatedAt: movie.latest_file_created_at,
-      };
-    };
-    return rows.map(mapMovie).map(publicMovieListItem);
+    const progress = await loadMovieBrowseProgress([...new Set(rows.map((movie) => movie.id))]);
+    return rows.map((movie) => mapBrowsableMovie(movie, progress));
   };
 
   const fetchRail = async (rail: MovieBrowseRail): Promise<MovieBrowseRailResponse> => {
@@ -271,33 +263,11 @@ export async function movieRows(
   const movieIds = [
     ...new Set([...allRows, ...continueRows, ...recentRows, ...latestRows, ...popularRows].map((movie) => movie.id)),
   ];
-  const progressRows =
-    movieIds.length === 0
-      ? []
-      : await db
-          .selectFrom("watch_progress")
-          .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
-          .where("user_id", "=", userId)
-          .where("media_item_id", "in", movieIds)
-          .orderBy("updated_at", "desc")
-          .execute();
-
-  const progress = summarizeMovieProgress(progressRows);
-
-  const mapMovie = (movie: MovieBrowseRow) => {
-    const summary = publicMovieSummary(movie, progress);
-    return {
-      ...summary,
-      sortTitle: movie.sort_title,
-      latestFileCreatedAt: movie.latest_file_created_at,
-    };
-  };
-
-  const publicMovie = (movie: ReturnType<typeof mapMovie>) => publicMovieListItem(movie);
+  const progress = await loadMovieBrowseProgress(movieIds);
 
   return {
-    continueWatching: continueRows.map(mapMovie).map(publicMovie),
-    all: allRows.map(mapMovie).map(publicMovie),
+    continueWatching: continueRows.map((movie) => mapBrowsableMovie(movie, progress)),
+    all: allRows.map((movie) => mapBrowsableMovie(movie, progress)),
     allPage: {
       page: currentPage,
       pageSize: cleanPageSize,
@@ -306,8 +276,8 @@ export async function movieRows(
       hasPrevious: currentPage > 1,
       hasNext: currentPage < totalPages,
     },
-    recent: recentRows.map(mapMovie).map(publicMovie),
-    latest: latestRows.map(mapMovie).map(publicMovie),
-    popular: popularRows.map(mapMovie).map(publicMovie),
+    recent: recentRows.map((movie) => mapBrowsableMovie(movie, progress)),
+    latest: latestRows.map((movie) => mapBrowsableMovie(movie, progress)),
+    popular: popularRows.map((movie) => mapBrowsableMovie(movie, progress)),
   } satisfies MovieRowsResponse;
 }

@@ -191,7 +191,7 @@ When `rail` is set, the response includes only the requested keys (for example `
 
 `GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). The web Continue page surfaces all three sections.
 
-When `LUNARR_CONTINUE_MAX_AGE_DAYS` is set, stale progress is omitted from these rails but kept for resume on movie and episode detail pages. See [Configuration](configuration.md#continue-watching).
+When `LUNARR_CONTINUE_MAX_AGE_DAYS` is set, stale progress is omitted from these rails but kept for resume on movie and episode detail pages. Continue rails also ignore accidental starts shorter than 60 seconds. See [Configuration](configuration.md#continue-watching).
 
 ### TV show detail tiers
 

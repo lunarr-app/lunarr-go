@@ -9,23 +9,22 @@ export function setContinueMaxAgeDaysForTests(days: number | undefined) {
   testContinueMaxAgeDays = days;
 }
 
-function continueMaxAgeDays(days?: number): number {
-  if (days !== undefined) return days;
+function continueMaxAgeDays(): number {
   return testContinueMaxAgeDays ?? appEnv.LUNARR_CONTINUE_MAX_AGE_DAYS;
 }
 
-export function continueMaxAgeEnabled(days?: number): boolean {
-  return continueMaxAgeDays(days) > 0;
+export function continueMaxAgeEnabled(): boolean {
+  return continueMaxAgeDays() > 0;
 }
 
-export function isContinueProgressFresh(updatedAt: string, days?: number, now = new Date()): boolean {
-  if (!continueMaxAgeEnabled(days)) return true;
+export function isContinueProgressFresh(updatedAt: string, now = new Date()): boolean {
+  if (!continueMaxAgeEnabled()) return true;
 
-  const cutoffMs = now.getTime() - continueMaxAgeDays(days) * 24 * 60 * 60 * 1000;
+  const cutoffMs = now.getTime() - continueMaxAgeDays() * 24 * 60 * 60 * 1000;
   return new Date(updatedAt).getTime() > cutoffMs;
 }
 
-export function continueMaxAgeCutoffSql(days?: number): RawBuilder<string> {
-  const maxAgeDays = continueMaxAgeDays(days);
+export function continueMaxAgeCutoffSql(): RawBuilder<string> {
+  const maxAgeDays = continueMaxAgeDays();
   return sql<string>`datetime('now', ${`-${maxAgeDays} days`})`;
 }
