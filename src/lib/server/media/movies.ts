@@ -14,6 +14,7 @@ import {
   type MovieBrowseRail,
 } from "./catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "./progress";
+import { continueFreshProgressAndSql, continueMaxAgeEnabled, continueProgressFreshSql } from "./continue-max-age";
 import {
   MOVIE_SIMILARITY_CREW,
   RECOMMENDATION_SEED_LIMIT,
@@ -288,8 +289,10 @@ export async function movieRows(
     withTitleOrder(query.orderBy("media_item.release_date", "desc"));
   const popularOrder = (query: ReturnType<typeof movieSelect>) =>
     withTitleOrder(query.orderBy("media_item.popularity", "desc").orderBy("media_item.vote_average", "desc"));
-  const continueOrder = () =>
-    withTitleOrder(
+  const continueOrder = () => {
+    const freshProgressAndSql = continueFreshProgressAndSql("watch_progress.updated_at");
+
+    return withTitleOrder(
       movieSelect()
         .where((eb) =>
           eb.not(
@@ -311,7 +314,8 @@ export async function movieRows(
               .where("watch_progress.user_id", "=", userId)
               .whereRef("watch_progress.media_item_id", "=", "media_item.id")
               .where(sql<boolean>`watch_progress.completed = 0`)
-              .where("watch_progress.position_seconds", ">", 0),
+              .where("watch_progress.position_seconds", ">", 0)
+              .$if(continueMaxAgeEnabled(), (qb) => qb.where(continueProgressFreshSql("watch_progress.updated_at"))),
           ),
         )
         .orderBy(
@@ -322,10 +326,12 @@ export async function movieRows(
               and watch_progress.media_item_id = media_item.id
               and watch_progress.completed = 0
               and watch_progress.position_seconds > 0
+              ${freshProgressAndSql}
           )`,
           "desc",
         ),
     );
+  };
 
   const mapPublicMovies = async (rows: MovieBrowseRow[]) => {
     const movieIds = [...new Set(rows.map((movie) => movie.id))];

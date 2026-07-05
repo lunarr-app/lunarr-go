@@ -186,3 +186,19 @@ LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS: 0-3650
 ```
 
 `0` omits an expiration on paired keys. Users can revoke paired keys earlier from Profile.
+
+## Continue Watching
+
+In-progress movies and episodes can be hidden from Continue rails when their watch progress has not been updated recently. Progress is kept in the database and resume still works on movie and episode detail pages.
+
+```sh
+LUNARR_CONTINUE_MAX_AGE_DAYS=90
+```
+
+Limits:
+
+```text
+LUNARR_CONTINUE_MAX_AGE_DAYS: 0-3650
+```
+
+`0` disables staleness filtering and keeps the current behavior. When set, stale items are omitted from the Continue page, home-screen `continueWatching` / `nextUp` rails, and `GET /api/continue`.

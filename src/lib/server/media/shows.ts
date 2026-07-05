@@ -15,6 +15,7 @@ import {
   type ShowBrowseRail,
 } from "./catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "./progress";
+import { continueFreshProgressAndSql, continueMaxAgeEnabled, isContinueProgressFresh } from "./continue-max-age";
 import {
   RECOMMENDATION_SEED_LIMIT,
   SHOW_SIMILARITY_CREW,
@@ -355,6 +356,8 @@ async function tvEpisodeProgress(userId: string, episodeIds: string[]) {
 
 async function tvEpisodeRows(userId: string, mode: "continue" | "with-progress", limit = 24) {
   const db = await getDb();
+  const continueFreshProgressSql =
+    mode === "continue" ? continueFreshProgressAndSql("incomplete_progress.updated_at") : sql``;
   const where =
     mode === "continue"
       ? sql`
@@ -372,6 +375,7 @@ async function tvEpisodeRows(userId: string, mode: "continue" | "with-progress",
             and incomplete_progress.media_item_id = episode.id
             and incomplete_progress.completed = 0
             and incomplete_progress.position_seconds > 0
+            ${continueFreshProgressSql}
         )
       `
       : mode === "with-progress"
@@ -396,6 +400,7 @@ async function tvEpisodeRows(userId: string, mode: "continue" | "with-progress",
             and incomplete_progress.media_item_id = episode.id
             and incomplete_progress.completed = 0
             and incomplete_progress.position_seconds > 0
+            ${continueFreshProgressSql}
         ) desc,
         show.sort_title asc,
         episode.season_number asc,
@@ -459,8 +464,19 @@ async function nextUpEpisodeRows(userId: string, limit = 24) {
       })
       .map((episode) => episode.id),
   );
+  const activeShowIds = continueMaxAgeEnabled()
+    ? new Set(
+        rows
+          .filter((episode) => {
+            const latest = progress.latestProgress.get(episode.id);
+            return latest?.updated_at ? isContinueProgressFresh(latest.updated_at) : false;
+          })
+          .map((episode) => episode.show_id),
+      )
+    : null;
   const byShow = new Map<string, EpisodeBrowseRow[]>();
   for (const row of rows) {
+    if (activeShowIds && !activeShowIds.has(row.show_id)) continue;
     const showRows = byShow.get(row.show_id) ?? [];
     showRows.push(row);
     byShow.set(row.show_id, showRows);

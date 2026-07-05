@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
 import { MOVIE_PAGE_SIZE } from "./catalog";
+import { setContinueMaxAgeDaysForTests } from "./continue-max-age";
 import { getMediaFile } from "./files";
 import { getMovieCredits, getMovieDetail, getMovieOverview, movieRows } from "./movies";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
@@ -210,6 +211,7 @@ describe("movieRows", () => {
   });
 
   afterEach(async () => {
+    setContinueMaxAgeDaysForTests(undefined);
     await closeDatabaseForTests();
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -376,6 +378,32 @@ describe("movieRows", () => {
     expect(rows.continueWatching.map((movie) => movie.id)).toEqual([]);
     expect((await movieRows("user-1", "", "watched")).all.map((movie) => movie.id)).toEqual(["movie-a"]);
     expect((await movieRows("user-1", "", "unwatched")).all.map((movie) => movie.id)).toEqual(["movie-b"]);
+  });
+
+  test("hides stale continue watching movies without removing browse progress", async () => {
+    const staleUpdatedAt = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString();
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "movie-b",
+        media_file_id: "file-b",
+        position_seconds: 45,
+        duration_seconds: 100,
+        completed: 0,
+        updated_at: staleUpdatedAt,
+      })
+      .execute();
+
+    setContinueMaxAgeDaysForTests(90);
+    const rows = await movieRows("user-1");
+
+    expect(rows.continueWatching.map((movie) => movie.id)).toEqual([]);
+    expect(rows.all.find((movie) => movie.id === "movie-b")).toMatchObject({
+      resumeFileId: "file-b",
+      progressSeconds: 45,
+      completed: false,
+    });
   });
 
   test("limits shared libraries to selected users while admins retain access", async () => {

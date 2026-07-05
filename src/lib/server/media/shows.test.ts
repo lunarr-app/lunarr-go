@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
 import { SHOW_PAGE_SIZE } from "./catalog";
+import { setContinueMaxAgeDaysForTests } from "./continue-max-age";
 import {
   getShowCredits,
   getShowDetail,
@@ -152,6 +153,7 @@ describe("showRows", () => {
   });
 
   afterEach(async () => {
+    setContinueMaxAgeDaysForTests(undefined);
     await closeDatabaseForTests();
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -501,5 +503,123 @@ describe("showRows", () => {
     expect(nextUpOnly.nextUp?.map((episode) => episode.id)).toEqual(["episode-3"]);
     expect(nextUpOnly).not.toHaveProperty("all");
     expect(nextUpOnly).not.toHaveProperty("continueWatching");
+  });
+
+  test("hides stale continue watching and next up without removing season progress", async () => {
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+    const staleUpdatedAt = new Date(nowMs - 100 * 24 * 60 * 60 * 1000).toISOString();
+
+    await db
+      .insertInto("media_item")
+      .values([
+        {
+          id: "episode-2",
+          kind: "episode",
+          title: "The Big Empty",
+          sort_title: "s001e0002",
+          season_number: 1,
+          episode_number: 2,
+          overview: "The crew keeps moving.",
+          runtime_seconds: 2700,
+          poster_path: "/still-2.jpg",
+          release_date: "2015-12-15",
+          provider: "tmdb",
+          provider_id: "episode-2",
+          parent_id: "season-1",
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "episode-3",
+          kind: "episode",
+          title: "Remember the Cant",
+          sort_title: "s001e0003",
+          season_number: 1,
+          episode_number: 3,
+          overview: "The next unwatched episode.",
+          runtime_seconds: 2700,
+          poster_path: "/still-3.jpg",
+          release_date: "2015-12-16",
+          provider: "tmdb",
+          provider_id: "episode-3",
+          parent_id: "season-1",
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .execute();
+    await db
+      .insertInto("media_file")
+      .values([
+        {
+          id: "file-2",
+          library_id: "library-1",
+          media_item_id: "episode-2",
+          path: path.join(tempDir, "The Expanse/Season 01/The Expanse - S01E02.mkv"),
+          basename: "The Expanse - S01E02.mkv",
+          extension: ".mkv",
+          size_bytes: 10,
+          mtime_ms: nowMs,
+          duration_seconds: null,
+          video_codec: null,
+          audio_codec: null,
+          container: "mkv",
+          created_at: new Date(nowMs + 1000).toISOString(),
+          updated_at: now,
+        },
+        {
+          id: "file-3",
+          library_id: "library-1",
+          media_item_id: "episode-3",
+          path: path.join(tempDir, "The Expanse/Season 01/The Expanse - S01E03.mkv"),
+          basename: "The Expanse - S01E03.mkv",
+          extension: ".mkv",
+          size_bytes: 10,
+          mtime_ms: nowMs,
+          duration_seconds: null,
+          video_codec: null,
+          audio_codec: null,
+          container: "mkv",
+          created_at: new Date(nowMs + 2000).toISOString(),
+          updated_at: now,
+        },
+      ])
+      .execute();
+    await db
+      .insertInto("watch_progress")
+      .values([
+        {
+          user_id: "user-1",
+          media_item_id: "episode-1",
+          media_file_id: "file-1",
+          position_seconds: 2700,
+          duration_seconds: 2700,
+          completed: 1,
+          updated_at: staleUpdatedAt,
+        },
+        {
+          user_id: "user-1",
+          media_item_id: "episode-2",
+          media_file_id: "file-2",
+          position_seconds: 120,
+          duration_seconds: 2700,
+          completed: 0,
+          updated_at: staleUpdatedAt,
+        },
+      ])
+      .execute();
+
+    setContinueMaxAgeDaysForTests(90);
+    const rows = await tvRows("user-1");
+
+    expect(rows.continueWatching).toEqual([]);
+    expect(rows.nextUp).toEqual([]);
+
+    const season = await getShowSeasonDetail("show-1", "season-1", "user-1");
+    expect(season?.season.episodes.find((episode) => episode.id === "episode-2")).toMatchObject({
+      progressSeconds: 120,
+      completed: false,
+    });
   });
 });
