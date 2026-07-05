@@ -2,7 +2,7 @@ import { requireJsonUser } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { DiscoverShowsResponse } from "$lib/server/api/types";
 import { normalizePage } from "$lib/server/media/catalog";
-import { listBecauseYouWatchedShows } from "$lib/server/media/shows";
+import { listBecauseYouWatchedShows } from "$lib/server/media/shows/discover";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {

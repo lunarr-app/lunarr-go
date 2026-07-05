@@ -1,5 +1,5 @@
 import { normalizeMovieSort, normalizeMovieStatusFilter, normalizePage } from "$lib/server/media/catalog";
-import { movieRows } from "$lib/server/media/movies";
+import { movieRows } from "$lib/server/media/movies/browse";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

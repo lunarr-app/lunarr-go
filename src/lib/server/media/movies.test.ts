@@ -6,7 +6,8 @@ import type { Kysely } from "kysely";
 import { MOVIE_PAGE_SIZE } from "./catalog";
 import { setContinueMaxAgeDaysForTests } from "./continue-max-age";
 import { getMediaFile } from "./files";
-import { getMovieCredits, getMovieDetail, getMovieOverview, movieRows } from "./movies";
+import { movieRows } from "./movies/browse";
+import { getMovieCredits, getMovieDetail, getMovieOverview } from "./movies/detail";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 

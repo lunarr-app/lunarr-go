@@ -3,8 +3,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { getSimilarMovies, listBecauseYouWatchedMovies } from "./movies";
-import { getSimilarShows, listBecauseYouWatchedShows } from "./shows";
+import { getSimilarMovies, listBecauseYouWatchedMovies } from "./movies/discover";
+import { getSimilarShows, listBecauseYouWatchedShows } from "./shows/discover";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 

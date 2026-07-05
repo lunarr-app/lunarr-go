@@ -9,8 +9,8 @@ import { SHARE_LIST_RECENTLY_EXPIRED_MS, SHARE_PAGE_SIZE, type ShareListStatus }
 import { catalogPageInfo, catalogPageSize } from "../media/catalog";
 import { randomBytes } from "node:crypto";
 import { getDb } from "../db";
-import { getMovieOverview } from "../media/movies";
-import { getShowOverview, getShowSeasonDetail } from "../media/shows";
+import { getMovieOverview } from "../media/movies/detail";
+import { getShowOverview, getShowSeasonDetail } from "../media/shows/detail";
 import { nowIso } from "../time";
 import type { CreateShareInput } from "./input";
 import {

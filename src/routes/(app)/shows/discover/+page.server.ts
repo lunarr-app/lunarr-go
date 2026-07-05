@@ -1,5 +1,5 @@
 import { normalizePage } from "$lib/server/media/catalog";
-import { listBecauseYouWatchedShows } from "$lib/server/media/shows";
+import { listBecauseYouWatchedShows } from "$lib/server/media/shows/discover";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

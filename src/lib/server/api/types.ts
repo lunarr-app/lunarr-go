@@ -8,12 +8,8 @@ import type { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
 import type { createManagedUser, listManagedUsers } from "$lib/server/auth/users-admin";
 import type { RefreshMovieMetadataResult } from "$lib/server/metadata/movies";
 import type { RefreshTvShowMetadataResult } from "$lib/server/metadata/tv";
-import type {
-  getMovieCredits,
-  getMovieDetail,
-  getMovieOverview,
-  listBecauseYouWatchedMovies,
-} from "$lib/server/media/movies";
+import type { getMovieCredits, getMovieDetail, getMovieOverview } from "$lib/server/media/movies/detail";
+import type { listBecauseYouWatchedMovies } from "$lib/server/media/movies/discover";
 import type { getPersonDetail } from "$lib/server/media/people";
 import type { loadSimilarMovies, loadSimilarShows } from "$lib/server/media/similar-page-load";
 import type {
@@ -22,8 +18,8 @@ import type {
   getShowDetail,
   getShowOverview,
   getShowSeasonDetail,
-  listBecauseYouWatchedShows,
-} from "$lib/server/media/shows";
+} from "$lib/server/media/shows/detail";
+import type { listBecauseYouWatchedShows } from "$lib/server/media/shows/discover";
 import type {
   createLibrary,
   getLibrary,

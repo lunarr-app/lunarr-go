@@ -1,5 +1,5 @@
 import { showSeasonHref, showSeasonKey } from "$lib/media/seasons";
-import { getShowSeasonDetail } from "$lib/server/media/shows";
+import { getShowSeasonDetail } from "$lib/server/media/shows/detail";
 import { markWatched } from "$lib/server/playback";
 import { markSeasonWatched } from "$lib/server/playback/commands";
 import { error, fail, redirect } from "@sveltejs/kit";

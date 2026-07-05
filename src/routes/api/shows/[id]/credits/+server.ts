@@ -1,7 +1,7 @@
 import { requireJsonUser } from "$lib/server/api";
 import { apiError, apiJson } from "$lib/server/api/json";
 import type { ShowCreditsResponse } from "$lib/server/api/types";
-import { getShowCredits } from "$lib/server/media/shows";
+import { getShowCredits } from "$lib/server/media/shows/detail";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {

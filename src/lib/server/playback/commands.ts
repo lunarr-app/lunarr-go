@@ -1,4 +1,4 @@
-import { getShowSeasonDetail } from "../media/shows";
+import { getShowSeasonDetail } from "../media/shows/detail";
 import { markWatched } from "./index";
 
 export async function markSeasonWatched(input: {

@@ -5,7 +5,7 @@ import {
   normalizePage,
   parseMovieBrowseRails,
 } from "$lib/server/media/catalog";
-import { movieRows } from "$lib/server/media/movies";
+import { movieRows } from "$lib/server/media/movies/browse";
 import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { MovieBrowseRailResponse, MovieRowsResponse } from "$lib/server/api/types";

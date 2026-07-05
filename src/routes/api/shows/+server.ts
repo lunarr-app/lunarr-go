@@ -1,5 +1,5 @@
 import { SHOW_PAGE_SIZE, normalizePage, normalizeShowSort, parseShowBrowseRails } from "$lib/server/media/catalog";
-import { tvRows } from "$lib/server/media/shows";
+import { tvRows } from "$lib/server/media/shows/episodes";
 import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { ShowBrowseRailResponse, ShowRowsResponse } from "$lib/server/api/types";

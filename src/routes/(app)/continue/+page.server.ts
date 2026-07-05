@@ -1,5 +1,5 @@
-import { movieRows } from "$lib/server/media/movies";
-import { tvRows } from "$lib/server/media/shows";
+import { movieRows } from "$lib/server/media/movies/browse";
+import { tvRows } from "$lib/server/media/shows/episodes";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {

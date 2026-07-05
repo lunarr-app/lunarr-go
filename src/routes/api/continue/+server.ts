@@ -1,8 +1,8 @@
 import { requireJsonUser } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
 import type { ContinueWatchingResponse } from "$lib/server/api/types";
-import { movieRows } from "$lib/server/media/movies";
-import { tvRows } from "$lib/server/media/shows";
+import { movieRows } from "$lib/server/media/movies/browse";
+import { tvRows } from "$lib/server/media/shows/episodes";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals }) => {

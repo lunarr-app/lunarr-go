@@ -5,15 +5,15 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { SHOW_PAGE_SIZE } from "./catalog";
 import { setContinueMaxAgeDaysForTests } from "./continue-max-age";
+import { showRows } from "./shows/browse";
 import {
   getShowCredits,
   getShowDetail,
   getShowOverview,
   getShowResumeEpisode,
   getShowSeasonDetail,
-  showRows,
-  tvRows,
-} from "./shows";
+} from "./shows/detail";
+import { tvRows } from "./shows/episodes";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 

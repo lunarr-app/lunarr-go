@@ -3,7 +3,7 @@ import { getDb } from "../db";
 import { tmdbImageUrl } from "$lib/media/images";
 import { accessibleLibrarySql, catalogPageInfo, MOVIE_PAGE_SIZE, normalizePage } from "./catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "./progress";
-import { publicShowSummary } from "./shows";
+import { publicShowSummary } from "./shows/browse";
 
 export const PERSON_FILMOGRAPHY_PAGE_SIZE = MOVIE_PAGE_SIZE;
 
