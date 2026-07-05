@@ -2,11 +2,13 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { GET as similarMoviesGet } from "./movies/[id]/similar/+server";
-import { GET as similarShowsGet } from "./shows/[id]/similar/+server";
+import type { Database } from "$lib/server/db/schema";
+import { GET as discoverMoviesGet } from "./movies/discover/+server";
+import { GET as discoverShowsGet } from "./shows/discover/+server";
 
-describe("similar catalog API", () => {
+describe("discover catalog API", () => {
   let tempDir: string | undefined;
 
   afterEach(async () => {
@@ -15,14 +17,7 @@ describe("similar catalog API", () => {
     tempDir = undefined;
   });
 
-  test("returns ranked similar movies with pagination metadata", async () => {
-    tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-similar-api-"));
-    await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
-    await migrateDatabase();
-    const db = await getDb();
-    const nowMs = Date.now();
-    const now = new Date(nowMs).toISOString();
-
+  async function seedMovieDiscoverLibrary(db: Kysely<Database>, root: string, now: string, nowMs: number) {
     await db
       .insertInto("user")
       .values({
@@ -42,7 +37,7 @@ describe("similar catalog API", () => {
         id: "library-1",
         name: "Movies",
         kind: "movie",
-        path: path.join(tempDir, "movies"),
+        path: path.join(root, "movies"),
         access_mode: "all",
         created_at: now,
         updated_at: now,
@@ -98,7 +93,7 @@ describe("similar catalog API", () => {
           id: "file-1",
           library_id: "library-1",
           media_item_id: "movie-1",
-          path: path.join(tempDir, "Seed.mp4"),
+          path: path.join(root, "Seed.mp4"),
           basename: "Seed.mp4",
           extension: ".mp4",
           size_bytes: 10,
@@ -114,7 +109,7 @@ describe("similar catalog API", () => {
           id: "file-2",
           library_id: "library-1",
           media_item_id: "movie-2",
-          path: path.join(tempDir, "Strong.mp4"),
+          path: path.join(root, "Strong.mp4"),
           basename: "Strong.mp4",
           extension: ".mp4",
           size_bytes: 10,
@@ -130,7 +125,7 @@ describe("similar catalog API", () => {
           id: "file-3",
           library_id: "library-1",
           media_item_id: "movie-3",
-          path: path.join(tempDir, "Weak.mp4"),
+          path: path.join(root, "Weak.mp4"),
           basename: "Weak.mp4",
           extension: ".mp4",
           size_bytes: 10,
@@ -205,68 +200,21 @@ describe("similar catalog API", () => {
         },
       ])
       .execute();
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "movie-1",
+        media_file_id: "file-1",
+        position_seconds: 120,
+        duration_seconds: 6000,
+        completed: 0,
+        updated_at: now,
+      })
+      .execute();
+  }
 
-    const response = await similarMoviesGet({
-      params: { id: "movie-1" },
-      locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/api/movies/movie-1/similar"),
-    } as never);
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      movie: { id: "movie-1", title: "Seed" },
-      movies: [{ id: "movie-2" }, { id: "movie-3" }],
-      page: {
-        page: 1,
-        pageSize: 24,
-        total: 2,
-        hasPrevious: false,
-        hasNext: false,
-      },
-    });
-
-    const limited = await similarMoviesGet({
-      params: { id: "movie-1" },
-      locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/api/movies/movie-1/similar?limit=1"),
-    } as never);
-
-    expect(limited.status).toBe(200);
-    expect(await limited.json()).toMatchObject({
-      movies: [{ id: "movie-2" }],
-      page: {
-        page: 1,
-        pageSize: 1,
-        total: 2,
-        totalPages: 2,
-        hasNext: true,
-      },
-    });
-  });
-
-  test("returns 404 when the source movie is inaccessible", async () => {
-    tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-similar-api-missing-"));
-    await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
-    await migrateDatabase();
-
-    const response = await similarMoviesGet({
-      params: { id: "missing-movie" },
-      locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/api/movies/missing-movie/similar"),
-    } as never);
-
-    expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "Movie not found." });
-  });
-
-  test("returns ranked similar shows with pagination metadata", async () => {
-    tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-similar-shows-api-"));
-    await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
-    await migrateDatabase();
-    const db = await getDb();
-    const nowMs = Date.now();
-    const now = new Date(nowMs).toISOString();
-
+  async function seedShowDiscoverLibrary(db: Kysely<Database>, root: string, now: string, nowMs: number) {
     await db
       .insertInto("user")
       .values({
@@ -286,7 +234,7 @@ describe("similar catalog API", () => {
         id: "library-tv",
         name: "TV",
         kind: "tv",
-        path: path.join(tempDir, "tv"),
+        path: path.join(root, "tv"),
         access_mode: "all",
         created_at: now,
         updated_at: now,
@@ -417,7 +365,7 @@ describe("similar catalog API", () => {
           id: "tv-file-1",
           library_id: "library-tv",
           media_item_id: "ep-1",
-          path: path.join(tempDir, "seed.mkv"),
+          path: path.join(root, "seed.mkv"),
           basename: "seed.mkv",
           extension: ".mkv",
           size_bytes: 10,
@@ -433,7 +381,7 @@ describe("similar catalog API", () => {
           id: "tv-file-2",
           library_id: "library-tv",
           media_item_id: "ep-2",
-          path: path.join(tempDir, "strong.mkv"),
+          path: path.join(root, "strong.mkv"),
           basename: "strong.mkv",
           extension: ".mkv",
           size_bytes: 10,
@@ -449,7 +397,7 @@ describe("similar catalog API", () => {
           id: "tv-file-3",
           library_id: "library-tv",
           media_item_id: "ep-3",
-          path: path.join(tempDir, "weak.mkv"),
+          path: path.join(root, "weak.mkv"),
           basename: "weak.mkv",
           extension: ".mkv",
           size_bytes: 10,
@@ -524,16 +472,80 @@ describe("similar catalog API", () => {
         },
       ])
       .execute();
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "ep-1",
+        media_file_id: "tv-file-1",
+        position_seconds: 120,
+        duration_seconds: 6000,
+        completed: 0,
+        updated_at: now,
+      })
+      .execute();
+  }
 
-    const response = await similarShowsGet({
-      params: { id: "show-1" },
+  test("returns personalized movie recommendations with pagination metadata", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-discover-movies-api-"));
+    await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
+    await migrateDatabase();
+    const db = await getDb();
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+    await seedMovieDiscoverLibrary(db, tempDir, now, nowMs);
+
+    const response = await discoverMoviesGet({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/api/shows/show-1/similar"),
+      url: new URL("http://localhost/api/movies/discover"),
     } as never);
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
-      show: { id: "show-1", title: "Seed Show" },
+      movies: [{ id: "movie-2" }, { id: "movie-3" }],
+      page: {
+        page: 1,
+        pageSize: 24,
+        total: 2,
+        hasPrevious: false,
+        hasNext: false,
+      },
+    });
+
+    const limited = await discoverMoviesGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/api/movies/discover?limit=1"),
+    } as never);
+
+    expect(limited.status).toBe(200);
+    expect(await limited.json()).toMatchObject({
+      movies: [{ id: "movie-2" }],
+      page: {
+        page: 1,
+        pageSize: 1,
+        total: 2,
+        totalPages: 2,
+        hasNext: true,
+      },
+    });
+  });
+
+  test("returns personalized show recommendations with pagination metadata", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-discover-shows-api-"));
+    await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
+    await migrateDatabase();
+    const db = await getDb();
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+    await seedShowDiscoverLibrary(db, tempDir, now, nowMs);
+
+    const response = await discoverShowsGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/api/shows/discover"),
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
       shows: [{ id: "show-2" }, { id: "show-3" }],
       page: {
         page: 1,
@@ -544,10 +556,9 @@ describe("similar catalog API", () => {
       },
     });
 
-    const limited = await similarShowsGet({
-      params: { id: "show-1" },
+    const limited = await discoverShowsGet({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/api/shows/show-1/similar?limit=1"),
+      url: new URL("http://localhost/api/shows/discover?limit=1"),
     } as never);
 
     expect(limited.status).toBe(200);
@@ -561,20 +572,5 @@ describe("similar catalog API", () => {
         hasNext: true,
       },
     });
-  });
-
-  test("returns 404 when the source show is inaccessible", async () => {
-    tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-similar-shows-api-missing-"));
-    await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
-    await migrateDatabase();
-
-    const response = await similarShowsGet({
-      params: { id: "missing-show" },
-      locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/api/shows/missing-show/similar"),
-    } as never);
-
-    expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "Show not found." });
   });
 });
