@@ -96,7 +96,8 @@ describe("device pairing API", () => {
     const before = Date.now();
     expect(approved.apiKey.expiresAt).toBeTruthy();
     const approvedExpiresAt = Date.parse(approved.apiKey.expiresAt);
-    expect(approvedExpiresAt).toBeGreaterThanOrEqual(before + devicePairingApiKeyExpiresInSeconds() * 1000 - 5000);
+    const expiresInSeconds = devicePairingApiKeyExpiresInSeconds(730);
+    expect(approvedExpiresAt).toBeGreaterThanOrEqual(before + (expiresInSeconds ?? 0) * 1000 - 5000);
 
     const db = await getDb();
     const apiKeyRow = await db
