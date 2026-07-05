@@ -19,7 +19,7 @@ https://lunarr.example.com
 
 `LUNARR_DATA_DIR`
 
-Persistent app data directory. Lunarr stores the SQLite database at `LUNARR_DATA_DIR/lunarr.db` and temporary playback artifacts under `LUNARR_DATA_DIR/playback-sessions`.
+Persistent app data directory. Lunarr stores the SQLite database at `LUNARR_DATA_DIR/lunarr.db`, per-session HLS playlists under `LUNARR_DATA_DIR/playback-sessions`, and shared encoded HLS segments under `LUNARR_DATA_DIR/playback-cache`.
 
 ## Local Development
 
@@ -134,7 +134,7 @@ docker run --rm \
 
 ## Watcher Environment
 
-Local libraries use native file events by default. For remote or mounted local libraries where native file events are unreliable, enable conservative watcher polling:
+Local libraries use native file events by default. For remote or mounted local libraries where native file events are unreliable, enable conservative watcher polling. The values below are example tuning for a slow network mount (defaults are lower when omitted):
 
 ```sh
 LUNARR_WATCH_USE_POLLING=true

@@ -9,7 +9,7 @@ Lunarr is a self-hosted media server for movie and TV libraries on local disks, 
 - Local, SFTP, and WebDAV libraries with TMDb metadata, continue watching, similar titles, and personalized because-you-watched recommendations
 - Direct play or on-the-fly HLS, Chromecast and AirPlay
 - Sidecar subtitles, FFmpeg transcoding, optional hardware acceleration
-- API keys and OpenAPI at `/api/openapi.json`
+- TV and mobile device pairing at `/link-device`, guest share links, API keys, and OpenAPI at `/api/openapi.json`
 
 ## Quick Start With Docker
 
@@ -83,6 +83,7 @@ bun run build
 bun run test
 bun run verify:ffmpeg
 bun run verify:nodeav
+bun run verify:runtime
 bun run smoke:transcode
 ```
 
@@ -97,6 +98,6 @@ bun run verify:tmdb
 - The first registered user becomes admin.
 - Later signup is disabled by default unless an admin enables it in Settings.
 - `AUTH_SECRET` must stay stable between restarts.
-- `LUNARR_DATA_DIR` stores the SQLite database and temporary playback artifacts, keep it on persistent storage.
+- `LUNARR_DATA_DIR` stores the SQLite database, per-session HLS playlists, and shared HLS cache segments. Keep it on persistent storage.
 - Admins can share each library with all users or only selected regular users.
 - Raw library paths, scan errors, jobs, users, and settings are admin-only.

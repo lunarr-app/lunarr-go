@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added optional Continue staleness filtering with `LUNARR_CONTINUE_MAX_AGE_DAYS`, hiding idle in-progress items from Continue rails while keeping resume on detail pages.
+- Continue rails now ignore accidental starts shorter than 60 seconds.
+
+### Changed
+
+- Documented Continue filtering for browse rails, transcoding admin settings, and `playback-cache` storage layout.
+
 ## 0.6.0 - 2026-07-04
 
 ### Added

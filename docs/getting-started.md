@@ -8,6 +8,8 @@ Open the configured `ORIGIN` in a browser. On a new install, Lunarr redirects to
 
 Later signup is disabled by default. An admin can enable it from Settings.
 
+TV and mobile apps can pair without copying a long API key. Open **Link a device** at `/link-device` to approve a code shown on the device, or scan the QR code from the pairing flow. See [API device pairing](api.md#device-pairing) for the JSON endpoints.
+
 ## Configure TMDb
 
 Lunarr includes a bundled public TMDb fallback token so metadata can work without immediate setup. To use your own credentials, open Settings and save either a TMDb access token or API key.

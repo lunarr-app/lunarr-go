@@ -116,26 +116,6 @@ Playback preference body:
 
 Supported preferences and language values are normalized by the server.
 
-Transcoding settings accept the combined temporary playback storage limit, encode-ahead window, and shared cache TTL:
-
-```json
-{
-  "transcodingEnabled": true,
-  "hardwareAcceleration": "off",
-  "hardwareAccelerationRequired": false,
-  "transcodeQualityPreset": "auto",
-  "playbackSessionArtifactMaxBytes": 21474836480,
-  "encodeAheadSegmentCount": 4,
-  "playbackCacheTtlHours": 24
-}
-```
-
-`playbackSessionArtifactMaxBytes` applies to both per-session virtual playlists under `playback-sessions/` and shared encoded segments under `playback-cache/`. Allowed limits are returned by `GET /api/settings` as `playbackSessionArtifactMaxBytesOptions`.
-
-`encodeAheadSegmentCount` bounds how many HLS segments FFmpeg encodes beyond the requested segment during request-driven playback. `playbackCacheTtlHours` controls how long idle, unreferenced shared cache entries remain before TTL eviction.
-
-`GET /api/settings` also returns `status.playbackCacheEntries`, `status.playbackCacheBytes`, `status.playbackCacheActiveRefs`, and `status.playbackCacheIdleEntries` for the shared HLS segment cache.
-
 ## Catalog
 
 ```http
@@ -191,7 +171,9 @@ When `rail` is set, the response includes only the requested keys (for example `
 
 `GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). The web Continue page surfaces all three sections.
 
-When `LUNARR_CONTINUE_MAX_AGE_DAYS` is set, stale progress is omitted from these rails but kept for resume on movie and episode detail pages. `continueWatching` filters per title, and `nextUp` drops a show when no episode has recent progress. Continue rails also ignore accidental starts shorter than 60 seconds. See [Configuration](configuration.md#continue-watching).
+The same Continue filters also apply to `continueWatching` and `nextUp` on `GET /api/movies` and `GET /api/shows` (including `?rail=continueWatching` and `?rail=nextUp`).
+
+When `LUNARR_CONTINUE_MAX_AGE_DAYS` is set, stale progress is omitted from these rails but kept for resume on movie and episode detail pages. `continueWatching` filters per title, and `nextUp` drops a show when no episode has recent progress. Continue rails also ignore accidental starts shorter than 60 seconds. Browse `all` rails and detail pages are not filtered. See [Configuration](configuration.md#continue-watching).
 
 ### TV show detail tiers
 
@@ -469,6 +451,26 @@ Update role body:
   "role": "admin"
 }
 ```
+
+`GET /api/settings` returns server status, registration settings, metadata credentials state, and transcoding settings. `GET /api/settings` also returns `status.playbackCacheEntries`, `status.playbackCacheBytes`, `status.playbackCacheActiveRefs`, and `status.playbackCacheIdleEntries` for the shared HLS segment cache.
+
+Transcoding settings body for `PUT /api/settings/transcoding`:
+
+```json
+{
+  "transcodingEnabled": true,
+  "hardwareAcceleration": "off",
+  "hardwareAccelerationRequired": false,
+  "transcodeQualityPreset": "auto",
+  "playbackSessionArtifactMaxBytes": 21474836480,
+  "encodeAheadSegmentCount": 4,
+  "playbackCacheTtlHours": 24
+}
+```
+
+`playbackSessionArtifactMaxBytes` applies to both per-session virtual playlists under `playback-sessions/` and shared encoded segments under `playback-cache/`. Allowed limits are returned by `GET /api/settings` as `playbackSessionArtifactMaxBytesOptions`.
+
+`encodeAheadSegmentCount` bounds how many HLS segments FFmpeg encodes beyond the requested segment during request-driven playback. `playbackCacheTtlHours` controls how long idle, unreferenced shared cache entries remain before TTL eviction.
 
 `GET /api/jobs` returns recent scan jobs, playback sessions, and summary counts. Each scan job row includes `errors_count`, but error rows are not embedded in that response.
 
