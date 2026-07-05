@@ -1,3 +1,8 @@
+export type DevicePairingApiKeyExpirySettings = {
+  neverExpires: boolean;
+  label: string;
+};
+
 export function formatDevicePairingApiKeyExpiryLabel(days: number): string {
   if (days >= 365 && days % 365 === 0) {
     const years = days / 365;

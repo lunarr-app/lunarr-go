@@ -1,6 +1,6 @@
 <script lang="ts">
   import { DEVICE_PAIRING_CODE_EXPIRY_MINUTES } from "$lib/device-pairing/constants";
-  import type { DevicePairingApiKeyExpirySettings } from "$lib/device-pairing/expiry-settings";
+  import type { DevicePairingApiKeyExpirySettings } from "$lib/device-pairing/expiry-label";
   import { formatUserCode, normalizeUserCode } from "$lib/device-pairing/format";
   import { Link2 } from "@lucide/svelte";
 

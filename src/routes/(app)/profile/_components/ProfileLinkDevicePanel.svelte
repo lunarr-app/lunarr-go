@@ -1,7 +1,7 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { DEVICE_PAIRING_CODE_EXPIRY_MINUTES } from "$lib/device-pairing/constants";
-  import type { DevicePairingApiKeyExpirySettings } from "$lib/device-pairing/expiry-settings";
+  import type { DevicePairingApiKeyExpirySettings } from "$lib/device-pairing/expiry-label";
   import { Link2, Tv } from "@lucide/svelte";
 
   let {
