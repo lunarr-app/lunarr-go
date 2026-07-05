@@ -189,9 +189,9 @@ LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS: 0-3650
 
 ## Continue Watching
 
-In-progress movies and episodes can be hidden from Continue rails when their watch progress has not been updated recently. Progress is kept in the database and resume still works on movie and episode detail pages.
+In-progress movies and episodes can be hidden from Continue rails when their watch progress has not been updated recently. Progress is kept in the database and resume still works on movie and episode detail pages, browse lists, and season views.
 
-Continue rails also ignore very short accidental starts: items need at least 60 seconds of watch progress before they appear in `continueWatching` or affect `nextUp`.
+Continue rails also ignore very short accidental starts: items need at least 60 seconds of watch progress before they appear in `continueWatching`. For `nextUp`, only progress at or above 60 seconds counts as "in progress" (so a 5-second accidental open does not skip the episode from next up).
 
 ```sh
 LUNARR_CONTINUE_MAX_AGE_DAYS=90
@@ -203,4 +203,11 @@ Limits:
 LUNARR_CONTINUE_MAX_AGE_DAYS: 0-3650
 ```
 
-`0` disables staleness filtering and keeps the current behavior. When set, stale items are omitted from the Continue page, home-screen `continueWatching` / `nextUp` rails, and `GET /api/continue`.
+`0` disables staleness filtering. When set, staleness is based on each row's `watch_progress.updated_at` timestamp (last playback save or watched-state change).
+
+| Rail                                     | Staleness rule                                                                                                  |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `continueWatching` (movies and episodes) | Hide the title when its own in-progress row is older than the window (and below 60 seconds is already ignored). |
+| `nextUp`                                 | Hide the whole show when **no** episode on that show has progress updated within the window.                    |
+
+Affected surfaces: the Continue page, home-screen `continueWatching` / `nextUp` rails, and `GET /api/continue`. Browse `all` rails and detail pages are not filtered.
