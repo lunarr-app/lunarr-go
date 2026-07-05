@@ -1,21 +1,27 @@
 import type { ShowBrowseRailResponse, ShowBrowseRowsResponse, ShowRowsResponse } from "$lib/media/types";
-import { sql } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { resolveShowSeason } from "$lib/media/seasons";
 import { getDb } from "../db";
+import type { Database } from "../db/schema";
 import { tmdbImageUrl } from "$lib/media/images";
 import { TV_SHOW_CREATOR_JOBS } from "../metadata/show-creators";
 import {
   SHOW_PAGE_SIZE,
   accessibleLibrarySql,
+  browseMatchesSearchSql,
   catalogPageInfo,
   emptyCatalogPage,
   normalizePage,
-  searchLikePattern,
   type ShowSort,
   type ShowBrowseRail,
 } from "./catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "./progress";
-import { continueFreshProgressAndSql, continueMaxAgeEnabled, isContinueProgressFresh } from "./continue-max-age";
+import {
+  continueFreshProgressAndSql,
+  continueMaxAgeEnabled,
+  continueProgressFreshSql,
+  isContinueProgressFresh,
+} from "./continue-max-age";
 import {
   RECOMMENDATION_SEED_LIMIT,
   SHOW_SIMILARITY_CREW,
@@ -26,6 +32,14 @@ import {
   rankIdsByScore,
 } from "./similarity";
 import type { EpisodeBrowseRow, ShowBrowseRow } from "./types";
+
+const SHOW_BROWSE_SEARCH_LIKE_EXPRESSIONS = [
+  "show.title",
+  "coalesce(show.original_title, '')",
+  "show.sort_title",
+  "episode.title",
+  "media_file.basename",
+] as const;
 
 async function filterAccessibleShowIds(userId: string, ids: string[]) {
   if (ids.length === 0) return [];
@@ -72,15 +86,18 @@ async function fetchRecentShowSeeds(userId: string, limit = RECOMMENDATION_SEED_
 
 async function showsWithCompletedEpisodeForUser(userId: string) {
   const db = await getDb();
-  const rows = await sql<{ show_id: string }>`
-    select distinct progressed_season.parent_id as show_id
-    from watch_progress
-    inner join media_item episode on episode.id = watch_progress.media_item_id and episode.kind = 'episode'
-    inner join media_item progressed_season on progressed_season.id = episode.parent_id and progressed_season.kind = 'season'
-    where watch_progress.user_id = ${userId}
-      and watch_progress.completed = 1
-  `.execute(db);
-  return new Set(rows.rows.map((row) => row.show_id));
+  const rows = await db
+    .selectFrom("watch_progress")
+    .innerJoin("media_item as episode", "episode.id", "watch_progress.media_item_id")
+    .innerJoin("media_item as progressed_season", "progressed_season.id", "episode.parent_id")
+    .select(sql<string>`progressed_season.parent_id`.as("show_id"))
+    .where("watch_progress.user_id", "=", userId)
+    .where("episode.kind", "=", "episode")
+    .where("progressed_season.kind", "=", "season")
+    .where(sql<boolean>`watch_progress.completed = 1`)
+    .distinct()
+    .execute();
+  return new Set(rows.map((row) => row.show_id));
 }
 
 async function showBrowseRowsForIds(userId: string, ids: string[]) {
@@ -170,30 +187,9 @@ async function filteredShows(userId: string, search = "") {
     .where("season.kind", "=", "season")
     .where("episode.kind", "=", "episode")
     .where(accessibleLibrarySql(userId))
-    .$if(searchPattern.length > 0, (qb) => qb.where(showMatchesSearchSql(searchPattern)));
-}
-
-function showMatchesSearchSql(searchPattern: string) {
-  const pattern = searchLikePattern(searchPattern);
-  return sql<boolean>`(
-    show.title like ${pattern} escape '\\'
-    or coalesce(show.original_title, '') like ${pattern} escape '\\'
-    or show.sort_title like ${pattern} escape '\\'
-    or episode.title like ${pattern} escape '\\'
-    or media_file.basename like ${pattern} escape '\\'
-    or exists (
-      select 1
-      from media_item_keyword
-      where media_item_keyword.media_item_id = show.id
-        and media_item_keyword.name like ${pattern} escape '\\'
-    )
-    or exists (
-      select 1
-      from media_item_genre
-      where media_item_genre.media_item_id = show.id
-        and media_item_genre.name like ${pattern} escape '\\'
-    )
-  )`;
+    .$if(searchPattern.length > 0, (qb) =>
+      qb.where(browseMatchesSearchSql(searchPattern, "show.id", SHOW_BROWSE_SEARCH_LIKE_EXPRESSIONS)),
+    );
 }
 
 function showBrowseSelect(filtered: Awaited<ReturnType<typeof filteredShows>>) {
@@ -354,97 +350,134 @@ async function tvEpisodeProgress(userId: string, episodeIds: string[]) {
   return summarizeMovieProgress(rows);
 }
 
+function filteredEpisodeBrowse(db: Kysely<Database>, userId: string) {
+  return db
+    .selectFrom("media_item as episode")
+    .innerJoin("media_item as season", "season.id", "episode.parent_id")
+    .innerJoin("media_item as show", "show.id", "season.parent_id")
+    .innerJoin("media_file", "media_file.media_item_id", "episode.id")
+    .where("episode.kind", "=", "episode")
+    .where("season.kind", "=", "season")
+    .where("show.kind", "=", "show")
+    .where(accessibleLibrarySql(userId));
+}
+
+function episodeBrowseSelect(filtered: ReturnType<typeof filteredEpisodeBrowse>) {
+  return filtered
+    .select([
+      "episode.id",
+      "episode.title",
+      "episode.overview",
+      "episode.season_number",
+      "episode.episode_number",
+      "episode.release_date",
+      "episode.runtime_seconds",
+      "episode.poster_path",
+      "episode.popularity",
+      "episode.vote_average",
+      sql<string>`season.id`.as("season_id"),
+      sql<string>`season.title`.as("season_title"),
+      sql<string>`show.id`.as("show_id"),
+      sql<string>`show.title`.as("show_title"),
+      sql<string>`show.sort_title`.as("show_sort_title"),
+      sql<number | null>`show.year`.as("show_year"),
+      sql<string | null>`show.poster_path`.as("show_poster_path"),
+      sql<string | null>`show.backdrop_path`.as("show_backdrop_path"),
+      sql<number>`count(distinct media_file.id)`.as("file_count"),
+      sql<string | null>`min(media_file.id)`.as("first_file_id"),
+      sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
+    ])
+    .groupBy("episode.id");
+}
+
+type EpisodeBrowseQuery = ReturnType<typeof episodeBrowseSelect>;
+
+function applyEpisodeContinueWatchingFilters(query: EpisodeBrowseQuery, userId: string) {
+  return query
+    .where((eb) =>
+      eb.not(
+        eb.exists(
+          eb
+            .selectFrom("watch_progress as completed_progress")
+            .select("completed_progress.media_item_id")
+            .where("completed_progress.user_id", "=", userId)
+            .whereRef("completed_progress.media_item_id", "=", "episode.id")
+            .where(sql<boolean>`completed_progress.completed = 1`),
+        ),
+      ),
+    )
+    .where((eb) =>
+      eb.exists(
+        eb
+          .selectFrom("watch_progress as incomplete_progress")
+          .select("incomplete_progress.media_item_id")
+          .where("incomplete_progress.user_id", "=", userId)
+          .whereRef("incomplete_progress.media_item_id", "=", "episode.id")
+          .where(sql<boolean>`incomplete_progress.completed = 0`)
+          .where("incomplete_progress.position_seconds", ">", 0)
+          .$if(continueMaxAgeEnabled(), (qb) => qb.where(continueProgressFreshSql("incomplete_progress.updated_at"))),
+      ),
+    );
+}
+
+function episodeContinueWatchingOrderSql(userId: string) {
+  const freshProgressAndSql = continueFreshProgressAndSql("incomplete_progress.updated_at");
+
+  return sql<string | null>`(
+    select max(incomplete_progress.updated_at)
+    from watch_progress incomplete_progress
+    where incomplete_progress.user_id = ${userId}
+      and incomplete_progress.media_item_id = episode.id
+      and incomplete_progress.completed = 0
+      and incomplete_progress.position_seconds > 0
+      ${freshProgressAndSql}
+  )`;
+}
+
+function applyWithProgressShowFilter(query: EpisodeBrowseQuery, userId: string) {
+  return query.where((eb) =>
+    eb.exists(
+      eb
+        .selectFrom("watch_progress as any_progress")
+        .innerJoin("media_item as progressed_episode", "progressed_episode.id", "any_progress.media_item_id")
+        .innerJoin("media_item as progressed_season", "progressed_season.id", "progressed_episode.parent_id")
+        .select("any_progress.media_item_id")
+        .where("any_progress.user_id", "=", userId)
+        .where("progressed_episode.kind", "=", "episode")
+        .where("progressed_season.kind", "=", "season")
+        .whereRef("progressed_season.parent_id", "=", "show.id"),
+    ),
+  );
+}
+
+function orderContinueEpisodes(query: EpisodeBrowseQuery, userId: string) {
+  return query
+    .orderBy(episodeContinueWatchingOrderSql(userId), "desc")
+    .orderBy("show.sort_title", "asc")
+    .orderBy("episode.season_number", "asc")
+    .orderBy("episode.episode_number", "asc")
+    .orderBy("episode.title", "asc");
+}
+
+function orderEpisodeBrowseDefault(query: EpisodeBrowseQuery) {
+  return query
+    .orderBy("show.sort_title", "asc")
+    .orderBy("episode.season_number", "asc")
+    .orderBy("episode.episode_number", "asc")
+    .orderBy("episode.title", "asc");
+}
+
 async function tvEpisodeRows(userId: string, mode: "continue" | "with-progress", limit = 24) {
   const db = await getDb();
-  const continueFreshProgressSql =
-    mode === "continue" ? continueFreshProgressAndSql("incomplete_progress.updated_at") : sql``;
-  const where =
-    mode === "continue"
-      ? sql`
-        and not exists (
-          select 1
-          from watch_progress completed_progress
-          where completed_progress.user_id = ${userId}
-            and completed_progress.media_item_id = episode.id
-            and completed_progress.completed = 1
-        )
-        and exists (
-          select 1
-          from watch_progress incomplete_progress
-          where incomplete_progress.user_id = ${userId}
-            and incomplete_progress.media_item_id = episode.id
-            and incomplete_progress.completed = 0
-            and incomplete_progress.position_seconds > 0
-            ${continueFreshProgressSql}
-        )
-      `
-      : mode === "with-progress"
-        ? sql`
-          and exists (
-            select 1
-            from watch_progress any_progress
-            inner join media_item progressed_episode on progressed_episode.id = any_progress.media_item_id and progressed_episode.kind = 'episode'
-            inner join media_item progressed_season on progressed_season.id = progressed_episode.parent_id and progressed_season.kind = 'season'
-            where any_progress.user_id = ${userId}
-              and progressed_season.parent_id = show.id
-          )
-        `
-        : sql``;
-  const order =
-    mode === "continue"
-      ? sql`
-        (
-          select max(incomplete_progress.updated_at)
-          from watch_progress incomplete_progress
-          where incomplete_progress.user_id = ${userId}
-            and incomplete_progress.media_item_id = episode.id
-            and incomplete_progress.completed = 0
-            and incomplete_progress.position_seconds > 0
-            ${continueFreshProgressSql}
-        ) desc,
-        show.sort_title asc,
-        episode.season_number asc,
-        episode.episode_number asc,
-        episode.title asc
-      `
-      : sql`show.sort_title asc, episode.season_number asc, episode.episode_number asc, episode.title asc`;
+  let query = episodeBrowseSelect(filteredEpisodeBrowse(db, userId));
 
-  const result = await sql<EpisodeBrowseRow>`
-    select
-      episode.id,
-      episode.title,
-      episode.overview,
-      episode.season_number,
-      episode.episode_number,
-      episode.release_date,
-      episode.runtime_seconds,
-      episode.poster_path,
-      episode.popularity,
-      episode.vote_average,
-      season.id as season_id,
-      season.title as season_title,
-      show.id as show_id,
-      show.title as show_title,
-      show.sort_title as show_sort_title,
-      show.year as show_year,
-      show.poster_path as show_poster_path,
-      show.backdrop_path as show_backdrop_path,
-      count(distinct media_file.id) as file_count,
-      min(media_file.id) as first_file_id,
-      max(media_file.created_at) as latest_file_created_at
-    from media_item episode
-    inner join media_item season on season.id = episode.parent_id and season.kind = 'season'
-    inner join media_item show on show.id = season.parent_id and show.kind = 'show'
-    inner join media_file on media_file.media_item_id = episode.id
-    where episode.kind = 'episode'
-    and ${accessibleLibrarySql(userId)}
-    ${where}
-    group by episode.id
-    order by ${order}
-    limit ${limit}
-  `.execute(db);
+  if (mode === "continue") {
+    query = orderContinueEpisodes(applyEpisodeContinueWatchingFilters(query, userId), userId);
+  } else {
+    query = orderEpisodeBrowseDefault(applyWithProgressShowFilter(query, userId));
+  }
 
-  return result.rows;
+  return query.limit(limit).execute();
 }
 
 async function nextUpEpisodeRows(userId: string, limit = 24) {

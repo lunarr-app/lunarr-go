@@ -96,6 +96,31 @@ export function searchLikePattern(searchPattern: string) {
   return `%${escapeLikePattern(searchPattern)}%`;
 }
 
+export function browseMatchesSearchSql(
+  searchPattern: string,
+  rootIdColumn: string,
+  likeExpressions: readonly string[],
+) {
+  const pattern = searchLikePattern(searchPattern);
+  const likes = likeExpressions.map((expression) => sql`${sql.raw(expression)} like ${pattern} escape '\\'`);
+
+  return sql<boolean>`(
+    ${sql.join(likes, sql` or `)}
+    or exists (
+      select 1
+      from media_item_keyword
+      where media_item_keyword.media_item_id = ${sql.ref(rootIdColumn)}
+        and media_item_keyword.name like ${pattern} escape '\\'
+    )
+    or exists (
+      select 1
+      from media_item_genre
+      where media_item_genre.media_item_id = ${sql.ref(rootIdColumn)}
+        and media_item_genre.name like ${pattern} escape '\\'
+    )
+  )`;
+}
+
 export function accessibleLibrarySql(userId: string, libraryIdRef = "media_file.library_id") {
   return sql<boolean>`(
     exists (

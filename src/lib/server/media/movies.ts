@@ -5,10 +5,10 @@ import { tmdbImageUrl } from "$lib/media/images";
 import {
   MOVIE_PAGE_SIZE,
   accessibleLibrarySql,
+  browseMatchesSearchSql,
   catalogPageInfo,
   emptyCatalogPage,
   normalizePage,
-  searchLikePattern,
   type MovieSort,
   type MovieStatusFilter,
   type MovieBrowseRail,
@@ -25,27 +25,12 @@ import {
 } from "./similarity";
 import type { MovieBrowseRow } from "./types";
 
-function movieMatchesSearchSql(searchPattern: string) {
-  const pattern = searchLikePattern(searchPattern);
-  return sql<boolean>`(
-    media_item.title like ${pattern} escape '\\'
-    or coalesce(media_item.original_title, '') like ${pattern} escape '\\'
-    or media_item.sort_title like ${pattern} escape '\\'
-    or media_file.basename like ${pattern} escape '\\'
-    or exists (
-      select 1
-      from media_item_keyword
-      where media_item_keyword.media_item_id = media_item.id
-        and media_item_keyword.name like ${pattern} escape '\\'
-    )
-    or exists (
-      select 1
-      from media_item_genre
-      where media_item_genre.media_item_id = media_item.id
-        and media_item_genre.name like ${pattern} escape '\\'
-    )
-  )`;
-}
+const MOVIE_BROWSE_SEARCH_LIKE_EXPRESSIONS = [
+  "media_item.title",
+  "coalesce(media_item.original_title, '')",
+  "media_item.sort_title",
+  "media_file.basename",
+] as const;
 
 async function filterAccessibleMovieIds(userId: string, ids: string[]) {
   if (ids.length === 0) return [];
@@ -220,7 +205,9 @@ export async function movieRows(
       .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
       .where("media_item.kind", "=", "movie")
       .where(accessibleLibrarySql(userId))
-      .$if(searchPattern.length > 0, (qb) => qb.where(movieMatchesSearchSql(searchPattern)))
+      .$if(searchPattern.length > 0, (qb) =>
+        qb.where(browseMatchesSearchSql(searchPattern, "media_item.id", MOVIE_BROWSE_SEARCH_LIKE_EXPRESSIONS)),
+      )
       .$if(status === "watched", (qb) =>
         qb.where((eb) =>
           eb.exists(
@@ -289,49 +276,50 @@ export async function movieRows(
     withTitleOrder(query.orderBy("media_item.release_date", "desc"));
   const popularOrder = (query: ReturnType<typeof movieSelect>) =>
     withTitleOrder(query.orderBy("media_item.popularity", "desc").orderBy("media_item.vote_average", "desc"));
-  const continueOrder = () => {
-    const freshProgressAndSql = continueFreshProgressAndSql("watch_progress.updated_at");
 
-    return withTitleOrder(
-      movieSelect()
-        .where((eb) =>
-          eb.not(
-            eb.exists(
-              eb
-                .selectFrom("watch_progress")
-                .select("watch_progress.media_item_id")
-                .where("watch_progress.user_id", "=", userId)
-                .whereRef("watch_progress.media_item_id", "=", "media_item.id")
-                .where(sql<boolean>`watch_progress.completed = 1`),
-            ),
-          ),
-        )
-        .where((eb) =>
+  const applyMovieContinueWatchingFilters = (query: ReturnType<typeof movieSelect>) =>
+    query
+      .where((eb) =>
+        eb.not(
           eb.exists(
             eb
               .selectFrom("watch_progress")
               .select("watch_progress.media_item_id")
               .where("watch_progress.user_id", "=", userId)
               .whereRef("watch_progress.media_item_id", "=", "media_item.id")
-              .where(sql<boolean>`watch_progress.completed = 0`)
-              .where("watch_progress.position_seconds", ">", 0)
-              .$if(continueMaxAgeEnabled(), (qb) => qb.where(continueProgressFreshSql("watch_progress.updated_at"))),
+              .where(sql<boolean>`watch_progress.completed = 1`),
           ),
-        )
-        .orderBy(
-          sql<string | null>`(
-            select max(watch_progress.updated_at)
-            from watch_progress
-            where watch_progress.user_id = ${userId}
-              and watch_progress.media_item_id = media_item.id
-              and watch_progress.completed = 0
-              and watch_progress.position_seconds > 0
-              ${freshProgressAndSql}
-          )`,
-          "desc",
         ),
-    );
+      )
+      .where((eb) =>
+        eb.exists(
+          eb
+            .selectFrom("watch_progress")
+            .select("watch_progress.media_item_id")
+            .where("watch_progress.user_id", "=", userId)
+            .whereRef("watch_progress.media_item_id", "=", "media_item.id")
+            .where(sql<boolean>`watch_progress.completed = 0`)
+            .where("watch_progress.position_seconds", ">", 0)
+            .$if(continueMaxAgeEnabled(), (qb) => qb.where(continueProgressFreshSql("watch_progress.updated_at"))),
+        ),
+      );
+
+  const movieContinueWatchingOrderSql = () => {
+    const freshProgressAndSql = continueFreshProgressAndSql("watch_progress.updated_at");
+
+    return sql<string | null>`(
+      select max(watch_progress.updated_at)
+      from watch_progress
+      where watch_progress.user_id = ${userId}
+        and watch_progress.media_item_id = media_item.id
+        and watch_progress.completed = 0
+        and watch_progress.position_seconds > 0
+        ${freshProgressAndSql}
+    )`;
   };
+
+  const continueOrder = () =>
+    withTitleOrder(applyMovieContinueWatchingFilters(movieSelect()).orderBy(movieContinueWatchingOrderSql(), "desc"));
 
   const mapPublicMovies = async (rows: MovieBrowseRow[]) => {
     const movieIds = [...new Set(rows.map((movie) => movie.id))];
