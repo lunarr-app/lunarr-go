@@ -102,7 +102,7 @@ function parseAppEnv() {
   });
   if (result.success) return result.data;
 
-  const message = result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
+  const message = result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ");
   throw new Error(`Invalid Lunarr environment: ${message}`);
 }
 

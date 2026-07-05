@@ -35,7 +35,7 @@
 
   <div class="ops-panel-body">
     <p class="muted detail-copy">
-      Provide either a TMDb read access token or an API key; both are not required. A read access token is preferred.
+      Provide either a TMDb read access token or an API key. You do not need both. A read access token is preferred.
     </p>
 
     <label>

@@ -140,7 +140,7 @@ const movieBrowseRailParameter = browseRailParameter(
 
 const showBrowseRailParameter = browseRailParameter(
   ["continueWatching", "nextUp", "all", "recent", "latest", "popular"],
-  "When set, returns only the requested rail(s). Comma-separate multiple rails. Episode rails return `EpisodeSummary` items; show rails return `ShowSummary` items. `all` also returns `allPage`.",
+  "When set, returns only the requested rail(s). Comma-separate multiple rails. Episode rails return `EpisodeSummary` items, and show rails return `ShowSummary` items. `all` also returns `allPage`.",
 );
 
 const commonErrors = {
@@ -250,7 +250,7 @@ export const openApiDocument = {
         tags: ["Catalog"],
         summary: "Paginated personalized movie recommendations from recent watch history.",
         description:
-          "Ranks accessible unwatched movies by shared genres, keywords, cast, and directors with the caller's recent watches. Scoring: genres +3, keywords +2, people +1 per seed; up to three recent seeds weighted 3/2/1.",
+          "Ranks accessible unwatched movies by shared genres, keywords, cast, and directors with the caller's recent watches. Scoring: genres +3, keywords +2, people +1 per seed, using up to three recent seeds weighted 3/2/1.",
         operationId: "getDiscoverMovies",
         parameters: [pageParameter],
         responses: {
@@ -437,7 +437,7 @@ export const openApiDocument = {
         tags: ["Catalog"],
         summary: "Paginated personalized show recommendations from recent episode watch history.",
         description:
-          "Ranks accessible unwatched shows by shared genres, keywords, cast, and creators with the caller's recent episode watches. Scoring: genres +3, keywords +2, people +1 per seed; up to three recent show seeds weighted 3/2/1.",
+          "Ranks accessible unwatched shows by shared genres, keywords, cast, and creators with the caller's recent episode watches. Scoring: genres +3, keywords +2, people +1 per seed, using up to three recent show seeds weighted 3/2/1.",
         operationId: "getDiscoverShows",
         parameters: [pageParameter],
         responses: {
@@ -1233,7 +1233,7 @@ export const openApiDocument = {
         tags: ["Account"],
         summary: "Approve a device pairing code.",
         description:
-          "Creates a personal API key for the signed-in user and makes it available to the waiting device. Paired keys default to a 2-year expiry (LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS; use 0 for no expiry).",
+          "Creates a personal API key for the signed-in user and makes it available to the waiting device. Paired keys default to a 2-year expiry (LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS, use 0 for no expiry).",
         operationId: "approveDevicePairing",
         requestBody: {
           required: true,

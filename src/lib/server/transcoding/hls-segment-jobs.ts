@@ -313,7 +313,7 @@ async function startHlsEncodeJob(
       } catch (fallbackError) {
         const message =
           fallbackError instanceof Error ? fallbackError.message : "Request-driven HLS segment generation failed.";
-        throw new Error(`Remux segment generation failed; full transcode fallback failed: ${message}`);
+        throw new Error(`Remux segment generation failed, and the full transcode fallback also failed: ${message}`);
       }
     }
   };

@@ -211,7 +211,7 @@
           { once: true },
         );
       } catch {
-        // Wake Lock is best-effort; unsupported or denied requests keep normal playback.
+        // Wake Lock is best-effort. Unsupported or denied requests keep normal playback.
       } finally {
         screenWakeLockRequest = null;
       }

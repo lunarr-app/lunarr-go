@@ -206,7 +206,7 @@ describe("profile page server", () => {
     } as never);
 
     expect(result).toMatchObject({
-      apiKeySuccess: "API key created. Copy it now; it will not be shown again.",
+      apiKeySuccess: "API key created. Copy it now. It will not be shown again.",
       createdApiKey: {
         name: "Android phone",
         expiresAt: expect.any(String),

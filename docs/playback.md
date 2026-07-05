@@ -26,7 +26,7 @@ Segment generation follows a small state machine per shared cache entry:
 2. **Active job covers the segment** — If another FFmpeg job is already encoding a window that includes the requested segment index, wait for the file to appear (with timeout) instead of starting duplicate work.
 3. **Seek outside the window** — When a session requests a segment outside its own active encode window, cancel that session's stale job and start a new FFmpeg window at the requested index.
 4. **Coalesced waiters** — Concurrent requests for the same segment on the same cache share one ensure operation.
-5. **Parallel windows** — Different sessions on the same shared cache may encode non-overlapping segment ranges in parallel (for example one viewer at segment 10 and another at segment 50). Within a single session, a seek outside the active encode window cancels that session's stale job before starting a new window; distant parallel encodes for the same session are not kept alive.
+5. **Parallel windows** — Different sessions on the same shared cache may encode non-overlapping segment ranges in parallel (for example one viewer at segment 10 and another at segment 50). Within a single session, a seek outside the active encode window cancels that session's stale job before starting a new window. Distant parallel encodes for the same session are not kept alive.
 6. **Idle cleanup** — When playback cache `ref_count` reaches zero or a session ends, active encode jobs for that cache are aborted.
 
 When the viewer stops or seeks ahead, remote reads stop once the encode-ahead buffer is satisfied.
@@ -45,16 +45,16 @@ Users can also set a preferred subtitle language in Profile. Lunarr still return
 
 | Target  | Query value          | Used by                                | Server assumes                                      | Typical outcome                                                  |
 | ------- | -------------------- | -------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------- |
-| Web     | omit or `target=web` | Lunarr web player                      | Browser codec hints (`hevc=1`, `webm=1`, and so on) | Direct when browser-compatible; otherwise HLS remux or transcode |
-| Cast    | `target=cast`        | Chromecast receiver                    | HLS-capable receiver; no WebM direct                | Direct MP4/H.264 when possible; otherwise signed HLS             |
-| AirPlay | `target=airplay`     | AirPlay receiver                       | Safari/client hints; no WebM direct                 | Direct when receiver-compatible; otherwise signed HLS            |
-| Native  | `target=native`      | VLC, mobile apps, other native players | Client decodes locally                              | Signed direct file stream; HLS only when `transcode=1`           |
+| Web     | omit or `target=web` | Lunarr web player                      | Browser codec hints (`hevc=1`, `webm=1`, and so on) | Direct when browser-compatible, otherwise HLS remux or transcode |
+| Cast    | `target=cast`        | Chromecast receiver                    | HLS-capable receiver, no WebM direct                | Direct MP4/H.264 when possible, otherwise signed HLS             |
+| AirPlay | `target=airplay`     | AirPlay receiver                       | Safari/client hints, no WebM direct                 | Direct when receiver-compatible, otherwise signed HLS            |
+| Native  | `target=native`      | VLC, mobile apps, other native players | Client decodes locally                              | Signed direct file stream, HLS only when `transcode=1`           |
 
 Capability hints matter for `web`, `cast`, and `airplay`. They are optional for `target=native`. See [API](api.md#playback) for the full query contract.
 
 ### Web (`target=web`)
 
-The Lunarr web player detects support with `video.canPlayType()` and sends positive hints on the playback API request. Without hints, Lunarr assumes a conservative browser profile: MP4 with H.264/AAC direct plays; HEVC, AV1, WebM, and non-MP4 containers fall back to temporary HLS when transcoding is enabled.
+The Lunarr web player detects support with `video.canPlayType()` and sends positive hints on the playback API request. Without hints, Lunarr assumes a conservative browser profile: MP4 with H.264/AAC direct plays. HEVC, AV1, WebM, and non-MP4 containers fall back to temporary HLS when transcoding is enabled.
 
 User playback preferences (`auto`, `prefer_direct`, `prefer_transcode`) apply to web playback. `?transcode=1` forces temporary HLS even when direct play is available.
 
@@ -114,7 +114,7 @@ Activity that resets the 3.5 second timer includes:
 - Using player keyboard shortcuts while focus is on the player shell.
 - Focusing a control.
 
-While hidden during playback, moving the pointer over the player does **not** reveal the bar; only a click or keyboard use does.
+While hidden during playback, moving the pointer over the player does **not** reveal the bar. Only a click or keyboard use does.
 
 ### Video surface clicks
 
@@ -220,7 +220,7 @@ The default combined temporary playback storage limit is 20 GiB. Admins can choo
 
 Admins can also configure encode-ahead segment count (default 4) and shared cache TTL (default 24 hours). Cache entries invalidate when the source file size or modification time changes.
 
-Active playback keeps needed cache entries alive through reference counting (`ref_count` on each cache entry) while sessions are running. Each FFmpeg encode job writes segment files and its own per-job event playlist under the shared cache directory; non-overlapping windows from different sessions can run in parallel without clobbering each other's playlist state. Completed or cancelled sessions decrement cache references, and unreferenced cache entries become eligible for TTL eviction (idle longer than the configured TTL) and LRU eviction (oldest idle entries removed first when combined playback storage exceeds the configured limit).
+Active playback keeps needed cache entries alive through reference counting (`ref_count` on each cache entry) while sessions are running. Each FFmpeg encode job writes segment files and its own per-job event playlist under the shared cache directory. Non-overlapping windows from different sessions can run in parallel without clobbering each other's playlist state. Completed or cancelled sessions decrement cache references, and unreferenced cache entries become eligible for TTL eviction (idle longer than the configured TTL) and LRU eviction (oldest idle entries removed first when combined playback storage exceeds the configured limit).
 
 Admins can inspect shared cache size, entry counts, idle entries, and configured limits in **Settings → Server status**, and force-clear idle cache entries from **Settings → Transcoding → Force cleanup**. Force cleanup removes all unreferenced cache entries immediately, ignoring TTL and storage limits, and also runs the routine session-artifact cleanup path. Active playback references are preserved.
 

@@ -4800,7 +4800,7 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     const message =
-      "Remux segment generation failed; full transcode fallback failed: Request-driven HLS segment generation completed without publishing segment-00003.ts.";
+      "Remux segment generation failed, and the full transcode fallback also failed: Request-driven HLS segment generation completed without publishing segment-00003.ts.";
     expect(response.status).toBe(409);
     expect(requestedModes).toEqual(["remux", "transcode"]);
     expect(await response.json()).toEqual({ error: message });

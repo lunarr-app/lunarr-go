@@ -95,7 +95,7 @@
 - Added custom app and fallback error pages with shared copy helpers and tests.
 - Added remote container format sniffing from file headers to improve probe and playback decisions on SFTP/WebDAV sources.
 - Added a README preview GIF and expanded docs for WebDAV, playback artifacts, runtime verification, and web player controls.
-- Added Cursor rules for svelte-check, tests, and extended verification; adopted Prettier with a 120-column width across the repo.
+- Added Cursor rules for svelte-check, tests, and extended verification, and adopted Prettier with a 120-column width across the repo.
 
 ### Changed
 

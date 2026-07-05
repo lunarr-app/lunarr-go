@@ -2,7 +2,7 @@
 
 Lunarr uses the same authorization model for the web app and JSON API. A request is authenticated by either a Better Auth browser session cookie or a personal API key backed by the Better Auth API Key plugin.
 
-The machine-readable contract lives at `GET /api/openapi.json` and `GET /api/openapi.yaml`. TypeScript response shapes for the public API are centralized in `src/lib/server/api/types.ts`; route handlers use `apiJson()` from `src/lib/server/api/json.ts` so JSON responses stay aligned with that contract. A test in `src/lib/server/api/contract.test.ts` verifies that every strongly typed schema name in that module is declared in OpenAPI.
+The machine-readable contract lives at `GET /api/openapi.json` and `GET /api/openapi.yaml`. TypeScript response shapes for the public API live in `src/lib/server/api/types.ts`. Route handlers use `apiJson()` from `src/lib/server/api/json.ts` so JSON responses stay aligned with that contract. A test in `src/lib/server/api/contract.test.ts` verifies that every strongly typed schema name in that module is declared in OpenAPI.
 
 Machine-readable API docs are available from a running Lunarr server:
 
@@ -74,7 +74,7 @@ Approve body:
 }
 ```
 
-Poll returns `status: "pending"` until approval, then `status: "approved"` with a one-time `apiKey` string. `POST /api/device-pairing` also returns `pairingUrl`, a ready-made `/link-device?code=...&name=...` URL for QR codes (`name` is omitted when the device did not provide one). Pairing codes expire after 10 minutes. API keys created through pairing expire after 2 years by default (`LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS`; use `0` for no expiry, see [Configuration](configuration.md)); users can revoke them earlier from Profile. Finished or expired pairing rows are deleted after 30 days.
+Poll returns `status: "pending"` until approval, then `status: "approved"` with a one-time `apiKey` string. `POST /api/device-pairing` also returns `pairingUrl`, a ready-made `/link-device?code=...&name=...` URL for QR codes (`name` is omitted when the device did not provide one). Pairing codes expire after 10 minutes. API keys created through pairing expire after 2 years by default (`LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS`, use `0` for no expiry, see [Configuration](configuration.md)). Users can revoke them earlier from Profile. Finished or expired pairing rows are deleted after 30 days.
 
 ## API Keys
 
@@ -191,7 +191,7 @@ When `rail` is set, the response includes only the requested keys (for example `
 
 `GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). The web Continue page surfaces all three sections.
 
-When `LUNARR_CONTINUE_MAX_AGE_DAYS` is set, stale progress is omitted from these rails but kept for resume on movie and episode detail pages. `continueWatching` filters per title; `nextUp` drops a show when no episode has recent progress. Continue rails also ignore accidental starts shorter than 60 seconds. See [Configuration](configuration.md#continue-watching).
+When `LUNARR_CONTINUE_MAX_AGE_DAYS` is set, stale progress is omitted from these rails but kept for resume on movie and episode detail pages. `continueWatching` filters per title, and `nextUp` drops a show when no episode has recent progress. Continue rails also ignore accidental starts shorter than 60 seconds. See [Configuration](configuration.md#continue-watching).
 
 ### TV show detail tiers
 
@@ -251,7 +251,7 @@ GET /api/movies/discover?page=
 GET /api/shows/discover?page=
 ```
 
-These endpoints return personalized recommendations ranked by shared metadata overlap (genres +3, keywords +2, cast and directors or creators +1 per seed; seeds weighted by recency). Completed movies and shows with a completed episode are excluded.
+These endpoints return personalized recommendations ranked by shared metadata overlap (genres +3, keywords +2, cast and directors or creators +1 per seed, with seeds weighted by recency). Completed movies and shows with a completed episode are excluded.
 
 Show query parameters:
 
@@ -305,7 +305,7 @@ The `target` query parameter selects the client capability profile. See [Playbac
 | Native  | `target=native`      | VLC, mobile apps, other native players |
 
 - **Web** — uses browser codec hints and user playback preferences.
-- **Cast / AirPlay** — tuned for remote receivers; returns signed `streamUrl` and subtitle URLs with a `remoteToken` (8-hour default, configurable).
+- **Cast / AirPlay** — tuned for remote receivers, returns signed `streamUrl` and subtitle URLs with a `remoteToken` (8-hour default, configurable).
 - **Native** — always returns a signed direct file stream unless `transcode=1` is set. Ignores `prefer_transcode`.
 
 ### Query parameters

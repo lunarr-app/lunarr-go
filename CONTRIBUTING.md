@@ -80,7 +80,7 @@ bun run verify:tmdb
 - Keep changes scoped to the feature or bug being addressed.
 - Keep code minimal and purposeful. Avoid speculative abstractions, broad rewrites, and cleanup that does not support the change.
 - Prefer existing helpers, server modules, route patterns, and Svelte component conventions over new abstractions.
-- Keep admin/configuration pages dense and utilitarian; keep media browsing and detail pages more visual and content-led.
+- Keep admin/configuration pages dense and utilitarian. Keep media browsing and detail pages more visual and content-led.
 - Do not expose raw paths, scan errors, jobs, users, or settings to non-admin users.
 - Prefer structured parsers and typed helpers over ad hoc string manipulation.
 - Avoid committing generated local data, databases, playback artifacts, or media fixtures.

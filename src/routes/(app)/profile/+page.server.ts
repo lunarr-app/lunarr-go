@@ -165,7 +165,7 @@ export const actions: Actions = {
       });
 
       return {
-        apiKeySuccess: "API key created. Copy it now; it will not be shown again.",
+        apiKeySuccess: "API key created. Copy it now. It will not be shown again.",
         createdApiKey: created.apiKey,
         createdApiKeyToken: created.token,
       };
