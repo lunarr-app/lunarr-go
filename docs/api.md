@@ -144,7 +144,7 @@ moviesPage
 showsPage
 ```
 
-`GET /api/people/:provider/:id` returns person metadata, aggregate filmography `stats`, paginated `movies` and `shows` credit lists, and separate `moviePage` / `showPage` metadata. Hero counts and year span use `stats` so clients do not need to load every credit up front.
+`GET /api/people/:provider/:id` returns person metadata, aggregate filmography `stats`, paginated `movies` and `shows` credit lists, and separate `moviePage` / `showPage` metadata. Hero counts and year span use `stats` so clients do not need to load every credit up front. Movie and show credits use a fixed page size of 24 (no `limit` parameter).
 
 ### Browse rails
 
@@ -179,6 +179,15 @@ limit=24
 ### Continue watching
 
 `GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). Each section includes matching page metadata (`moviesPage`, `episodesPage`, `nextUpPage`). The web Continue hub at `/continue` previews all three sections. Full paginated lists live at `/continue/movies`, `/continue/episodes`, and `/continue/next-up` (36 items per page).
+
+Continue query parameters:
+
+```text
+page
+limit=24
+```
+
+The same `page` and `limit` apply to all three sections in one response.
 
 The same Continue filters also apply to `continueWatching` and `nextUp` on `GET /api/movies` and `GET /api/shows` (including `?rail=continueWatching` and `?rail=nextUp`).
 
@@ -226,13 +235,15 @@ Recommended mobile flow:
 4. Prepare playback with `GET /api/playback/:movieId` (optionally choose a file via the `file` query parameter).
 5. Mark watched with `POST /api/movies/:id/watched`.
 
-Movie query parameters:
+Movie query parameters (`GET /api/movies`):
 
 ```text
 search
 status=all|watched|unwatched
 sort=title|recent|year_desc|rating|release_date
+rail=continueWatching|all|recent|latest|popular
 page
+limit=24
 ```
 
 Similar movie and show endpoints accept `page`, `limit` (default 24, max 200), and return accessible titles ranked by shared genres, keywords, cast, and directors or creators. Responses include the source title plus paginated `movies` or `shows` and a `page` object with `total`, `totalPages`, `hasPrevious`, and `hasNext`.
@@ -246,12 +257,14 @@ GET /api/shows/:id/similar?page=&limit=
 
 These endpoints return personalized recommendations ranked by shared metadata overlap (genres +3, keywords +2, cast and directors or creators +1 per seed, with seeds weighted by recency). Completed movies and shows with a completed episode are excluded.
 
-Show query parameters:
+Show query parameters (`GET /api/shows`):
 
 ```text
 search
 sort=title|recent|latest|popular
+rail=continueWatching|nextUp|all|recent|latest|popular
 page
+limit=24
 ```
 
 ## Playback
