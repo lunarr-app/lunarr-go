@@ -24,7 +24,6 @@ type MoviesLoadResult = {
   query: string;
   status: string;
   sort: string;
-  page: number;
   rows: {
     all: MovieRow[];
     continueWatching: MovieRow[];
@@ -250,7 +249,6 @@ describe("movies page server", () => {
       query: "rav",
       status: "unwatched",
       sort: "rating",
-      page: 1,
     });
     expect(result.rows.all).toHaveLength(1);
     expect(result.rows.all[0]).toMatchObject({
@@ -274,19 +272,6 @@ describe("movies page server", () => {
 
     expect(result.status).toBe("all");
     expect(result.sort).toBe("title");
-    expect(result.page).toBe(1);
-    expect(result.rows.all.map((movie) => movie.id)).toEqual(["movie-alpha", "movie-bravo", "movie-charlie"]);
-  });
-
-  test("clamps out-of-range movies pages", async () => {
-    const result = (await moviesLoad({
-      locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/movies?page=2"),
-    } as never)) as MoviesLoadResult;
-
-    expect(result.page).toBe(1);
-    expect(result.rows.allPage.page).toBe(1);
-    expect(result.rows.allPage.total).toBe(3);
     expect(result.rows.all.map((movie) => movie.id)).toEqual(["movie-alpha", "movie-bravo", "movie-charlie"]);
   });
 
