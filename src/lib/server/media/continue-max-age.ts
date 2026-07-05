@@ -1,6 +1,8 @@
 import { sql, type RawBuilder } from "kysely";
 import { appEnv } from "$lib/server/config/env";
 
+export const MIN_CONTINUE_POSITION_SECONDS = 60;
+
 let testContinueMaxAgeDays: number | undefined;
 
 export function setContinueMaxAgeDaysForTests(days: number | undefined) {
@@ -23,12 +25,7 @@ export function isContinueProgressFresh(updatedAt: string, days?: number, now = 
   return new Date(updatedAt).getTime() > cutoffMs;
 }
 
-export function continueProgressFreshSql(updatedAtColumn: string, days?: number): RawBuilder<boolean> {
+export function continueMaxAgeCutoffSql(days?: number): RawBuilder<string> {
   const maxAgeDays = continueMaxAgeDays(days);
-  return sql<boolean>`${sql.raw(updatedAtColumn)} > datetime('now', ${`-${maxAgeDays} days`})`;
-}
-
-export function continueFreshProgressAndSql(updatedAtColumn: string, days?: number): RawBuilder<boolean> {
-  if (!continueMaxAgeEnabled(days)) return sql<boolean>``;
-  return sql<boolean>`and ${continueProgressFreshSql(updatedAtColumn, days)}`;
+  return sql<string>`datetime('now', ${`-${maxAgeDays} days`})`;
 }

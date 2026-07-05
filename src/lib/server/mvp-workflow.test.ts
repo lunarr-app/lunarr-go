@@ -140,7 +140,7 @@ describe("local movie library MVP workflow", () => {
       userId: "user-1",
       mediaItemId: rows.all[0].id,
       mediaFileId: playback!.file.id,
-      positionSeconds: 42,
+      positionSeconds: 60,
       durationSeconds: 100,
       completed: false,
     });
@@ -149,7 +149,7 @@ describe("local movie library MVP workflow", () => {
     expect(afterProgress.continueWatching[0]).toMatchObject({
       id: rows.all[0].id,
       resumeFileId: playback!.file.id,
-      progressSeconds: 42,
+      progressSeconds: 60,
       durationSeconds: 100,
       completed: false,
     });

@@ -11,7 +11,7 @@ import {
   type MovieBrowseRail,
 } from "../catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
-import { continueFreshProgressAndSql, continueMaxAgeEnabled, continueProgressFreshSql } from "../continue-max-age";
+import { continueMaxAgeCutoffSql, continueMaxAgeEnabled, MIN_CONTINUE_POSITION_SECONDS } from "../continue-max-age";
 import type { MovieBrowseRow } from "../types";
 import { publicMovieListItem } from "./shared";
 
@@ -154,27 +154,28 @@ export async function movieRows(
             .where("watch_progress.user_id", "=", userId)
             .whereRef("watch_progress.media_item_id", "=", "media_item.id")
             .where(sql<boolean>`watch_progress.completed = 0`)
-            .where("watch_progress.position_seconds", ">", 0)
-            .$if(continueMaxAgeEnabled(), (qb) => qb.where(continueProgressFreshSql("watch_progress.updated_at"))),
+            .where("watch_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
+            .$if(continueMaxAgeEnabled(), (qb) =>
+              qb.where("watch_progress.updated_at", ">", continueMaxAgeCutoffSql()),
+            ),
         ),
       );
 
-  const movieContinueWatchingOrderSql = () => {
-    const freshProgressAndSql = continueFreshProgressAndSql("watch_progress.updated_at");
-
-    return sql<string | null>`(
-      select max(watch_progress.updated_at)
-      from watch_progress
-      where watch_progress.user_id = ${userId}
-        and watch_progress.media_item_id = media_item.id
-        and watch_progress.completed = 0
-        and watch_progress.position_seconds > 0
-        ${freshProgressAndSql}
-    )`;
-  };
-
   const continueOrder = () =>
-    withTitleOrder(applyMovieContinueWatchingFilters(movieSelect()).orderBy(movieContinueWatchingOrderSql(), "desc"));
+    withTitleOrder(
+      applyMovieContinueWatchingFilters(movieSelect()).orderBy(
+        sql<string | null>`(
+          select max(watch_progress.updated_at)
+          from watch_progress
+          where watch_progress.user_id = ${userId}
+            and watch_progress.media_item_id = media_item.id
+            and watch_progress.completed = 0
+            and watch_progress.position_seconds >= ${MIN_CONTINUE_POSITION_SECONDS}
+            ${continueMaxAgeEnabled() ? sql`and watch_progress.updated_at > ${continueMaxAgeCutoffSql()}` : sql``}
+        )`,
+        "desc",
+      ),
+    );
 
   const mapPublicMovies = async (rows: MovieBrowseRow[]) => {
     const movieIds = [...new Set(rows.map((movie) => movie.id))];

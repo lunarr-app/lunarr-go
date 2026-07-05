@@ -209,7 +209,7 @@ describe("runScanJob", () => {
       userId: "user-1",
       mediaItemId: matrix.id,
       mediaFileId: matrixFile.id,
-      positionSeconds: 55,
+      positionSeconds: 60,
       durationSeconds: 120,
       completed: false,
     });
@@ -219,7 +219,7 @@ describe("runScanJob", () => {
     expect(rows.all[0]).toMatchObject({
       title: "The Matrix",
       posterUrl: "https://image.tmdb.org/t/p/w342/matrix.jpg",
-      progressSeconds: 55,
+      progressSeconds: 60,
       durationSeconds: 120,
       completed: false,
     });
@@ -258,7 +258,7 @@ describe("runScanJob", () => {
     expect(detail?.genres).toEqual(["Science Fiction"]);
     expect(detail?.progress[0]).toMatchObject({
       media_file_id: matrixFile.id,
-      position_seconds: 55,
+      position_seconds: 60,
       duration_seconds: 120,
       completed: 0,
     });

@@ -381,6 +381,31 @@ describe("movieRows", () => {
     expect((await movieRows("user-1", "", "unwatched")).all.map((movie) => movie.id)).toEqual(["movie-b"]);
   });
 
+  test("hides accidental continue starts without removing browse progress", async () => {
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "movie-b",
+        media_file_id: "file-b",
+        position_seconds: 5,
+        duration_seconds: 3600,
+        completed: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .execute();
+
+    const rows = await movieRows("user-1");
+
+    expect(rows.continueWatching.map((movie) => movie.id)).toEqual([]);
+    expect(rows.all.find((movie) => movie.id === "movie-b")).toMatchObject({
+      resumeFileId: "file-b",
+      progressSeconds: 5,
+      durationSeconds: 3600,
+      completed: false,
+    });
+  });
+
   test("hides stale continue watching movies without removing browse progress", async () => {
     const staleUpdatedAt = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString();
     await db
@@ -389,8 +414,8 @@ describe("movieRows", () => {
         user_id: "user-1",
         media_item_id: "movie-b",
         media_file_id: "file-b",
-        position_seconds: 45,
-        duration_seconds: 100,
+        position_seconds: 90,
+        duration_seconds: 3600,
         completed: 0,
         updated_at: staleUpdatedAt,
       })
@@ -402,7 +427,7 @@ describe("movieRows", () => {
     expect(rows.continueWatching.map((movie) => movie.id)).toEqual([]);
     expect(rows.all.find((movie) => movie.id === "movie-b")).toMatchObject({
       resumeFileId: "file-b",
-      progressSeconds: 45,
+      progressSeconds: 90,
       completed: false,
     });
   });

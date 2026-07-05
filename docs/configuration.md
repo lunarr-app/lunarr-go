@@ -191,6 +191,8 @@ LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS: 0-3650
 
 In-progress movies and episodes can be hidden from Continue rails when their watch progress has not been updated recently. Progress is kept in the database and resume still works on movie and episode detail pages.
 
+Continue rails also ignore very short accidental starts: items need at least 60 seconds of watch progress before they appear in `continueWatching` or affect `nextUp`.
+
 ```sh
 LUNARR_CONTINUE_MAX_AGE_DAYS=90
 ```
