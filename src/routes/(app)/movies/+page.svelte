@@ -18,7 +18,7 @@
       key: "continue",
       title: "Continue watching",
       movies: data.rows.continueWatching,
-      href: "/continue",
+      href: "/continue/movies",
     },
     {
       key: "all",

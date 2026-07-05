@@ -1,13 +1,12 @@
-import { BROWSE_RAIL_LIMIT, normalizePage } from "$lib/server/media/catalog";
+import { BROWSE_RAIL_LIMIT } from "$lib/server/media/catalog";
 import { continueMovieRows } from "$lib/server/media/movies/browse";
 import { continueTvRows } from "$lib/server/media/shows/episodes";
 import type { PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ locals, url }) => {
-  const page = normalizePage(url.searchParams.get("page"));
+export const load: PageServerLoad = async ({ locals }) => {
   const [movieResults, tvResults] = await Promise.all([
-    continueMovieRows(locals.user!.id, page, BROWSE_RAIL_LIMIT),
-    continueTvRows(locals.user!.id, page, BROWSE_RAIL_LIMIT),
+    continueMovieRows(locals.user!.id, 1, BROWSE_RAIL_LIMIT),
+    continueTvRows(locals.user!.id, 1, BROWSE_RAIL_LIMIT),
   ]);
 
   return {
@@ -17,6 +16,5 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     episodesPage: tvResults.continueWatchingPage,
     nextUp: tvResults.nextUp,
     nextUpPage: tvResults.nextUpPage,
-    page,
   };
 };

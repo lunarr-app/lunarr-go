@@ -360,25 +360,50 @@ export async function tvRows(
   } satisfies ShowRowsResponse;
 }
 
+export async function continueEpisodeRows(
+  userId: string,
+  pageInput = 1,
+  pageSize = BROWSE_RAIL_LIMIT,
+): Promise<Pick<ShowRowsResponse, "continueWatching" | "continueWatchingPage">> {
+  const page = normalizePage(pageInput);
+  const limit = catalogPageSize(pageSize);
+  const continueRail = await paginatedContinueEpisodeRows(userId, page, limit);
+
+  return {
+    continueWatching: await mapEpisodeSummaries(userId, continueRail.items),
+    continueWatchingPage: continueRail.page,
+  };
+}
+
+export async function nextUpEpisodeRows(
+  userId: string,
+  pageInput = 1,
+  pageSize = BROWSE_RAIL_LIMIT,
+): Promise<Pick<ShowRowsResponse, "nextUp" | "nextUpPage">> {
+  const page = normalizePage(pageInput);
+  const limit = catalogPageSize(pageSize);
+  const nextUpRail = await paginatedNextUpEpisodeRows(userId, page, limit);
+
+  return {
+    nextUp: await mapEpisodeSummaries(userId, nextUpRail.items),
+    nextUpPage: nextUpRail.page,
+  };
+}
+
 export async function continueTvRows(
   userId: string,
   pageInput = 1,
   pageSize = BROWSE_RAIL_LIMIT,
 ): Promise<Pick<ShowRowsResponse, "continueWatching" | "continueWatchingPage" | "nextUp" | "nextUpPage">> {
-  const page = normalizePage(pageInput);
-  const limit = catalogPageSize(pageSize);
-  const [continueRail, nextUpRail] = await Promise.all([
-    paginatedContinueEpisodeRows(userId, page, limit),
-    paginatedNextUpEpisodeRows(userId, page, limit),
+  const [continueResults, nextUpResults] = await Promise.all([
+    continueEpisodeRows(userId, pageInput, pageSize),
+    nextUpEpisodeRows(userId, pageInput, pageSize),
   ]);
-  const episodeIds = [...new Set([...continueRail.items, ...nextUpRail.items].map((episode) => episode.id))];
-  const progress = await tvEpisodeProgress(userId, episodeIds);
-  const mapEpisode = (episode: EpisodeBrowseRow) => publicEpisodeSummary(episode, progress);
 
   return {
-    continueWatching: continueRail.items.map(mapEpisode),
-    continueWatchingPage: continueRail.page,
-    nextUp: nextUpRail.items.map(mapEpisode),
-    nextUpPage: nextUpRail.page,
+    continueWatching: continueResults.continueWatching,
+    continueWatchingPage: continueResults.continueWatchingPage,
+    nextUp: nextUpResults.nextUp,
+    nextUpPage: nextUpResults.nextUpPage,
   };
 }

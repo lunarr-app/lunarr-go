@@ -5,6 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
 import { load as continueLoad } from "../continue/+page.server";
+import { load as continueMoviesLoad } from "../continue/movies/+page.server";
 import { load as moviesLoad } from "./+page.server";
 
 type MovieRow = {
@@ -56,7 +57,6 @@ type ContinueLoadResult = {
   nextUpPage: {
     total: number;
   };
-  page: number;
 };
 
 describe("movies page server", () => {
@@ -313,5 +313,20 @@ describe("movies page server", () => {
     expect(result.episodesPage.total).toBe(0);
     expect(result.nextUp).toEqual([]);
     expect(result.nextUpPage.total).toBe(0);
+  });
+
+  test("loads paginated continue movies for the section list page", async () => {
+    const result = (await continueMoviesLoad({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/continue/movies"),
+    } as never)) as { movies: MovieRow[]; pageInfo: { page: number; pageSize: number; total: number } };
+
+    expect(result.movies).toHaveLength(1);
+    expect(result.movies[0]?.id).toBe("movie-bravo");
+    expect(result.pageInfo).toMatchObject({
+      page: 1,
+      pageSize: 36,
+      total: 1,
+    });
   });
 });

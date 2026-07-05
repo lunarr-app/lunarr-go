@@ -178,7 +178,7 @@ limit=24
 
 ### Continue watching
 
-`GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). Each section includes matching page metadata (`moviesPage`, `episodesPage`, `nextUpPage`). The web Continue page surfaces all three sections.
+`GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). Each section includes matching page metadata (`moviesPage`, `episodesPage`, `nextUpPage`). The web Continue hub at `/continue` previews all three sections. Full paginated lists live at `/continue/movies`, `/continue/episodes`, and `/continue/next-up` (36 items per page).
 
 The same Continue filters also apply to `continueWatching` and `nextUp` on `GET /api/movies` and `GET /api/shows` (including `?rail=continueWatching` and `?rail=nextUp`).
 

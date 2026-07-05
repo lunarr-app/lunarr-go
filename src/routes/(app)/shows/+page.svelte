@@ -18,12 +18,13 @@
             key: "continue",
             title: "Continue watching",
             episodes: data.rows.continueWatching,
-            href: "/continue",
+            href: "/continue/episodes",
           },
           {
             key: "next-up",
             title: "Next up",
             episodes: data.rows.nextUp,
+            href: "/continue/next-up",
           },
         ].filter((section) => section.episodes.length > 0),
   );

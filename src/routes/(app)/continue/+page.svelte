@@ -1,13 +1,18 @@
 <script lang="ts">
   import EpisodeCard from "$lib/components/EpisodeCard.svelte";
   import MovieCard from "$lib/components/MovieCard.svelte";
-  import { Film, Tv } from "@lucide/svelte";
+  import { ChevronRight, Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();
-  const hasContent = $derived(data.movies.length > 0 || data.episodes.length > 0 || data.nextUp.length > 0);
-  const movieCountLabel = $derived(`${data.movies.length} ${data.movies.length === 1 ? "movie" : "movies"}`);
-  const episodeCountLabel = $derived(`${data.episodes.length} ${data.episodes.length === 1 ? "episode" : "episodes"}`);
-  const nextUpCountLabel = $derived(`${data.nextUp.length} ${data.nextUp.length === 1 ? "episode" : "episodes"}`);
+
+  function countLabel(total: number, singular: string, plural: string) {
+    return `${total} ${total === 1 ? singular : plural}`;
+  }
+
+  const hasContent = $derived(data.moviesPage.total > 0 || data.episodesPage.total > 0 || data.nextUpPage.total > 0);
+  const movieCountLabel = $derived(countLabel(data.moviesPage.total, "movie", "movies"));
+  const episodeCountLabel = $derived(countLabel(data.episodesPage.total, "episode", "episodes"));
+  const nextUpCountLabel = $derived(countLabel(data.nextUpPage.total, "episode", "episodes"));
 </script>
 
 <svelte:head>
@@ -25,42 +30,60 @@
 </header>
 
 {#if hasContent}
-  {#if data.movies.length}
+  {#if data.moviesPage.total > 0}
     <section class="media-section" aria-labelledby="movies-heading">
       <div class="section-heading">
         <h2 id="movies-heading" class="section-title">Movies</h2>
-        <span>{movieCountLabel}</span>
+        <div class="section-meta">
+          <span>{movieCountLabel}</span>
+          <a class="view-all" href="/continue/movies">
+            <span>View all</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </a>
+        </div>
       </div>
       <div class="movie-grid">
-        {#each data.movies as movie}
+        {#each data.movies as movie (movie.id)}
           <MovieCard {movie} />
         {/each}
       </div>
     </section>
   {/if}
 
-  {#if data.episodes.length}
+  {#if data.episodesPage.total > 0}
     <section class="media-section" aria-labelledby="episodes-heading">
       <div class="section-heading">
         <h2 id="episodes-heading" class="section-title">Episodes</h2>
-        <span>{episodeCountLabel}</span>
+        <div class="section-meta">
+          <span>{episodeCountLabel}</span>
+          <a class="view-all" href="/continue/episodes">
+            <span>View all</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </a>
+        </div>
       </div>
       <div class="episode-grid">
-        {#each data.episodes as episode}
+        {#each data.episodes as episode (episode.id)}
           <EpisodeCard {episode} />
         {/each}
       </div>
     </section>
   {/if}
 
-  {#if data.nextUp.length}
+  {#if data.nextUpPage.total > 0}
     <section class="media-section" aria-labelledby="next-up-heading">
       <div class="section-heading">
         <h2 id="next-up-heading" class="section-title">Next up</h2>
-        <span>{nextUpCountLabel}</span>
+        <div class="section-meta">
+          <span>{nextUpCountLabel}</span>
+          <a class="view-all" href="/continue/next-up">
+            <span>View all</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </a>
+        </div>
       </div>
       <div class="episode-grid">
-        {#each data.nextUp as episode}
+        {#each data.nextUp as episode (episode.id)}
           <EpisodeCard {episode} />
         {/each}
       </div>
@@ -110,10 +133,30 @@
     margin: 0;
   }
 
-  .section-heading span {
+  .section-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .section-meta span {
     color: var(--color-muted);
     font-size: 0.86rem;
     font-weight: 700;
+  }
+
+  .view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .view-all:hover {
+    color: var(--color-text);
   }
 
   .movie-grid,
@@ -142,5 +185,11 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.65rem;
+  }
+
+  @media (max-width: 760px) {
+    .section-heading {
+      flex-wrap: wrap;
+    }
   }
 </style>
