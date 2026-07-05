@@ -261,7 +261,7 @@ export const openApiDocument = {
         description:
           "Ranks accessible unwatched movies by shared genres, keywords, cast, and directors with the caller's recent watches. Scoring: genres +3, keywords +2, people +1 per seed, using up to three recent seeds weighted 3/2/1.",
         operationId: "getDiscoverMovies",
-        parameters: [pageParameter],
+        parameters: [pageParameter, limitParameter],
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/DiscoverMoviesResponse",
@@ -365,7 +365,7 @@ export const openApiDocument = {
         tags: ["Catalog"],
         summary: "List movies similar to a title in the caller's accessible library.",
         operationId: "getSimilarMovies",
-        parameters: [pathIdParameter(), pageParameter],
+        parameters: [pathIdParameter(), pageParameter, limitParameter],
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/SimilarMoviesResponse",
@@ -450,7 +450,7 @@ export const openApiDocument = {
         description:
           "Ranks accessible unwatched shows by shared genres, keywords, cast, and creators with the caller's recent episode watches. Scoring: genres +3, keywords +2, people +1 per seed, using up to three recent show seeds weighted 3/2/1.",
         operationId: "getDiscoverShows",
-        parameters: [pageParameter],
+        parameters: [pageParameter, limitParameter],
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/DiscoverShowsResponse",
@@ -813,7 +813,7 @@ export const openApiDocument = {
         tags: ["Catalog"],
         summary: "List shows similar to a title in the caller's accessible library.",
         operationId: "getSimilarShows",
-        parameters: [pathIdParameter(), pageParameter],
+        parameters: [pathIdParameter(), pageParameter, limitParameter],
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/SimilarShowsResponse",

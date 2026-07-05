@@ -1,10 +1,11 @@
-import { normalizePage } from "$lib/server/media/catalog";
+import { SHOW_PAGE_SIZE, normalizeLimit, normalizePage } from "$lib/server/media/catalog";
 import { listBecauseYouWatchedShows } from "$lib/server/media/shows/discover";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const page = normalizePage(url.searchParams.get("page"));
-  const rows = await listBecauseYouWatchedShows(locals.user!.id, page);
+  const limit = normalizeLimit(url.searchParams.get("limit"), SHOW_PAGE_SIZE);
+  const rows = await listBecauseYouWatchedShows(locals.user!.id, page, limit);
 
   return {
     shows: rows.shows,

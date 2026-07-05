@@ -6,7 +6,7 @@
 
 - Added optional Continue staleness filtering with `LUNARR_CONTINUE_MAX_AGE_DAYS`, hiding idle in-progress items from Continue rails while keeping resume on detail pages.
 - Continue rails now ignore accidental starts shorter than 60 seconds.
-- Added optional `page` and `limit` query params (default limit 24) to browse and continue APIs, with companion `*Page` metadata for every rail and continue section.
+- Added optional `page` and `limit` query params (default limit 24) to browse, continue, discover, and similar APIs, with companion `*Page` metadata for every rail and continue section.
 - Added paginated Continue section pages at `/continue/movies`, `/continue/episodes`, and `/continue/next-up`.
 
 ### Changed

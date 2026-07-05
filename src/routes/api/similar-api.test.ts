@@ -217,9 +217,28 @@ describe("similar catalog API", () => {
       movies: [{ id: "movie-2" }, { id: "movie-3" }],
       page: {
         page: 1,
+        pageSize: 24,
         total: 2,
         hasPrevious: false,
         hasNext: false,
+      },
+    });
+
+    const limited = await similarMoviesGet({
+      params: { id: "movie-1" },
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/api/movies/movie-1/similar?limit=1"),
+    } as never);
+
+    expect(limited.status).toBe(200);
+    expect(await limited.json()).toMatchObject({
+      movies: [{ id: "movie-2" }],
+      page: {
+        page: 1,
+        pageSize: 1,
+        total: 2,
+        totalPages: 2,
+        hasNext: true,
       },
     });
   });
