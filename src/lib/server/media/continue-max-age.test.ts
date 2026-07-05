@@ -21,4 +21,15 @@ describe("continue max age", () => {
     expect(isContinueProgressFresh(freshUpdatedAt, now)).toBe(true);
     expect(isContinueProgressFresh(staleUpdatedAt, now)).toBe(false);
   });
+
+  test("uses iso cutoffs that match watch_progress.updated_at ordering", () => {
+    setContinueMaxAgeDaysForTests(90);
+    const now = new Date("2026-06-19T12:00:00.000Z");
+    const cutoffIso = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const freshUpdatedAt = new Date(now.getTime() - 89 * 24 * 60 * 60 * 1000).toISOString();
+    const staleUpdatedAt = new Date(now.getTime() - 91 * 24 * 60 * 60 * 1000).toISOString();
+
+    expect(freshUpdatedAt > cutoffIso).toBe(isContinueProgressFresh(freshUpdatedAt, now));
+    expect(staleUpdatedAt > cutoffIso).toBe(isContinueProgressFresh(staleUpdatedAt, now));
+  });
 });
