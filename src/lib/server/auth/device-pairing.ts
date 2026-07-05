@@ -256,10 +256,11 @@ export async function approveDevicePairing(input: { userId: string; userCode: un
 
   let created;
   try {
+    const expiresIn = devicePairingApiKeyExpiresInSeconds();
     created = await createApiKeyForUserId({
       userId: input.userId,
       name: deviceName,
-      expiresIn: devicePairingApiKeyExpiresInSeconds(),
+      ...(expiresIn != null ? { expiresIn } : {}),
     });
   } catch (error) {
     await db

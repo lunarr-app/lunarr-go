@@ -1,9 +1,14 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { DEVICE_PAIRING_CODE_EXPIRY_MINUTES } from "$lib/device-pairing/constants";
+  import type { DevicePairingApiKeyExpirySettings } from "$lib/device-pairing/expiry-settings";
   import { Link2, Tv } from "@lucide/svelte";
 
-  let { devicePairingApiKeyExpiryLabel = "2 years" }: { devicePairingApiKeyExpiryLabel?: string } = $props();
+  let {
+    devicePairingApiKeyExpiry = { neverExpires: false, label: "2 years" },
+  }: {
+    devicePairingApiKeyExpiry?: DevicePairingApiKeyExpirySettings;
+  } = $props();
 </script>
 
 <section class="ops-panel">
@@ -18,10 +23,10 @@
   <div class="ops-panel-body link-device-panel-body">
     <p class="muted link-device-summary">
       Pairing codes expire after {DEVICE_PAIRING_CODE_EXPIRY_MINUTES} minutes. Linked devices receive an API key that
-      {#if devicePairingApiKeyExpiryLabel === "never"}
+      {#if devicePairingApiKeyExpiry.neverExpires}
         does not expire.
       {:else}
-        expires after {devicePairingApiKeyExpiryLabel}.
+        expires after {devicePairingApiKeyExpiry.label}.
       {/if}
       Revoke linked keys in API Keys below.
     </p>

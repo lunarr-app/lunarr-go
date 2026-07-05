@@ -57,7 +57,7 @@ describe("link-device page server", () => {
     expect(data).toEqual({
       initialUserCode: "abcd-1234",
       initialDeviceName: "Living room TV",
-      devicePairingApiKeyExpiryLabel: "2 years",
+      devicePairingApiKeyExpiry: { neverExpires: false, label: "2 years" },
     });
   });
 

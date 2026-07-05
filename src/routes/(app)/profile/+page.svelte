@@ -27,7 +27,7 @@
     </div>
 
     <div class="profile-panel profile-panel--link">
-      <ProfileLinkDevicePanel devicePairingApiKeyExpiryLabel={data.devicePairingApiKeyExpiryLabel} />
+      <ProfileLinkDevicePanel devicePairingApiKeyExpiry={data.devicePairingApiKeyExpiry} />
     </div>
 
     <div class="profile-panel profile-panel--api">

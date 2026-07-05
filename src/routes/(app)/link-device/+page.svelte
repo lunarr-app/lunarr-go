@@ -20,7 +20,7 @@
   <LinkDeviceForm
     initialUserCode={data.initialUserCode}
     initialDeviceName={data.initialDeviceName}
-    devicePairingApiKeyExpiryLabel={data.devicePairingApiKeyExpiryLabel}
+    devicePairingApiKeyExpiry={data.devicePairingApiKeyExpiry}
     pairingSuccess={form?.pairingSuccess}
     pairingError={form?.pairingError}
   />

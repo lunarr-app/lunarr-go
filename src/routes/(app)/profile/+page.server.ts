@@ -14,7 +14,7 @@ import {
   setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
 import { buildLinkDevicePath, readLinkDevicePrefill } from "$lib/device-pairing/url";
-import { devicePairingApiKeyExpiryLabel } from "$lib/server/device-pairing/env";
+import { devicePairingApiKeyExpirySettings } from "$lib/server/device-pairing/env";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -44,7 +44,7 @@ export const load: PageServerLoad = async ({ locals, request, url }) => {
     user: locals.user,
     apiKeys,
     transcodePolicy: await getTranscodePolicy(locals.user.id),
-    devicePairingApiKeyExpiryLabel: devicePairingApiKeyExpiryLabel(),
+    devicePairingApiKeyExpiry: devicePairingApiKeyExpirySettings(),
   };
 };
 
