@@ -1,4 +1,4 @@
-import type { CatalogPageInfo, MovieBrowseRailResponse, MovieRowsResponse } from "$lib/media/types";
+import type { MovieBrowseRailResponse, MovieRowsResponse } from "$lib/media/types";
 import { sql } from "kysely";
 import { getDb } from "../../db";
 import {
@@ -7,8 +7,10 @@ import {
   accessibleLibrarySql,
   browseMatchesSearchSql,
   catalogPageInfo,
+  catalogPageSize,
   emptyCatalogPage,
   normalizePage,
+  paginatedGroupedRail,
   type MovieSort,
   type MovieStatusFilter,
   type MovieBrowseRail,
@@ -27,20 +29,6 @@ const MOVIE_BROWSE_SEARCH_LIKE_EXPRESSIONS = [
 
 function mapBrowsableMovie(movie: MovieBrowseRow, progress: ReturnType<typeof summarizeMovieProgress>) {
   return publicMovieListItem(publicMovieSummary(movie, progress));
-}
-
-async function paginatedGroupedRail<T extends MovieBrowseRow>(
-  orderedQuery: { limit(n: number): { offset(n: number): { execute(): Promise<T[]> } } },
-  countQuery: () => Promise<number>,
-  page: number,
-  limit: number,
-): Promise<{ items: T[]; page: CatalogPageInfo }> {
-  const total = await countQuery();
-  const pageInfo = catalogPageInfo(page, limit, total);
-  if (total === 0) return { items: [], page: pageInfo };
-  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
-  const items = await orderedQuery.limit(pageInfo.pageSize).offset(offset).execute();
-  return { items, page: pageInfo };
 }
 
 export async function movieRows(
@@ -73,7 +61,7 @@ export async function movieRows(
   const db = await getDb();
   const searchPattern = search.trim();
   const page = normalizePage(pageInput);
-  const limit = Math.max(1, Math.min(Math.floor(pageSize), 200));
+  const limit = catalogPageSize(pageSize);
 
   const filteredMovies = () =>
     db

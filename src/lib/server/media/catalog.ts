@@ -6,6 +6,7 @@ const MOVIE_SORTS = ["title", "recent", "year_desc", "rating", "release_date"] a
 export const BROWSE_RAIL_LIMIT = 24;
 export const MOVIE_PAGE_SIZE = BROWSE_RAIL_LIMIT;
 export const SHOW_PAGE_SIZE = BROWSE_RAIL_LIMIT;
+export const FULL_LIBRARY_PAGE_SIZE = 36;
 const SHOW_SORTS = ["title", "recent", "latest", "popular"] as const;
 export const MOVIE_BROWSE_RAILS = ["continueWatching", "all", "recent", "latest", "popular"] as const;
 export const SHOW_BROWSE_RAILS = ["continueWatching", "nextUp", "all", "recent", "latest", "popular"] as const;
@@ -103,6 +104,24 @@ export function paginatedSlice<T>(pageInput: number, limitInput: number, items: 
     items: items.slice(offset, offset + pageInfo.pageSize),
     page: pageInfo,
   };
+}
+
+type PaginatedQuery<T> = {
+  limit(n: number): { offset(n: number): { execute(): Promise<T[]> } };
+};
+
+export async function paginatedGroupedRail<T>(
+  orderedQuery: PaginatedQuery<T>,
+  countQuery: () => Promise<number>,
+  page: number,
+  limit: number,
+): Promise<{ items: T[]; page: CatalogPageInfo }> {
+  const total = await countQuery();
+  const pageInfo = catalogPageInfo(page, limit, total);
+  if (total === 0) return { items: [], page: pageInfo };
+  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
+  const items = await orderedQuery.limit(pageInfo.pageSize).offset(offset).execute();
+  return { items, page: pageInfo };
 }
 
 function escapeLikePattern(value: string) {

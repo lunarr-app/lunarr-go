@@ -7,8 +7,9 @@ import {
   BROWSE_RAIL_LIMIT,
   SHOW_PAGE_SIZE,
   accessibleLibrarySql,
-  catalogPageInfo,
+  catalogPageSize,
   normalizePage,
+  paginatedGroupedRail,
   paginatedSlice,
   type ShowSort,
   type ShowBrowseRail,
@@ -196,16 +197,18 @@ async function paginatedContinueEpisodeRows(userId: string, page: number, limit:
     applyEpisodeContinueWatchingFilters(episodeBrowseSelect(filteredEpisodeBrowse(db, userId)), userId),
     userId,
   );
-  const totalRow = await db
-    .selectFrom(ordered.as("rail_rows"))
-    .select(sql<number>`count(*)`.as("total"))
-    .executeTakeFirst();
-  const total = Number(totalRow?.total ?? 0);
-  const pageInfo = catalogPageInfo(page, limit, total);
-  if (total === 0) return { items: [] as EpisodeBrowseRow[], page: pageInfo };
-  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
-  const items = await ordered.limit(pageInfo.pageSize).offset(offset).execute();
-  return { items, page: pageInfo };
+  return paginatedGroupedRail(
+    ordered,
+    async () => {
+      const totalRow = await db
+        .selectFrom(ordered.as("rail_rows"))
+        .select(sql<number>`count(*)`.as("total"))
+        .executeTakeFirst();
+      return Number(totalRow?.total ?? 0);
+    },
+    page,
+    limit,
+  );
 }
 
 async function allWithProgressEpisodeRows(userId: string) {
@@ -305,7 +308,7 @@ export async function tvRows(
   rails: readonly ShowBrowseRail[] | null = null,
 ): Promise<ShowRowsResponse | Partial<ShowRowsResponse>> {
   const page = normalizePage(pageInput);
-  const limit = Math.max(1, Math.min(Math.floor(pageSize), 200));
+  const limit = catalogPageSize(pageSize);
 
   const fetchRail = async (rail: ShowBrowseRail): Promise<Partial<ShowRowsResponse>> => {
     if (rail === "continueWatching") {
@@ -363,7 +366,7 @@ export async function continueTvRows(
   pageSize = BROWSE_RAIL_LIMIT,
 ): Promise<Pick<ShowRowsResponse, "continueWatching" | "continueWatchingPage" | "nextUp" | "nextUpPage">> {
   const page = normalizePage(pageInput);
-  const limit = Math.max(1, Math.min(Math.floor(pageSize), 200));
+  const limit = catalogPageSize(pageSize);
   const [continueRail, nextUpRail] = await Promise.all([
     paginatedContinueEpisodeRows(userId, page, limit),
     paginatedNextUpEpisodeRows(userId, page, limit),

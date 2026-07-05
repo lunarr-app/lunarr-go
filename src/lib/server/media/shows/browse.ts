@@ -1,24 +1,18 @@
-import type { CatalogPageInfo, ShowBrowseRailResponse, ShowBrowseRowsResponse } from "$lib/media/types";
+import type { ShowBrowseRailResponse, ShowBrowseRowsResponse } from "$lib/media/types";
 import { sql } from "kysely";
 import { tmdbImageUrl } from "$lib/media/images";
 import { getDb } from "../../db";
-import { SHOW_PAGE_SIZE, catalogPageInfo, normalizePage, type ShowSort, type ShowBrowseRail } from "../catalog";
+import {
+  SHOW_PAGE_SIZE,
+  catalogPageInfo,
+  catalogPageSize,
+  normalizePage,
+  paginatedGroupedRail,
+  type ShowSort,
+  type ShowBrowseRail,
+} from "../catalog";
 import type { ShowBrowseRow } from "../types";
 import { filteredShows, orderShowBrowseQuery, showBrowseSelect } from "./browse-query";
-
-async function paginatedGroupedRail<T extends ShowBrowseRow>(
-  orderedQuery: { limit(n: number): { offset(n: number): { execute(): Promise<T[]> } } },
-  countQuery: () => Promise<number>,
-  page: number,
-  limit: number,
-): Promise<{ items: T[]; page: CatalogPageInfo }> {
-  const total = await countQuery();
-  const pageInfo = catalogPageInfo(page, limit, total);
-  if (total === 0) return { items: [], page: pageInfo };
-  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
-  const items = await orderedQuery.limit(pageInfo.pageSize).offset(offset).execute();
-  return { items, page: pageInfo };
-}
 
 export async function showBrowseRowsForIds(userId: string, ids: string[]) {
   if (ids.length === 0) return [] as ShowBrowseRow[];
@@ -77,7 +71,7 @@ export async function showBrowseRows(
 ): Promise<ShowBrowseRowsResponse | ShowBrowseRailResponse> {
   const db = await getDb();
   const page = normalizePage(pageInput);
-  const limit = Math.max(1, Math.min(Math.floor(pageSize), 200));
+  const limit = catalogPageSize(pageSize);
   const filtered = await filteredShows(userId, search);
   const mapShow = (show: ShowBrowseRow) => publicShowSummary(show);
 
