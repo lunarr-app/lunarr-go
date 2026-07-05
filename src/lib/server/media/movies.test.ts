@@ -342,6 +342,7 @@ describe("movieRows", () => {
     const rows = await movieRows("user-1", "", "all", "title", 1, MOVIE_PAGE_SIZE, ["recent"]);
 
     expect(rows.recent?.map((movie) => movie.title)).toEqual(["Alpha", "Bravo"]);
+    expect(rows.recentPage).toMatchObject({ page: 1, pageSize: 24, total: 2 });
     expect(rows).not.toHaveProperty("all");
     expect(rows).not.toHaveProperty("continueWatching");
   });

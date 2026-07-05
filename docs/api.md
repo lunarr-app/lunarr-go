@@ -165,11 +165,20 @@ Valid movie rails: `continueWatching`, `all`, `recent`, `latest`, `popular`.
 
 Valid show rails: `continueWatching`, `nextUp`, `all`, `recent`, `latest`, `popular`.
 
-When `rail` is set, the response includes only the requested keys (for example `{ "recent": [...] }`, `{ "all": [...], "allPage": {...} }`, or `{ "continueWatching": [...], "recent": [...] }` when multiple rails are comma-separated). Omit `rail` for the full bundled payload. Invalid `rail` values return `400`.
+When `rail` is set, the response includes only the requested keys (for example `{ "recent": [...], "recentPage": {...} }`, `{ "all": [...], "allPage": {...} }`, or `{ "continueWatching": [...], "continueWatchingPage": {...}, "recent": [...], "recentPage": {...} }` when multiple rails are comma-separated). Omit `rail` for the full bundled payload. Invalid `rail` values return `400`.
+
+Browse and continue endpoints accept optional pagination:
+
+```text
+page=1
+limit=24
+```
+
+`page` is 1-based. `limit` defaults to `24` and is clamped to `200`. The same `page` and `limit` apply to each rail requested in one call. Each rail returns a companion `*Page` object with `page`, `pageSize`, `total`, `totalPages`, `hasPrevious`, and `hasNext` (for example `continueWatchingPage`, `recentPage`, `allPage`).
 
 ### Continue watching
 
-`GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). The web Continue page surfaces all three sections.
+`GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). Each section includes matching page metadata (`moviesPage`, `episodesPage`, `nextUpPage`). The web Continue page surfaces all three sections.
 
 The same Continue filters also apply to `continueWatching` and `nextUp` on `GET /api/movies` and `GET /api/shows` (including `?rail=continueWatching` and `?rail=nextUp`).
 

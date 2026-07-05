@@ -3,7 +3,16 @@ import { sql, type Kysely } from "kysely";
 import { tmdbImageUrl } from "$lib/media/images";
 import { getDb } from "../../db";
 import type { Database } from "../../db/schema";
-import { SHOW_PAGE_SIZE, accessibleLibrarySql, type ShowSort, type ShowBrowseRail } from "../catalog";
+import {
+  BROWSE_RAIL_LIMIT,
+  SHOW_PAGE_SIZE,
+  accessibleLibrarySql,
+  catalogPageInfo,
+  normalizePage,
+  paginatedSlice,
+  type ShowSort,
+  type ShowBrowseRail,
+} from "../catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
 import {
   continueMaxAgeCutoffSql,
@@ -181,22 +190,34 @@ function orderEpisodeBrowseDefault(query: EpisodeBrowseQuery) {
     .orderBy("episode.title", "asc");
 }
 
-async function tvEpisodeRows(userId: string, mode: "continue" | "with-progress", limit = 24) {
+async function paginatedContinueEpisodeRows(userId: string, page: number, limit: number) {
   const db = await getDb();
-  let query = episodeBrowseSelect(filteredEpisodeBrowse(db, userId));
-
-  if (mode === "continue") {
-    query = orderContinueEpisodes(applyEpisodeContinueWatchingFilters(query, userId), userId);
-  } else {
-    query = orderEpisodeBrowseDefault(applyWithProgressShowFilter(query, userId));
-  }
-
-  return query.limit(limit).execute();
+  const ordered = orderContinueEpisodes(
+    applyEpisodeContinueWatchingFilters(episodeBrowseSelect(filteredEpisodeBrowse(db, userId)), userId),
+    userId,
+  );
+  const totalRow = await db
+    .selectFrom(ordered.as("rail_rows"))
+    .select(sql<number>`count(*)`.as("total"))
+    .executeTakeFirst();
+  const total = Number(totalRow?.total ?? 0);
+  const pageInfo = catalogPageInfo(page, limit, total);
+  if (total === 0) return { items: [] as EpisodeBrowseRow[], page: pageInfo };
+  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
+  const items = await ordered.limit(pageInfo.pageSize).offset(offset).execute();
+  return { items, page: pageInfo };
 }
 
-async function nextUpEpisodeRows(userId: string, limit = 24) {
-  const rows = await tvEpisodeRows(userId, "with-progress", 1000);
-  if (rows.length === 0) return [];
+async function allWithProgressEpisodeRows(userId: string) {
+  const db = await getDb();
+  return orderEpisodeBrowseDefault(
+    applyWithProgressShowFilter(episodeBrowseSelect(filteredEpisodeBrowse(db, userId)), userId),
+  ).execute();
+}
+
+async function buildNextUpEpisodeRows(userId: string) {
+  const rows = await allWithProgressEpisodeRows(userId);
+  if (rows.length === 0) return [] as EpisodeBrowseRow[];
 
   const progress = await tvEpisodeProgress(
     userId,
@@ -242,7 +263,21 @@ async function nextUpEpisodeRows(userId: string, limit = 24) {
     if (next) nextRows.push(next);
   }
 
-  return nextRows.slice(0, limit);
+  return nextRows;
+}
+
+async function paginatedNextUpEpisodeRows(userId: string, page: number, limit: number) {
+  const allNextRows = await buildNextUpEpisodeRows(userId);
+  const { items, page: pageInfo } = paginatedSlice(page, limit, allNextRows);
+  return { items, page: pageInfo };
+}
+
+async function mapEpisodeSummaries(userId: string, episodes: EpisodeBrowseRow[]) {
+  const progress = await tvEpisodeProgress(
+    userId,
+    episodes.map((episode) => episode.id),
+  );
+  return episodes.map((episode) => publicEpisodeSummary(episode, progress));
 }
 
 export async function tvRows(
@@ -269,25 +304,24 @@ export async function tvRows(
   pageSize = SHOW_PAGE_SIZE,
   rails: readonly ShowBrowseRail[] | null = null,
 ): Promise<ShowRowsResponse | Partial<ShowRowsResponse>> {
+  const page = normalizePage(pageInput);
+  const limit = Math.max(1, Math.min(Math.floor(pageSize), 200));
+
   const fetchRail = async (rail: ShowBrowseRail): Promise<Partial<ShowRowsResponse>> => {
     if (rail === "continueWatching") {
-      const continueEpisodeRows = await tvEpisodeRows(userId, "continue");
-      const progress = await tvEpisodeProgress(
-        userId,
-        continueEpisodeRows.map((episode) => episode.id),
-      );
+      const { items, page: railPage } = await paginatedContinueEpisodeRows(userId, page, limit);
       return {
-        continueWatching: continueEpisodeRows.map((episode) => publicEpisodeSummary(episode, progress)),
+        continueWatching: await mapEpisodeSummaries(userId, items),
+        continueWatchingPage: railPage,
       };
     }
 
     if (rail === "nextUp") {
-      const nextRows = await nextUpEpisodeRows(userId);
-      const progress = await tvEpisodeProgress(
-        userId,
-        nextRows.map((episode) => episode.id),
-      );
-      return { nextUp: nextRows.map((episode) => publicEpisodeSummary(episode, progress)) };
+      const { items, page: railPage } = await paginatedNextUpEpisodeRows(userId, page, limit);
+      return {
+        nextUp: await mapEpisodeSummaries(userId, items),
+        nextUpPage: railPage,
+      };
     }
 
     return showBrowseRows(userId, search, sort, pageInput, pageSize, [rail]);
@@ -298,22 +332,50 @@ export async function tvRows(
     return Object.assign({}, ...parts);
   }
 
-  const [browse, continueEpisodeRows, nextRows] = await Promise.all([
+  const [browse, continueRail, nextUpRail] = await Promise.all([
     showBrowseRows(userId, search, sort, pageInput, pageSize),
-    tvEpisodeRows(userId, "continue"),
-    nextUpEpisodeRows(userId),
+    paginatedContinueEpisodeRows(userId, page, limit),
+    paginatedNextUpEpisodeRows(userId, page, limit),
   ]);
-  const episodeIds = [...new Set([...continueEpisodeRows, ...nextRows].map((episode) => episode.id))];
+  const episodeIds = [...new Set([...continueRail.items, ...nextUpRail.items].map((episode) => episode.id))];
   const progress = await tvEpisodeProgress(userId, episodeIds);
   const mapEpisode = (episode: EpisodeBrowseRow) => publicEpisodeSummary(episode, progress);
 
   return {
-    continueWatching: continueEpisodeRows.map(mapEpisode),
-    nextUp: nextRows.map(mapEpisode),
+    continueWatching: continueRail.items.map(mapEpisode),
+    continueWatchingPage: continueRail.page,
+    nextUp: nextUpRail.items.map(mapEpisode),
+    nextUpPage: nextUpRail.page,
     all: browse.all,
     allPage: browse.allPage,
     recent: browse.recent,
+    recentPage: browse.recentPage,
     latest: browse.latest,
+    latestPage: browse.latestPage,
     popular: browse.popular,
+    popularPage: browse.popularPage,
   } satisfies ShowRowsResponse;
+}
+
+export async function continueTvRows(
+  userId: string,
+  pageInput = 1,
+  pageSize = BROWSE_RAIL_LIMIT,
+): Promise<Pick<ShowRowsResponse, "continueWatching" | "continueWatchingPage" | "nextUp" | "nextUpPage">> {
+  const page = normalizePage(pageInput);
+  const limit = Math.max(1, Math.min(Math.floor(pageSize), 200));
+  const [continueRail, nextUpRail] = await Promise.all([
+    paginatedContinueEpisodeRows(userId, page, limit),
+    paginatedNextUpEpisodeRows(userId, page, limit),
+  ]);
+  const episodeIds = [...new Set([...continueRail.items, ...nextUpRail.items].map((episode) => episode.id))];
+  const progress = await tvEpisodeProgress(userId, episodeIds);
+  const mapEpisode = (episode: EpisodeBrowseRow) => publicEpisodeSummary(episode, progress);
+
+  return {
+    continueWatching: continueRail.items.map(mapEpisode),
+    continueWatchingPage: continueRail.page,
+    nextUp: nextUpRail.items.map(mapEpisode),
+    nextUpPage: nextUpRail.page,
+  };
 }

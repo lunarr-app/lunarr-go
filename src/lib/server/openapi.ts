@@ -119,6 +119,14 @@ const pageParameter = {
   schema: { type: "integer", minimum: 1 },
 };
 
+const limitParameter = {
+  name: "limit",
+  in: "query",
+  required: false,
+  description: "Maximum items per rail or continue section. Default 24. Clamped to 200.",
+  schema: { type: "integer", minimum: 1, maximum: 200 },
+};
+
 function browseRailParameter(rails: readonly string[], description: string) {
   const railPattern = rails.join("|");
   return {
@@ -135,12 +143,12 @@ function browseRailParameter(rails: readonly string[], description: string) {
 
 const movieBrowseRailParameter = browseRailParameter(
   ["continueWatching", "all", "recent", "latest", "popular"],
-  "When set, returns only the requested rail(s). Comma-separate multiple rails. `all` also returns `allPage`. Omit for the full bundled response.",
+  "When set, returns only the requested rail(s). Comma-separate multiple rails. Each rail also returns a matching `*Page` object (for example `continueWatchingPage`, `allPage`). Omit for the full bundled response.",
 );
 
 const showBrowseRailParameter = browseRailParameter(
   ["continueWatching", "nextUp", "all", "recent", "latest", "popular"],
-  "When set, returns only the requested rail(s). Comma-separate multiple rails. Episode rails return `EpisodeSummary` items, and show rails return `ShowSummary` items. `all` also returns `allPage`.",
+  "When set, returns only the requested rail(s). Comma-separate multiple rails. Episode rails return `EpisodeSummary` items, and show rails return `ShowSummary` items. Each rail also returns a matching `*Page` object. Omit for the full bundled response.",
 );
 
 const commonErrors = {
@@ -237,6 +245,7 @@ export const openApiDocument = {
         tags: ["Catalog"],
         summary: "List resumable movies and episodes.",
         operationId: "getContinueWatching",
+        parameters: [pageParameter, limitParameter],
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/ContinueWatchingResponse",
@@ -292,6 +301,7 @@ export const openApiDocument = {
             required: false,
             schema: { type: "integer", minimum: 1 },
           },
+          limitParameter,
         ],
         responses: {
           "200": jsonResponse({
@@ -419,6 +429,7 @@ export const openApiDocument = {
             required: false,
             schema: { type: "integer", minimum: 1 },
           },
+          limitParameter,
         ],
         responses: {
           "200": jsonResponse({
@@ -2379,12 +2390,24 @@ export const openApiDocument = {
       },
       MovieRowsResponse: {
         type: "object",
-        required: ["continueWatching", "all", "allPage", "recent", "latest", "popular"],
+        required: [
+          "continueWatching",
+          "continueWatchingPage",
+          "all",
+          "allPage",
+          "recent",
+          "recentPage",
+          "latest",
+          "latestPage",
+          "popular",
+          "popularPage",
+        ],
         properties: {
           continueWatching: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          continueWatchingPage: { $ref: "#/components/schemas/PageMetadata" },
           all: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
@@ -2394,14 +2417,17 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          recentPage: { $ref: "#/components/schemas/PageMetadata" },
           latest: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          latestPage: { $ref: "#/components/schemas/PageMetadata" },
           popular: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          popularPage: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
       MovieBrowseRailResponse: {
@@ -2412,6 +2438,7 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          continueWatchingPage: { $ref: "#/components/schemas/PageMetadata" },
           all: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
@@ -2421,14 +2448,17 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          recentPage: { $ref: "#/components/schemas/PageMetadata" },
           latest: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          latestPage: { $ref: "#/components/schemas/PageMetadata" },
           popular: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          popularPage: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
       PageMetadata: {
@@ -2445,20 +2475,23 @@ export const openApiDocument = {
       },
       ContinueWatchingResponse: {
         type: "object",
-        required: ["movies", "episodes", "nextUp"],
+        required: ["movies", "moviesPage", "episodes", "episodesPage", "nextUp", "nextUpPage"],
         properties: {
           movies: {
             type: "array",
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
+          moviesPage: { $ref: "#/components/schemas/PageMetadata" },
           episodes: {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },
           },
+          episodesPage: { $ref: "#/components/schemas/PageMetadata" },
           nextUp: {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },
           },
+          nextUpPage: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
       DiscoverMoviesResponse: {
@@ -2485,16 +2518,31 @@ export const openApiDocument = {
       },
       ShowRowsResponse: {
         type: "object",
-        required: ["continueWatching", "nextUp", "all", "allPage", "recent", "latest", "popular"],
+        required: [
+          "continueWatching",
+          "continueWatchingPage",
+          "nextUp",
+          "nextUpPage",
+          "all",
+          "allPage",
+          "recent",
+          "recentPage",
+          "latest",
+          "latestPage",
+          "popular",
+          "popularPage",
+        ],
         properties: {
           continueWatching: {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },
           },
+          continueWatchingPage: { $ref: "#/components/schemas/PageMetadata" },
           nextUp: {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },
           },
+          nextUpPage: { $ref: "#/components/schemas/PageMetadata" },
           all: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
@@ -2504,14 +2552,17 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
+          recentPage: { $ref: "#/components/schemas/PageMetadata" },
           latest: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
+          latestPage: { $ref: "#/components/schemas/PageMetadata" },
           popular: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
+          popularPage: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
       ShowBrowseRailResponse: {
@@ -2522,10 +2573,12 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },
           },
+          continueWatchingPage: { $ref: "#/components/schemas/PageMetadata" },
           nextUp: {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },
           },
+          nextUpPage: { $ref: "#/components/schemas/PageMetadata" },
           all: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
@@ -2535,14 +2588,17 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
+          recentPage: { $ref: "#/components/schemas/PageMetadata" },
           latest: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
+          latestPage: { $ref: "#/components/schemas/PageMetadata" },
           popular: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
+          popularPage: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
       ShareEpisode: {

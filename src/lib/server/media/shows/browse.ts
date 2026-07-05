@@ -1,9 +1,24 @@
-import type { ShowBrowseRailResponse, ShowBrowseRowsResponse } from "$lib/media/types";
+import type { CatalogPageInfo, ShowBrowseRailResponse, ShowBrowseRowsResponse } from "$lib/media/types";
 import { sql } from "kysely";
 import { tmdbImageUrl } from "$lib/media/images";
-import { SHOW_PAGE_SIZE, normalizePage, type ShowSort, type ShowBrowseRail } from "../catalog";
+import { getDb } from "../../db";
+import { SHOW_PAGE_SIZE, catalogPageInfo, normalizePage, type ShowSort, type ShowBrowseRail } from "../catalog";
 import type { ShowBrowseRow } from "../types";
 import { filteredShows, orderShowBrowseQuery, showBrowseSelect } from "./browse-query";
+
+async function paginatedGroupedRail<T extends ShowBrowseRow>(
+  orderedQuery: { limit(n: number): { offset(n: number): { execute(): Promise<T[]> } } },
+  countQuery: () => Promise<number>,
+  page: number,
+  limit: number,
+): Promise<{ items: T[]; page: CatalogPageInfo }> {
+  const total = await countQuery();
+  const pageInfo = catalogPageInfo(page, limit, total);
+  if (total === 0) return { items: [], page: pageInfo };
+  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
+  const items = await orderedQuery.limit(pageInfo.pageSize).offset(offset).execute();
+  return { items, page: pageInfo };
+}
 
 export async function showBrowseRowsForIds(userId: string, ids: string[]) {
   if (ids.length === 0) return [] as ShowBrowseRow[];
@@ -60,49 +75,70 @@ export async function showBrowseRows(
   pageSize = SHOW_PAGE_SIZE,
   rails: readonly Exclude<ShowBrowseRail, "continueWatching" | "nextUp">[] | null = null,
 ): Promise<ShowBrowseRowsResponse | ShowBrowseRailResponse> {
+  const db = await getDb();
   const page = normalizePage(pageInput);
-  const cleanPageSize = Math.max(1, Math.min(Math.floor(pageSize), 200));
+  const limit = Math.max(1, Math.min(Math.floor(pageSize), 200));
   const filtered = await filteredShows(userId, search);
   const mapShow = (show: ShowBrowseRow) => publicShowSummary(show);
+
+  const countGroupedRail = async (orderedQuery: ReturnType<typeof showBrowseSelect>) => {
+    const row = await db
+      .selectFrom(orderedQuery.as("rail_rows"))
+      .select(sql<number>`count(*)`.as("total"))
+      .executeTakeFirst();
+    return Number(row?.total ?? 0);
+  };
+
+  const fetchRecentRail = async () => {
+    const ordered = orderShowBrowseQuery(showBrowseSelect(filtered), "recent");
+    return paginatedGroupedRail(ordered, () => countGroupedRail(ordered), page, limit);
+  };
+
+  const fetchLatestRail = async () => {
+    const ordered = orderShowBrowseQuery(showBrowseSelect(filtered), "latest");
+    return paginatedGroupedRail(ordered, () => countGroupedRail(ordered), page, limit);
+  };
+
+  const fetchPopularRail = async () => {
+    const ordered = orderShowBrowseQuery(showBrowseSelect(filtered), "popular");
+    return paginatedGroupedRail(ordered, () => countGroupedRail(ordered), page, limit);
+  };
+
+  const fetchAllRail = async () => {
+    const totalRow = await filtered.select(sql<number>`count(distinct show.id)`.as("total")).executeTakeFirst();
+    const total = Number(totalRow?.total ?? 0);
+    const pageInfo = catalogPageInfo(page, limit, total);
+    const offset = (pageInfo.page - 1) * pageInfo.pageSize;
+    const allRows =
+      total === 0
+        ? []
+        : await orderShowBrowseQuery(showBrowseSelect(filtered), sort)
+            .limit(pageInfo.pageSize)
+            .offset(offset)
+            .execute();
+    return { items: allRows, page: pageInfo };
+  };
 
   const fetchRail = async (
     rail: Exclude<ShowBrowseRail, "continueWatching" | "nextUp">,
   ): Promise<ShowBrowseRailResponse> => {
     if (rail === "recent") {
-      const recentRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "recent").limit(24).execute();
-      return { recent: recentRows.map(mapShow) };
+      const { items, page: railPage } = await fetchRecentRail();
+      return { recent: items.map(mapShow), recentPage: railPage };
     }
 
     if (rail === "latest") {
-      const latestRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "latest").limit(24).execute();
-      return { latest: latestRows.map(mapShow) };
+      const { items, page: railPage } = await fetchLatestRail();
+      return { latest: items.map(mapShow), latestPage: railPage };
     }
 
     if (rail === "popular") {
-      const popularRows = await orderShowBrowseQuery(showBrowseSelect(filtered), "popular").limit(24).execute();
-      return { popular: popularRows.map(mapShow) };
+      const { items, page: railPage } = await fetchPopularRail();
+      return { popular: items.map(mapShow), popularPage: railPage };
     }
 
-    const totalRow = await filtered.select(sql<number>`count(distinct show.id)`.as("total")).executeTakeFirst();
-    const total = Number(totalRow?.total ?? 0);
-    const totalPages = Math.max(1, Math.ceil(total / cleanPageSize));
-    const currentPage = Math.min(page, totalPages);
-    const offset = (currentPage - 1) * cleanPageSize;
-    const allRows = await orderShowBrowseQuery(showBrowseSelect(filtered), sort)
-      .limit(cleanPageSize)
-      .offset(offset)
-      .execute();
-    return {
-      all: allRows.map(mapShow),
-      allPage: {
-        page: currentPage,
-        pageSize: cleanPageSize,
-        total,
-        totalPages,
-        hasPrevious: currentPage > 1,
-        hasNext: currentPage < totalPages,
-      },
-    };
+    const { items, page: railPage } = await fetchAllRail();
+    return { all: items.map(mapShow), allPage: railPage };
   };
 
   if (rails && rails.length > 0) {
@@ -110,31 +146,21 @@ export async function showBrowseRows(
     return Object.assign({}, ...parts);
   }
 
-  const totalRow = await filtered.select(sql<number>`count(distinct show.id)`.as("total")).executeTakeFirst();
-  const total = Number(totalRow?.total ?? 0);
-  const totalPages = Math.max(1, Math.ceil(total / cleanPageSize));
-  const currentPage = Math.min(page, totalPages);
-  const offset = (currentPage - 1) * cleanPageSize;
-
-  const [allRows, recentRows, latestRows, popularRows] = await Promise.all([
-    orderShowBrowseQuery(showBrowseSelect(filtered), sort).limit(cleanPageSize).offset(offset).execute(),
-    orderShowBrowseQuery(showBrowseSelect(filtered), "recent").limit(24).execute(),
-    orderShowBrowseQuery(showBrowseSelect(filtered), "latest").limit(24).execute(),
-    orderShowBrowseQuery(showBrowseSelect(filtered), "popular").limit(24).execute(),
+  const [allRail, recentRail, latestRail, popularRail] = await Promise.all([
+    fetchAllRail(),
+    fetchRecentRail(),
+    fetchLatestRail(),
+    fetchPopularRail(),
   ]);
 
   return {
-    all: allRows.map(mapShow),
-    allPage: {
-      page: currentPage,
-      pageSize: cleanPageSize,
-      total,
-      totalPages,
-      hasPrevious: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    },
-    recent: recentRows.map(mapShow),
-    latest: latestRows.map(mapShow),
-    popular: popularRows.map(mapShow),
+    all: allRail.items.map(mapShow),
+    allPage: allRail.page,
+    recent: recentRail.items.map(mapShow),
+    recentPage: recentRail.page,
+    latest: latestRail.items.map(mapShow),
+    latestPage: latestRail.page,
+    popular: popularRail.items.map(mapShow),
+    popularPage: popularRail.page,
   } satisfies ShowBrowseRowsResponse;
 }

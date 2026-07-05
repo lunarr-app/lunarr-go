@@ -6,10 +6,12 @@
 
 - Added optional Continue staleness filtering with `LUNARR_CONTINUE_MAX_AGE_DAYS`, hiding idle in-progress items from Continue rails while keeping resume on detail pages.
 - Continue rails now ignore accidental starts shorter than 60 seconds.
+- Added optional `page` and `limit` query params (default limit 24) to browse and continue APIs, with companion `*Page` metadata for every rail and continue section.
 
 ### Changed
 
 - Documented Continue filtering for browse rails, transcoding admin settings, and `playback-cache` storage layout.
+- Unified default catalog page size to 24 items. Web full-library pages still request 36 items per page.
 
 ## 0.6.0 - 2026-07-04
 

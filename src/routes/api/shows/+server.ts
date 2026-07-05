@@ -1,4 +1,10 @@
-import { SHOW_PAGE_SIZE, normalizePage, normalizeShowSort, parseShowBrowseRails } from "$lib/server/media/catalog";
+import {
+  SHOW_PAGE_SIZE,
+  normalizeLimit,
+  normalizePage,
+  normalizeShowSort,
+  parseShowBrowseRails,
+} from "$lib/server/media/catalog";
 import { tvRows } from "$lib/server/media/shows/episodes";
 import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
 import { apiJson } from "$lib/server/api/json";
@@ -17,10 +23,11 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const search = url.searchParams.get("search") ?? "";
   const sort = normalizeShowSort(url.searchParams.get("sort"));
   const page = normalizePage(url.searchParams.get("page"));
+  const limit = normalizeLimit(url.searchParams.get("limit"), SHOW_PAGE_SIZE);
 
   if (rails && rails.length > 0) {
-    return apiJson<ShowBrowseRailResponse>(await tvRows(user.id, search, sort, page, SHOW_PAGE_SIZE, rails));
+    return apiJson<ShowBrowseRailResponse>(await tvRows(user.id, search, sort, page, limit, rails));
   }
 
-  return apiJson<ShowRowsResponse>(await tvRows(user.id, search, sort, page));
+  return apiJson<ShowRowsResponse>(await tvRows(user.id, search, sort, page, limit));
 };

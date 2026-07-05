@@ -61,11 +61,15 @@ export type CatalogPageInfo = {
 
 export type MovieRowsResponse = {
   continueWatching: MovieSummary[];
+  continueWatchingPage: CatalogPageInfo;
   all: MovieSummary[];
   allPage: CatalogPageInfo;
   recent: MovieSummary[];
+  recentPage: CatalogPageInfo;
   latest: MovieSummary[];
+  latestPage: CatalogPageInfo;
   popular: MovieSummary[];
+  popularPage: CatalogPageInfo;
 };
 
 export type MovieBrowseRailResponse = Partial<MovieRowsResponse>;
@@ -74,13 +78,18 @@ export type ShowBrowseRowsResponse = {
   all: ShowSummary[];
   allPage: CatalogPageInfo;
   recent: ShowSummary[];
+  recentPage: CatalogPageInfo;
   latest: ShowSummary[];
+  latestPage: CatalogPageInfo;
   popular: ShowSummary[];
+  popularPage: CatalogPageInfo;
 };
 
 export type ShowBrowseRailResponse = Partial<ShowBrowseRowsResponse>;
 
 export type ShowRowsResponse = {
   continueWatching: EpisodeSummary[];
+  continueWatchingPage: CatalogPageInfo;
   nextUp: EpisodeSummary[];
+  nextUpPage: CatalogPageInfo;
 } & ShowBrowseRowsResponse;

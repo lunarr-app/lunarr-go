@@ -40,8 +40,23 @@ type MoviesLoadResult = {
 
 type ContinueLoadResult = {
   movies: MovieRow[];
+  moviesPage: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+  };
   episodes: Array<{ id: string }>;
+  episodesPage: {
+    total: number;
+  };
   nextUp: Array<{ id: string }>;
+  nextUpPage: {
+    total: number;
+  };
+  page: number;
 };
 
 describe("movies page server", () => {
@@ -278,6 +293,7 @@ describe("movies page server", () => {
   test("loads only resumable movies for continue watching", async () => {
     const result = (await continueLoad({
       locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/continue"),
     } as never)) as ContinueLoadResult;
 
     expect(result.movies).toHaveLength(1);
@@ -287,7 +303,15 @@ describe("movies page server", () => {
       progressSeconds: 90,
       completed: false,
     });
+    expect(result.moviesPage).toMatchObject({
+      page: 1,
+      pageSize: 24,
+      total: 1,
+      hasNext: false,
+    });
     expect(result.episodes).toEqual([]);
+    expect(result.episodesPage.total).toBe(0);
     expect(result.nextUp).toEqual([]);
+    expect(result.nextUpPage.total).toBe(0);
   });
 });

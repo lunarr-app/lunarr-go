@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
+import { GET as continueGet } from "./continue/+server";
 import { GET as moviesGet } from "./movies/+server";
 
 describe("catalog API access", () => {
@@ -179,5 +180,72 @@ describe("catalog API access", () => {
     });
     expect(body).not.toHaveProperty("all");
     expect(body).not.toHaveProperty("continueWatching");
+  });
+
+  test("movie API honors page and limit query params", async () => {
+    await setupCatalog();
+
+    const response = await moviesGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/api/movies?rail=popular&limit=1"),
+    } as never);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      popular: [{ id: "movie-1", title: "Shared Movie" }],
+      popularPage: {
+        page: 1,
+        pageSize: 1,
+        total: 1,
+        totalPages: 1,
+        hasPrevious: false,
+        hasNext: false,
+      },
+    });
+  });
+
+  test("continue API returns page metadata for each section", async () => {
+    await setupCatalog();
+    const db = await getDb();
+    const now = new Date().toISOString();
+
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "user-1",
+        media_item_id: "movie-1",
+        media_file_id: "file-1",
+        position_seconds: 120,
+        duration_seconds: 3600,
+        completed: 0,
+        updated_at: now,
+      })
+      .execute();
+
+    const response = await continueGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/api/continue?limit=10"),
+    } as never);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      movies: [{ id: "movie-1", title: "Shared Movie" }],
+      moviesPage: {
+        page: 1,
+        pageSize: 10,
+        total: 1,
+        hasNext: false,
+      },
+      episodes: [],
+      episodesPage: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+      },
+      nextUp: [],
+      nextUpPage: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+      },
+    });
   });
 });

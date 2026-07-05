@@ -30,7 +30,7 @@ import type { getScanJobSummary, listPlaybackSessions, listScanErrorsForJob, lis
 import type { PlaybackData } from "$lib/server/playback";
 import type { TranscodePolicy } from "$lib/server/transcoding/policy";
 import type { CreateSharePayload, PublicShareRecord, SharePageData, ShareSeasonData } from "$lib/shares/types";
-import type { MovieRowsResponse, ShowRowsResponse } from "$lib/media/types";
+import type { CatalogPageInfo, MovieRowsResponse, ShowRowsResponse } from "$lib/media/types";
 
 export type {
   CatalogPageInfo,
@@ -71,8 +71,11 @@ export type SimilarShowsResponse = NonNullable<Awaited<ReturnType<typeof loadSim
 
 export type ContinueWatchingResponse = {
   movies: MovieRowsResponse["continueWatching"];
+  moviesPage: CatalogPageInfo;
   episodes: ShowRowsResponse["continueWatching"];
+  episodesPage: CatalogPageInfo;
   nextUp: ShowRowsResponse["nextUp"];
+  nextUpPage: CatalogPageInfo;
 };
 
 export type GuestSharePageResponse = {

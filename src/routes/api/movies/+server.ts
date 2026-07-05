@@ -1,5 +1,6 @@
 import {
   MOVIE_PAGE_SIZE,
+  normalizeLimit,
   normalizeMovieSort,
   normalizeMovieStatusFilter,
   normalizePage,
@@ -24,12 +25,11 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const status = normalizeMovieStatusFilter(url.searchParams.get("status"));
   const sort = normalizeMovieSort(url.searchParams.get("sort"));
   const page = normalizePage(url.searchParams.get("page"));
+  const limit = normalizeLimit(url.searchParams.get("limit"), MOVIE_PAGE_SIZE);
 
   if (rails && rails.length > 0) {
-    return apiJson<MovieBrowseRailResponse>(
-      await movieRows(user.id, search, status, sort, page, MOVIE_PAGE_SIZE, rails),
-    );
+    return apiJson<MovieBrowseRailResponse>(await movieRows(user.id, search, status, sort, page, limit, rails));
   }
 
-  return apiJson<MovieRowsResponse>(await movieRows(user.id, search, status, sort, page));
+  return apiJson<MovieRowsResponse>(await movieRows(user.id, search, status, sort, page, limit));
 };

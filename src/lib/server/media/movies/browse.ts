@@ -1,10 +1,13 @@
-import type { MovieBrowseRailResponse, MovieRowsResponse } from "$lib/media/types";
+import type { CatalogPageInfo, MovieBrowseRailResponse, MovieRowsResponse } from "$lib/media/types";
 import { sql } from "kysely";
 import { getDb } from "../../db";
 import {
+  BROWSE_RAIL_LIMIT,
   MOVIE_PAGE_SIZE,
   accessibleLibrarySql,
   browseMatchesSearchSql,
+  catalogPageInfo,
+  emptyCatalogPage,
   normalizePage,
   type MovieSort,
   type MovieStatusFilter,
@@ -24,6 +27,20 @@ const MOVIE_BROWSE_SEARCH_LIKE_EXPRESSIONS = [
 
 function mapBrowsableMovie(movie: MovieBrowseRow, progress: ReturnType<typeof summarizeMovieProgress>) {
   return publicMovieListItem(publicMovieSummary(movie, progress));
+}
+
+async function paginatedGroupedRail<T extends MovieBrowseRow>(
+  orderedQuery: { limit(n: number): { offset(n: number): { execute(): Promise<T[]> } } },
+  countQuery: () => Promise<number>,
+  page: number,
+  limit: number,
+): Promise<{ items: T[]; page: CatalogPageInfo }> {
+  const total = await countQuery();
+  const pageInfo = catalogPageInfo(page, limit, total);
+  if (total === 0) return { items: [], page: pageInfo };
+  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
+  const items = await orderedQuery.limit(pageInfo.pageSize).offset(offset).execute();
+  return { items, page: pageInfo };
 }
 
 export async function movieRows(
@@ -56,7 +73,7 @@ export async function movieRows(
   const db = await getDb();
   const searchPattern = search.trim();
   const page = normalizePage(pageInput);
-  const cleanPageSize = Math.max(1, Math.min(Math.floor(pageSize), 200));
+  const limit = Math.max(1, Math.min(Math.floor(pageSize), 200));
 
   const filteredMovies = () =>
     db
@@ -181,6 +198,14 @@ export async function movieRows(
       ),
     );
 
+  const countGroupedRail = async (orderedQuery: ReturnType<typeof movieSelect>) => {
+    const row = await db
+      .selectFrom(orderedQuery.as("rail_rows"))
+      .select(sql<number>`count(*)`.as("total"))
+      .executeTakeFirst();
+    return Number(row?.total ?? 0);
+  };
+
   const loadMovieBrowseProgress = async (movieIds: string[]) => {
     if (movieIds.length === 0) return summarizeMovieProgress([]);
 
@@ -200,46 +225,61 @@ export async function movieRows(
     return rows.map((movie) => mapBrowsableMovie(movie, progress));
   };
 
-  const fetchRail = async (rail: MovieBrowseRail): Promise<MovieBrowseRailResponse> => {
-    if (rail === "continueWatching") {
-      const continueRows = await continueOrder().limit(24).execute();
-      return { continueWatching: await mapPublicMovies(continueRows) };
-    }
+  const fetchContinueRail = async () => {
+    const ordered = continueOrder();
+    return paginatedGroupedRail(ordered, () => countGroupedRail(ordered), page, limit);
+  };
 
-    if (rail === "recent") {
-      const recentRows = await recentOrder(movieSelect()).limit(24).execute();
-      return { recent: await mapPublicMovies(recentRows) };
-    }
+  const fetchRecentRail = async () => {
+    const ordered = recentOrder(movieSelect());
+    return paginatedGroupedRail(ordered, () => countGroupedRail(ordered), page, limit);
+  };
 
-    if (rail === "latest") {
-      const latestRows = await latestOrder(movieSelect()).limit(24).execute();
-      return { latest: await mapPublicMovies(latestRows) };
-    }
+  const fetchLatestRail = async () => {
+    const ordered = latestOrder(movieSelect());
+    return paginatedGroupedRail(ordered, () => countGroupedRail(ordered), page, limit);
+  };
 
-    if (rail === "popular") {
-      const popularRows = await popularOrder(movieSelect()).limit(24).execute();
-      return { popular: await mapPublicMovies(popularRows) };
-    }
+  const fetchPopularRail = async () => {
+    const ordered = popularOrder(movieSelect());
+    return paginatedGroupedRail(ordered, () => countGroupedRail(ordered), page, limit);
+  };
 
+  const fetchAllRail = async () => {
     const totalRow = await filteredMovies()
       .select(sql<number>`count(distinct media_item.id)`.as("total"))
       .executeTakeFirst();
     const total = Number(totalRow?.total ?? 0);
-    const totalPages = Math.max(1, Math.ceil(total / cleanPageSize));
-    const currentPage = Math.min(page, totalPages);
-    const offset = (currentPage - 1) * cleanPageSize;
-    const allRows = await withBrowseOrder(movieSelect()).limit(cleanPageSize).offset(offset).execute();
-    return {
-      all: await mapPublicMovies(allRows),
-      allPage: {
-        page: currentPage,
-        pageSize: cleanPageSize,
-        total,
-        totalPages,
-        hasPrevious: currentPage > 1,
-        hasNext: currentPage < totalPages,
-      },
-    };
+    const pageInfo = catalogPageInfo(page, limit, total);
+    const offset = (pageInfo.page - 1) * pageInfo.pageSize;
+    const allRows =
+      total === 0 ? [] : await withBrowseOrder(movieSelect()).limit(pageInfo.pageSize).offset(offset).execute();
+    return { items: allRows, page: pageInfo };
+  };
+
+  const fetchRail = async (rail: MovieBrowseRail): Promise<MovieBrowseRailResponse> => {
+    if (rail === "continueWatching") {
+      const { items, page: railPage } = await fetchContinueRail();
+      return { continueWatching: await mapPublicMovies(items), continueWatchingPage: railPage };
+    }
+
+    if (rail === "recent") {
+      const { items, page: railPage } = await fetchRecentRail();
+      return { recent: await mapPublicMovies(items), recentPage: railPage };
+    }
+
+    if (rail === "latest") {
+      const { items, page: railPage } = await fetchLatestRail();
+      return { latest: await mapPublicMovies(items), latestPage: railPage };
+    }
+
+    if (rail === "popular") {
+      const { items, page: railPage } = await fetchPopularRail();
+      return { popular: await mapPublicMovies(items), popularPage: railPage };
+    }
+
+    const { items, page: railPage } = await fetchAllRail();
+    return { all: await mapPublicMovies(items), allPage: railPage };
   };
 
   if (rails && rails.length > 0) {
@@ -247,37 +287,44 @@ export async function movieRows(
     return Object.assign({}, ...parts);
   }
 
-  const totalRow = await filteredMovies()
-    .select(sql<number>`count(distinct media_item.id)`.as("total"))
-    .executeTakeFirst();
-  const total = Number(totalRow?.total ?? 0);
-  const totalPages = Math.max(1, Math.ceil(total / cleanPageSize));
-  const currentPage = Math.min(page, totalPages);
-  const offset = (currentPage - 1) * cleanPageSize;
-
-  const allRows = await withBrowseOrder(movieSelect()).limit(cleanPageSize).offset(offset).execute();
-  const continueRows = await continueOrder().limit(24).execute();
-  const recentRows = await recentOrder(movieSelect()).limit(24).execute();
-  const latestRows = await latestOrder(movieSelect()).limit(24).execute();
-  const popularRows = await popularOrder(movieSelect()).limit(24).execute();
+  const [continueRail, allRail, recentRail, latestRail, popularRail] = await Promise.all([
+    fetchContinueRail(),
+    fetchAllRail(),
+    fetchRecentRail(),
+    fetchLatestRail(),
+    fetchPopularRail(),
+  ]);
   const movieIds = [
-    ...new Set([...allRows, ...continueRows, ...recentRows, ...latestRows, ...popularRows].map((movie) => movie.id)),
+    ...new Set(
+      [...continueRail.items, ...allRail.items, ...recentRail.items, ...latestRail.items, ...popularRail.items].map(
+        (movie) => movie.id,
+      ),
+    ),
   ];
   const progress = await loadMovieBrowseProgress(movieIds);
 
   return {
-    continueWatching: continueRows.map((movie) => mapBrowsableMovie(movie, progress)),
-    all: allRows.map((movie) => mapBrowsableMovie(movie, progress)),
-    allPage: {
-      page: currentPage,
-      pageSize: cleanPageSize,
-      total,
-      totalPages,
-      hasPrevious: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    },
-    recent: recentRows.map((movie) => mapBrowsableMovie(movie, progress)),
-    latest: latestRows.map((movie) => mapBrowsableMovie(movie, progress)),
-    popular: popularRows.map((movie) => mapBrowsableMovie(movie, progress)),
+    continueWatching: continueRail.items.map((movie) => mapBrowsableMovie(movie, progress)),
+    continueWatchingPage: continueRail.page,
+    all: allRail.items.map((movie) => mapBrowsableMovie(movie, progress)),
+    allPage: allRail.page,
+    recent: recentRail.items.map((movie) => mapBrowsableMovie(movie, progress)),
+    recentPage: recentRail.page,
+    latest: latestRail.items.map((movie) => mapBrowsableMovie(movie, progress)),
+    latestPage: latestRail.page,
+    popular: popularRail.items.map((movie) => mapBrowsableMovie(movie, progress)),
+    popularPage: popularRail.page,
   } satisfies MovieRowsResponse;
+}
+
+export async function continueMovieRows(
+  userId: string,
+  pageInput = 1,
+  pageSize = BROWSE_RAIL_LIMIT,
+): Promise<Pick<MovieRowsResponse, "continueWatching" | "continueWatchingPage">> {
+  const result = await movieRows(userId, "", "all", "title", pageInput, pageSize, ["continueWatching"]);
+  return {
+    continueWatching: result.continueWatching ?? [],
+    continueWatchingPage: result.continueWatchingPage ?? emptyCatalogPage(pageInput, pageSize),
+  };
 }

@@ -3,8 +3,9 @@ import type { CatalogPageInfo } from "$lib/media/types";
 
 const MOVIE_STATUS_FILTERS = ["all", "watched", "unwatched"] as const;
 const MOVIE_SORTS = ["title", "recent", "year_desc", "rating", "release_date"] as const;
-export const MOVIE_PAGE_SIZE = 36;
-export const SHOW_PAGE_SIZE = 36;
+export const BROWSE_RAIL_LIMIT = 24;
+export const MOVIE_PAGE_SIZE = BROWSE_RAIL_LIMIT;
+export const SHOW_PAGE_SIZE = BROWSE_RAIL_LIMIT;
 const SHOW_SORTS = ["title", "recent", "latest", "popular"] as const;
 export const MOVIE_BROWSE_RAILS = ["continueWatching", "all", "recent", "latest", "popular"] as const;
 export const SHOW_BROWSE_RAILS = ["continueWatching", "nextUp", "all", "recent", "latest", "popular"] as const;
@@ -59,6 +60,13 @@ export function normalizePage(value: string | number | null | undefined) {
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
+export function normalizeLimit(value: string | number | null | undefined, defaultLimit = BROWSE_RAIL_LIMIT) {
+  if (value === null || value === undefined || value === "") return defaultLimit;
+  const limit = Number(value);
+  if (!Number.isInteger(limit) || limit <= 0) return defaultLimit;
+  return catalogPageSize(limit);
+}
+
 export function catalogPageSize(pageSizeInput: number) {
   return Math.max(1, Math.min(Math.floor(pageSizeInput), 200));
 }
@@ -85,6 +93,15 @@ export function emptyCatalogPage(pageInput: number, pageSizeInput: number): Cata
     totalPages: 1,
     hasPrevious: false,
     hasNext: false,
+  };
+}
+
+export function paginatedSlice<T>(pageInput: number, limitInput: number, items: readonly T[]) {
+  const pageInfo = catalogPageInfo(pageInput, limitInput, items.length);
+  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
+  return {
+    items: items.slice(offset, offset + pageInfo.pageSize),
+    page: pageInfo,
   };
 }
 
