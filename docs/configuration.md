@@ -170,3 +170,19 @@ LUNARR_SIGNED_PLAYBACK_TOKEN_TTL_SECONDS: 300-604800
 ```
 
 Re-request playback before the token expires on sessions longer than the configured TTL.
+
+## Advanced Device Pairing
+
+API keys created when a user approves TV or mobile pairing expire after a configurable number of days. The default is 730 days (2 years). Use `0` for keys that do not expire until revoked.
+
+```sh
+LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS=730
+```
+
+Limits:
+
+```text
+LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS: 0-3650
+```
+
+`0` omits an expiration on paired keys. Users can revoke paired keys earlier from Profile.

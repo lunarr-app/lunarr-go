@@ -74,7 +74,7 @@ Approve body:
 }
 ```
 
-Poll returns `status: "pending"` until approval, then `status: "approved"` with a one-time `apiKey` string. `POST /api/device-pairing` also returns `pairingUrl`, a ready-made `/link-device?code=...&name=...` URL for QR codes (`name` is omitted when the device did not provide one). Pairing codes expire after 10 minutes. API keys created through pairing expire after 2 years (users can revoke them earlier from Profile). Finished or expired pairing rows are deleted after 30 days.
+Poll returns `status: "pending"` until approval, then `status: "approved"` with a one-time `apiKey` string. `POST /api/device-pairing` also returns `pairingUrl`, a ready-made `/link-device?code=...&name=...` URL for QR codes (`name` is omitted when the device did not provide one). Pairing codes expire after 10 minutes. API keys created through pairing expire after 2 years by default (`LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS`; use `0` for no expiry, see [Configuration](configuration.md)); users can revoke them earlier from Profile. Finished or expired pairing rows are deleted after 30 days.
 
 ## API Keys
 

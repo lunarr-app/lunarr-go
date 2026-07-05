@@ -1,5 +1,4 @@
 import {
-  DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS,
   DEVICE_PAIRING_POLL_INTERVAL_MS,
   DEVICE_PAIRING_RETENTION_MS,
   DEVICE_PAIRING_TTL_MS,
@@ -7,6 +6,7 @@ import {
 } from "$lib/device-pairing/constants";
 import { buildLinkDeviceUrl } from "$lib/device-pairing/url";
 import { formatUserCode, generateUserCode, normalizeUserCode } from "$lib/device-pairing/format";
+import { devicePairingApiKeyExpiresInSeconds } from "$lib/server/device-pairing/env";
 import { randomUUID } from "node:crypto";
 import { getDb } from "../db";
 import type { DevicePairingStatus } from "../db/schema/device-pairing";
@@ -259,7 +259,7 @@ export async function approveDevicePairing(input: { userId: string; userCode: un
     created = await createApiKeyForUserId({
       userId: input.userId,
       name: deviceName,
-      expiresIn: DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS,
+      expiresIn: devicePairingApiKeyExpiresInSeconds(),
     });
   } catch (error) {
     await db

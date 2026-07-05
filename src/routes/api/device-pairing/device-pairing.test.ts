@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS } from "$lib/device-pairing/constants";
+import { devicePairingApiKeyExpiresInSeconds } from "$lib/server/device-pairing/env";
 import { mkdtemp, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -96,7 +96,7 @@ describe("device pairing API", () => {
     const before = Date.now();
     expect(approved.apiKey.expiresAt).toBeTruthy();
     const approvedExpiresAt = Date.parse(approved.apiKey.expiresAt);
-    expect(approvedExpiresAt).toBeGreaterThanOrEqual(before + DEVICE_PAIRING_API_KEY_EXPIRES_IN_SECONDS * 1000 - 5000);
+    expect(approvedExpiresAt).toBeGreaterThanOrEqual(before + devicePairingApiKeyExpiresInSeconds() * 1000 - 5000);
 
     const db = await getDb();
     const apiKeyRow = await db

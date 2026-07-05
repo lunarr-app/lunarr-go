@@ -72,6 +72,10 @@ const envSchema = z.object({
       .max(604_800)
       .default(8 * 60 * 60),
   ),
+  LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS: z.preprocess(
+    (value) => (value === undefined || value === "" ? undefined : value),
+    z.coerce.number().int().min(0).max(3650).default(730),
+  ),
 });
 
 export function appEnvDefaultsForEnvironment(env: NodeJS.ProcessEnv) {

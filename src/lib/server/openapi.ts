@@ -1233,7 +1233,7 @@ export const openApiDocument = {
         tags: ["Account"],
         summary: "Approve a device pairing code.",
         description:
-          "Creates a personal API key for the signed-in user and makes it available to the waiting device. Paired keys expire after 2 years.",
+          "Creates a personal API key for the signed-in user and makes it available to the waiting device. Paired keys default to a 2-year expiry (LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS).",
         operationId: "approveDevicePairing",
         requestBody: {
           required: true,

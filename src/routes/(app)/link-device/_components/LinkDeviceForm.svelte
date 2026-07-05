@@ -1,19 +1,18 @@
 <script lang="ts">
-  import {
-    DEVICE_PAIRING_API_KEY_EXPIRY_YEARS,
-    DEVICE_PAIRING_CODE_EXPIRY_MINUTES,
-  } from "$lib/device-pairing/constants";
+  import { DEVICE_PAIRING_CODE_EXPIRY_MINUTES } from "$lib/device-pairing/constants";
   import { formatUserCode, normalizeUserCode } from "$lib/device-pairing/format";
   import { Link2 } from "@lucide/svelte";
 
   let {
     initialUserCode = "",
     initialDeviceName = "",
+    devicePairingApiKeyExpiryLabel = "2 years",
     pairingSuccess,
     pairingError,
   }: {
     initialUserCode?: string;
     initialDeviceName?: string;
+    devicePairingApiKeyExpiryLabel?: string;
     pairingSuccess?: string;
     pairingError?: string;
   } = $props();
@@ -70,8 +69,13 @@
     </form>
 
     <p class="muted pairing-footnote">
-      Codes expire after {DEVICE_PAIRING_CODE_EXPIRY_MINUTES} minutes. Device keys last {DEVICE_PAIRING_API_KEY_EXPIRY_YEARS}
-      years and can be revoked in Profile.
+      Codes expire after {DEVICE_PAIRING_CODE_EXPIRY_MINUTES} minutes. Device keys
+      {#if devicePairingApiKeyExpiryLabel === "never"}
+        do not expire
+      {:else}
+        last {devicePairingApiKeyExpiryLabel}
+      {/if}
+      and can be revoked in Profile.
     </p>
   </div>
 </section>
