@@ -7,8 +7,6 @@ const MAX_REFRESH_INTERVAL_HOURS = 30 * 24; // 30 days
 const MIN_STALENESS_DAYS = 0;
 const MAX_STALENESS_DAYS = 3650;
 
-export { DEFAULT_MOVIE_METADATA_STALENESS_DAYS, DEFAULT_TV_METADATA_STALENESS_DAYS } from "$lib/metadata/settings";
-
 const MOVIE_INTERVAL_KEY = "movie_metadata_refresh_interval_hours";
 const TV_INTERVAL_KEY = "tv_metadata_refresh_interval_hours";
 

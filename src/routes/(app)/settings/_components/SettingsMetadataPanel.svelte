@@ -1,5 +1,10 @@
 <script lang="ts">
   import { Save } from "@lucide/svelte";
+  import {
+    METADATA_REFRESH_FIELDS,
+    METADATA_REFRESH_INTERVAL_OPTIONS,
+    type MetadataRefreshKind,
+  } from "$lib/metadata/refresh";
   import { DEFAULT_MOVIE_METADATA_STALENESS_DAYS, DEFAULT_TV_METADATA_STALENESS_DAYS } from "$lib/metadata/settings";
 
   let {
@@ -28,16 +33,21 @@
   let tmdbApiKey = $state("");
   let clearTmdbAccessToken = $state(false);
   let clearTmdbApiKey = $state(false);
-  let movieIntervalHours = $state("");
-  let tvIntervalHours = $state("");
-  let movieStalenessDays = $state(String(DEFAULT_MOVIE_METADATA_STALENESS_DAYS));
-  let tvStalenessDays = $state(String(DEFAULT_TV_METADATA_STALENESS_DAYS));
+  let intervalHours = $state<Record<MetadataRefreshKind, string>>({ movie: "", tv: "" });
+  let stalenessDays = $state<Record<MetadataRefreshKind, string>>({
+    movie: String(DEFAULT_MOVIE_METADATA_STALENESS_DAYS),
+    tv: String(DEFAULT_TV_METADATA_STALENESS_DAYS),
+  });
 
   $effect(() => {
-    movieIntervalHours = movieMetadataRefreshIntervalHours === null ? "" : String(movieMetadataRefreshIntervalHours);
-    tvIntervalHours = tvMetadataRefreshIntervalHours === null ? "" : String(tvMetadataRefreshIntervalHours);
-    movieStalenessDays = String(movieMetadataStalenessDays);
-    tvStalenessDays = String(tvMetadataStalenessDays);
+    intervalHours = {
+      movie: movieMetadataRefreshIntervalHours === null ? "" : String(movieMetadataRefreshIntervalHours),
+      tv: tvMetadataRefreshIntervalHours === null ? "" : String(tvMetadataRefreshIntervalHours),
+    };
+    stalenessDays = {
+      movie: String(movieMetadataStalenessDays),
+      tv: String(tvMetadataStalenessDays),
+    };
   });
 
   const metadataChanged = $derived(
@@ -45,11 +55,11 @@
       tmdbApiKey.trim().length > 0 ||
       clearTmdbAccessToken ||
       clearTmdbApiKey ||
-      movieIntervalHours !==
+      intervalHours.movie !==
         (movieMetadataRefreshIntervalHours === null ? "" : String(movieMetadataRefreshIntervalHours)) ||
-      tvIntervalHours !== (tvMetadataRefreshIntervalHours === null ? "" : String(tvMetadataRefreshIntervalHours)) ||
-      movieStalenessDays !== String(movieMetadataStalenessDays) ||
-      tvStalenessDays !== String(tvMetadataStalenessDays),
+      intervalHours.tv !== (tvMetadataRefreshIntervalHours === null ? "" : String(tvMetadataRefreshIntervalHours)) ||
+      stalenessDays.movie !== String(movieMetadataStalenessDays) ||
+      stalenessDays.tv !== String(tvMetadataStalenessDays),
   );
 </script>
 
@@ -116,55 +126,31 @@
       </p>
 
       <div class="metadata-refresh-columns">
-        <div>
-          <h3>Movies</h3>
-          <label>
-            Interval
-            <select name="movieMetadataRefreshIntervalHours" bind:value={movieIntervalHours}>
-              <option value="">Off</option>
-              <option value="24">Daily</option>
-              <option value="168">Weekly</option>
-              <option value="720">Monthly</option>
-            </select>
-          </label>
+        {#each METADATA_REFRESH_FIELDS as field (field.kind)}
+          <div>
+            <h3>{field.title}</h3>
+            <label>
+              Interval
+              <select name={field.intervalField} bind:value={intervalHours[field.kind]}>
+                {#each METADATA_REFRESH_INTERVAL_OPTIONS as option (option.value)}
+                  <option value={option.value}>{option.label}</option>
+                {/each}
+              </select>
+            </label>
 
-          <label>
-            Staleness (days)
-            <input
-              name="movieMetadataStalenessDays"
-              type="number"
-              min="0"
-              max="3650"
-              step="1"
-              bind:value={movieStalenessDays}
-            />
-          </label>
-        </div>
-
-        <div>
-          <h3>TV shows</h3>
-          <label>
-            Interval
-            <select name="tvMetadataRefreshIntervalHours" bind:value={tvIntervalHours}>
-              <option value="">Off</option>
-              <option value="24">Daily</option>
-              <option value="168">Weekly</option>
-              <option value="720">Monthly</option>
-            </select>
-          </label>
-
-          <label>
-            Staleness (days)
-            <input
-              name="tvMetadataStalenessDays"
-              type="number"
-              min="0"
-              max="3650"
-              step="1"
-              bind:value={tvStalenessDays}
-            />
-          </label>
-        </div>
+            <label>
+              Staleness (days)
+              <input
+                name={field.stalenessField}
+                type="number"
+                min="0"
+                max="3650"
+                step="1"
+                bind:value={stalenessDays[field.kind]}
+              />
+            </label>
+          </div>
+        {/each}
       </div>
     </fieldset>
 
@@ -179,11 +165,6 @@
 </form>
 
 <style>
-  .detail-copy {
-    line-height: 1.5;
-    font-size: 0.88rem;
-  }
-
   .metadata-refresh {
     margin-top: 1.5rem;
   }

@@ -308,6 +308,33 @@ describe("settings page server", () => {
     });
   });
 
+  test("resets scheduled metadata anchor when refresh interval changes", async () => {
+    await setSetting("movie_metadata_refresh_interval_hours", "24");
+    await setSetting("movie_metadata_last_scheduled_refresh_at", "2026-01-01T00:00:00.000Z");
+
+    const metadataForm = new FormData();
+    metadataForm.set("movieMetadataRefreshIntervalHours", "168");
+
+    try {
+      await actions.saveMetadata({
+        request: new Request("http://localhost/settings", {
+          method: "POST",
+          body: metadataForm,
+        }),
+        locals: { user: { id: "admin-1", role: "admin" } },
+      } as never);
+      throw new Error("Expected metadata save to redirect.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        status: 303,
+        location: "/settings",
+      });
+    }
+
+    expect(await getSetting("movie_metadata_refresh_interval_hours")).toBe("168");
+    expect(await getSetting("movie_metadata_last_scheduled_refresh_at")).toBe("");
+  });
+
   test("does not save hardware-required policy when hardware mode is off", async () => {
     const transcodingForm = new FormData();
     transcodingForm.set("transcodingEnabled", "on");

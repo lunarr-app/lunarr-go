@@ -1,5 +1,6 @@
 import { getDb } from "../db";
 import { listLibraries } from "../libraries";
+import { MAX_SCHEDULED_TIMEOUT_MS } from "../scheduling/timeout";
 import { nowIso } from "../time";
 import { startScan } from ".";
 
@@ -11,8 +12,6 @@ type SchedulableLibrary = {
   scan_interval_minutes: number | null;
   last_scheduled_scan_at: string | null;
 };
-
-const MAX_TIMEOUT_MS = 2_147_483_647;
 
 const scheduledScanTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let syncPromise: Promise<void> | null = null;
@@ -48,7 +47,7 @@ export function scheduledScanDelayMs(library: SchedulableLibrary, nowMs = Date.n
     timestampMs(library.created_at) ??
     nowMs;
   const dueMs = anchorMs + intervalMinutes * 60_000;
-  return Math.max(0, Math.min(dueMs - nowMs, MAX_TIMEOUT_MS));
+  return Math.max(0, Math.min(dueMs - nowMs, MAX_SCHEDULED_TIMEOUT_MS));
 }
 
 function clearScheduledScanTimer(libraryId: string) {

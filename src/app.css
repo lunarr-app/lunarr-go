@@ -385,3 +385,8 @@ label {
   margin: 0;
   font-size: 0.95rem;
 }
+
+.detail-copy {
+  line-height: 1.5;
+  font-size: 0.88rem;
+}

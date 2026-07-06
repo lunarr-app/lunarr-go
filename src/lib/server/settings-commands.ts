@@ -7,7 +7,6 @@ import { deleteSetting, getBooleanSetting, getSetting, setBooleanSetting, setSet
 import {
   getMetadataRefreshIntervalHours,
   getMetadataStalenessDays,
-  normalizeRefreshIntervalHours,
   normalizeStalenessDays,
   setLastScheduledMetadataRefreshAt,
   setMetadataRefreshIntervalHours,
@@ -116,9 +115,8 @@ export async function updateMetadataSettings(input: InputSource) {
   async function updateMetadataInterval(kind: MetadataKind, hoursInput: number | null) {
     if (hoursInput === null) return;
     const previous = await getMetadataRefreshIntervalHours(kind);
-    const normalized = normalizeRefreshIntervalHours(hoursInput);
-    await setMetadataRefreshIntervalHours(kind, normalized);
-    if (normalized !== previous) {
+    await setMetadataRefreshIntervalHours(kind, hoursInput);
+    if ((await getMetadataRefreshIntervalHours(kind)) !== previous) {
       await setLastScheduledMetadataRefreshAt(kind, "");
     }
   }

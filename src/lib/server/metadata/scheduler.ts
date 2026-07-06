@@ -1,4 +1,5 @@
 import { building } from "$app/environment";
+import { MAX_SCHEDULED_TIMEOUT_MS } from "../scheduling/timeout";
 import { nowIso } from "../time";
 import { tmdbCredentialsConfigured } from "./tmdb";
 import {
@@ -14,15 +15,13 @@ import { startTvMetadataRefreshJob } from "./tv";
 type TimerMap = Map<MetadataKind, ReturnType<typeof setTimeout>>;
 
 const timers: TimerMap = new Map();
-const MAX_TIMEOUT_MS = 2_147_483_647;
+let syncPromise: Promise<void> | null = null;
 
-export function scheduledMetadataRefreshDelayMs(
-  kind: MetadataKind,
-  options: { intervalHours: number | null; lastScheduledAt: string | null; nowMs?: number } = {
-    intervalHours: null,
-    lastScheduledAt: null,
-  },
-): number | null {
+export function scheduledMetadataRefreshDelayMs(options: {
+  intervalHours: number | null;
+  lastScheduledAt: string | null;
+  nowMs?: number;
+}): number | null {
   const { intervalHours, lastScheduledAt } = options;
   const nowMs = options.nowMs ?? Date.now();
   if (!intervalHours || intervalHours <= 0) return null;
@@ -33,7 +32,7 @@ export function scheduledMetadataRefreshDelayMs(
   const dueMs = effectiveAnchor + intervalMs;
   const remaining = dueMs - nowMs;
   if (remaining <= 0) return 0;
-  return Math.max(0, Math.min(remaining, MAX_TIMEOUT_MS));
+  return Math.max(0, Math.min(remaining, MAX_SCHEDULED_TIMEOUT_MS));
 }
 
 function clearMetadataTimer(kind: MetadataKind) {
@@ -68,7 +67,7 @@ async function runScheduledMetadataRefresh(kind: MetadataKind) {
 }
 
 function scheduleMetadataRefresh(kind: MetadataKind, intervalHours: number | null, lastScheduledAt: string | null) {
-  const delayMs = scheduledMetadataRefreshDelayMs(kind, { intervalHours, lastScheduledAt });
+  const delayMs = scheduledMetadataRefreshDelayMs({ intervalHours, lastScheduledAt });
   if (delayMs === null) return;
 
   const timer = setTimeout(() => {
@@ -79,18 +78,24 @@ function scheduleMetadataRefresh(kind: MetadataKind, intervalHours: number | nul
 }
 
 export async function syncScheduledMetadataRefresh() {
-  const [movieInterval, tvInterval, movieLast, tvLast] = await Promise.all([
-    getMetadataRefreshIntervalHours("movie"),
-    getMetadataRefreshIntervalHours("tv"),
-    getLastScheduledMetadataRefreshAt("movie"),
-    getLastScheduledMetadataRefreshAt("tv"),
-  ]);
+  syncPromise ??= (async () => {
+    const [movieInterval, tvInterval, movieLast, tvLast] = await Promise.all([
+      getMetadataRefreshIntervalHours("movie"),
+      getMetadataRefreshIntervalHours("tv"),
+      getLastScheduledMetadataRefreshAt("movie"),
+      getLastScheduledMetadataRefreshAt("tv"),
+    ]);
 
-  clearMetadataTimer("movie");
-  clearMetadataTimer("tv");
+    clearMetadataTimer("movie");
+    clearMetadataTimer("tv");
 
-  if (!building) {
-    scheduleMetadataRefresh("movie", movieInterval, movieLast);
-    scheduleMetadataRefresh("tv", tvInterval, tvLast);
-  }
+    if (!building) {
+      scheduleMetadataRefresh("movie", movieInterval, movieLast);
+      scheduleMetadataRefresh("tv", tvInterval, tvLast);
+    }
+  })().finally(() => {
+    syncPromise = null;
+  });
+
+  return syncPromise;
 }

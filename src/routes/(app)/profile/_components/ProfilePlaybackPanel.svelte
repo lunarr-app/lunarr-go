@@ -107,11 +107,6 @@
 </form>
 
 <style>
-  .detail-copy {
-    line-height: 1.5;
-    font-size: 0.88rem;
-  }
-
   .status-note {
     border: 1px solid var(--color-warning-border);
     border-radius: 8px;
