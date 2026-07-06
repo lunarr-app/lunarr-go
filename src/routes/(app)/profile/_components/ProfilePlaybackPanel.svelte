@@ -45,7 +45,7 @@
   <div class="ops-panel-header">
     <div>
       <h2>Playback</h2>
-      <p class="muted">Default behavior when direct play and temporary HLS are both available.</p>
+      <p class="muted">Default behavior when direct play and transcoding are both available.</p>
     </div>
   </div>
 
@@ -55,7 +55,7 @@
       <select name="playbackPreference" bind:value={playbackPreference} onchange={submitPlaybackPreference}>
         <option value="auto">Auto</option>
         <option value="prefer_direct">Prefer direct play</option>
-        <option value="prefer_transcode">Prefer temporary HLS</option>
+        <option value="prefer_transcode">Prefer transcoding</option>
       </select>
     </label>
 
@@ -91,7 +91,7 @@
 
     {#if !transcodePolicy.transcodingEnabled}
       <p class="muted status-note">
-        Temporary HLS playback is currently disabled by an admin. Compatible files still use direct play.
+        Transcoding is currently disabled by an admin. Compatible files still use direct play.
       </p>
     {/if}
 

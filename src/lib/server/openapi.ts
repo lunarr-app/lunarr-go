@@ -933,7 +933,7 @@ export const openApiDocument = {
             in: "query",
             required: false,
             schema: { type: "boolean" },
-            description: "Force temporary HLS even when direct play is available.",
+            description: "Force transcoding even when direct play is available.",
           },
           ...playbackCapabilityParameters(),
         ],

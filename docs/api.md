@@ -337,7 +337,7 @@ hlsNative=1
 
 - `file` — choose a specific media file when an item has more than one.
 - `start` — resume from an explicit position in seconds.
-- `transcode=1` — force temporary HLS even when direct play is available.
+- `transcode=1` — force transcoding even when direct play is available.
 - `target` — select the playback target profile (see table above).
 - `hevc`, `av1`, `webm`, `vp9`, `vp8`, `opus`, `vorbis`, `hlsFmp4`, `hlsNative` — optional client capability hints for `web`, `cast`, and `airplay`. The Lunarr web player sets these automatically from `video.canPlayType()`. Omit them for `target=native`.
 
