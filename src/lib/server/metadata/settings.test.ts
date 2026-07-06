@@ -4,10 +4,12 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtemp, rm } from "node:fs/promises";
 import {
+  getLastScheduledMetadataRefreshAt,
   getMetadataRefreshIntervalHours,
   getMetadataStalenessDays,
   normalizeRefreshIntervalHours,
   normalizeStalenessDays,
+  setLastScheduledMetadataRefreshAt,
   setMetadataRefreshIntervalHours,
   setMetadataStalenessDays,
 } from "./settings";
@@ -58,6 +60,20 @@ describe("metadata settings", () => {
     expect(await getMetadataRefreshIntervalHours("tv")).toBe(168);
     expect(await getMetadataStalenessDays("movie")).toBe(30);
     expect(await getMetadataStalenessDays("tv")).toBe(14);
+  });
+
+  test("stores and reads last scheduled metadata refresh timestamps per kind", async () => {
+    expect(await getLastScheduledMetadataRefreshAt("movie")).toBeNull();
+    expect(await getLastScheduledMetadataRefreshAt("tv")).toBeNull();
+
+    await setLastScheduledMetadataRefreshAt("movie", "2026-07-06T12:00:00.000Z");
+    await setLastScheduledMetadataRefreshAt("tv", "2026-07-05T08:00:00.000Z");
+
+    expect(await getLastScheduledMetadataRefreshAt("movie")).toBe("2026-07-06T12:00:00.000Z");
+    expect(await getLastScheduledMetadataRefreshAt("tv")).toBe("2026-07-05T08:00:00.000Z");
+
+    await setLastScheduledMetadataRefreshAt("movie", "");
+    expect(await getLastScheduledMetadataRefreshAt("movie")).toBe("");
   });
 });
 
