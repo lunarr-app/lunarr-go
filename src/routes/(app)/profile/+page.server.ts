@@ -6,16 +6,9 @@ import {
   revokeApiKey as revokePersonalApiKey,
   apiKeyHttpStatus,
 } from "$lib/server/auth/api-keys";
-import {
-  getTranscodePolicy,
-  normalizePlaybackPreference,
-  setUserPlaybackPreference,
-  setUserPreferredAudioLanguage,
-  setUserPreferredSubtitleLanguage,
-} from "$lib/server/transcoding/policy";
 import { buildLinkDevicePath, readLinkDevicePrefill } from "$lib/device-pairing/url";
 import { devicePairingApiKeyExpirySettings } from "$lib/server/device-pairing/env";
-import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
+import { getUserProfilePreferences, updateUserProfilePreferences } from "$lib/server/profile/preferences";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -44,8 +37,7 @@ export const load: PageServerLoad = async ({ locals, request, url }) => {
   return {
     user: locals.user,
     apiKeys,
-    transcodePolicy: await getTranscodePolicy(locals.user.id),
-    continueMaxAgeDays: await getContinueMaxAgeDays(locals.user.id),
+    ...(await getUserProfilePreferences(locals.user.id)),
     devicePairingApiKeyExpiry: devicePairingApiKeyExpirySettings(),
   };
 };
@@ -134,12 +126,11 @@ export const actions: Actions = {
       });
 
     const form = await request.formData();
-    await setUserPlaybackPreference(
-      locals.user.id,
-      normalizePlaybackPreference(String(form.get("playbackPreference") ?? "")),
-    );
-    await setUserPreferredAudioLanguage(locals.user.id, String(form.get("preferredAudioLanguage") ?? ""));
-    await setUserPreferredSubtitleLanguage(locals.user.id, String(form.get("preferredSubtitleLanguage") ?? ""));
+    await updateUserProfilePreferences(locals.user.id, {
+      playbackPreference: form.get("playbackPreference"),
+      preferredAudioLanguage: form.get("preferredAudioLanguage"),
+      preferredSubtitleLanguage: form.get("preferredSubtitleLanguage"),
+    });
 
     throw redirect(303, "/profile");
   },
@@ -150,7 +141,9 @@ export const actions: Actions = {
       });
 
     const form = await request.formData();
-    await setUserContinueMaxAgeDays(locals.user.id, String(form.get("continueMaxAgeDays") ?? ""));
+    await updateUserProfilePreferences(locals.user.id, {
+      continueMaxAgeDays: form.get("continueMaxAgeDays"),
+    });
 
     throw redirect(303, "/profile");
   },
