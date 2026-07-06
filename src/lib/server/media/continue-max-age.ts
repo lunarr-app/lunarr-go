@@ -5,8 +5,6 @@ export const MIN_CONTINUE_POSITION_SECONDS = 60;
 export const CONTINUE_MAX_AGE_DAYS_MIN = 0;
 export const CONTINUE_MAX_AGE_DAYS_MAX = 3650;
 
-let testContinueMaxAgeDays: number | undefined;
-
 export function userContinueMaxAgeDaysKey(userId: string) {
   return `user:${userId}:continue_max_age_days`;
 }
@@ -17,13 +15,7 @@ export function normalizeContinueMaxAgeDays(value: string | number | null | unde
   return Math.min(CONTINUE_MAX_AGE_DAYS_MAX, Math.max(CONTINUE_MAX_AGE_DAYS_MIN, Math.floor(parsed)));
 }
 
-export function setContinueMaxAgeDaysForTests(days: number | undefined) {
-  testContinueMaxAgeDays = days;
-}
-
 export async function getContinueMaxAgeDays(userId: string) {
-  if (testContinueMaxAgeDays !== undefined) return testContinueMaxAgeDays;
-
   const raw = await getSetting(userContinueMaxAgeDaysKey(userId));
   return normalizeContinueMaxAgeDays(raw);
 }

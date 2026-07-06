@@ -8,15 +8,10 @@ import {
   getContinueMaxAgeDays,
   isContinueProgressFresh,
   normalizeContinueMaxAgeDays,
-  setContinueMaxAgeDaysForTests,
   setUserContinueMaxAgeDays,
 } from "./continue-max-age";
 
 describe("continue max age", () => {
-  afterEach(() => {
-    setContinueMaxAgeDaysForTests(undefined);
-  });
-
   test("treats zero days as disabled", () => {
     expect(continueMaxAgeEnabledForDays(0)).toBe(false);
     expect(isContinueProgressFresh("2000-01-01T00:00:00.000Z", { maxAgeDays: 0 })).toBe(true);
@@ -47,11 +42,6 @@ describe("continue max age", () => {
     expect(normalizeContinueMaxAgeDays(4000)).toBe(3650);
     expect(normalizeContinueMaxAgeDays(-5)).toBe(0);
   });
-
-  test("reads test override without touching the database", async () => {
-    setContinueMaxAgeDaysForTests(45);
-    expect(await getContinueMaxAgeDays("user-1")).toBe(45);
-  });
 });
 
 describe("continue max age database", () => {
@@ -64,7 +54,6 @@ describe("continue max age database", () => {
   });
 
   afterEach(async () => {
-    setContinueMaxAgeDaysForTests(undefined);
     await closeDatabaseForTests();
     await rm(tempDir, { recursive: true, force: true });
   });

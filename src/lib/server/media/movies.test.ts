@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
 import { MOVIE_PAGE_SIZE } from "./catalog";
-import { setContinueMaxAgeDaysForTests } from "./continue-max-age";
+import { setUserContinueMaxAgeDays } from "./continue-max-age";
 import { getMediaFile } from "./files";
 import { movieRows } from "./movies/browse";
 import { getMovieCredits, getMovieDetail, getMovieOverview } from "./movies/detail";
@@ -212,7 +212,6 @@ describe("movieRows", () => {
   });
 
   afterEach(async () => {
-    setContinueMaxAgeDaysForTests(undefined);
     await closeDatabaseForTests();
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -422,7 +421,7 @@ describe("movieRows", () => {
       })
       .execute();
 
-    setContinueMaxAgeDaysForTests(90);
+    await setUserContinueMaxAgeDays("user-1", 90);
     const rows = await movieRows("user-1");
 
     expect(rows.continueWatching.map((movie) => movie.id)).toEqual([]);

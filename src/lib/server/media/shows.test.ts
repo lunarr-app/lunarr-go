@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
 import { SHOW_PAGE_SIZE } from "./catalog";
-import { setContinueMaxAgeDaysForTests } from "./continue-max-age";
+import { setUserContinueMaxAgeDays } from "./continue-max-age";
 import { showRows } from "./shows/browse";
 import {
   getShowCredits,
@@ -153,7 +153,6 @@ describe("showRows", () => {
   });
 
   afterEach(async () => {
-    setContinueMaxAgeDaysForTests(undefined);
     await closeDatabaseForTests();
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -684,7 +683,7 @@ describe("showRows", () => {
       ])
       .execute();
 
-    setContinueMaxAgeDaysForTests(90);
+    await setUserContinueMaxAgeDays("user-1", 90);
     const rows = await tvRows("user-1");
 
     expect(rows.continueWatching).toEqual([]);
