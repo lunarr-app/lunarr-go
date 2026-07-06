@@ -64,7 +64,8 @@ export async function movieRows(
   rails: readonly MovieBrowseRail[] | null = null,
 ): Promise<MovieRowsResponse | MovieBrowseRailResponse> {
   const db = await getDb();
-  const maxAgeDays = await getContinueMaxAgeDays(userId);
+  const needsContinueMaxAge = !rails || rails.length === 0 || rails.includes("continueWatching");
+  const maxAgeDays = needsContinueMaxAge ? await getContinueMaxAgeDays(userId) : 0;
   const searchPattern = search.trim();
   const page = normalizePage(pageInput);
   const limit = catalogPageSize(pageSize);

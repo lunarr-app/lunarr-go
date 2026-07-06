@@ -192,9 +192,8 @@ function orderEpisodeBrowseDefault(query: EpisodeBrowseQuery) {
     .orderBy("episode.title", "asc");
 }
 
-async function paginatedContinueEpisodeRows(userId: string, page: number, limit: number) {
+async function paginatedContinueEpisodeRows(userId: string, page: number, limit: number, maxAgeDays: number) {
   const db = await getDb();
-  const maxAgeDays = await getContinueMaxAgeDays(userId);
   const ordered = orderContinueEpisodes(
     applyEpisodeContinueWatchingFilters(episodeBrowseSelect(filteredEpisodeBrowse(db, userId)), userId, maxAgeDays),
     userId,
@@ -221,8 +220,7 @@ async function allWithProgressEpisodeRows(userId: string) {
   ).execute();
 }
 
-async function buildNextUpEpisodeRows(userId: string) {
-  const maxAgeDays = await getContinueMaxAgeDays(userId);
+async function buildNextUpEpisodeRows(userId: string, maxAgeDays: number) {
   const rows = await allWithProgressEpisodeRows(userId);
   if (rows.length === 0) return [] as EpisodeBrowseRow[];
 
@@ -273,8 +271,8 @@ async function buildNextUpEpisodeRows(userId: string) {
   return nextRows;
 }
 
-async function paginatedNextUpEpisodeRows(userId: string, page: number, limit: number) {
-  const allNextRows = await buildNextUpEpisodeRows(userId);
+async function paginatedNextUpEpisodeRows(userId: string, page: number, limit: number, maxAgeDays: number) {
+  const allNextRows = await buildNextUpEpisodeRows(userId, maxAgeDays);
   const { items, page: pageInfo } = paginatedSlice(page, limit, allNextRows);
   return { items, page: pageInfo };
 }
@@ -313,10 +311,13 @@ export async function tvRows(
 ): Promise<ShowRowsResponse | Partial<ShowRowsResponse>> {
   const page = normalizePage(pageInput);
   const limit = catalogPageSize(pageSize);
+  const needsContinueMaxAge =
+    !rails || rails.length === 0 || rails.some((rail) => rail === "continueWatching" || rail === "nextUp");
+  const maxAgeDays = needsContinueMaxAge ? await getContinueMaxAgeDays(userId) : 0;
 
   const fetchRail = async (rail: ShowBrowseRail): Promise<Partial<ShowRowsResponse>> => {
     if (rail === "continueWatching") {
-      const { items, page: railPage } = await paginatedContinueEpisodeRows(userId, page, limit);
+      const { items, page: railPage } = await paginatedContinueEpisodeRows(userId, page, limit, maxAgeDays);
       return {
         continueWatching: await mapEpisodeSummaries(userId, items),
         continueWatchingPage: railPage,
@@ -324,7 +325,7 @@ export async function tvRows(
     }
 
     if (rail === "nextUp") {
-      const { items, page: railPage } = await paginatedNextUpEpisodeRows(userId, page, limit);
+      const { items, page: railPage } = await paginatedNextUpEpisodeRows(userId, page, limit, maxAgeDays);
       return {
         nextUp: await mapEpisodeSummaries(userId, items),
         nextUpPage: railPage,
@@ -341,8 +342,8 @@ export async function tvRows(
 
   const [browse, continueRail, nextUpRail] = await Promise.all([
     showBrowseRows(userId, search, sort, pageInput, pageSize),
-    paginatedContinueEpisodeRows(userId, page, limit),
-    paginatedNextUpEpisodeRows(userId, page, limit),
+    paginatedContinueEpisodeRows(userId, page, limit, maxAgeDays),
+    paginatedNextUpEpisodeRows(userId, page, limit, maxAgeDays),
   ]);
   const episodeIds = [...new Set([...continueRail.items, ...nextUpRail.items].map((episode) => episode.id))];
   const progress = await tvEpisodeProgress(userId, episodeIds);
@@ -368,10 +369,12 @@ export async function continueEpisodeRows(
   userId: string,
   pageInput = 1,
   pageSize = BROWSE_RAIL_LIMIT,
+  maxAgeDaysInput?: number,
 ): Promise<Pick<ShowRowsResponse, "continueWatching" | "continueWatchingPage">> {
   const page = normalizePage(pageInput);
   const limit = catalogPageSize(pageSize);
-  const continueRail = await paginatedContinueEpisodeRows(userId, page, limit);
+  const maxAgeDays = maxAgeDaysInput ?? (await getContinueMaxAgeDays(userId));
+  const continueRail = await paginatedContinueEpisodeRows(userId, page, limit, maxAgeDays);
 
   return {
     continueWatching: await mapEpisodeSummaries(userId, continueRail.items),
@@ -383,10 +386,12 @@ export async function nextUpEpisodeRows(
   userId: string,
   pageInput = 1,
   pageSize = BROWSE_RAIL_LIMIT,
+  maxAgeDaysInput?: number,
 ): Promise<Pick<ShowRowsResponse, "nextUp" | "nextUpPage">> {
   const page = normalizePage(pageInput);
   const limit = catalogPageSize(pageSize);
-  const nextUpRail = await paginatedNextUpEpisodeRows(userId, page, limit);
+  const maxAgeDays = maxAgeDaysInput ?? (await getContinueMaxAgeDays(userId));
+  const nextUpRail = await paginatedNextUpEpisodeRows(userId, page, limit, maxAgeDays);
 
   return {
     nextUp: await mapEpisodeSummaries(userId, nextUpRail.items),
@@ -399,9 +404,10 @@ export async function continueTvRows(
   pageInput = 1,
   pageSize = BROWSE_RAIL_LIMIT,
 ): Promise<Pick<ShowRowsResponse, "continueWatching" | "continueWatchingPage" | "nextUp" | "nextUpPage">> {
+  const maxAgeDays = await getContinueMaxAgeDays(userId);
   const [continueResults, nextUpResults] = await Promise.all([
-    continueEpisodeRows(userId, pageInput, pageSize),
-    nextUpEpisodeRows(userId, pageInput, pageSize),
+    continueEpisodeRows(userId, pageInput, pageSize, maxAgeDays),
+    nextUpEpisodeRows(userId, pageInput, pageSize, maxAgeDays),
   ]);
 
   return {
