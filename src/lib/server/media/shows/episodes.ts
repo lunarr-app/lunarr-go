@@ -17,7 +17,6 @@ import {
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
 import {
   continueMaxAgeCutoffSqlForDays,
-  continueMaxAgeEnabledForDays,
   getContinueMaxAgeDays,
   isContinueProgressFresh,
   MIN_CONTINUE_POSITION_SECONDS,
@@ -141,7 +140,7 @@ function applyEpisodeContinueWatchingFilters(query: EpisodeBrowseQuery, userId: 
           .whereRef("incomplete_progress.media_item_id", "=", "episode.id")
           .where(sql<boolean>`incomplete_progress.completed = 0`)
           .where("incomplete_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
-          .$if(continueMaxAgeEnabledForDays(maxAgeDays), (qb) =>
+          .$if(maxAgeDays > 0, (qb) =>
             qb.where("incomplete_progress.updated_at", ">", continueMaxAgeCutoffSqlForDays(maxAgeDays)),
           ),
       ),
@@ -158,7 +157,7 @@ function orderContinueEpisodes(query: EpisodeBrowseQuery, userId: string, maxAge
           and incomplete_progress.media_item_id = episode.id
           and incomplete_progress.completed = 0
           and incomplete_progress.position_seconds >= ${MIN_CONTINUE_POSITION_SECONDS}
-          ${continueMaxAgeEnabledForDays(maxAgeDays) ? sql`and incomplete_progress.updated_at > ${continueMaxAgeCutoffSqlForDays(maxAgeDays)}` : sql``}
+          ${maxAgeDays > 0 ? sql`and incomplete_progress.updated_at > ${continueMaxAgeCutoffSqlForDays(maxAgeDays)}` : sql``}
       )`,
       "desc",
     )
@@ -237,16 +236,17 @@ async function buildNextUpEpisodeRows(userId: string, maxAgeDays: number) {
       })
       .map((episode) => episode.id),
   );
-  const activeShowIds = continueMaxAgeEnabledForDays(maxAgeDays)
-    ? new Set(
-        rows
-          .filter((episode) => {
-            const latest = progress.latestProgress.get(episode.id);
-            return latest?.updated_at ? isContinueProgressFresh(latest.updated_at, { maxAgeDays }) : false;
-          })
-          .map((episode) => episode.show_id),
-      )
-    : null;
+  const activeShowIds =
+    maxAgeDays > 0
+      ? new Set(
+          rows
+            .filter((episode) => {
+              const latest = progress.latestProgress.get(episode.id);
+              return latest?.updated_at ? isContinueProgressFresh(latest.updated_at, { maxAgeDays }) : false;
+            })
+            .map((episode) => episode.show_id),
+        )
+      : null;
   const byShow = new Map<string, EpisodeBrowseRow[]>();
   for (const row of rows) {
     if (activeShowIds && !activeShowIds.has(row.show_id)) continue;

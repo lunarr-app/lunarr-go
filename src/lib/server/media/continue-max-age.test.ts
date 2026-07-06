@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import {
-  continueMaxAgeEnabledForDays,
   getContinueMaxAgeDays,
   isContinueProgressFresh,
   normalizeContinueMaxAgeDays,
@@ -13,7 +12,6 @@ import {
 
 describe("continue max age", () => {
   test("treats zero days as disabled", () => {
-    expect(continueMaxAgeEnabledForDays(0)).toBe(false);
     expect(isContinueProgressFresh("2000-01-01T00:00:00.000Z", { maxAgeDays: 0 })).toBe(true);
   });
 

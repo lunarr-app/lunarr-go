@@ -1,0 +1,2 @@
+export const CONTINUE_MAX_AGE_DAYS_MIN = 0;
+export const CONTINUE_MAX_AGE_DAYS_MAX = 3650;

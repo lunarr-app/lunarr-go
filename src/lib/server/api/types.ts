@@ -99,10 +99,7 @@ export type ProfilePreferencesUpdate = {
   continueMaxAgeDays?: unknown;
 };
 
-export type ProfilePreferencesResponse = {
-  transcodePolicy: TranscodePolicy;
-  continueMaxAgeDays: number;
-};
+export type ProfilePreferencesResponse = Omit<MeResponse, "user">;
 
 export type LibraryListItem = Awaited<ReturnType<typeof listLibrariesWithScanStatus>>[number];
 export type LibraryShareUser = Awaited<ReturnType<typeof listLibraryShareUsers>>[number];

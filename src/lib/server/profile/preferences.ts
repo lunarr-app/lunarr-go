@@ -8,8 +8,6 @@ import {
   setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
 
-export type { ProfilePreferencesUpdate } from "$lib/server/api/types";
-
 const PROFILE_PREFERENCE_KEYS = [
   "playbackPreference",
   "preferredAudioLanguage",

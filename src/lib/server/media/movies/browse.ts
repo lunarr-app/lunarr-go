@@ -18,7 +18,6 @@ import {
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
 import {
   continueMaxAgeCutoffSqlForDays,
-  continueMaxAgeEnabledForDays,
   getContinueMaxAgeDays,
   MIN_CONTINUE_POSITION_SECONDS,
 } from "../continue-max-age";
@@ -171,7 +170,7 @@ export async function movieRows(
             .whereRef("watch_progress.media_item_id", "=", "media_item.id")
             .where(sql<boolean>`watch_progress.completed = 0`)
             .where("watch_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
-            .$if(continueMaxAgeEnabledForDays(maxAgeDays), (qb) =>
+            .$if(maxAgeDays > 0, (qb) =>
               qb.where("watch_progress.updated_at", ">", continueMaxAgeCutoffSqlForDays(maxAgeDays)),
             ),
         ),
@@ -187,7 +186,7 @@ export async function movieRows(
             and watch_progress.media_item_id = media_item.id
             and watch_progress.completed = 0
             and watch_progress.position_seconds >= ${MIN_CONTINUE_POSITION_SECONDS}
-            ${continueMaxAgeEnabledForDays(maxAgeDays) ? sql`and watch_progress.updated_at > ${continueMaxAgeCutoffSqlForDays(maxAgeDays)}` : sql``}
+            ${maxAgeDays > 0 ? sql`and watch_progress.updated_at > ${continueMaxAgeCutoffSqlForDays(maxAgeDays)}` : sql``}
         )`,
         "desc",
       ),

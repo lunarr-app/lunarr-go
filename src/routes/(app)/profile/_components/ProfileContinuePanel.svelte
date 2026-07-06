@@ -1,8 +1,6 @@
 <script lang="ts">
   import { Save } from "@lucide/svelte";
-
-  const CONTINUE_MAX_AGE_DAYS_MIN = 0;
-  const CONTINUE_MAX_AGE_DAYS_MAX = 3650;
+  import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
 
   let {
     continueMaxAgeDays: initialContinueMaxAgeDays,

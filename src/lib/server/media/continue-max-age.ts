@@ -1,9 +1,9 @@
 import { sql, type RawBuilder } from "kysely";
+import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
 import { getSetting, setSetting } from "../settings";
 
+export { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
 export const MIN_CONTINUE_POSITION_SECONDS = 60;
-export const CONTINUE_MAX_AGE_DAYS_MIN = 0;
-export const CONTINUE_MAX_AGE_DAYS_MAX = 3650;
 
 export function userContinueMaxAgeDaysKey(userId: string) {
   return `user:${userId}:continue_max_age_days`;
@@ -24,10 +24,6 @@ export async function setUserContinueMaxAgeDays(userId: string, days: string | n
   await setSetting(userContinueMaxAgeDaysKey(userId), String(normalizeContinueMaxAgeDays(days)));
 }
 
-export function continueMaxAgeEnabledForDays(days: number) {
-  return days > 0;
-}
-
 function continueMaxAgeCutoffIsoForDays(days: number, now = new Date()) {
   return new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
 }
@@ -41,7 +37,7 @@ export function isContinueProgressFresh(
   options: { maxAgeDays: number; now?: Date } = { maxAgeDays: 0 },
 ) {
   const { maxAgeDays, now = new Date() } = options;
-  if (!continueMaxAgeEnabledForDays(maxAgeDays)) return true;
+  if (maxAgeDays <= 0) return true;
 
   return updatedAt > continueMaxAgeCutoffIsoForDays(maxAgeDays, now);
 }
