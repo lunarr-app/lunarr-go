@@ -180,7 +180,7 @@ export const openApiDocument = {
     "/api/me": {
       get: {
         tags: ["Account"],
-        summary: "Get the signed-in user and playback policy.",
+        summary: "Get the signed-in user and profile preferences.",
         operationId: "getCurrentUser",
         responses: {
           "200": jsonResponse({ $ref: "#/components/schemas/MeResponse" }),
@@ -225,31 +225,20 @@ export const openApiDocument = {
         },
       },
     },
-    "/api/profile/playback-preference": {
+    "/api/profile": {
       put: {
         tags: ["Account"],
-        summary: "Update playback preference and language preferences.",
-        operationId: "updatePlaybackPreference",
+        summary: "Update signed-in user preferences.",
+        description:
+          "Partial update. Only fields present in the JSON body are changed. Returns the updated preference snapshot.",
+        operationId: "updateProfilePreferences",
         requestBody: {
-          $ref: "#/components/requestBodies/PlaybackPreferenceRequest",
+          $ref: "#/components/requestBodies/ProfilePreferencesRequest",
         },
         responses: {
-          "200": okResponse,
-          "400": errorResponse,
-          "401": errorResponse,
-        },
-      },
-    },
-    "/api/profile/continue-max-age": {
-      put: {
-        tags: ["Account"],
-        summary: "Update Continue watching staleness window.",
-        operationId: "updateContinueMaxAge",
-        requestBody: {
-          $ref: "#/components/requestBodies/ContinueMaxAgeRequest",
-        },
-        responses: {
-          "200": okResponse,
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ProfilePreferencesResponse",
+          }),
           "400": errorResponse,
           "401": errorResponse,
         },
@@ -1479,19 +1468,11 @@ export const openApiDocument = {
           },
         },
       },
-      PlaybackPreferenceRequest: {
+      ProfilePreferencesRequest: {
         required: true,
         content: {
           "application/json": {
-            schema: { $ref: "#/components/schemas/PlaybackPreferenceRequest" },
-          },
-        },
-      },
-      ContinueMaxAgeRequest: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/ContinueMaxAgeRequest" },
+            schema: { $ref: "#/components/schemas/ProfilePreferencesRequest" },
           },
         },
       },
@@ -1740,8 +1721,9 @@ export const openApiDocument = {
           apiKey: { $ref: "#/components/schemas/ApiKeySummary" },
         },
       },
-      PlaybackPreferenceRequest: {
+      ProfilePreferencesRequest: {
         type: "object",
+        minProperties: 1,
         properties: {
           playbackPreference: {
             type: "string",
@@ -1749,18 +1731,24 @@ export const openApiDocument = {
           },
           preferredAudioLanguage: nullableStringSchema,
           preferredSubtitleLanguage: nullableStringSchema,
-        },
-      },
-      ContinueMaxAgeRequest: {
-        type: "object",
-        required: ["continueMaxAgeDays"],
-        properties: {
           continueMaxAgeDays: {
             type: "integer",
             minimum: 0,
             maximum: 3650,
             description:
               "Hide idle in-progress items from Continue rails after this many days. 0 disables staleness filtering.",
+          },
+        },
+      },
+      ProfilePreferencesResponse: {
+        type: "object",
+        required: ["transcodePolicy", "continueMaxAgeDays"],
+        properties: {
+          transcodePolicy: { $ref: "#/components/schemas/TranscodePolicy" },
+          continueMaxAgeDays: {
+            type: "integer",
+            minimum: 0,
+            maximum: 3650,
           },
         },
       },

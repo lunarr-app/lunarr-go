@@ -92,6 +92,18 @@ export type MeResponse = {
   continueMaxAgeDays: number;
 };
 
+export type ProfilePreferencesUpdate = {
+  playbackPreference?: unknown;
+  preferredAudioLanguage?: unknown;
+  preferredSubtitleLanguage?: unknown;
+  continueMaxAgeDays?: unknown;
+};
+
+export type ProfilePreferencesResponse = {
+  transcodePolicy: TranscodePolicy;
+  continueMaxAgeDays: number;
+};
+
 export type LibraryListItem = Awaited<ReturnType<typeof listLibrariesWithScanStatus>>[number];
 export type LibraryShareUser = Awaited<ReturnType<typeof listLibraryShareUsers>>[number];
 export type LibraryRecord = Awaited<ReturnType<typeof createLibrary>>;
@@ -190,6 +202,7 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "OkResponse",
   "User",
   "MeResponse",
+  "ProfilePreferencesResponse",
   "TranscodePolicy",
   "TranscodeQualityTarget",
   "PersonRecord",

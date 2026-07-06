@@ -101,33 +101,23 @@ Create body:
 
 ```http
 GET /api/me
-PUT /api/profile/playback-preference
-PUT /api/profile/continue-max-age
+PUT /api/profile
 ```
 
-`GET /api/me` includes `continueMaxAgeDays` (0–3650; `0` disables Continue staleness filtering).
+`GET /api/me` returns the signed-in `user`, `transcodePolicy`, and `continueMaxAgeDays`.
 
-Playback preference body:
+`PUT /api/profile` accepts a partial JSON body and updates only the fields you send. At least one field is required. The response returns the updated preference snapshot (`transcodePolicy`, `continueMaxAgeDays`).
 
 ```json
 {
   "playbackPreference": "auto",
   "preferredAudioLanguage": "eng",
-  "preferredSubtitleLanguage": "eng"
-}
-```
-
-Supported preferences and language values are normalized by the server.
-
-Continue max age body:
-
-```json
-{
+  "preferredSubtitleLanguage": "eng",
   "continueMaxAgeDays": 90
 }
 ```
 
-Use `0` to disable staleness filtering.
+Supported playback and language values are normalized by the server. `continueMaxAgeDays` is 0–3650; use `0` to disable Continue staleness filtering.
 
 ## Catalog
 
@@ -204,7 +194,7 @@ The same `page` and `limit` apply to all three sections in one response.
 
 The same Continue filters also apply to `continueWatching` and `nextUp` on `GET /api/movies` and `GET /api/shows` (including `?rail=continueWatching` and `?rail=nextUp`).
 
-When a user sets `continueMaxAgeDays` on Profile (or via `PUT /api/profile/continue-max-age`), stale progress is omitted from these rails but kept for resume on movie and episode detail pages. `continueWatching` filters per title, and `nextUp` drops a show when no episode has recent progress. Continue rails also ignore accidental starts shorter than 60 seconds. Browse `all` rails and detail pages are not filtered. See [Configuration](configuration.md#continue-watching).
+When a user sets `continueMaxAgeDays` on Profile (or via `PUT /api/profile`), stale progress is omitted from these rails but kept for resume on movie and episode detail pages. `continueWatching` filters per title, and `nextUp` drops a show when no episode has recent progress. Continue rails also ignore accidental starts shorter than 60 seconds. Browse `all` rails and detail pages are not filtered. See [Configuration](configuration.md#continue-watching).
 
 ### TV show detail tiers
 

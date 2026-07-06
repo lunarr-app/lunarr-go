@@ -202,4 +202,4 @@ Each signed-in user can set a staleness window on **Profile** (0–3650 days). `
 
 Affected surfaces: the Continue page, home-screen `continueWatching` / `nextUp` rails, and `GET /api/continue`. Browse `all` rails and detail pages are not filtered.
 
-API: `GET /api/me` returns `continueMaxAgeDays`. Update with `PUT /api/profile/continue-max-age` and body `{ "continueMaxAgeDays": 90 }`.
+API: `GET /api/me` returns `continueMaxAgeDays`. Update preferences with `PUT /api/profile` and a partial body such as `{ "continueMaxAgeDays": 90 }`.

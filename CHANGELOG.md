@@ -11,6 +11,7 @@
 
 ### Changed
 
+- Replaced `PUT /api/profile/playback-preference` and `PUT /api/profile/continue-max-age` with a single partial-update `PUT /api/profile` that returns an updated preferences snapshot.
 - Documented Continue filtering for browse rails, transcoding admin settings, and `playback-cache` storage layout.
 - Unified default catalog page size to 24 items. Web full-library pages still request 36 items per page.
 - Continue hub and home rails now link to dedicated section list pages instead of relying on a single unpaginated `/continue` view.
