@@ -2,6 +2,7 @@
   import ProfileAccountPanel from "./_components/ProfileAccountPanel.svelte";
   import ProfileApiKeysPanel from "./_components/ProfileApiKeysPanel.svelte";
   import ProfileAppearancePanel from "./_components/ProfileAppearancePanel.svelte";
+  import ProfileContinuePanel from "./_components/ProfileContinuePanel.svelte";
   import ProfileLinkDevicePanel from "./_components/ProfileLinkDevicePanel.svelte";
   import ProfilePlaybackPanel from "./_components/ProfilePlaybackPanel.svelte";
 
@@ -49,6 +50,13 @@
       <ProfilePlaybackPanel
         transcodePolicy={data.transcodePolicy}
         playbackPreferenceError={form?.playbackPreferenceError}
+      />
+    </div>
+
+    <div class="profile-panel profile-panel--continue">
+      <ProfileContinuePanel
+        continueMaxAgeDays={data.continueMaxAgeDays}
+        continueMaxAgeError={form?.continueMaxAgeError}
       />
     </div>
   </div>
@@ -113,6 +121,10 @@
 
     .profile-panel--playback {
       order: 5;
+    }
+
+    .profile-panel--continue {
+      order: 6;
     }
   }
 </style>

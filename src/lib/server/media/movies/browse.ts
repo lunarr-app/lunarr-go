@@ -16,7 +16,12 @@ import {
   type MovieBrowseRail,
 } from "../catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
-import { continueMaxAgeCutoffSql, continueMaxAgeEnabled, MIN_CONTINUE_POSITION_SECONDS } from "../continue-max-age";
+import {
+  continueMaxAgeCutoffSqlForDays,
+  continueMaxAgeEnabledForDays,
+  getContinueMaxAgeDays,
+  MIN_CONTINUE_POSITION_SECONDS,
+} from "../continue-max-age";
 import type { MovieBrowseRow } from "../types";
 import { publicMovieListItem } from "./shared";
 
@@ -59,6 +64,7 @@ export async function movieRows(
   rails: readonly MovieBrowseRail[] | null = null,
 ): Promise<MovieRowsResponse | MovieBrowseRailResponse> {
   const db = await getDb();
+  const maxAgeDays = await getContinueMaxAgeDays(userId);
   const searchPattern = search.trim();
   const page = normalizePage(pageInput);
   const limit = catalogPageSize(pageSize);
@@ -164,8 +170,8 @@ export async function movieRows(
             .whereRef("watch_progress.media_item_id", "=", "media_item.id")
             .where(sql<boolean>`watch_progress.completed = 0`)
             .where("watch_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
-            .$if(continueMaxAgeEnabled(), (qb) =>
-              qb.where("watch_progress.updated_at", ">", continueMaxAgeCutoffSql()),
+            .$if(continueMaxAgeEnabledForDays(maxAgeDays), (qb) =>
+              qb.where("watch_progress.updated_at", ">", continueMaxAgeCutoffSqlForDays(maxAgeDays)),
             ),
         ),
       );
@@ -180,7 +186,7 @@ export async function movieRows(
             and watch_progress.media_item_id = media_item.id
             and watch_progress.completed = 0
             and watch_progress.position_seconds >= ${MIN_CONTINUE_POSITION_SECONDS}
-            ${continueMaxAgeEnabled() ? sql`and watch_progress.updated_at > ${continueMaxAgeCutoffSql()}` : sql``}
+            ${continueMaxAgeEnabledForDays(maxAgeDays) ? sql`and watch_progress.updated_at > ${continueMaxAgeCutoffSqlForDays(maxAgeDays)}` : sql``}
         )`,
         "desc",
       ),

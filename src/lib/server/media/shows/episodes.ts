@@ -16,8 +16,9 @@ import {
 } from "../catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
 import {
-  continueMaxAgeCutoffSql,
-  continueMaxAgeEnabled,
+  continueMaxAgeCutoffSqlForDays,
+  continueMaxAgeEnabledForDays,
+  getContinueMaxAgeDays,
   isContinueProgressFresh,
   MIN_CONTINUE_POSITION_SECONDS,
 } from "../continue-max-age";
@@ -117,7 +118,7 @@ function episodeBrowseSelect(filtered: ReturnType<typeof filteredEpisodeBrowse>)
 
 type EpisodeBrowseQuery = ReturnType<typeof episodeBrowseSelect>;
 
-function applyEpisodeContinueWatchingFilters(query: EpisodeBrowseQuery, userId: string) {
+function applyEpisodeContinueWatchingFilters(query: EpisodeBrowseQuery, userId: string, maxAgeDays: number) {
   return query
     .where((eb) =>
       eb.not(
@@ -140,14 +141,14 @@ function applyEpisodeContinueWatchingFilters(query: EpisodeBrowseQuery, userId: 
           .whereRef("incomplete_progress.media_item_id", "=", "episode.id")
           .where(sql<boolean>`incomplete_progress.completed = 0`)
           .where("incomplete_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
-          .$if(continueMaxAgeEnabled(), (qb) =>
-            qb.where("incomplete_progress.updated_at", ">", continueMaxAgeCutoffSql()),
+          .$if(continueMaxAgeEnabledForDays(maxAgeDays), (qb) =>
+            qb.where("incomplete_progress.updated_at", ">", continueMaxAgeCutoffSqlForDays(maxAgeDays)),
           ),
       ),
     );
 }
 
-function orderContinueEpisodes(query: EpisodeBrowseQuery, userId: string) {
+function orderContinueEpisodes(query: EpisodeBrowseQuery, userId: string, maxAgeDays: number) {
   return query
     .orderBy(
       sql<string | null>`(
@@ -157,7 +158,7 @@ function orderContinueEpisodes(query: EpisodeBrowseQuery, userId: string) {
           and incomplete_progress.media_item_id = episode.id
           and incomplete_progress.completed = 0
           and incomplete_progress.position_seconds >= ${MIN_CONTINUE_POSITION_SECONDS}
-          ${continueMaxAgeEnabled() ? sql`and incomplete_progress.updated_at > ${continueMaxAgeCutoffSql()}` : sql``}
+          ${continueMaxAgeEnabledForDays(maxAgeDays) ? sql`and incomplete_progress.updated_at > ${continueMaxAgeCutoffSqlForDays(maxAgeDays)}` : sql``}
       )`,
       "desc",
     )
@@ -193,9 +194,11 @@ function orderEpisodeBrowseDefault(query: EpisodeBrowseQuery) {
 
 async function paginatedContinueEpisodeRows(userId: string, page: number, limit: number) {
   const db = await getDb();
+  const maxAgeDays = await getContinueMaxAgeDays(userId);
   const ordered = orderContinueEpisodes(
-    applyEpisodeContinueWatchingFilters(episodeBrowseSelect(filteredEpisodeBrowse(db, userId)), userId),
+    applyEpisodeContinueWatchingFilters(episodeBrowseSelect(filteredEpisodeBrowse(db, userId)), userId, maxAgeDays),
     userId,
+    maxAgeDays,
   );
   return paginatedGroupedRail(
     ordered,
@@ -219,6 +222,7 @@ async function allWithProgressEpisodeRows(userId: string) {
 }
 
 async function buildNextUpEpisodeRows(userId: string) {
+  const maxAgeDays = await getContinueMaxAgeDays(userId);
   const rows = await allWithProgressEpisodeRows(userId);
   if (rows.length === 0) return [] as EpisodeBrowseRow[];
 
@@ -235,12 +239,12 @@ async function buildNextUpEpisodeRows(userId: string) {
       })
       .map((episode) => episode.id),
   );
-  const activeShowIds = continueMaxAgeEnabled()
+  const activeShowIds = continueMaxAgeEnabledForDays(maxAgeDays)
     ? new Set(
         rows
           .filter((episode) => {
             const latest = progress.latestProgress.get(episode.id);
-            return latest?.updated_at ? isContinueProgressFresh(latest.updated_at) : false;
+            return latest?.updated_at ? isContinueProgressFresh(latest.updated_at, { maxAgeDays }) : false;
           })
           .map((episode) => episode.show_id),
       )

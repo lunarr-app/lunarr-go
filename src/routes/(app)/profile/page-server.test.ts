@@ -7,6 +7,7 @@ import { auth } from "$lib/server/auth";
 import { createApiKeyForUserId, listApiKeys } from "$lib/server/auth/api-keys";
 import { resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
+import { getContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
 
 const testUser = {
   id: "user-1",
@@ -89,6 +90,7 @@ describe("profile page server", () => {
         preferredSubtitleLanguage: null,
         transcodingEnabled: true,
       },
+      continueMaxAgeDays: 0,
       apiKeys: [],
     });
   });
@@ -151,6 +153,62 @@ describe("profile page server", () => {
     expect(await getTranscodePolicy("user-1").then((policy) => policy.playbackPreference)).toBe("prefer_transcode");
     expect(await getTranscodePolicy("user-1").then((policy) => policy.preferredAudioLanguage)).toBe("jpn");
     expect(await getTranscodePolicy("user-1").then((policy) => policy.preferredSubtitleLanguage)).toBe("eng");
+  });
+
+  test("saves continue max age for normal users", async () => {
+    const form = new FormData();
+    form.set("continueMaxAgeDays", "90");
+
+    await expectRedirect(
+      actions.saveContinueMaxAge({
+        request: new Request("http://localhost/profile", {
+          method: "POST",
+          body: form,
+        }),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never),
+      "/profile",
+    );
+
+    expect(await getContinueMaxAgeDays("user-1")).toBe(90);
+  });
+
+  test("normalizes invalid continue max age values", async () => {
+    const form = new FormData();
+    form.set("continueMaxAgeDays", "not-a-number");
+
+    await expectRedirect(
+      actions.saveContinueMaxAge({
+        request: new Request("http://localhost/profile", {
+          method: "POST",
+          body: form,
+        }),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never),
+      "/profile",
+    );
+
+    expect(await getContinueMaxAgeDays("user-1")).toBe(0);
+  });
+
+  test("rejects continue max age writes without a user", async () => {
+    const form = new FormData();
+    form.set("continueMaxAgeDays", "30");
+
+    const result = await actions.saveContinueMaxAge({
+      request: new Request("http://localhost/profile", {
+        method: "POST",
+        body: form,
+      }),
+      locals: { user: null },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 401,
+      data: {
+        continueMaxAgeError: "Sign in to update continue settings.",
+      },
+    });
   });
 
   test("normalizes invalid playback preference values", async () => {

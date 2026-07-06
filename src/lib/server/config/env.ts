@@ -76,10 +76,6 @@ const envSchema = z.object({
     (value) => (value === undefined || value === "" ? undefined : value),
     z.coerce.number().int().min(0).max(3650).default(730),
   ),
-  LUNARR_CONTINUE_MAX_AGE_DAYS: z.preprocess(
-    (value) => (value === undefined || value === "" ? undefined : value),
-    z.coerce.number().int().min(0).max(3650).default(0),
-  ),
 });
 
 export function appEnvDefaultsForEnvironment(env: NodeJS.ProcessEnv) {

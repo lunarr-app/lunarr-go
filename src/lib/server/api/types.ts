@@ -89,6 +89,7 @@ export type GuestShareSeasonResponse = {
 export type MeResponse = {
   user: NonNullable<App.Locals["user"]>;
   transcodePolicy: TranscodePolicy;
+  continueMaxAgeDays: number;
 };
 
 export type LibraryListItem = Awaited<ReturnType<typeof listLibrariesWithScanStatus>>[number];

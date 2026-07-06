@@ -193,17 +193,7 @@ In-progress movies and episodes can be hidden from Continue rails when their wat
 
 Continue rails also ignore very short accidental starts: items need at least 60 seconds of watch progress before they appear in `continueWatching`. For `nextUp`, only progress at or above 60 seconds counts as "in progress" (so a 5-second accidental open does not skip the episode from next up).
 
-```sh
-LUNARR_CONTINUE_MAX_AGE_DAYS=90
-```
-
-Limits:
-
-```text
-LUNARR_CONTINUE_MAX_AGE_DAYS: 0-3650
-```
-
-`0` disables staleness filtering. When set, staleness is based on each row's `watch_progress.updated_at` timestamp (last playback save or watched-state change).
+Each signed-in user can set a staleness window on **Profile** (0–3650 days). `0` disables staleness filtering. When set, staleness is based on each row's `watch_progress.updated_at` timestamp (last playback save or watched-state change).
 
 | Rail                                     | Staleness rule                                                                                                  |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -211,3 +201,5 @@ LUNARR_CONTINUE_MAX_AGE_DAYS: 0-3650
 | `nextUp`                                 | Hide the whole show when **no** episode on that show has progress updated within the window.                    |
 
 Affected surfaces: the Continue page, home-screen `continueWatching` / `nextUp` rails, and `GET /api/continue`. Browse `all` rails and detail pages are not filtered.
+
+API: `GET /api/me` returns `continueMaxAgeDays`. Update with `PUT /api/profile/continue-max-age` and body `{ "continueMaxAgeDays": 90 }`.

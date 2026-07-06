@@ -240,6 +240,21 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/profile/continue-max-age": {
+      put: {
+        tags: ["Account"],
+        summary: "Update Continue watching staleness window.",
+        operationId: "updateContinueMaxAge",
+        requestBody: {
+          $ref: "#/components/requestBodies/ContinueMaxAgeRequest",
+        },
+        responses: {
+          "200": okResponse,
+          "400": errorResponse,
+          "401": errorResponse,
+        },
+      },
+    },
     "/api/continue": {
       get: {
         tags: ["Catalog"],
@@ -1472,6 +1487,14 @@ export const openApiDocument = {
           },
         },
       },
+      ContinueMaxAgeRequest: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ContinueMaxAgeRequest" },
+          },
+        },
+      },
       WatchedRequest: {
         required: true,
         content: {
@@ -1728,12 +1751,30 @@ export const openApiDocument = {
           preferredSubtitleLanguage: nullableStringSchema,
         },
       },
+      ContinueMaxAgeRequest: {
+        type: "object",
+        required: ["continueMaxAgeDays"],
+        properties: {
+          continueMaxAgeDays: {
+            type: "integer",
+            minimum: 0,
+            maximum: 3650,
+            description:
+              "Hide idle in-progress items from Continue rails after this many days. 0 disables staleness filtering.",
+          },
+        },
+      },
       MeResponse: {
         type: "object",
-        required: ["user", "transcodePolicy"],
+        required: ["user", "transcodePolicy", "continueMaxAgeDays"],
         properties: {
           user: { $ref: "#/components/schemas/User" },
           transcodePolicy: { $ref: "#/components/schemas/TranscodePolicy" },
+          continueMaxAgeDays: {
+            type: "integer",
+            minimum: 0,
+            maximum: 3650,
+          },
         },
       },
       TranscodePolicy: {
