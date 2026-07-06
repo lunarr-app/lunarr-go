@@ -41,6 +41,10 @@
       tmdbApiKeyConfigured={data.tmdbApiKeyConfigured}
       tmdbAccessTokenSaved={data.tmdbAccessTokenSaved}
       tmdbApiKeySaved={data.tmdbApiKeySaved}
+      movieMetadataRefreshIntervalHours={data.movieMetadataRefreshIntervalHours}
+      tvMetadataRefreshIntervalHours={data.tvMetadataRefreshIntervalHours}
+      movieMetadataStalenessDays={data.movieMetadataStalenessDays}
+      tvMetadataStalenessDays={data.tvMetadataStalenessDays}
       metadataSaveError={form?.metadataSaveError}
     />
   </section>

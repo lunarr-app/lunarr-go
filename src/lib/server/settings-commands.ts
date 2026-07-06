@@ -4,6 +4,17 @@ import { PUBLIC_TMDB_ACCESS_TOKEN } from "./metadata/public-token";
 import { testTmdbConnection, tmdbCredentialsConfigured } from "./metadata/tmdb";
 import { startAllLibraryScans } from "./scanner";
 import { deleteSetting, getBooleanSetting, getSetting, setBooleanSetting, setSetting } from "./settings";
+import {
+  getMetadataRefreshIntervalHours,
+  getMetadataStalenessDays,
+  normalizeRefreshIntervalHours,
+  normalizeStalenessDays,
+  setLastScheduledMetadataRefreshAt,
+  setMetadataRefreshIntervalHours,
+  setMetadataStalenessDays,
+} from "./metadata/settings";
+import type { MetadataKind } from "./metadata/settings";
+import { syncScheduledMetadataRefresh } from "./metadata/scheduler";
 import { getServerStatus } from "./status";
 import { cancelActivePlaybackSessions } from "./transcoding/manager";
 import { startMediaProbeRefreshJob } from "./transcoding/probe-jobs";
@@ -62,6 +73,10 @@ export async function getAdminSettingsResponse(userId: string) {
     tmdbAccessTokenSaved: Boolean(savedAccessToken),
     tmdbApiKeyConfigured: Boolean(savedApiKey),
     tmdbApiKeySaved: Boolean(savedApiKey),
+    movieMetadataRefreshIntervalHours: await getMetadataRefreshIntervalHours("movie"),
+    tvMetadataRefreshIntervalHours: await getMetadataRefreshIntervalHours("tv"),
+    movieMetadataStalenessDays: await getMetadataStalenessDays("movie"),
+    tvMetadataStalenessDays: await getMetadataStalenessDays("tv"),
     transcodePolicy: await getTranscodePolicy(userId),
     playbackSessionArtifactMaxBytes: await getPlaybackSessionArtifactMaxBytes(),
     playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
@@ -80,10 +95,48 @@ export async function updateMetadataSettings(input: InputSource) {
   const accessToken = stringInput(input, "tmdbAccessToken");
   const apiKey = stringInput(input, "tmdbApiKey");
 
+  function numberInputOrNull(key: string) {
+    if (!hasInput(input, key)) return null;
+    const raw = stringInput(input, key);
+    if (!raw) return null;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  const movieIntervalHoursInput = numberInputOrNull("movieMetadataRefreshIntervalHours");
+  const tvIntervalHoursInput = numberInputOrNull("tvMetadataRefreshIntervalHours");
+  const movieStalenessDaysInput = numberInputOrNull("movieMetadataStalenessDays");
+  const tvStalenessDaysInput = numberInputOrNull("tvMetadataStalenessDays");
+
   if (booleanInput(input, "clearTmdbAccessToken")) await deleteSetting("tmdb_access_token");
   if (booleanInput(input, "clearTmdbApiKey")) await deleteSetting("tmdb_api_key");
   if (accessToken) await setSetting("tmdb_access_token", accessToken);
   if (apiKey) await setSetting("tmdb_api_key", apiKey);
+
+  async function updateMetadataInterval(kind: MetadataKind, hoursInput: number | null) {
+    if (hoursInput === null) return;
+    const previous = await getMetadataRefreshIntervalHours(kind);
+    const normalized = normalizeRefreshIntervalHours(hoursInput);
+    await setMetadataRefreshIntervalHours(kind, normalized);
+    if (normalized !== previous) {
+      await setLastScheduledMetadataRefreshAt(kind, "");
+    }
+  }
+
+  async function updateMetadataStaleness(kind: MetadataKind, daysInput: number | null) {
+    if (daysInput === null) return;
+    const normalized = normalizeStalenessDays(daysInput);
+    await setMetadataStalenessDays(kind, normalized);
+  }
+
+  await Promise.all([
+    updateMetadataInterval("movie", movieIntervalHoursInput),
+    updateMetadataInterval("tv", tvIntervalHoursInput),
+    updateMetadataStaleness("movie", movieStalenessDaysInput),
+    updateMetadataStaleness("tv", tvStalenessDaysInput),
+  ]);
+
+  await syncScheduledMetadataRefresh();
 }
 
 export async function updateTranscodingSettings(input: InputSource) {

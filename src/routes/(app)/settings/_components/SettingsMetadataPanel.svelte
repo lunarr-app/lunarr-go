@@ -7,21 +7,48 @@
     tmdbAccessTokenSaved,
     tmdbApiKeySaved,
     metadataSaveError,
+    movieMetadataRefreshIntervalHours,
+    tvMetadataRefreshIntervalHours,
+    movieMetadataStalenessDays,
+    tvMetadataStalenessDays,
   }: {
     tmdbAccessTokenConfigured: boolean;
     tmdbApiKeyConfigured: boolean;
     tmdbAccessTokenSaved: boolean;
     tmdbApiKeySaved: boolean;
     metadataSaveError?: string;
+    movieMetadataRefreshIntervalHours: number | null;
+    tvMetadataRefreshIntervalHours: number | null;
+    movieMetadataStalenessDays: number;
+    tvMetadataStalenessDays: number;
   } = $props();
 
   let tmdbAccessToken = $state("");
   let tmdbApiKey = $state("");
   let clearTmdbAccessToken = $state(false);
   let clearTmdbApiKey = $state(false);
+  let movieIntervalHours = $state("");
+  let tvIntervalHours = $state("");
+  let movieStalenessDays = $state("0");
+  let tvStalenessDays = $state("0");
+
+  $effect(() => {
+    movieIntervalHours = movieMetadataRefreshIntervalHours === null ? "" : String(movieMetadataRefreshIntervalHours);
+    tvIntervalHours = tvMetadataRefreshIntervalHours === null ? "" : String(tvMetadataRefreshIntervalHours);
+    movieStalenessDays = String(movieMetadataStalenessDays);
+    tvStalenessDays = String(tvMetadataStalenessDays);
+  });
 
   const metadataChanged = $derived(
-    tmdbAccessToken.trim().length > 0 || tmdbApiKey.trim().length > 0 || clearTmdbAccessToken || clearTmdbApiKey,
+    tmdbAccessToken.trim().length > 0 ||
+      tmdbApiKey.trim().length > 0 ||
+      clearTmdbAccessToken ||
+      clearTmdbApiKey ||
+      movieIntervalHours !==
+        (movieMetadataRefreshIntervalHours === null ? "" : String(movieMetadataRefreshIntervalHours)) ||
+      tvIntervalHours !== (tvMetadataRefreshIntervalHours === null ? "" : String(tvMetadataRefreshIntervalHours)) ||
+      movieStalenessDays !== String(movieMetadataStalenessDays) ||
+      tvStalenessDays !== String(tvMetadataStalenessDays),
   );
 </script>
 
@@ -78,6 +105,64 @@
       </label>
     {/if}
 
+    <fieldset class="metadata-refresh">
+      <legend>Scheduled metadata refresh</legend>
+
+      <div class="metadata-refresh-columns">
+        <div>
+          <h3>Movies</h3>
+          <label>
+            Interval
+            <select name="movieMetadataRefreshIntervalHours" bind:value={movieIntervalHours}>
+              <option value="">Off</option>
+              <option value="6">Every 6 hours</option>
+              <option value="12">Every 12 hours</option>
+              <option value="24">Daily</option>
+              <option value="168">Weekly</option>
+            </select>
+          </label>
+
+          <label>
+            Staleness (days)
+            <input
+              name="movieMetadataStalenessDays"
+              type="number"
+              min="0"
+              max="3650"
+              step="1"
+              bind:value={movieStalenessDays}
+            />
+          </label>
+        </div>
+
+        <div>
+          <h3>TV shows</h3>
+          <label>
+            Interval
+            <select name="tvMetadataRefreshIntervalHours" bind:value={tvIntervalHours}>
+              <option value="">Off</option>
+              <option value="6">Every 6 hours</option>
+              <option value="12">Every 12 hours</option>
+              <option value="24">Daily</option>
+              <option value="168">Weekly</option>
+            </select>
+          </label>
+
+          <label>
+            Staleness (days)
+            <input
+              name="tvMetadataStalenessDays"
+              type="number"
+              min="0"
+              max="3650"
+              step="1"
+              bind:value={tvStalenessDays}
+            />
+          </label>
+        </div>
+      </div>
+    </fieldset>
+
     {#if metadataSaveError}
       <p class="error">{metadataSaveError}</p>
     {/if}
@@ -92,5 +177,26 @@
   .detail-copy {
     line-height: 1.5;
     font-size: 0.88rem;
+  }
+
+  .metadata-refresh {
+    margin-top: 1.5rem;
+  }
+
+  .metadata-refresh-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 0.75rem;
+  }
+
+  .metadata-refresh-columns h3 {
+    margin: 0 0 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .metadata-refresh-columns label {
+    display: block;
+    margin-bottom: 0.75rem;
   }
 </style>

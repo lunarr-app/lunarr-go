@@ -187,6 +187,22 @@ LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS: 0-3650
 
 `0` omits an expiration on paired keys. Users can revoke paired keys earlier from Profile.
 
+## Metadata Refresh
+
+Admins can keep TMDb metadata fresh with separate scheduled refresh settings for movies and TV shows in **Settings → TMDb metadata**.
+
+- **Interval (hours):** `Off`, every 6 hours, every 12 hours, daily, or weekly
+- **Staleness (days):** only scheduled refreshes older than this window are re-fetched
+
+`0` staleness means each scheduled run refreshes all matched items of that kind. Manual refresh actions from Settings, detail pages, or `/api/movies/:id/metadata/refresh` and `/api/shows/:id/metadata/refresh` still refresh immediately and ignore staleness.
+
+Scheduled metadata refresh is separate from library scheduled rescans:
+
+- **Library rescans** discover added/changed files
+- **Metadata refresh** re-pulls TMDb metadata for existing matched movies or TV seasons
+
+The current staleness signal uses each row's `media_item.updated_at` timestamp. Any change that updates the media row can make it count as fresh until the configured window expires again.
+
 ## Continue Watching
 
 In-progress movies and episodes can be hidden from Continue rails when their watch progress has not been updated recently. Progress is kept in the database and resume still works on movie and episode detail pages, browse lists, and season views.

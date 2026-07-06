@@ -21,6 +21,10 @@ type SettingsLoadResult = {
   tmdbAccessTokenSaved: boolean;
   tmdbApiKeyConfigured: boolean;
   tmdbApiKeySaved: boolean;
+  movieMetadataRefreshIntervalHours: number | null;
+  tvMetadataRefreshIntervalHours: number | null;
+  movieMetadataStalenessDays: number;
+  tvMetadataStalenessDays: number;
   transcodePolicy: TranscodePolicy;
   playbackSessionArtifactMaxBytes: number;
   playbackSessionArtifactMaxBytesOptions: readonly number[];
@@ -82,6 +86,10 @@ describe("settings page server", () => {
     const metadataForm = new FormData();
     metadataForm.set("tmdbAccessToken", "saved-access-token");
     metadataForm.set("tmdbApiKey", "saved-api-key");
+    metadataForm.set("movieMetadataRefreshIntervalHours", "24");
+    metadataForm.set("tvMetadataRefreshIntervalHours", "168");
+    metadataForm.set("movieMetadataStalenessDays", "30");
+    metadataForm.set("tvMetadataStalenessDays", "14");
 
     try {
       await actions.saveMetadata({
@@ -102,6 +110,10 @@ describe("settings page server", () => {
     expect(await getBooleanSetting("signup_open", false)).toBe(true);
     expect(await getSetting("tmdb_access_token")).toBe("saved-access-token");
     expect(await getSetting("tmdb_api_key")).toBe("saved-api-key");
+    expect(await getSetting("movie_metadata_refresh_interval_hours")).toBe("24");
+    expect(await getSetting("tv_metadata_refresh_interval_hours")).toBe("168");
+    expect(await getSetting("movie_metadata_staleness_days")).toBe("30");
+    expect(await getSetting("tv_metadata_staleness_days")).toBe("14");
 
     const transcodingForm = new FormData();
     transcodingForm.set("hardwareAcceleration", "videotoolbox");
@@ -231,6 +243,10 @@ describe("settings page server", () => {
       tmdbAccessTokenSaved: true,
       tmdbApiKeyConfigured: true,
       tmdbApiKeySaved: true,
+      movieMetadataRefreshIntervalHours: 24,
+      tvMetadataRefreshIntervalHours: 168,
+      movieMetadataStalenessDays: 30,
+      tvMetadataStalenessDays: 14,
       transcodePolicy: {
         transcodingEnabled: false,
         playbackPreference: "auto",
@@ -284,6 +300,10 @@ describe("settings page server", () => {
       tmdbConfigured: true,
       tmdbAccessTokenConfigured: false,
       tmdbApiKeyConfigured: false,
+      movieMetadataRefreshIntervalHours: null,
+      tvMetadataRefreshIntervalHours: null,
+      movieMetadataStalenessDays: 0,
+      tvMetadataStalenessDays: 0,
       playbackSessionArtifactMaxBytes: DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
     });
   });

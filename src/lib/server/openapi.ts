@@ -3340,6 +3340,10 @@ export const openApiDocument = {
         required: [
           "signupOpen",
           "tmdbConfigured",
+          "movieMetadataRefreshIntervalHours",
+          "tvMetadataRefreshIntervalHours",
+          "movieMetadataStalenessDays",
+          "tvMetadataStalenessDays",
           "transcodePolicy",
           "playbackSessionArtifactMaxBytes",
           "playbackSessionArtifactMaxBytesOptions",
@@ -3355,6 +3359,10 @@ export const openApiDocument = {
           tmdbAccessTokenSaved: { type: "boolean" },
           tmdbApiKeyConfigured: { type: "boolean" },
           tmdbApiKeySaved: { type: "boolean" },
+          movieMetadataRefreshIntervalHours: nullableIntegerSchema,
+          tvMetadataRefreshIntervalHours: nullableIntegerSchema,
+          movieMetadataStalenessDays: { type: "integer", minimum: 0, maximum: 3650 },
+          tvMetadataStalenessDays: { type: "integer", minimum: 0, maximum: 3650 },
           transcodePolicy: { $ref: "#/components/schemas/TranscodePolicy" },
           playbackSessionArtifactMaxBytes: { type: "integer", minimum: 0 },
           playbackSessionArtifactMaxBytesOptions: {
@@ -3390,6 +3398,26 @@ export const openApiDocument = {
           tmdbApiKey: stringSchema,
           clearTmdbAccessToken: { type: "boolean" },
           clearTmdbApiKey: { type: "boolean" },
+          movieMetadataRefreshIntervalHours: {
+            ...nullableIntegerSchema,
+            description:
+              "Scheduled movie metadata refresh interval, in whole hours. Null or 0 disables scheduled refresh.",
+          },
+          tvMetadataRefreshIntervalHours: {
+            ...nullableIntegerSchema,
+            description:
+              "Scheduled TV metadata refresh interval, in whole hours. Null or 0 disables scheduled refresh.",
+          },
+          movieMetadataStalenessDays: {
+            ...nullableIntegerSchema,
+            description:
+              "On scheduled movie metadata refresh, skip movies updated within this window. 0 or null refreshes all movies.",
+          },
+          tvMetadataStalenessDays: {
+            ...nullableIntegerSchema,
+            description:
+              "On scheduled TV metadata refresh, skip seasons updated within this window. 0 or null refreshes all seasons.",
+          },
         },
       },
       TranscodingSettingsRequest: {

@@ -10,6 +10,7 @@ type MovieMetadataMatcher = (title: string, year: number | null) => Promise<Matc
 
 export type RefreshMetadataOptions = {
   metadataMatcher?: MovieMetadataMatcher;
+  stalenessDays?: number;
 };
 
 export type RefreshMovieMetadataResult =
@@ -322,14 +323,20 @@ export async function runMovieMetadataRefreshJob(jobId: string, options: Refresh
     errors = isResume ? job.errors_count : 0;
     resumeCheckpoint = isResume ? job.checkpoint_value : null;
 
-    const movies = await db
+    const moviesQuery = db
       .selectFrom("media_item")
       .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
-      .select(["media_item.id", "media_item.title", "media_item.sort_title"])
+      .select(["media_item.id", "media_item.title", "media_item.sort_title", "media_item.updated_at"])
       .where("media_item.kind", "=", "movie")
       .groupBy("media_item.id")
-      .orderBy("media_item.sort_title", "asc")
-      .execute();
+      .orderBy("media_item.sort_title", "asc");
+
+    const movies =
+      options.stalenessDays && options.stalenessDays > 0
+        ? await moviesQuery
+            .where(sql<boolean>`media_item.updated_at < datetime('now', '-' || ${options.stalenessDays} || ' days')`)
+            .execute()
+        : await moviesQuery.execute();
 
     if (resumeCheckpoint && !movies.some((movie) => movie.id === resumeCheckpoint)) {
       seen = 0;

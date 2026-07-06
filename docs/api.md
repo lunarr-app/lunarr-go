@@ -460,6 +460,8 @@ DELETE /api/shares/:id
 
 `GET /api/users` returns registered accounts with roles and timestamps. Admins can create accounts with `POST /api/users`, promote or demote users with `PATCH /api/users/:userId`, and remove accounts with `DELETE /api/users/:userId`. Lunarr keeps at least one admin and blocks self-deletion.
 
+`GET /api/settings` includes TMDb credential state plus scheduled metadata refresh settings: `movieMetadataRefreshIntervalHours`, `tvMetadataRefreshIntervalHours`, `movieMetadataStalenessDays`, and `tvMetadataStalenessDays`. Update them with `PUT /api/settings/metadata` alongside TMDb credentials.
+
 Create user body:
 
 ```json

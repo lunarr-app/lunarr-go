@@ -24,6 +24,7 @@ type TvSeasonMetadataMatcher = (
 
 export type RefreshTvMetadataOptions = {
   metadataMatcher?: TvSeasonMetadataMatcher;
+  stalenessDays?: number;
 };
 
 type RefreshTvSeasonMetadataResult =
@@ -481,16 +482,22 @@ export async function runTvMetadataRefreshJob(jobId: string, options: RefreshTvM
     errors = isResume ? job.errors_count : 0;
     resumeCheckpoint = isResume ? job.checkpoint_value : null;
 
-    const seasons = await db
+    const seasonsQuery = db
       .selectFrom("media_item as season")
       .innerJoin("media_item as show", "show.id", "season.parent_id")
-      .select(["season.id", "season.title", "season.season_number", "show.title as show_title"])
+      .select(["season.id", "season.title", "season.season_number", "season.updated_at", "show.title as show_title"])
       .where("season.kind", "=", "season")
       .where("show.kind", "=", "show")
       .where("season.season_number", "is not", null)
       .orderBy("show.sort_title", "asc")
-      .orderBy("season.season_number", "asc")
-      .execute();
+      .orderBy("season.season_number", "asc");
+
+    const seasons =
+      options.stalenessDays && options.stalenessDays > 0
+        ? await seasonsQuery
+            .where(sql<boolean>`season.updated_at < datetime('now', '-' || ${options.stalenessDays} || ' days')`)
+            .execute()
+        : await seasonsQuery.execute();
 
     if (resumeCheckpoint && !seasons.some((season) => season.id === resumeCheckpoint)) {
       seen = 0;

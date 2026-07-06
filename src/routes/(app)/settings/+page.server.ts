@@ -1,6 +1,7 @@
 import { isAdmin, requireAdmin } from "$lib/server/auth/users";
 import { PUBLIC_TMDB_ACCESS_TOKEN } from "$lib/server/metadata/public-token";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
+import { getMetadataRefreshIntervalHours, getMetadataStalenessDays } from "$lib/server/metadata/settings";
 import { getBooleanSetting, getSetting } from "$lib/server/settings";
 import {
   runSettingsAction,
@@ -33,6 +34,10 @@ export const load: PageServerLoad = async ({ locals }) => {
     tmdbAccessTokenSaved: Boolean(savedAccessToken),
     tmdbApiKeyConfigured: Boolean(savedApiKey),
     tmdbApiKeySaved: Boolean(savedApiKey),
+    movieMetadataRefreshIntervalHours: await getMetadataRefreshIntervalHours("movie"),
+    tvMetadataRefreshIntervalHours: await getMetadataRefreshIntervalHours("tv"),
+    movieMetadataStalenessDays: await getMetadataStalenessDays("movie"),
+    tvMetadataStalenessDays: await getMetadataStalenessDays("tv"),
     transcodePolicy: await getTranscodePolicy(locals.user?.id),
     playbackSessionArtifactMaxBytes: await getPlaybackSessionArtifactMaxBytes(),
     playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,

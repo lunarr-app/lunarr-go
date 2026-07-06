@@ -11,6 +11,7 @@ import { resumeInterruptedJobs } from "$lib/server/scanner";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
 import { startStaleTranscodeExpiryLoop } from "$lib/server/transcoding/manager";
+import { syncScheduledMetadataRefresh } from "$lib/server/metadata/scheduler";
 import {
   cleanupConfiguredPlaybackSessionArtifacts,
   recoverInterruptedTranscodeSessions,
@@ -38,6 +39,7 @@ function ensureStartup() {
       startStaleTranscodeExpiryLoop();
       await syncLibraryWatchers();
       await syncScheduledLibraryScans();
+      await syncScheduledMetadataRefresh();
     }
   })().catch((error) => {
     startupPromise = undefined;
