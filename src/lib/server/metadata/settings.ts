@@ -6,6 +6,9 @@ const MAX_REFRESH_INTERVAL_HOURS = 30 * 24; // 30 days
 const MIN_STALENESS_DAYS = 0;
 const MAX_STALENESS_DAYS = 3650;
 
+export const DEFAULT_MOVIE_METADATA_STALENESS_DAYS = 30;
+export const DEFAULT_TV_METADATA_STALENESS_DAYS = 14;
+
 const MOVIE_INTERVAL_KEY = "movie_metadata_refresh_interval_hours";
 const TV_INTERVAL_KEY = "tv_metadata_refresh_interval_hours";
 
@@ -27,6 +30,10 @@ function stalenessKey(kind: MetadataKind) {
 
 function lastScheduledAtKey(kind: MetadataKind) {
   return kind === "movie" ? MOVIE_LAST_SCHEDULED_AT_KEY : TV_LAST_SCHEDULED_AT_KEY;
+}
+
+function defaultMetadataStalenessDays(kind: MetadataKind) {
+  return kind === "movie" ? DEFAULT_MOVIE_METADATA_STALENESS_DAYS : DEFAULT_TV_METADATA_STALENESS_DAYS;
 }
 
 export function normalizeRefreshIntervalHours(value: number | null | undefined): number | null {
@@ -64,7 +71,7 @@ export async function setMetadataRefreshIntervalHours(kind: MetadataKind, hours:
 
 export async function getMetadataStalenessDays(kind: MetadataKind): Promise<number> {
   const raw = await getSetting(stalenessKey(kind));
-  if (raw === null) return MIN_STALENESS_DAYS;
+  if (raw === null) return defaultMetadataStalenessDays(kind);
   const parsed = Number.parseInt(raw, 10);
   return normalizeStalenessDays(parsed);
 }

@@ -3361,8 +3361,20 @@ export const openApiDocument = {
           tmdbApiKeySaved: { type: "boolean" },
           movieMetadataRefreshIntervalHours: nullableIntegerSchema,
           tvMetadataRefreshIntervalHours: nullableIntegerSchema,
-          movieMetadataStalenessDays: { type: "integer", minimum: 0, maximum: 3650 },
-          tvMetadataStalenessDays: { type: "integer", minimum: 0, maximum: 3650 },
+          movieMetadataStalenessDays: {
+            type: "integer",
+            minimum: 0,
+            maximum: 3650,
+            description:
+              "Scheduled movie metadata staleness window in days. Default 30. Use 0 to refresh all movies each run.",
+          },
+          tvMetadataStalenessDays: {
+            type: "integer",
+            minimum: 0,
+            maximum: 3650,
+            description:
+              "Scheduled TV metadata staleness window in days. Default 14. Use 0 to refresh all seasons each run.",
+          },
           transcodePolicy: { $ref: "#/components/schemas/TranscodePolicy" },
           playbackSessionArtifactMaxBytes: { type: "integer", minimum: 0 },
           playbackSessionArtifactMaxBytesOptions: {
@@ -3411,12 +3423,12 @@ export const openApiDocument = {
           movieMetadataStalenessDays: {
             ...nullableIntegerSchema,
             description:
-              "On scheduled movie metadata refresh, skip movies updated within this window. 0 or null refreshes all movies.",
+              "On scheduled movie metadata refresh, skip movies updated within this window. Default 30. Use 0 to refresh all movies each run.",
           },
           tvMetadataStalenessDays: {
             ...nullableIntegerSchema,
             description:
-              "On scheduled TV metadata refresh, skip seasons updated within this window. 0 or null refreshes all seasons.",
+              "On scheduled TV metadata refresh, skip seasons updated within this window. Default 14. Use 0 to refresh all seasons each run.",
           },
         },
       },

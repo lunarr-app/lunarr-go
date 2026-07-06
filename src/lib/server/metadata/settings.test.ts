@@ -38,6 +38,16 @@ describe("metadata settings", () => {
     expect(normalizeStalenessDays(4000)).toBe(3650);
   });
 
+  test("returns kind-specific defaults when staleness is unset", async () => {
+    expect(await getMetadataStalenessDays("movie")).toBe(30);
+    expect(await getMetadataStalenessDays("tv")).toBe(14);
+  });
+
+  test("reads explicit zero staleness", async () => {
+    await setMetadataStalenessDays("movie", 0);
+    expect(await getMetadataStalenessDays("movie")).toBe(0);
+  });
+
   test("stores and reads back movie and tv metadata settings", async () => {
     await setMetadataRefreshIntervalHours("movie", 24);
     await setMetadataRefreshIntervalHours("tv", 168);

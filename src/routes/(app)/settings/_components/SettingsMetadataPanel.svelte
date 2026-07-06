@@ -29,8 +29,8 @@
   let clearTmdbApiKey = $state(false);
   let movieIntervalHours = $state("");
   let tvIntervalHours = $state("");
-  let movieStalenessDays = $state("0");
-  let tvStalenessDays = $state("0");
+  let movieStalenessDays = $state("30");
+  let tvStalenessDays = $state("14");
 
   $effect(() => {
     movieIntervalHours = movieMetadataRefreshIntervalHours === null ? "" : String(movieMetadataRefreshIntervalHours);
@@ -200,7 +200,8 @@
   }
 
   .metadata-refresh-columns label {
-    display: block;
+    display: grid;
+    gap: 0.35rem;
     margin-bottom: 0.75rem;
   }
 </style>

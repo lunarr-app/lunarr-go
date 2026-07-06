@@ -302,8 +302,8 @@ describe("settings page server", () => {
       tmdbApiKeyConfigured: false,
       movieMetadataRefreshIntervalHours: null,
       tvMetadataRefreshIntervalHours: null,
-      movieMetadataStalenessDays: 0,
-      tvMetadataStalenessDays: 0,
+      movieMetadataStalenessDays: 30,
+      tvMetadataStalenessDays: 14,
       playbackSessionArtifactMaxBytes: DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
     });
   });
