@@ -1,51 +1,18 @@
 import { isAdmin, requireAdmin } from "$lib/server/auth/users";
-import { PUBLIC_TMDB_ACCESS_TOKEN } from "$lib/server/metadata/public-token";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
-import { getMetadataRefreshIntervalHours, getMetadataStalenessDays } from "$lib/server/metadata/settings";
-import { getBooleanSetting, getSetting } from "$lib/server/settings";
 import {
+  getAdminSettingsResponse,
   runSettingsAction,
   updateMetadataSettings,
   updateRegistrationSettings,
   updateTranscodingSettings,
 } from "$lib/server/settings-commands";
-import { getServerStatus } from "$lib/server/status";
-import { getTranscodePolicy } from "$lib/server/transcoding/policy";
-import {
-  getPlaybackSessionArtifactMaxBytes,
-  PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
-} from "$lib/server/transcoding/sessions";
-import { getEncodeAheadSegmentCount, getPlaybackCacheTtlMs } from "$lib/server/transcoding/cache";
-import { APP_VERSION } from "$lib/server/version";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
   requireAdmin(locals.user);
-  const savedAccessToken = await getSetting("tmdb_access_token");
-  const savedApiKey = await getSetting("tmdb_api_key");
-  const fallbackConfigured = Boolean(PUBLIC_TMDB_ACCESS_TOKEN);
-  const tmdbConfigured = Boolean(savedAccessToken || savedApiKey || fallbackConfigured);
-
-  return {
-    signupOpen: await getBooleanSetting("signup_open", false),
-    tmdbConfigured,
-    tmdbAccessTokenConfigured: Boolean(savedAccessToken),
-    tmdbAccessTokenSaved: Boolean(savedAccessToken),
-    tmdbApiKeyConfigured: Boolean(savedApiKey),
-    tmdbApiKeySaved: Boolean(savedApiKey),
-    movieMetadataRefreshIntervalHours: await getMetadataRefreshIntervalHours("movie"),
-    tvMetadataRefreshIntervalHours: await getMetadataRefreshIntervalHours("tv"),
-    movieMetadataStalenessDays: await getMetadataStalenessDays("movie"),
-    tvMetadataStalenessDays: await getMetadataStalenessDays("tv"),
-    transcodePolicy: await getTranscodePolicy(locals.user?.id),
-    playbackSessionArtifactMaxBytes: await getPlaybackSessionArtifactMaxBytes(),
-    playbackSessionArtifactMaxBytesOptions: PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
-    encodeAheadSegmentCount: await getEncodeAheadSegmentCount(),
-    playbackCacheTtlHours: (await getPlaybackCacheTtlMs()) / (60 * 60 * 1000),
-    version: APP_VERSION,
-    status: await getServerStatus(),
-  };
+  return await getAdminSettingsResponse(locals.user!.id);
 };
 
 export const actions: Actions = {

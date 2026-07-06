@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Save } from "@lucide/svelte";
+  import { DEFAULT_MOVIE_METADATA_STALENESS_DAYS, DEFAULT_TV_METADATA_STALENESS_DAYS } from "$lib/metadata/settings";
 
   let {
     tmdbAccessTokenConfigured,
@@ -29,8 +30,8 @@
   let clearTmdbApiKey = $state(false);
   let movieIntervalHours = $state("");
   let tvIntervalHours = $state("");
-  let movieStalenessDays = $state("30");
-  let tvStalenessDays = $state("14");
+  let movieStalenessDays = $state(String(DEFAULT_MOVIE_METADATA_STALENESS_DAYS));
+  let tvStalenessDays = $state(String(DEFAULT_TV_METADATA_STALENESS_DAYS));
 
   $effect(() => {
     movieIntervalHours = movieMetadataRefreshIntervalHours === null ? "" : String(movieMetadataRefreshIntervalHours);

@@ -1,3 +1,4 @@
+import { normalizePreferredLanguage } from "$lib/media/preferred-language";
 import { getBooleanSetting, getSetting, setBooleanSetting, setSetting } from "../settings";
 
 export const PLAYBACK_PREFERENCES = ["auto", "prefer_direct", "prefer_transcode"] as const;
@@ -47,10 +48,7 @@ export function normalizePlaybackPreference(value: string | null | undefined): P
   return PLAYBACK_PREFERENCES.includes(value as PlaybackPreference) ? (value as PlaybackPreference) : "auto";
 }
 
-export function normalizePreferredAudioLanguage(value: string | null | undefined) {
-  const normalized = value?.trim().toLowerCase() ?? "";
-  return normalized.length > 0 ? normalized.slice(0, 32) : null;
-}
+export { normalizePreferredLanguage as normalizePreferredAudioLanguage } from "$lib/media/preferred-language";
 
 export function normalizeHardwareAccelerationMode(value: string | null | undefined): HardwareAccelerationMode {
   return HARDWARE_ACCELERATION_MODES.includes(value as HardwareAccelerationMode)
@@ -104,12 +102,12 @@ export async function getUserPlaybackPreference(userId: string | null | undefine
 
 export async function getUserPreferredAudioLanguage(userId: string | null | undefined) {
   if (!userId) return null;
-  return normalizePreferredAudioLanguage(await getSetting(userPreferredAudioLanguageKey(userId)));
+  return normalizePreferredLanguage(await getSetting(userPreferredAudioLanguageKey(userId)));
 }
 
 export async function getUserPreferredSubtitleLanguage(userId: string | null | undefined) {
   if (!userId) return null;
-  return normalizePreferredAudioLanguage(await getSetting(userPreferredSubtitleLanguageKey(userId)));
+  return normalizePreferredLanguage(await getSetting(userPreferredSubtitleLanguageKey(userId)));
 }
 
 export async function setUserPlaybackPreference(userId: string, value: PlaybackPreference) {
@@ -117,11 +115,11 @@ export async function setUserPlaybackPreference(userId: string, value: PlaybackP
 }
 
 export async function setUserPreferredAudioLanguage(userId: string, value: string | null | undefined) {
-  await setSetting(userPreferredAudioLanguageKey(userId), normalizePreferredAudioLanguage(value) ?? "");
+  await setSetting(userPreferredAudioLanguageKey(userId), normalizePreferredLanguage(value) ?? "");
 }
 
 export async function setUserPreferredSubtitleLanguage(userId: string, value: string | null | undefined) {
-  await setSetting(userPreferredSubtitleLanguageKey(userId), normalizePreferredAudioLanguage(value) ?? "");
+  await setSetting(userPreferredSubtitleLanguageKey(userId), normalizePreferredLanguage(value) ?? "");
 }
 
 export async function getTranscodePolicy(userId?: string | null): Promise<TranscodePolicy> {

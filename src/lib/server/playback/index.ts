@@ -4,6 +4,7 @@ import {
   type ClientPlaybackCapabilities,
   type PlaybackTarget,
 } from "$lib/playback/capabilities";
+import { normalizePreferredLanguage } from "$lib/media/preferred-language";
 import { getDb } from "../db";
 import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media/files";
 import { nowIso } from "../time";
@@ -83,10 +84,6 @@ function parseRequestedStartSeconds(url: URL) {
 function parseForceTranscode(url: URL) {
   const value = url.searchParams.get("transcode")?.trim().toLowerCase();
   return value === "1" || value === "true" || value === "transcode";
-}
-
-function normalizedLanguage(value: string | null | undefined) {
-  return value?.trim().toLowerCase() || null;
 }
 
 export function parsePlaybackProgressBody(body: unknown): PlaybackProgressBody {
@@ -196,9 +193,9 @@ export async function getPlaybackDecision(
     .orderBy("label", "asc")
     .execute();
 
-  const preferredSubtitleLanguage = normalizedLanguage(policy.preferredSubtitleLanguage);
+  const preferredSubtitleLanguage = normalizePreferredLanguage(policy.preferredSubtitleLanguage);
   const preferredSubtitleTrackId = preferredSubtitleLanguage
-    ? tracks.find((track) => normalizedLanguage(track.language) === preferredSubtitleLanguage)?.id
+    ? tracks.find((track) => normalizePreferredLanguage(track.language) === preferredSubtitleLanguage)?.id
     : null;
   let defaultAssigned = false;
   const mappedTracks = tracks.map((track) => {

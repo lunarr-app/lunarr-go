@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Save } from "@lucide/svelte";
+  import { normalizePreferredLanguage } from "$lib/media/preferred-language";
 
   let {
     transcodePolicy,
@@ -19,15 +20,14 @@
   let preferredAudioLanguage = $state("");
   let preferredSubtitleLanguage = $state("");
 
-  function normalizeLanguage(value: string) {
-    const normalized = value.trim().toLowerCase();
-    return normalized.length > 0 ? normalized.slice(0, 32) : "";
+  function preferredLanguageInput(value: string) {
+    return normalizePreferredLanguage(value) ?? "";
   }
 
   const playbackDirty = $derived(
     playbackPreference !== transcodePolicy.playbackPreference ||
-      normalizeLanguage(preferredAudioLanguage) !== (transcodePolicy.preferredAudioLanguage ?? "") ||
-      normalizeLanguage(preferredSubtitleLanguage) !== (transcodePolicy.preferredSubtitleLanguage ?? ""),
+      preferredLanguageInput(preferredAudioLanguage) !== (transcodePolicy.preferredAudioLanguage ?? "") ||
+      preferredLanguageInput(preferredSubtitleLanguage) !== (transcodePolicy.preferredSubtitleLanguage ?? ""),
   );
 
   $effect(() => {
