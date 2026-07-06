@@ -15,11 +15,7 @@ import {
 } from "$lib/server/transcoding/policy";
 import { buildLinkDevicePath, readLinkDevicePrefill } from "$lib/device-pairing/url";
 import { devicePairingApiKeyExpirySettings } from "$lib/server/device-pairing/env";
-import {
-  getContinueMaxAgeDays,
-  normalizeContinueMaxAgeDays,
-  setUserContinueMaxAgeDays,
-} from "$lib/server/media/continue-max-age";
+import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -154,10 +150,7 @@ export const actions: Actions = {
       });
 
     const form = await request.formData();
-    await setUserContinueMaxAgeDays(
-      locals.user.id,
-      normalizeContinueMaxAgeDays(String(form.get("continueMaxAgeDays") ?? "")),
-    );
+    await setUserContinueMaxAgeDays(locals.user.id, String(form.get("continueMaxAgeDays") ?? ""));
 
     throw redirect(303, "/profile");
   },

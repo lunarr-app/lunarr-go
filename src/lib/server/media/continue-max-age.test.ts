@@ -69,4 +69,12 @@ describe("continue max age database", () => {
     expect(await getContinueMaxAgeDays("user-1")).toBe(90);
     expect(await getContinueMaxAgeDays("user-2")).toBe(30);
   });
+
+  test("normalizes values when saving", async () => {
+    await setUserContinueMaxAgeDays("user-1", "not-a-number");
+    await setUserContinueMaxAgeDays("user-2", 9999);
+
+    expect(await getContinueMaxAgeDays("user-1")).toBe(0);
+    expect(await getContinueMaxAgeDays("user-2")).toBe(3650);
+  });
 });

@@ -20,7 +20,7 @@ export async function getContinueMaxAgeDays(userId: string) {
   return normalizeContinueMaxAgeDays(raw);
 }
 
-export async function setUserContinueMaxAgeDays(userId: string, days: number) {
+export async function setUserContinueMaxAgeDays(userId: string, days: string | number | null | undefined) {
   await setSetting(userContinueMaxAgeDaysKey(userId), String(normalizeContinueMaxAgeDays(days)));
 }
 
