@@ -191,7 +191,7 @@ LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS: 0-3650
 
 Admins can keep TMDb metadata fresh with separate scheduled refresh settings for movies and TV shows in **Settings → TMDb metadata**.
 
-- **Interval (hours):** `Off`, every 6 hours, every 12 hours, daily, or weekly
+- **Interval:** `Off`, daily, weekly, or monthly
 - **Staleness (days):** only scheduled refreshes older than this window are re-fetched
 
 `0` staleness means each scheduled run refreshes all matched items of that kind. Manual refresh actions from Settings, detail pages, or `/api/movies/:id/metadata/refresh` and `/api/shows/:id/metadata/refresh` still refresh immediately and ignore staleness.

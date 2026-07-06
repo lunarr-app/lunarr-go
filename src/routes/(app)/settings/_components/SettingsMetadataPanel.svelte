@@ -108,6 +108,12 @@
     <fieldset class="metadata-refresh">
       <legend>Scheduled metadata refresh</legend>
 
+      <p class="muted detail-copy">
+        Interval sets how often Lunarr starts a background TMDb refresh. Staleness limits scheduled runs to movies or
+        seasons not updated within that many days. Use 0 to refresh everything each run. Manual refresh from Settings
+        actions still updates all matched titles and ignores staleness.
+      </p>
+
       <div class="metadata-refresh-columns">
         <div>
           <h3>Movies</h3>
@@ -115,10 +121,9 @@
             Interval
             <select name="movieMetadataRefreshIntervalHours" bind:value={movieIntervalHours}>
               <option value="">Off</option>
-              <option value="6">Every 6 hours</option>
-              <option value="12">Every 12 hours</option>
               <option value="24">Daily</option>
               <option value="168">Weekly</option>
+              <option value="720">Monthly</option>
             </select>
           </label>
 
@@ -141,10 +146,9 @@
             Interval
             <select name="tvMetadataRefreshIntervalHours" bind:value={tvIntervalHours}>
               <option value="">Off</option>
-              <option value="6">Every 6 hours</option>
-              <option value="12">Every 12 hours</option>
               <option value="24">Daily</option>
               <option value="168">Weekly</option>
+              <option value="720">Monthly</option>
             </select>
           </label>
 
