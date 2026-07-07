@@ -142,7 +142,7 @@
     grid-template-rows: auto 1fr auto;
     pointer-events: none;
     background:
-      linear-gradient(rgba(0, 0, 0, 0.56), rgba(0, 0, 0, 0) 34%),
+      linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0) 42%),
       linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0) 42%);
   }
 
