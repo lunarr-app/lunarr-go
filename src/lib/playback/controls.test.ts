@@ -40,6 +40,7 @@ import {
   shouldClosePlaybackModalOnKeydown,
   shouldCloseSubtitleMenuOnPlayerKeydown,
   shouldHandlePlayerShortcut,
+  shouldRefreshControlsFromPointerMove,
   shouldShowCustomControls,
   shouldSyncTimelineUiNow,
   shouldUseHlsRepositionForSeek,
@@ -943,6 +944,59 @@ describe("custom player controls", () => {
         scrubbing: true,
         lastSyncAtMs: 1000,
         nowMs: 1100,
+      }),
+    ).toBe(true);
+  });
+
+  test("ignores sub-threshold pointer movement for control reveal", () => {
+    expect(
+      shouldRefreshControlsFromPointerMove({
+        clientX: 104,
+        clientY: 100,
+        anchorX: 100,
+        anchorY: 100,
+        controlsVisible: false,
+        lastRefreshAtMs: 0,
+        nowMs: 1000,
+        thresholdPx: 12,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRefreshControlsFromPointerMove({
+        clientX: 120,
+        clientY: 100,
+        anchorX: 100,
+        anchorY: 100,
+        controlsVisible: false,
+        lastRefreshAtMs: 0,
+        nowMs: 1000,
+        thresholdPx: 12,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRefreshControlsFromPointerMove({
+        clientX: 120,
+        clientY: 100,
+        anchorX: 100,
+        anchorY: 100,
+        controlsVisible: true,
+        lastRefreshAtMs: 1000,
+        nowMs: 1100,
+        thresholdPx: 12,
+        refreshIntervalMs: 250,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRefreshControlsFromPointerMove({
+        clientX: 120,
+        clientY: 100,
+        anchorX: 100,
+        anchorY: 100,
+        controlsVisible: true,
+        lastRefreshAtMs: 1000,
+        nowMs: 1300,
+        thresholdPx: 12,
+        refreshIntervalMs: 250,
       }),
     ).toBe(true);
   });

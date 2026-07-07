@@ -122,21 +122,23 @@ During normal **playing** with none of the conditions above, the bar auto-hides 
 
 Activity that resets the 3.5 second timer includes:
 
-- Moving the pointer over the player while controls are already eligible to show (refreshed at most every **250 ms** so small movements do not spam timers).
+- Moving the pointer over the player by at least **12 px** from the last reveal position (refreshed at most every **250 ms** while visible so tiny jitters do not keep resetting the timer).
 - Clicking the video surface or any control.
 - Using player keyboard shortcuts while focus is on the player shell.
 - Focusing a control.
 
-While hidden during playback, moving the pointer over the player does **not** reveal the bar. Only a click or keyboard use does.
+While hidden during playback, deliberate pointer movement over the player reveals the bar. Sub-pixel jitter and very small movements are ignored.
 
 ### Video surface clicks
 
-Clicks on the video (not on the control bar) behave differently depending on whether the bar is currently shown.
+Clicks on the video (not on the control bar) behave differently depending on whether the bar is currently shown and the pointer type.
 
-| Bar state | Single click                                                                             | Double click                                   |
-| --------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Hidden    | Show the control bar (after a **300 ms** delay so a fast double-click can be recognized) | **Seek / play** by horizontal zone (see below) |
-| Visible   | **Seek / play** by horizontal zone                                                       | No extra action                                |
+| Bar state | Desktop single click               | Touch single tap     | Double click / double tap          |
+| --------- | ---------------------------------- | -------------------- | ---------------------------------- |
+| Hidden    | Show the control bar               | Show the control bar | **Seek / play** by horizontal zone |
+| Visible   | **Seek / play** by horizontal zone | Hide the control bar | No extra action                    |
+
+On desktop, deliberate pointer movement (at least **12 px**) over the video also reveals the bar while it is hidden.
 
 Horizontal zones are measured across the full video width:
 

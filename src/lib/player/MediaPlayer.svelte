@@ -48,6 +48,7 @@
     shouldAutoHideControls,
     shouldCloseSubtitleMenuOnPlayerKeydown,
     shouldHandlePlayerShortcut,
+    shouldRefreshControlsFromPointerMove,
     shouldShowCustomControls,
     shouldSyncTimelineUiNow,
     subtitleTextTrackMode,
@@ -79,7 +80,6 @@
   };
 
   type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
-  const POINTER_CONTROLS_REFRESH_INTERVAL_MS = 250;
 
   let {
     data,
@@ -144,7 +144,30 @@
   let timelineDurationSeconds: number | null = null;
   let lastTimelineUiSyncAt = 0;
   let lastPointerControlsRefreshAt = -Infinity;
+  let lastPointerClientX = 0;
+  let lastPointerClientY = 0;
+  let hasLastPointerClient = false;
+  let pointerControlsAnchorX = 0;
+  let pointerControlsAnchorY = 0;
+  let hasPointerControlsAnchor = false;
   const castHolder: { api?: ReturnType<typeof createMediaPlayerCast> } = {};
+
+  function recordPointerSample(clientX: number, clientY: number) {
+    lastPointerClientX = clientX;
+    lastPointerClientY = clientY;
+    hasLastPointerClient = true;
+  }
+
+  function anchorPointerControlsAt(clientX: number, clientY: number) {
+    pointerControlsAnchorX = clientX;
+    pointerControlsAnchorY = clientY;
+    hasPointerControlsAnchor = true;
+  }
+
+  function anchorPointerControlsFromLastSample() {
+    if (!hasLastPointerClient) return;
+    anchorPointerControlsAt(lastPointerClientX, lastPointerClientY);
+  }
 
   function setPlaybackErrorDetail(message: string | null) {
     const trimmed = message?.trim() ?? "";
@@ -287,15 +310,36 @@
 
   function hideControls() {
     playerControlsVisible = false;
+    anchorPointerControlsFromLastSample();
   }
 
   function handlePlayerPointerMove(event: PointerEvent) {
     if (event.pointerType === "touch") return;
-    const now = window.performance.now();
-    if (playerControlsVisible && now - lastPointerControlsRefreshAt < POINTER_CONTROLS_REFRESH_INTERVAL_MS) {
+
+    recordPointerSample(event.clientX, event.clientY);
+
+    if (!hasPointerControlsAnchor) {
+      anchorPointerControlsAt(event.clientX, event.clientY);
       return;
     }
+
+    const now = window.performance.now();
+    if (
+      !shouldRefreshControlsFromPointerMove({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        anchorX: pointerControlsAnchorX,
+        anchorY: pointerControlsAnchorY,
+        controlsVisible: playerControlsVisible,
+        lastRefreshAtMs: lastPointerControlsRefreshAt,
+        nowMs: now,
+      })
+    ) {
+      return;
+    }
+
     lastPointerControlsRefreshAt = now;
+    anchorPointerControlsAt(event.clientX, event.clientY);
     showControls();
   }
 
@@ -356,14 +400,20 @@
       return;
     }
     if (intent === "hide-controls") {
+      recordPointerSample(event.clientX, event.clientY);
+      anchorPointerControlsAt(event.clientX, event.clientY);
       hideControls();
       return;
     }
     if (intent === "show-controls") {
+      recordPointerSample(event.clientX, event.clientY);
+      anchorPointerControlsAt(event.clientX, event.clientY);
       showControls();
       return;
     }
     if (intent === "surface-control") {
+      recordPointerSample(event.clientX, event.clientY);
+      anchorPointerControlsAt(event.clientX, event.clientY);
       applySurfaceControl(event);
     }
   }
@@ -848,6 +898,12 @@
 
   $effect(() => {
     if (!browser) return;
+    if (playerControlsVisible) return;
+    anchorPointerControlsFromLastSample();
+  });
+
+  $effect(() => {
+    if (!browser) return;
     const controlsActivityTick = playerControlsActivityTick;
     void controlsActivityTick;
     if (
@@ -1013,6 +1069,10 @@
       aria-hidden="true"
       onpointerdown={(event) => {
         surfacePointerType = event.pointerType;
+        if (event.pointerType !== "touch") {
+          recordPointerSample(event.clientX, event.clientY);
+          anchorPointerControlsAt(event.clientX, event.clientY);
+        }
         focusPlayerShell();
       }}
       onclick={handleSurfaceClick}

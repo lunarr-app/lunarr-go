@@ -470,6 +470,54 @@ export function shouldShowCustomControls(input: {
 
 export const PLAYER_OVERLAY_DISMISS_MS = 3500;
 
+/** Minimum pointer travel before mouse movement reveals or refreshes the control bar. */
+export const POINTER_CONTROLS_MOVEMENT_THRESHOLD_PX = 12;
+
+/** Throttle control-bar activity refreshes from pointer movement while the bar is visible. */
+export const POINTER_CONTROLS_REFRESH_INTERVAL_MS = 250;
+
+export function pointerMovementExceedsControlsThreshold(input: {
+  clientX: number;
+  clientY: number;
+  anchorX: number;
+  anchorY: number;
+  thresholdPx?: number;
+}) {
+  const threshold = input.thresholdPx ?? POINTER_CONTROLS_MOVEMENT_THRESHOLD_PX;
+  const dx = input.clientX - input.anchorX;
+  const dy = input.clientY - input.anchorY;
+  return Math.hypot(dx, dy) >= threshold;
+}
+
+export function shouldRefreshControlsFromPointerMove(input: {
+  clientX: number;
+  clientY: number;
+  anchorX: number;
+  anchorY: number;
+  controlsVisible: boolean;
+  lastRefreshAtMs: number;
+  nowMs: number;
+  thresholdPx?: number;
+  refreshIntervalMs?: number;
+}) {
+  if (
+    !pointerMovementExceedsControlsThreshold({
+      clientX: input.clientX,
+      clientY: input.clientY,
+      anchorX: input.anchorX,
+      anchorY: input.anchorY,
+      thresholdPx: input.thresholdPx,
+    })
+  ) {
+    return false;
+  }
+  const refreshInterval = input.refreshIntervalMs ?? POINTER_CONTROLS_REFRESH_INTERVAL_MS;
+  if (input.controlsVisible && input.nowMs - input.lastRefreshAtMs < refreshInterval) {
+    return false;
+  }
+  return true;
+}
+
 export const TIMELINE_UI_UPDATE_INTERVAL_MS = 1000;
 
 export function shouldSyncTimelineUiNow(input: {
