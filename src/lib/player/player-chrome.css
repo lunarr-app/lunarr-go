@@ -10,6 +10,7 @@
   --player-accent-hover-text: #f8fafc;
   --player-accent-active: rgba(255, 255, 255, 0.18);
   --player-accent-active-text: #f8fafc;
+  --player-track-bg: rgba(248, 250, 252, 0.34);
   outline: none;
   color: var(--color-text);
 }
@@ -185,9 +186,51 @@
 
 .seek-slider {
   height: 1.5rem;
-  accent-color: var(--player-accent);
+  appearance: none;
+  background: transparent;
   cursor: pointer;
   touch-action: none;
+}
+
+.seek-slider::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--player-accent-strong) 0 var(--seek-fill, 0%),
+    var(--player-track-bg) var(--seek-fill, 0%) 100%
+  );
+}
+
+.seek-slider::-webkit-slider-thumb {
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-top: -0.275rem;
+  appearance: none;
+  border-radius: 999px;
+  background: var(--player-accent-strong);
+  box-shadow: 0 0 0 1px rgba(8, 12, 16, 0.5);
+}
+
+.seek-slider::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--player-track-bg);
+}
+
+.seek-slider::-moz-range-progress {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--player-accent-strong);
+}
+
+.seek-slider::-moz-range-thumb {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--player-accent-strong);
+  box-shadow: 0 0 0 1px rgba(8, 12, 16, 0.5);
 }
 
 .volume-slider {
@@ -197,6 +240,47 @@
   background: transparent;
   cursor: pointer;
   touch-action: none;
+}
+
+.volume-slider::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--player-accent-strong) 0 var(--volume-fill, 100%),
+    var(--player-track-bg) var(--volume-fill, 100%) 100%
+  );
+}
+
+.volume-slider::-webkit-slider-thumb {
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-top: -0.275rem;
+  appearance: none;
+  border-radius: 999px;
+  background: var(--player-accent-strong);
+  box-shadow: 0 0 0 1px rgba(8, 12, 16, 0.5);
+}
+
+.volume-slider::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--player-track-bg);
+}
+
+.volume-slider::-moz-range-progress {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--player-accent-strong);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--player-accent-strong);
+  box-shadow: 0 0 0 1px rgba(8, 12, 16, 0.5);
 }
 
 .time-readout {

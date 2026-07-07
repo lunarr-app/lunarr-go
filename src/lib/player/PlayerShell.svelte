@@ -46,7 +46,16 @@
     </div>
 
     <div class="bottom-controls" aria-hidden="true">
-      <input class="seek-slider" type="range" min="0" max="1" value="0" tabindex="-1" disabled />
+      <input
+        class="seek-slider"
+        type="range"
+        min="0"
+        max="1"
+        value="0"
+        style="--seek-fill: 0%"
+        tabindex="-1"
+        disabled
+      />
       <div class="control-row">
         <div class="primary-controls">
           <button class="control-button primary-play" type="button" disabled>
@@ -66,7 +75,16 @@
           <button class="control-button" type="button" disabled>
             <Volume2 size={20} aria-hidden="true" />
           </button>
-          <input class="volume-slider" type="range" min="0" max="1" value="1" tabindex="-1" disabled />
+          <input
+            class="volume-slider"
+            type="range"
+            min="0"
+            max="1"
+            value="1"
+            style="--volume-fill: 100%"
+            tabindex="-1"
+            disabled
+          />
           <button class="control-button" type="button" disabled>
             <Maximize size={20} aria-hidden="true" />
           </button>
