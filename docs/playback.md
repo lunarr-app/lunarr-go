@@ -44,7 +44,7 @@ Users can also set a preferred subtitle language in Profile. Lunarr still return
 When playback starts, Lunarr can look up community-verified intro, recap, and credits timestamps from [TheIntroDB](https://theintrodb.org) and return them in `GET /api/playback/:mediaItemId` as a `segments` array. Playback responses also include `segmentSkip` with the signed-in user's skip preferences (`enabled`, `automatic`).
 
 - Lookup uses the show or movie **TMDb ID** from metadata (`provider=tmdb`). TV episodes also require season and episode numbers. Titles without TMDb metadata return `segments: []`.
-- IntroDB is queried during playback prepare using the **selected file duration** (`duration_ms`) so timestamps can match submissions for similar runtimes. Titles without a known file duration omit that hint. Successful responses are cached in memory for 24 hours. Failures or missing data return `segments: []` and playback continues normally.
+- IntroDB is queried during playback prepare using the **selected file duration** (`duration_ms`) so timestamps can match submissions for similar runtimes. Titles without a known file duration omit that hint. Successful responses are cached in memory for 24 hours (up to 500 entries, LRU-evicted). Failures or missing data return `segments: []` and playback continues normally.
 - Segment markers are per metadata identity, not per file, so different releases may be slightly off.
 - When `segmentSkip.enabled` is `false`, Lunarr skips the IntroDB lookup and returns `segments: []`.
 - When enabled and `segmentSkip.automatic` is `false`, the web player shows a manual **Skip intro**, **Skip recap**, or **Skip credits** button while the playhead is inside the matching window.

@@ -1,18 +1,18 @@
 import { SEGMENT_LABELS } from "$lib/playback/segments";
+import { createTtlCache } from "$lib/server/cache/ttl-cache";
 import { getDb } from "$lib/server/db";
 import type { PlaybackSegment, PlaybackSegmentType } from "$lib/server/playback";
 import { getMedia, type GetMediaParams, type MediaRecord, type NormalizedSegmentTimestamp } from "theintrodb";
 
 const INTRODB_FETCH_TIMEOUT_MS = 3_000;
 const INTRODB_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const INTRODB_CACHE_MAX_ENTRIES = 500;
 const ENABLED_SEGMENT_TYPES = new Set<PlaybackSegmentType>(["intro", "recap", "credits"]);
 
-type IntroDbCacheEntry = {
-  expiresAt: number;
-  value: MediaRecord;
-};
-
-const introDbCache = new Map<string, IntroDbCacheEntry>();
+const introDbCache = createTtlCache<MediaRecord>({
+  ttlMs: INTRODB_CACHE_TTL_MS,
+  maxEntries: INTRODB_CACHE_MAX_ENTRIES,
+});
 const introDbInflight = new Map<string, Promise<MediaRecord | null>>();
 
 export function clearIntroDbMediaCacheForTests() {
@@ -26,20 +26,6 @@ function introDbCacheKey(params: GetMediaParams) {
   if ("episode" in params && params.episode !== undefined) parts.push(`e${params.episode}`);
   if ("durationMs" in params && params.durationMs !== undefined) parts.push(`d${params.durationMs}`);
   return parts.join(":");
-}
-
-function readIntroDbCache(key: string) {
-  const entry = introDbCache.get(key);
-  if (!entry) return undefined;
-  if (Date.now() >= entry.expiresAt) {
-    introDbCache.delete(key);
-    return undefined;
-  }
-  return entry.value;
-}
-
-function writeIntroDbCache(key: string, value: MediaRecord) {
-  introDbCache.set(key, { value, expiresAt: Date.now() + INTRODB_CACHE_TTL_MS });
 }
 
 export async function introDbLookupForMediaItem(mediaItemId: string): Promise<GetMediaParams | null> {
@@ -139,7 +125,7 @@ export async function fetchIntroDbMedia(
       : undefined;
   const params = durationMs === undefined ? lookup : { ...lookup, durationMs };
   const cacheKey = introDbCacheKey(params);
-  const cached = readIntroDbCache(cacheKey);
+  const cached = introDbCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
   const inflight = introDbInflight.get(cacheKey);
@@ -151,7 +137,7 @@ export async function fetchIntroDbMedia(
 
     try {
       const record = await getMedia(params, { signal: controller.signal });
-      writeIntroDbCache(cacheKey, record);
+      introDbCache.set(cacheKey, record);
       return record;
     } catch {
       return null;
