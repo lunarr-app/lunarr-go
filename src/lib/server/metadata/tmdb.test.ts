@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -15,10 +15,6 @@ import {
 } from "./tmdb";
 
 beforeEach(() => {
-  clearTmdbDetailCachesForTests();
-});
-
-afterEach(() => {
   clearTmdbDetailCachesForTests();
 });
 

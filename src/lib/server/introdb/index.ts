@@ -13,12 +13,6 @@ const introDbCache = createTtlCache<MediaRecord>({
   ttlMs: INTRODB_CACHE_TTL_MS,
   maxEntries: INTRODB_CACHE_MAX_ENTRIES,
 });
-const introDbInflight = new Map<string, Promise<MediaRecord | null>>();
-
-export function clearIntroDbMediaCacheForTests() {
-  introDbCache.clear();
-  introDbInflight.clear();
-}
 
 function introDbCacheKey(params: GetMediaParams) {
   const parts = [String(params.tmdbId)];
@@ -128,27 +122,18 @@ export async function fetchIntroDbMedia(
   const cached = introDbCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
-  const inflight = introDbInflight.get(cacheKey);
-  if (inflight) return inflight;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), INTRODB_FETCH_TIMEOUT_MS);
 
-  const request = (async () => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), INTRODB_FETCH_TIMEOUT_MS);
-
-    try {
-      const record = await getMedia(params, { signal: controller.signal });
-      introDbCache.set(cacheKey, record);
-      return record;
-    } catch {
-      return null;
-    } finally {
-      clearTimeout(timeout);
-      introDbInflight.delete(cacheKey);
-    }
-  })();
-
-  introDbInflight.set(cacheKey, request);
-  return request;
+  try {
+    const record = await getMedia(params, { signal: controller.signal });
+    introDbCache.set(cacheKey, record);
+    return record;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function playbackSegmentFromTimestamp(
