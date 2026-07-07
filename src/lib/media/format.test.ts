@@ -8,6 +8,7 @@ import {
   formatGibibytes,
   formatMediaDuration,
   formatRelativeTime,
+  formatFileCountLabel,
   formatVoteAverageLabel,
   formatVoteCountLabel,
   seasonTabLabel,
@@ -80,6 +81,13 @@ describe("formatGibibytes", () => {
   test("formats gibibyte labels", () => {
     expect(formatGibibytes(2 * 1024 * 1024 * 1024)).toBe("2 GiB");
     expect(formatGibibytes(1.5 * 1024 * 1024 * 1024)).toBe("1.5 GiB");
+  });
+});
+
+describe("formatFileCountLabel", () => {
+  test("formats file counts", () => {
+    expect(formatFileCountLabel(1)).toBe("1 file");
+    expect(formatFileCountLabel(3)).toBe("3 files");
   });
 });
 

@@ -468,6 +468,8 @@ export function shouldShowCustomControls(input: {
   return input.controlsVisible;
 }
 
+export const PLAYER_OVERLAY_DISMISS_MS = 3500;
+
 export const TIMELINE_UI_UPDATE_INTERVAL_MS = 1000;
 
 export function shouldSyncTimelineUiNow(input: {
@@ -522,15 +524,20 @@ export function playerSurfaceClickAction(input: {
   return "toggle-playback";
 }
 
-export type PlayerSurfaceInteractionIntent = "close-subtitle-menu" | "show-controls" | "surface-control" | "none";
+export type PlayerSurfaceInteractionIntent =
+  "close-subtitle-menu" | "show-controls" | "hide-controls" | "surface-control" | "none";
 
 export function playerSurfaceSingleClickIntent(input: {
   /** Whether the control bar is rendered on screen (`shouldShowCustomControls`), not just `playerControlsVisible`. */
   controlsVisible: boolean;
   subtitleMenuOpen: boolean;
+  /** True for touch pointers on phones/tablets; desktop mouse clicks stay on play/seek behavior. */
+  touchPointer?: boolean;
 }): PlayerSurfaceInteractionIntent {
   if (input.subtitleMenuOpen) return "close-subtitle-menu";
-  if (input.controlsVisible) return "surface-control";
+  if (input.controlsVisible) {
+    return input.touchPointer ? "hide-controls" : "surface-control";
+  }
   return "show-controls";
 }
 

@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { PLAYER_OVERLAY_DISMISS_MS } from "$lib/playback/controls";
 import {
   activePlaybackSegment,
   playbackSegmentKey,
@@ -28,8 +29,6 @@ export function createMediaPlayerSegments(deps: MediaPlayerSegmentsDeps) {
   let autoSkipNotice = $state<string | null>(null);
   let autoSkipNoticeTimeout: number | null = null;
 
-  const AUTO_SKIP_NOTICE_MS = 3200;
-
   function clearAutoSkipNotice() {
     autoSkipNotice = null;
     if (autoSkipNoticeTimeout !== null) {
@@ -46,7 +45,7 @@ export function createMediaPlayerSegments(deps: MediaPlayerSegmentsDeps) {
     autoSkipNoticeTimeout = window.setTimeout(() => {
       autoSkipNotice = null;
       autoSkipNoticeTimeout = null;
-    }, AUTO_SKIP_NOTICE_MS);
+    }, PLAYER_OVERLAY_DISMISS_MS);
   }
 
   function skipActiveSegment() {

@@ -1050,6 +1050,20 @@ describe("custom player controls", () => {
     expect(
       playerSurfaceSingleClickIntent({
         controlsVisible: true,
+        subtitleMenuOpen: false,
+        touchPointer: true,
+      }),
+    ).toBe("hide-controls");
+    expect(
+      playerSurfaceSingleClickIntent({
+        controlsVisible: false,
+        subtitleMenuOpen: false,
+        touchPointer: true,
+      }),
+    ).toBe("show-controls");
+    expect(
+      playerSurfaceSingleClickIntent({
+        controlsVisible: true,
         subtitleMenuOpen: true,
       }),
     ).toBe("close-subtitle-menu");

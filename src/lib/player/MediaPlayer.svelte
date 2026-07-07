@@ -2,6 +2,7 @@
   import { browser } from "$app/environment";
   import { onDestroy, tick } from "svelte";
   import PlayerShell from "$lib/player/PlayerShell.svelte";
+  import "./player-chrome.css";
   import {
     Airplay,
     Captions,
@@ -42,6 +43,7 @@
     playerSurfaceDoubleClickIntent,
     playerSurfaceSingleClickIntent,
     playerStatusOverlayState,
+    PLAYER_OVERLAY_DISMISS_MS,
     primaryPlaybackButtonState,
     shouldAutoHideControls,
     shouldCloseSubtitleMenuOnPlayerKeydown,
@@ -78,8 +80,6 @@
 
   type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
   const POINTER_CONTROLS_REFRESH_INTERVAL_MS = 250;
-  const SURFACE_SINGLE_CLICK_DELAY_MS = 300;
-  const CONTROLS_AUTO_HIDE_MS = 3500;
 
   let {
     data,
@@ -120,7 +120,7 @@
   let playerControlsHovered = $state(false);
   let surfaceFeedback = $state<SurfaceFeedback | null>(null);
   let surfaceFeedbackTimeout: number | null = null;
-  let surfaceSingleClickTimeout: number | null = null;
+  let surfacePointerType = $state<PointerEvent["pointerType"]>("mouse");
   let playerControlsActivityTick = $state(0);
   let currentPlaybackSeconds = $state(0);
   let durationSeconds = $state<number | null>(null);
@@ -285,15 +285,18 @@
     playerControlsActivityTick = nextControlsActivityTick(playerControlsActivityTick);
   }
 
-  function handlePlayerPointerMove() {
-    if (customControlsVisible) {
-      const now = window.performance.now();
-      if (playerControlsVisible && now - lastPointerControlsRefreshAt < POINTER_CONTROLS_REFRESH_INTERVAL_MS) {
-        return;
-      }
-      lastPointerControlsRefreshAt = now;
-      showControls();
+  function hideControls() {
+    playerControlsVisible = false;
+  }
+
+  function handlePlayerPointerMove(event: PointerEvent) {
+    if (event.pointerType === "touch") return;
+    const now = window.performance.now();
+    if (playerControlsVisible && now - lastPointerControlsRefreshAt < POINTER_CONTROLS_REFRESH_INTERVAL_MS) {
+      return;
     }
+    lastPointerControlsRefreshAt = now;
+    showControls();
   }
 
   function handleControlsFocusIn() {
@@ -318,13 +321,6 @@
       surfaceFeedback = null;
       surfaceFeedbackTimeout = null;
     }, 620);
-  }
-
-  function clearSurfaceSingleClickTimeout() {
-    if (surfaceSingleClickTimeout !== null) {
-      window.clearTimeout(surfaceSingleClickTimeout);
-      surfaceSingleClickTimeout = null;
-    }
   }
 
   function applySurfaceControl(event: MouseEvent) {
@@ -353,24 +349,26 @@
     const intent = playerSurfaceSingleClickIntent({
       controlsVisible: customControlsVisible,
       subtitleMenuOpen,
+      touchPointer: surfacePointerType === "touch",
     });
     if (intent === "close-subtitle-menu") {
       void closeSubtitleMenu();
       return;
     }
-    if (intent === "surface-control") {
-      applySurfaceControl(event);
+    if (intent === "hide-controls") {
+      hideControls();
       return;
     }
-    clearSurfaceSingleClickTimeout();
-    surfaceSingleClickTimeout = window.setTimeout(() => {
-      surfaceSingleClickTimeout = null;
+    if (intent === "show-controls") {
       showControls();
-    }, SURFACE_SINGLE_CLICK_DELAY_MS);
+      return;
+    }
+    if (intent === "surface-control") {
+      applySurfaceControl(event);
+    }
   }
 
   function handleSurfaceDoubleClick(event: MouseEvent) {
-    clearSurfaceSingleClickTimeout();
     const intent = playerSurfaceDoubleClickIntent({
       controlsVisible: customControlsVisible,
       subtitleMenuOpen,
@@ -864,7 +862,7 @@
     ) {
       const timeout = window.setTimeout(() => {
         playerControlsVisible = false;
-      }, CONTROLS_AUTO_HIDE_MS);
+      }, PLAYER_OVERLAY_DISMISS_MS);
       return () => window.clearTimeout(timeout);
     }
   });
@@ -966,7 +964,6 @@
       window.clearTimeout(surfaceFeedbackTimeout);
       surfaceFeedbackTimeout = null;
     }
-    clearSurfaceSingleClickTimeout();
     clearSignedPlaybackNotice();
     segments.destroy();
     releaseScreenWakeLock();
@@ -1014,7 +1011,10 @@
     <div
       class="video-tap-target"
       aria-hidden="true"
-      onpointerdown={focusPlayerShell}
+      onpointerdown={(event) => {
+        surfacePointerType = event.pointerType;
+        focusPlayerShell();
+      }}
       onclick={handleSurfaceClick}
       ondblclick={handleSurfaceDoubleClick}
     ></div>
@@ -1339,26 +1339,6 @@
     background: #000;
   }
 
-  .custom-player {
-    --color-text: #f8fafc;
-    --color-text-soft: rgba(248, 250, 252, 0.82);
-    --color-border-strong: rgba(255, 255, 255, 0.18);
-    --player-border-subtle: rgba(255, 255, 255, 0.28);
-    --player-focus-ring: rgba(255, 255, 255, 0.75);
-    --player-accent: #f8fafc;
-    --player-accent-strong: #f8fafc;
-    --player-accent-hover: rgba(255, 255, 255, 0.12);
-    --player-accent-hover-text: #f8fafc;
-    --player-accent-active: rgba(255, 255, 255, 0.18);
-    --player-accent-active-text: #f8fafc;
-    outline: none;
-    color: var(--color-text);
-  }
-
-  .custom-player:focus-visible {
-    box-shadow: 0 0 0 2px var(--player-focus-ring);
-  }
-
   video {
     width: 100%;
     height: 100%;
@@ -1569,178 +1549,6 @@
     }
   }
 
-  .player-controls {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-    pointer-events: none;
-    background:
-      linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0) 42%),
-      linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0) 42%);
-  }
-
-  .top-controls,
-  .bottom-controls {
-    pointer-events: auto;
-  }
-
-  .top-controls {
-    grid-row: 1;
-    min-height: 4.25rem;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 0.75rem;
-    padding: 0.75rem;
-  }
-
-  .player-title {
-    min-width: 0;
-  }
-
-  .player-title p,
-  .player-title h2 {
-    margin: 0;
-  }
-
-  .player-title p {
-    color: rgba(248, 250, 252, 0.7);
-    font-size: 0.72rem;
-    font-weight: 750;
-    text-transform: uppercase;
-  }
-
-  .player-title h2 {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: clamp(0.98rem, 2.2vw, 1.2rem);
-  }
-
-  .bottom-controls {
-    grid-row: 3;
-    align-self: end;
-    display: grid;
-    gap: 0.5rem;
-    padding: 0 0.9rem 0.8rem;
-  }
-
-  .control-row {
-    min-height: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-  }
-
-  .primary-controls {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .right-controls {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    gap: 0.45rem;
-  }
-
-  .control-button {
-    width: 2.5rem;
-    height: 2.5rem;
-    display: inline-grid;
-    place-items: center;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--color-text);
-    cursor: pointer;
-    padding: 0;
-    text-decoration: none;
-    touch-action: manipulation;
-  }
-
-  .control-button:hover:not(:disabled) {
-    background: var(--player-accent-hover);
-    color: var(--player-accent-hover-text);
-  }
-
-  .control-button.active {
-    background: var(--player-accent-active);
-    color: var(--player-accent-active-text);
-  }
-
-  .control-button:focus-visible,
-  .seek-slider:focus-visible,
-  .volume-slider:focus-visible,
-  .subtitle-menu button:focus-visible {
-    outline: 2px solid var(--player-accent-strong);
-    outline-offset: 2px;
-  }
-
-  .control-button.error {
-    background: rgba(127, 29, 29, 0.7);
-  }
-
-  .control-button:disabled {
-    cursor: default;
-    opacity: 0.7;
-  }
-
-  .primary-play {
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 999px;
-    background: rgba(8, 12, 16, 0.58);
-  }
-
-  .skip-button {
-    position: relative;
-    width: 2.75rem;
-    height: 2.75rem;
-    align-content: center;
-    gap: 0.02rem;
-    border-radius: 999px;
-    background: rgba(8, 12, 16, 0.38);
-    padding-top: 0.25rem;
-  }
-
-  .skip-button span {
-    display: block;
-    font-size: 0.62rem;
-    font-weight: 850;
-    line-height: 1;
-  }
-
-  .seek-slider,
-  .volume-slider {
-    width: 100%;
-    min-height: 0;
-    border: 0;
-    border-radius: 0;
-    padding: 0;
-  }
-
-  .seek-slider {
-    height: 1.5rem;
-    accent-color: var(--player-accent);
-    cursor: pointer;
-    touch-action: none;
-  }
-
-  .volume-slider {
-    width: 6rem;
-    height: 1.25rem;
-    appearance: none;
-    background: transparent;
-    cursor: pointer;
-    touch-action: none;
-  }
-
   .volume-slider::-webkit-slider-runnable-track {
     height: 0.25rem;
     border-radius: 999px;
@@ -1782,12 +1590,9 @@
     box-shadow: 0 0 0 1px rgba(8, 12, 16, 0.5);
   }
 
-  .time-readout {
-    min-width: 7.5rem;
-    color: rgba(248, 250, 252, 0.82);
-    font-size: 0.82rem;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+  .subtitle-menu button:focus-visible {
+    outline: 2px solid var(--player-accent-strong);
+    outline-offset: 2px;
   }
 
   .subtitle-control {
@@ -1830,19 +1635,6 @@
     color: var(--player-accent-active-text);
   }
 
-  .custom-player.controls-hidden {
-    cursor: none;
-  }
-
-  .overlay-spinner {
-    width: 3rem;
-    height: 3rem;
-    border: 3px solid var(--player-border-subtle);
-    border-top-color: var(--color-text);
-    border-radius: 999px;
-    animation: spin 0.85s linear infinite;
-  }
-
   .overlay-error {
     width: 3rem;
     height: 3rem;
@@ -1853,12 +1645,6 @@
     color: var(--color-text);
     font-size: 1.6rem;
     font-weight: 900;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   @keyframes surface-feedback {
@@ -1877,7 +1663,6 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .overlay-spinner,
     .surface-feedback {
       animation: none;
     }
@@ -1912,55 +1697,6 @@
   }
 
   @media (max-width: 640px) {
-    .top-controls {
-      min-height: 3.5rem;
-      padding: 0.55rem;
-    }
-
-    .player-title p {
-      display: none;
-    }
-
-    .player-title h2 {
-      font-size: 0.95rem;
-    }
-
-    .control-button {
-      width: 2.75rem;
-      height: 2.75rem;
-    }
-
-    .bottom-controls {
-      gap: 0.35rem;
-      padding: 0 0.65rem 0.65rem;
-    }
-
-    .control-row {
-      min-height: auto;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.45rem;
-    }
-
-    .primary-controls {
-      flex: 1 1 auto;
-      gap: 0.25rem;
-    }
-
-    .right-controls {
-      margin-left: auto;
-      gap: 0.25rem;
-    }
-
-    .volume-slider {
-      display: none;
-    }
-
-    .time-readout {
-      min-width: 6.6rem;
-      font-size: 0.76rem;
-    }
-
     .skip-segment-prompt {
       right: 1rem;
       bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
@@ -1970,22 +1706,6 @@
       min-height: 2.75rem;
       padding: 0.55rem 1.15rem;
       font-size: 0.84rem;
-    }
-  }
-
-  @media (max-width: 420px) {
-    .player-title {
-      display: none;
-    }
-
-    .primary-play {
-      width: 2.6rem;
-      height: 2.6rem;
-    }
-
-    .skip-button {
-      width: 2.6rem;
-      height: 2.6rem;
     }
   }
 </style>

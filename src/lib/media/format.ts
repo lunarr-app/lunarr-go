@@ -89,6 +89,10 @@ export function formatVoteCountLabel(voteCount: number | null | undefined): stri
   return new Intl.NumberFormat(undefined, { notation: "compact" }).format(Number(voteCount));
 }
 
+export function formatFileCountLabel(count: number): string {
+  return `${count} ${count === 1 ? "file" : "files"}`;
+}
+
 type SeasonTabLabelInput = {
   title: string;
   seasonNumber?: number | null;

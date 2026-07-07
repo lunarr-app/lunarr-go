@@ -5,6 +5,7 @@
   import { deriveDetailPlaybackState } from "$lib/media/detail-playback";
   import {
     formatEpisodeCode,
+    formatFileCountLabel,
     formatMediaDuration,
     formatVoteAverageLabel,
     formatVoteCountLabel,
@@ -34,7 +35,7 @@
       : `/episodes/${data.episode.id}`,
   );
   const totalSizeBytes = $derived(data.files.reduce((total, file) => total + Number(file.size_bytes ?? 0), 0));
-  const fileCountLabel = $derived(`${data.files.length} ${data.files.length === 1 ? "file" : "files"}`);
+  const fileCountLabel = $derived(formatFileCountLabel(data.files.length));
 </script>
 
 <svelte:head>

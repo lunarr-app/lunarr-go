@@ -48,7 +48,7 @@ When playback starts, Lunarr can look up community-verified intro, recap, and cr
 - Segment markers are per metadata identity, not per file, so different releases may be slightly off.
 - When `segmentSkip.enabled` is `false`, Lunarr skips the IntroDB lookup and returns `segments: []`.
 - When enabled and `segmentSkip.automatic` is `false`, the web player shows a manual **Skip intro**, **Skip recap**, or **Skip credits** button while the playhead is inside the matching window.
-- When enabled and `segmentSkip.automatic` is `true`, the web player seeks past each segment once per title and shows a brief **Skipped intro/recap/credits** notice. Seeking back into a segment does not auto-skip again during the same playback session.
+- When enabled and `segmentSkip.automatic` is `true`, the web player seeks past each segment once per title and shows a brief **Skipped intro/recap/credits** notice for 3.5 seconds. Seeking back into a segment does not auto-skip again during the same playback session.
 
 Users configure segment skip on **Profile → Skip intro & credits** or through `PUT /api/profile` with `segmentSkipEnabled` and `segmentSkipAutomatic`. Defaults are enabled with manual skip. See [API](api.md#user).
 

@@ -5,7 +5,12 @@
   import MediaFilesSection from "$lib/components/MediaFilesSection.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
   import { deriveDetailPlaybackState } from "$lib/media/detail-playback";
-  import { formatMediaDuration, formatVoteAverageLabel, formatVoteCountLabel } from "$lib/media/format";
+  import {
+    formatFileCountLabel,
+    formatMediaDuration,
+    formatVoteAverageLabel,
+    formatVoteCountLabel,
+  } from "$lib/media/format";
   import { playbackModalHref } from "$lib/playback/links";
   import MovieDetailHero from "./_components/MovieDetailHero.svelte";
   import MovieMetadataSidebar from "./_components/MovieMetadataSidebar.svelte";
@@ -28,7 +33,7 @@
       : `/movies/${data.movie.id}`,
   );
   const totalSizeBytes = $derived(data.files.reduce((total, file) => total + Number(file.size_bytes ?? 0), 0));
-  const fileCountLabel = $derived(`${data.files.length} ${data.files.length === 1 ? "file" : "files"}`);
+  const fileCountLabel = $derived(formatFileCountLabel(data.files.length));
   const directorLabel = $derived(data.directors.join(", "));
   const writerLabel = $derived(data.writers.join(", "));
   const trailerHref = $derived(
