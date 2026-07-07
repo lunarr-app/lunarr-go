@@ -47,6 +47,7 @@
     PLAYER_OVERLAY_DISMISS_MS,
     primaryPlaybackButtonState,
     seekSliderHoverPreview,
+    shouldRefreshSeekSliderHoverPreview,
     shouldAutoHideControls,
     shouldCloseSubtitleMenuOnPlayerKeydown,
     shouldHandlePlayerShortcut,
@@ -130,6 +131,7 @@
   let seekPreviewSeconds = $state<number | null>(null);
   let seekSliderTrackEl = $state<HTMLDivElement | undefined>();
   let seekHoverPreview = $state<SeekSliderHoverPreview | null>(null);
+  let seekSliderTrackRect: DOMRectReadOnly | null = null;
   let volume = $state(1);
   let muted = $state(false);
   let subtitleMenuOpen = $state(false);
@@ -319,6 +321,16 @@
 
   function clearSeekHoverPreview() {
     seekHoverPreview = null;
+    seekSliderTrackRect = null;
+  }
+
+  function refreshSeekSliderTrackRect() {
+    seekSliderTrackRect = seekSliderTrackEl?.getBoundingClientRect() ?? null;
+  }
+
+  function handleSeekSliderTrackEnter(event: PointerEvent) {
+    if (event.pointerType !== "mouse") return;
+    refreshSeekSliderTrackRect();
   }
 
   function updateSeekHoverPreview(event: PointerEvent) {
@@ -327,16 +339,22 @@
       return;
     }
 
-    const track = seekSliderTrackEl;
-    if (!track) return;
+    if (!seekSliderTrackRect) refreshSeekSliderTrackRect();
+    const rect = seekSliderTrackRect;
+    if (!rect) return;
 
-    const rect = track.getBoundingClientRect();
-    seekHoverPreview = seekSliderHoverPreview({
+    const next = seekSliderHoverPreview({
       clientX: event.clientX,
       left: rect.left,
       width: rect.width,
       durationSeconds,
     });
+    if (!next) {
+      clearSeekHoverPreview();
+      return;
+    }
+    if (!shouldRefreshSeekSliderHoverPreview(seekHoverPreview, next)) return;
+    seekHoverPreview = next;
   }
 
   function showControls() {
@@ -1251,6 +1269,7 @@
           <div
             class="seek-slider-track"
             bind:this={seekSliderTrackEl}
+            onpointerenter={handleSeekSliderTrackEnter}
             onpointermove={updateSeekHoverPreview}
             onpointerleave={clearSeekHoverPreview}
           >

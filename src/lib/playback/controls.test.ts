@@ -32,6 +32,7 @@ import {
   playerSurfaceDoubleClickIntent,
   playerSurfaceSingleClickIntent,
   seekSliderHoverPreview,
+  shouldRefreshSeekSliderHoverPreview,
   playerStatusOverlayState,
   releaseCastOwnedPlaybackSession,
   shouldAutoHideControls,
@@ -1139,6 +1140,38 @@ describe("custom player controls", () => {
         durationSeconds: null,
       }),
     ).toBeNull();
+  });
+
+  test("skips seek hover preview updates until the label or position moves enough", () => {
+    const preview = seekSliderHoverPreview({
+      clientX: 150,
+      left: 0,
+      width: 300,
+      durationSeconds: 120,
+    })!;
+
+    expect(shouldRefreshSeekSliderHoverPreview(null, preview)).toBe(true);
+    expect(
+      shouldRefreshSeekSliderHoverPreview(preview, {
+        ...preview,
+        ratio: preview.ratio + 0.001,
+        seconds: preview.seconds + 0.1,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRefreshSeekSliderHoverPreview(preview, {
+        ...preview,
+        ratio: preview.ratio + 0.01,
+        seconds: preview.seconds + 0.1,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRefreshSeekSliderHoverPreview(preview, {
+        ...preview,
+        ratio: preview.ratio,
+        seconds: 61,
+      }),
+    ).toBe(true);
   });
 
   test("routes surface single and double clicks based on control visibility", () => {

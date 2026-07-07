@@ -594,6 +594,15 @@ export function seekSliderHoverPreview(input: {
   };
 }
 
+export function shouldRefreshSeekSliderHoverPreview(
+  previous: SeekSliderHoverPreview | null,
+  next: SeekSliderHoverPreview,
+) {
+  if (!previous) return true;
+  if (Math.floor(previous.seconds) !== Math.floor(next.seconds)) return true;
+  return Math.abs(previous.ratio - next.ratio) >= 0.003;
+}
+
 export type PlayerSurfaceInteractionIntent =
   "close-subtitle-menu" | "show-controls" | "hide-controls" | "surface-control" | "none";
 
