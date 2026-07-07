@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
-import { getSegmentSkipPreferences, setSegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
+import { getSegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
 import {
   getTranscodePolicy,
   setUserPlaybackPreference,

@@ -2936,6 +2936,8 @@ export const openApiDocument = {
           startSeconds: { type: "number", minimum: 0 },
           segments: {
             type: "array",
+            description:
+              "Intro, recap, and credits windows from IntroDB. Empty when segmentSkip.enabled is false or lookup data is unavailable.",
             items: { $ref: "#/components/schemas/PlaybackSegment" },
           },
           segmentSkip: { $ref: "#/components/schemas/SegmentSkipPreferences" },

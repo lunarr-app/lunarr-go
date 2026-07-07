@@ -19,6 +19,7 @@
   } from "@lucide/svelte";
   import { createMediaPlayerCast } from "$lib/player/media-player-cast.svelte";
   import { createMediaPlayerHls } from "$lib/player/media-player-hls.svelte";
+  import { createMediaPlayerSegments } from "$lib/player/media-player-segments.svelte";
   import { createMediaPlayerSession } from "$lib/player/media-player-session.svelte";
   import {
     airPlayActiveFromVideo,
@@ -52,12 +53,6 @@
     volumeStateForMuteToggle,
     volumeStateForSliderValue,
   } from "$lib/playback/controls";
-  import {
-    activePlaybackSegment,
-    playbackSegmentKey,
-    segmentSkippedLabel,
-    segmentSkipTargetSeconds,
-  } from "$lib/playback/segments";
   import type { PlaybackData } from "$lib/server/playback";
 
   type PlayerUiState = "starting" | "playing" | "paused" | "buffering" | "seeking" | "autoplayBlocked" | "error";
@@ -276,42 +271,6 @@
 
   function displayedPlaybackSeconds() {
     return seekPreviewSeconds ?? currentPlaybackSeconds;
-  }
-
-  const activeSegment = $derived(
-    data.segmentSkip.enabled
-      ? activePlaybackSegment(data.segments ?? [], seekPreviewSeconds ?? currentPlaybackSeconds, durationSeconds)
-      : null,
-  );
-
-  let autoSkippedSegmentKeys = $state(new Set<string>());
-  let autoSkipNotice = $state<string | null>(null);
-  let autoSkipNoticeTimeout: number | null = null;
-
-  const AUTO_SKIP_NOTICE_MS = 3200;
-
-  function clearAutoSkipNotice() {
-    autoSkipNotice = null;
-    if (autoSkipNoticeTimeout !== null) {
-      window.clearTimeout(autoSkipNoticeTimeout);
-      autoSkipNoticeTimeout = null;
-    }
-  }
-
-  function showAutoSkipNotice(message: string) {
-    autoSkipNotice = message;
-    if (autoSkipNoticeTimeout !== null) {
-      window.clearTimeout(autoSkipNoticeTimeout);
-    }
-    autoSkipNoticeTimeout = window.setTimeout(() => {
-      autoSkipNotice = null;
-      autoSkipNoticeTimeout = null;
-    }, AUTO_SKIP_NOTICE_MS);
-  }
-
-  function skipActiveSegment() {
-    if (!activeSegment) return;
-    seekToPlaybackSeconds(segmentSkipTargetSeconds(activeSegment, durationSeconds));
   }
 
   function seekSliderMax() {
@@ -767,6 +726,19 @@
     seekToPlaybackSeconds(displayedPlaybackSeconds() + deltaSeconds);
   }
 
+  const segments = createMediaPlayerSegments({
+    getData: () => data,
+    getDisplayedPlaybackSeconds: displayedPlaybackSeconds,
+    getDurationSeconds: () => durationSeconds,
+    getVideo: () => video,
+    isCasting: () => cast.isCasting(),
+    getCastLaunchState: () => castLaunchState,
+    seekToPlaybackSeconds,
+  });
+
+  const activeSegment = $derived(segments.activeSegment);
+  const autoSkipNotice = $derived(segments.autoSkipNotice);
+
   async function toggleFullscreen() {
     if (!browser || !playerShell) return;
     const safariVideo = video as SafariVideoElement | undefined;
@@ -877,24 +849,7 @@
   cast.runCastFrameworkEffect();
   session.runHeartbeatEffect();
   session.runCleanupEffect();
-
-  $effect(() => {
-    const mediaItemId = data.item.id;
-    void mediaItemId;
-    autoSkippedSegmentKeys = new Set();
-    clearAutoSkipNotice();
-  });
-
-  $effect(() => {
-    if (!browser || !data.segmentSkip.enabled || !data.segmentSkip.automatic || !activeSegment) return;
-    if (castLaunchState === "connecting") return;
-    if (!video && !cast.isCasting()) return;
-    const key = playbackSegmentKey(activeSegment);
-    if (autoSkippedSegmentKeys.has(key)) return;
-    autoSkippedSegmentKeys = new Set([...autoSkippedSegmentKeys, key]);
-    showAutoSkipNotice(segmentSkippedLabel(activeSegment.type));
-    skipActiveSegment();
-  });
+  segments.runSegmentEffects();
 
   $effect(() => {
     if (!browser) return;
@@ -1016,7 +971,7 @@
     }
     clearSurfaceSingleClickTimeout();
     clearSignedPlaybackNotice();
-    clearAutoSkipNotice();
+    segments.destroy();
     releaseScreenWakeLock();
     session.flushProgress(data);
     cast.destroy();
@@ -1097,7 +1052,12 @@
 
     {#if activeSegment && !data.segmentSkip.automatic}
       <div class="skip-segment-prompt">
-        <button class="skip-segment-button" type="button" aria-label={activeSegment.label} onclick={skipActiveSegment}>
+        <button
+          class="skip-segment-button"
+          type="button"
+          aria-label={activeSegment.label}
+          onclick={segments.skipActiveSegment}
+        >
           <SkipForward size={16} strokeWidth={2.25} aria-hidden="true" />
           <span>{activeSegment.label}</span>
         </button>
