@@ -24,40 +24,41 @@ function introDbCacheKey(params: GetMediaParams) {
 
 export async function introDbLookupForMediaItem(mediaItemId: string): Promise<GetMediaParams | null> {
   const db = await getDb();
-  const item = await db
-    .selectFrom("media_item")
-    .select(["id", "kind", "provider", "provider_id", "season_number", "episode_number", "parent_id"])
-    .where("id", "=", mediaItemId)
+  const row = await db
+    .selectFrom("media_item as item")
+    .leftJoin("media_item as season", (join) =>
+      join.onRef("season.id", "=", "item.parent_id").on("item.kind", "=", "episode").on("season.kind", "=", "season"),
+    )
+    .leftJoin("media_item as show", (join) =>
+      join.onRef("show.id", "=", "season.parent_id").on("show.kind", "=", "show"),
+    )
+    .select([
+      "item.kind",
+      "item.provider",
+      "item.provider_id",
+      "item.season_number",
+      "item.episode_number",
+      "item.parent_id",
+      "show.provider as show_provider",
+      "show.provider_id as show_provider_id",
+    ])
+    .where("item.id", "=", mediaItemId)
     .executeTakeFirst();
 
-  if (!item) return null;
+  if (!row) return null;
 
-  if (item.kind === "movie") {
-    const tmdbId = tmdbIdFromMetadata(item.provider, item.provider_id);
+  if (row.kind === "movie") {
+    const tmdbId = tmdbIdFromMetadata(row.provider, row.provider_id);
     return tmdbId ? { tmdbId } : null;
   }
 
-  if (item.kind !== "episode") return null;
-  if (item.season_number === null || item.episode_number === null || !item.parent_id) return null;
+  if (row.kind !== "episode") return null;
+  if (row.season_number === null || row.episode_number === null || !row.parent_id) return null;
 
-  const season = await db
-    .selectFrom("media_item")
-    .select(["parent_id"])
-    .where("id", "=", item.parent_id)
-    .executeTakeFirst();
-  if (!season?.parent_id) return null;
-
-  const show = await db
-    .selectFrom("media_item")
-    .select(["provider", "provider_id"])
-    .where("id", "=", season.parent_id)
-    .executeTakeFirst();
-  if (!show) return null;
-
-  const tmdbId = tmdbIdFromMetadata(show.provider, show.provider_id);
+  const tmdbId = tmdbIdFromMetadata(row.show_provider, row.show_provider_id);
   if (!tmdbId) return null;
 
-  return { tmdbId, season: item.season_number, episode: item.episode_number };
+  return { tmdbId, season: row.season_number, episode: row.episode_number };
 }
 
 export function playbackSegmentsFromMediaRecord(record: MediaRecord): PlaybackSegment[] {
