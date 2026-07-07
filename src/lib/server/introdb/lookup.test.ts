@@ -170,13 +170,13 @@ describe("introDb lookup", () => {
   });
 
   test("prefers movie TMDb ids for lookup", async () => {
-    await expect(introDbLookupForMediaItem("movie-1")).resolves.toEqual({
+    expect(await introDbLookupForMediaItem("movie-1")).toEqual({
       tmdbId: 603,
     });
   });
 
   test("prefers show TMDb ids for episode lookup", async () => {
-    await expect(introDbLookupForMediaItem("episode-1")).resolves.toEqual({
+    expect(await introDbLookupForMediaItem("episode-1")).toEqual({
       tmdbId: 1396,
       season: 1,
       episode: 1,
@@ -184,6 +184,6 @@ describe("introDb lookup", () => {
   });
 
   test("returns null when show TMDb metadata is missing", async () => {
-    await expect(introDbLookupForMediaItem("episode-2")).resolves.toBeNull();
+    expect(await introDbLookupForMediaItem("episode-2")).toBeNull();
   });
 });

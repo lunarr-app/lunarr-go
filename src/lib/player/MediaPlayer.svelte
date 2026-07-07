@@ -57,6 +57,7 @@
     volumeSliderAriaValue,
     volumeStateForMuteToggle,
     volumeStateForSliderValue,
+    type SeekSliderHoverPreview,
   } from "$lib/playback/controls";
   import type { PlaybackData } from "$lib/server/playback";
 
@@ -128,7 +129,7 @@
   let durationSeconds = $state<number | null>(null);
   let seekPreviewSeconds = $state<number | null>(null);
   let seekSliderTrackEl = $state<HTMLDivElement | undefined>();
-  let seekHoverPreview = $state<{ seconds: number; ratio: number } | null>(null);
+  let seekHoverPreview = $state<SeekSliderHoverPreview | null>(null);
   let volume = $state(1);
   let muted = $state(false);
   let subtitleMenuOpen = $state(false);

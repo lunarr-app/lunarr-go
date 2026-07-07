@@ -5,6 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
+import { expectRejectsToThrow } from "$lib/test/async-expect";
 import {
   assertShareAllowsPlayableItem,
   createShare,
@@ -269,7 +270,8 @@ describe("media shares", () => {
     expect(resolved).not.toBeNull();
 
     await assertShareAllowsPlayableItem(resolved!, "episode-1");
-    await expect(assertShareAllowsPlayableItem(resolved!, "episode-2")).rejects.toThrow(
+    await expectRejectsToThrow(
+      assertShareAllowsPlayableItem(resolved!, "episode-2"),
       "This share does not include the requested season.",
     );
   });

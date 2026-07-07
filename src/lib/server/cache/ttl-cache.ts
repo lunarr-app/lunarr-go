@@ -6,7 +6,6 @@ export type TtlCacheOptions = {
 export type TtlCache<T> = {
   get(key: string): T | undefined;
   set(key: string, value: T): void;
-  delete(key: string): void;
   clear(): void;
   size(): number;
 };
@@ -64,9 +63,6 @@ export function createTtlCache<T>(options: TtlCacheOptions): TtlCache<T> {
       evictExpired();
       evictOldestWhileOverLimit();
       store.set(key, entry);
-    },
-    delete(key) {
-      store.delete(key);
     },
     clear() {
       store.clear();

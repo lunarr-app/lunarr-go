@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { resetAuthForTests } from "$lib/server/auth/test/setup";
+import { expectRejectsToMatchObject } from "$lib/test/async-expect";
 
 const testUser = {
   id: "user-1",
@@ -62,11 +63,12 @@ describe("link-device page server", () => {
   });
 
   test("requires a signed-in user", async () => {
-    await expect(
+    await expectRejectsToMatchObject(
       load({
         locals: { user: null },
         url: new URL("http://localhost/link-device"),
       } as never),
-    ).rejects.toMatchObject({ status: 401 });
+      { status: 401 },
+    );
   });
 });

@@ -529,7 +529,7 @@ function metadataTitleCandidates(
   return [...new Set(titles)];
 }
 
-export const MOVIE_METADATA_RUNTIME_TOLERANCE_SECONDS = 300;
+const MOVIE_METADATA_RUNTIME_TOLERANCE_SECONDS = 300;
 
 function normalizedRuntimeSeconds(value: number | null | undefined) {
   if (!Number.isFinite(value) || Number(value) <= 0) return null;
@@ -547,7 +547,7 @@ export function movieMetadataRuntimesCompatible(
   return Math.abs(fileRuntime - metadataRuntime) <= Math.max(0, toleranceSeconds);
 }
 
-export function movieMetadataYearDelta(queryYear: number | null, metadataYear: number | null) {
+function movieMetadataYearDelta(queryYear: number | null, metadataYear: number | null) {
   if (queryYear === null || metadataYear === null) return null;
   return Math.abs(queryYear - metadataYear);
 }
