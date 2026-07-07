@@ -2,11 +2,11 @@
   import { page } from "$app/state";
   import MediaCastRail from "$lib/components/MediaCastRail.svelte";
   import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
+  import MediaFilesSection from "$lib/components/MediaFilesSection.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
   import { formatMediaDuration } from "$lib/media/format";
   import { playbackModalHref } from "$lib/playback/links";
   import MovieDetailHero from "./_components/MovieDetailHero.svelte";
-  import MovieFilesSection from "./_components/MovieFilesSection.svelte";
   import MovieMetadataSidebar from "./_components/MovieMetadataSidebar.svelte";
 
   let { data, form } = $props();
@@ -113,8 +113,8 @@
 
 <MediaDetailLayout>
   {#snippet main()}
-    <MovieFilesSection
-      movieId={data.movie.id}
+    <MediaFilesSection
+      mediaItemId={data.movie.id}
       files={data.files}
       progress={data.progress}
       primaryFileId={primaryFile?.id}

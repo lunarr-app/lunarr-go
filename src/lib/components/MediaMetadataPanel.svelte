@@ -29,52 +29,59 @@
   } = $props();
 </script>
 
-<div class="media-metadata-heading">
-  <h2 id="metadata-heading">Metadata</h2>
-  {#if canManageMetadata}
-    <form class="media-metadata-refresh" method="POST" action="?/refreshMetadata">
-      <button
-        class="text-button"
-        disabled={!tmdbConfigured}
-        title={tmdbConfigured ? "Refresh metadata from TMDb" : "TMDb credentials are not configured"}
-      >
-        <RefreshCw size={14} aria-hidden="true" />
-        Refresh
-      </button>
-    </form>
+<div class="media-metadata">
+  <div class="media-metadata-heading">
+    <h2 id="metadata-heading">Metadata</h2>
+    {#if canManageMetadata}
+      <form class="media-metadata-refresh" method="POST" action="?/refreshMetadata">
+        <button
+          class="text-button"
+          disabled={!tmdbConfigured}
+          title={tmdbConfigured ? "Refresh metadata from TMDb" : "TMDb credentials are not configured"}
+        >
+          <RefreshCw size={14} aria-hidden="true" />
+          Refresh
+        </button>
+      </form>
+    {/if}
+  </div>
+  {#if metadataError}
+    <p class="error">{metadataError}</p>
+  {/if}
+  <div class="media-metadata-score">
+    <div>
+      <strong>{ratingLabel ?? "-"}</strong>
+      <span>{voteCountLabel ? `${voteCountLabel} votes` : ratingLabel ? "TMDb rating" : "Unrated"}</span>
+    </div>
+    <div>
+      <strong>{certificationLabel}</strong>
+      <span>{statusLabel}</span>
+    </div>
+  </div>
+  <div class="media-metadata-chips" aria-label={chipsLabel}>
+    {@render chips()}
+  </div>
+  <div class="media-metadata-blocks">
+    {@render blocks()}
+  </div>
+  {#if keywords.length}
+    <section class="media-metadata-keywords">
+      <h3>Keywords</h3>
+      <div class="media-keyword-list">
+        {#each keywords as keyword (keyword)}
+          <span>{keyword}</span>
+        {/each}
+      </div>
+    </section>
   {/if}
 </div>
-{#if metadataError}
-  <p class="error">{metadataError}</p>
-{/if}
-<div class="media-metadata-score">
-  <div>
-    <strong>{ratingLabel ?? "-"}</strong>
-    <span>{voteCountLabel ? `${voteCountLabel} votes` : "Unrated"}</span>
-  </div>
-  <div>
-    <strong>{certificationLabel}</strong>
-    <span>{statusLabel}</span>
-  </div>
-</div>
-<div class="media-metadata-chips" aria-label={chipsLabel}>
-  {@render chips()}
-</div>
-<div class="media-metadata-blocks">
-  {@render blocks()}
-</div>
-{#if keywords.length}
-  <section class="media-metadata-keywords">
-    <h3>Keywords</h3>
-    <div class="media-keyword-list">
-      {#each keywords as keyword (keyword)}
-        <span>{keyword}</span>
-      {/each}
-    </div>
-  </section>
-{/if}
 
 <style>
+  .media-metadata {
+    display: grid;
+    gap: 1rem;
+  }
+
   .media-metadata-heading {
     display: flex;
     align-items: center;

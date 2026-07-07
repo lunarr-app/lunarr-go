@@ -536,6 +536,7 @@ export async function getEpisodeDetail(id: string, userId: string) {
       runtimeSeconds: episode.runtime_seconds,
       stillUrl: tmdbImageUrl(episode.poster_path, "w780"),
       voteAverage: episode.vote_average,
+      voteCount: episode.vote_count,
     },
     files,
     progress,

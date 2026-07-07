@@ -22,13 +22,13 @@
   };
 
   let {
-    movieId,
+    mediaItemId,
     files,
     progress,
     primaryFileId,
     formError,
   }: {
-    movieId: string;
+    mediaItemId: string;
     files: MediaFile[];
     progress: Array<FileProgress & { media_file_id: string }>;
     primaryFileId: string | undefined;
@@ -36,15 +36,15 @@
   } = $props();
 
   const progressByFile = $derived.by(() => {
-    const rows = new Map<string, FileProgress>();
+    const rows: Record<string, FileProgress> = {};
     for (const item of progress) {
-      rows.set(item.media_file_id, item);
+      rows[item.media_file_id] = item;
     }
     return rows;
   });
 
   function fileProgress(fileId: string) {
-    return progressByFile.get(fileId);
+    return progressByFile[fileId];
   }
 
   function progressLabel(progressRow: FileProgress | undefined) {
@@ -85,7 +85,7 @@
       <span>Status</span>
       <span>Actions</span>
     </div>
-    {#each files as file}
+    {#each files as file (file.id)}
       {@const fileProgressRow = fileProgress(file.id)}
       <article class="file-row" class:featured={primaryFileId === file.id}>
         <div class="file-copy">
@@ -108,7 +108,7 @@
             class="button secondary"
             href={playbackModalHref({
               currentUrl: page.url,
-              mediaItemId: movieId,
+              mediaItemId,
               mediaFileId: file.id,
             })}
           >
