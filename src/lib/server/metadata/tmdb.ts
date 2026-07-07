@@ -1,5 +1,30 @@
 import { getSetting } from "../settings";
+import { createTtlCache } from "$lib/server/cache/ttl-cache";
 import { PUBLIC_TMDB_ACCESS_TOKEN } from "./public-token";
+
+const TMDB_DETAIL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const TMDB_DETAIL_CACHE_MAX_ENTRIES = 1_000;
+
+const tmdbMovieDetailCache = createTtlCache<TmdbMovieDetails>({
+  ttlMs: TMDB_DETAIL_CACHE_TTL_MS,
+  maxEntries: TMDB_DETAIL_CACHE_MAX_ENTRIES,
+});
+
+const tmdbTvDetailCache = createTtlCache<TmdbTvDetails>({
+  ttlMs: TMDB_DETAIL_CACHE_TTL_MS,
+  maxEntries: TMDB_DETAIL_CACHE_MAX_ENTRIES,
+});
+
+const tmdbTvSeasonCache = createTtlCache<TmdbTvSeasonDetails>({
+  ttlMs: TMDB_DETAIL_CACHE_TTL_MS,
+  maxEntries: TMDB_DETAIL_CACHE_MAX_ENTRIES,
+});
+
+export function clearTmdbDetailCachesForTests() {
+  tmdbMovieDetailCache.clear();
+  tmdbTvDetailCache.clear();
+  tmdbTvSeasonCache.clear();
+}
 
 type TmdbSearchResult = {
   id: number;
@@ -921,18 +946,17 @@ const MOVIE_DETAIL_CANDIDATE_LIMIT = 5;
 type MovieMetadataMatchOptions = {
   credentials?: TmdbCredentials;
   fetch?: TmdbFetch;
-  detailCache?: Map<string, TmdbMovieDetails>;
 };
 
 async function fetchMovieDetail(movieId: number, options: MovieMetadataMatchOptions = {}) {
   const cacheKey = String(movieId);
-  const cached = options.detailCache?.get(cacheKey);
+  const cached = tmdbMovieDetailCache.get(cacheKey);
   if (cached) return cached;
 
   const detailUrl = new URL(`https://api.themoviedb.org/3/movie/${movieId}`);
   detailUrl.searchParams.set("append_to_response", "credits,videos,keywords,release_dates,alternative_titles");
   const detail = await tmdbFetch<TmdbMovieDetails>(detailUrl, options.credentials, options.fetch);
-  if (detail) options.detailCache?.set(cacheKey, detail);
+  if (detail) tmdbMovieDetailCache.set(cacheKey, detail);
   return detail;
 }
 
@@ -978,19 +1002,42 @@ export async function matchMovieMetadata(
   options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
 ) {
   const seenProviderIds = new Set<string>();
-  const detailCache = new Map<string, TmdbMovieDetails>();
 
   for (const searchYear of movieMetadataSearchYears(year)) {
-    const metadata = await matchMovieMetadataForSearchYear(title, searchYear, searchYear ?? year, {
-      ...options,
-      detailCache,
-    });
+    const metadata = await matchMovieMetadataForSearchYear(title, searchYear, searchYear ?? year, options);
     if (!metadata || seenProviderIds.has(metadata.providerId)) continue;
     seenProviderIds.add(metadata.providerId);
     return metadata;
   }
 
   return null;
+}
+
+async function fetchTvDetail(tvId: number, options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {}) {
+  const cacheKey = `tv:${tvId}`;
+  const cached = tmdbTvDetailCache.get(cacheKey);
+  if (cached) return cached;
+
+  const detailUrl = new URL(`https://api.themoviedb.org/3/tv/${tvId}`);
+  detailUrl.searchParams.set("append_to_response", "aggregate_credits,videos,keywords,content_ratings,external_ids");
+  const detail = await tmdbFetch<TmdbTvDetails>(detailUrl, options.credentials, options.fetch);
+  if (detail) tmdbTvDetailCache.set(cacheKey, detail);
+  return detail;
+}
+
+async function fetchTvSeason(
+  tvId: number,
+  seasonNumber: number,
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+) {
+  const cacheKey = `tv:${tvId}:s${seasonNumber}`;
+  const cached = tmdbTvSeasonCache.get(cacheKey);
+  if (cached) return cached;
+
+  const seasonUrl = new URL(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}`);
+  const season = await tmdbFetch<TmdbTvSeasonDetails>(seasonUrl, options.credentials, options.fetch);
+  if (season) tmdbTvSeasonCache.set(cacheKey, season);
+  return season;
 }
 
 export async function matchTvSeasonMetadata(
@@ -1008,13 +1055,10 @@ export async function matchTvSeasonMetadata(
   const first = bestTvSearchResult(search?.results, title, year);
   if (!first) return null;
 
-  const detailUrl = new URL(`https://api.themoviedb.org/3/tv/${first.id}`);
-  detailUrl.searchParams.set("append_to_response", "aggregate_credits,videos,keywords,content_ratings,external_ids");
-  const detail = await tmdbFetch<TmdbTvDetails>(detailUrl, options.credentials, options.fetch);
+  const detail = await fetchTvDetail(first.id, options);
   if (!detail) return null;
 
-  const seasonUrl = new URL(`https://api.themoviedb.org/3/tv/${detail.id}/season/${seasonNumber}`);
-  const season = await tmdbFetch<TmdbTvSeasonDetails>(seasonUrl, options.credentials, options.fetch);
+  const season = await fetchTvSeason(detail.id, seasonNumber, options);
   if (!season) return null;
 
   return {

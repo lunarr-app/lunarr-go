@@ -1,10 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "../db";
 import { setSetting } from "../settings";
 import {
+  clearTmdbDetailCachesForTests,
   matchMovieMetadata,
   matchTvSeasonMetadata,
   movieMetadataMatchAccepts,
@@ -12,6 +13,14 @@ import {
   testTmdbConnection,
   tmdbCredentialsConfigured,
 } from "./tmdb";
+
+beforeEach(() => {
+  clearTmdbDetailCachesForTests();
+});
+
+afterEach(() => {
+  clearTmdbDetailCachesForTests();
+});
 
 describe("matchMovieMetadata", () => {
   test("reports whether TMDb credentials are configured", async () => {
