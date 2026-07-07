@@ -4,6 +4,7 @@
   import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
   import { playbackModalHref } from "$lib/playback/links";
+  import { formatVoteAverageLabel, formatVoteCountLabel } from "$lib/media/format";
   import ShowDetailHero from "./_components/ShowDetailHero.svelte";
   import ShowMetadataSidebar from "./_components/ShowMetadataSidebar.svelte";
   import ShowSeasonsSection from "./_components/ShowSeasonsSection.svelte";
@@ -18,16 +19,8 @@
   const seasonCount = $derived(data.seasons.length);
   const episodeCountLabel = $derived(`${totalEpisodes} ${totalEpisodes === 1 ? "episode" : "episodes"}`);
   const seasonCountLabel = $derived(`${seasonCount} ${seasonCount === 1 ? "season" : "seasons"}`);
-  const ratingLabel = $derived(
-    data.show.voteAverage === null || data.show.voteAverage === undefined
-      ? null
-      : Number(data.show.voteAverage).toFixed(1),
-  );
-  const voteCountLabel = $derived(
-    data.show.voteCount === null || data.show.voteCount === undefined
-      ? null
-      : new Intl.NumberFormat(undefined, { notation: "compact" }).format(Number(data.show.voteCount)),
-  );
+  const ratingLabel = $derived(formatVoteAverageLabel(data.show.voteAverage));
+  const voteCountLabel = $derived(formatVoteCountLabel(data.show.voteCount));
   const providerLabel = $derived(data.show.provider ? data.show.provider.toUpperCase() : "Local");
   const creatorLabel = $derived(data.creators.join(", "));
   const trailerHref = $derived(

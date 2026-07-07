@@ -8,6 +8,8 @@ import {
   formatGibibytes,
   formatMediaDuration,
   formatRelativeTime,
+  formatVoteAverageLabel,
+  formatVoteCountLabel,
   seasonTabLabel,
 } from "./format";
 
@@ -78,6 +80,21 @@ describe("formatGibibytes", () => {
   test("formats gibibyte labels", () => {
     expect(formatGibibytes(2 * 1024 * 1024 * 1024)).toBe("2 GiB");
     expect(formatGibibytes(1.5 * 1024 * 1024 * 1024)).toBe("1.5 GiB");
+  });
+});
+
+describe("formatVoteAverageLabel", () => {
+  test("formats vote averages", () => {
+    expect(formatVoteAverageLabel(8.456)).toBe("8.5");
+    expect(formatVoteAverageLabel(null)).toBeNull();
+  });
+});
+
+describe("formatVoteCountLabel", () => {
+  test("formats compact vote counts", () => {
+    expect(formatVoteCountLabel(173)).toBe("173");
+    expect(formatVoteCountLabel(1200)).toMatch(/1\.2/);
+    expect(formatVoteCountLabel(null)).toBeNull();
   });
 });
 

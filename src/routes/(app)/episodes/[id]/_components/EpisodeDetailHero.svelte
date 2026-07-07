@@ -1,6 +1,8 @@
 <script lang="ts">
   import MediaHero from "$lib/components/MediaHero.svelte";
-  import { Calendar, Check, ChevronLeft, CirclePlay, Clock3, RotateCcw, Star } from "@lucide/svelte";
+  import MediaHeroPlaybackActions from "$lib/components/MediaHeroPlaybackActions.svelte";
+  import MediaHeroResumeBar from "$lib/components/MediaHeroResumeBar.svelte";
+  import { Calendar, ChevronLeft, Clock3, Star } from "@lucide/svelte";
 
   let {
     title,
@@ -63,59 +65,10 @@
   {/snippet}
 
   {#snippet actions()}
-    {#if primaryFile}
-      <a class="button primary-action" href={primaryHref}>
-        <CirclePlay size={19} aria-hidden="true" />
-        {primaryActionLabel}
-      </a>
-      <form class="inline-action" method="POST" action="?/watched">
-        <input type="hidden" name="fileId" value={primaryFile.id} />
-        <button class="secondary" name="completed" value={hasCompletedProgress ? "false" : "true"}>
-          {#if hasCompletedProgress}
-            <RotateCcw size={16} aria-hidden="true" />
-            Mark unwatched
-          {:else}
-            <Check size={16} aria-hidden="true" />
-            Mark watched
-          {/if}
-        </button>
-      </form>
-    {/if}
+    <MediaHeroPlaybackActions {primaryFile} {primaryHref} {primaryActionLabel} {hasCompletedProgress} />
   {/snippet}
 
   {#snippet below()}
-    {#if resumeLabel}
-      <div class="resume">
-        <span>{resumeLabel}</span>
-        <div aria-hidden="true">
-          <span style={`width: ${resumePercent}%`}></span>
-        </div>
-      </div>
-    {/if}
+    <MediaHeroResumeBar {resumeLabel} {resumePercent} />
   {/snippet}
 </MediaHero>
-
-<style>
-  .resume {
-    display: grid;
-    gap: 0.35rem;
-    width: min(100%, 24rem);
-    color: var(--color-subtle);
-    font-size: 0.9rem;
-    font-weight: 700;
-  }
-
-  .resume div {
-    height: 0.28rem;
-    overflow: hidden;
-    border-radius: 999px;
-    background: var(--color-border-strong);
-  }
-
-  .resume div span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--color-accent);
-  }
-</style>

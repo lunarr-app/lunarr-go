@@ -79,6 +79,16 @@ export function formatGibibytes(value: number): string {
   return `${Number.isInteger(gib) ? gib : gib.toFixed(1)} GiB`;
 }
 
+export function formatVoteAverageLabel(voteAverage: number | null | undefined): string | null {
+  if (voteAverage === null || voteAverage === undefined) return null;
+  return Number(voteAverage).toFixed(1);
+}
+
+export function formatVoteCountLabel(voteCount: number | null | undefined): string | null {
+  if (voteCount === null || voteCount === undefined) return null;
+  return new Intl.NumberFormat(undefined, { notation: "compact" }).format(Number(voteCount));
+}
+
 type SeasonTabLabelInput = {
   title: string;
   seasonNumber?: number | null;

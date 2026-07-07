@@ -211,4 +211,14 @@
     overflow-wrap: anywhere;
     text-align: right;
   }
+
+  .media-metadata-blocks :global(dd a) {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .media-metadata-blocks :global(dd a:hover) {
+    text-decoration: underline;
+  }
 </style>
