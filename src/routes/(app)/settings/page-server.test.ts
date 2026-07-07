@@ -5,6 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
+import { clearTmdbDetailCachesForTests } from "$lib/server/metadata/tmdb";
 import { getBooleanSetting, getSetting, setSetting } from "$lib/server/settings";
 import { registerTranscodeHlsArtifact } from "$lib/server/transcoding/sessions";
 import {
@@ -51,6 +52,7 @@ describe("settings page server", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(async () => {
+    clearTmdbDetailCachesForTests();
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-settings-page-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();

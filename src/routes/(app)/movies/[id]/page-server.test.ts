@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
+import { clearTmdbDetailCachesForTests } from "$lib/server/metadata/tmdb";
 import { setSetting } from "$lib/server/settings";
 import { actions, load } from "./+page.server";
 
@@ -57,6 +58,7 @@ describe("movie detail page server", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(async () => {
+    clearTmdbDetailCachesForTests();
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-movie-page-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();

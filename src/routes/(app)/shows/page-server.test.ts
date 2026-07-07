@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql, type Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
+import { clearTmdbDetailCachesForTests } from "$lib/server/metadata/tmdb";
 import { setSetting } from "$lib/server/settings";
 import { actions as showActions, load as showLoad } from "./[id]/+page.server";
 import { actions as seasonActions, load as seasonLoad } from "./[id]/seasons/[seasonId]/+page.server";
@@ -26,6 +27,7 @@ describe("shows page server", () => {
   let db: Kysely<Database>;
 
   beforeEach(async () => {
+    clearTmdbDetailCachesForTests();
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-shows-page-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();

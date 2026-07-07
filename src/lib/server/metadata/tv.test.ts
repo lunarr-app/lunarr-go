@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
+import { clearTmdbDetailCachesForTests } from "./tmdb";
 import { refreshTvShowMetadataResult } from "./tv";
 
 describe("refreshTvShowMetadata", () => {
@@ -11,6 +12,7 @@ describe("refreshTvShowMetadata", () => {
   let db: Kysely<Database>;
 
   beforeEach(async () => {
+    clearTmdbDetailCachesForTests();
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-tv-metadata-"));
     await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
     await migrateDatabase();
