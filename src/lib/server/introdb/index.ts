@@ -4,7 +4,43 @@ import type { PlaybackSegment, PlaybackSegmentType } from "$lib/server/playback"
 import { getMedia, type GetMediaParams, type MediaRecord, type NormalizedSegmentTimestamp } from "theintrodb";
 
 const INTRODB_FETCH_TIMEOUT_MS = 3_000;
+const INTRODB_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const ENABLED_SEGMENT_TYPES = new Set<PlaybackSegmentType>(["intro", "recap", "credits"]);
+
+type IntroDbCacheEntry = {
+  expiresAt: number;
+  value: MediaRecord;
+};
+
+const introDbCache = new Map<string, IntroDbCacheEntry>();
+const introDbInflight = new Map<string, Promise<MediaRecord | null>>();
+
+export function clearIntroDbMediaCacheForTests() {
+  introDbCache.clear();
+  introDbInflight.clear();
+}
+
+function introDbCacheKey(params: GetMediaParams) {
+  const parts = [String(params.tmdbId)];
+  if ("season" in params && params.season !== undefined) parts.push(`s${params.season}`);
+  if ("episode" in params && params.episode !== undefined) parts.push(`e${params.episode}`);
+  if ("durationMs" in params && params.durationMs !== undefined) parts.push(`d${params.durationMs}`);
+  return parts.join(":");
+}
+
+function readIntroDbCache(key: string) {
+  const entry = introDbCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() >= entry.expiresAt) {
+    introDbCache.delete(key);
+    return undefined;
+  }
+  return entry.value;
+}
+
+function writeIntroDbCache(key: string, value: MediaRecord) {
+  introDbCache.set(key, { value, expiresAt: Date.now() + INTRODB_CACHE_TTL_MS });
+}
 
 export async function introDbLookupForMediaItem(mediaItemId: string): Promise<GetMediaParams | null> {
   const db = await getDb();
@@ -91,16 +127,31 @@ export async function fetchIntroDbMedia(
       ? Math.round(Number(durationSeconds) * 1000)
       : undefined;
   const params = durationMs === undefined ? lookup : { ...lookup, durationMs };
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), INTRODB_FETCH_TIMEOUT_MS);
+  const cacheKey = introDbCacheKey(params);
+  const cached = readIntroDbCache(cacheKey);
+  if (cached !== undefined) return cached;
 
-  try {
-    return await getMedia(params, { signal: controller.signal });
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
+  const inflight = introDbInflight.get(cacheKey);
+  if (inflight) return inflight;
+
+  const request = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), INTRODB_FETCH_TIMEOUT_MS);
+
+    try {
+      const record = await getMedia(params, { signal: controller.signal });
+      writeIntroDbCache(cacheKey, record);
+      return record;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timeout);
+      introDbInflight.delete(cacheKey);
+    }
+  })();
+
+  introDbInflight.set(cacheKey, request);
+  return request;
 }
 
 function playbackSegmentFromTimestamp(

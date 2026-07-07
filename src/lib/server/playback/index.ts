@@ -335,18 +335,20 @@ export async function getPlaybackData(input: {
   const startSecondsForPlayback =
     explicitStartSeconds ??
     (requestedProgress && !requestedProgress.completed ? Math.floor(requestedProgress.position_seconds ?? 0) : 0);
-  const playback = await getPlaybackDecision(input.mediaItemId, mediaFileId, input.userId, startSecondsForPlayback, {
-    forceStartTime: explicitStartSeconds !== null,
-    forceTranscode: parseForceTranscode(input.url),
-    clientCapabilities: parseClientPlaybackCapabilities(input.url),
-    playbackTarget: normalizePlaybackTarget(input.url.searchParams.get("target")),
-  });
+  const [playback, segmentSkip, introDbLookup] = await Promise.all([
+    getPlaybackDecision(input.mediaItemId, mediaFileId, input.userId, startSecondsForPlayback, {
+      forceStartTime: explicitStartSeconds !== null,
+      forceTranscode: parseForceTranscode(input.url),
+      clientCapabilities: parseClientPlaybackCapabilities(input.url),
+      playbackTarget: normalizePlaybackTarget(input.url.searchParams.get("target")),
+    }),
+    getSegmentSkipPreferences(input.userId),
+    introDbLookupForMediaItem(input.mediaItemId),
+  ]);
   if (!playback?.file) return null;
-  const segmentSkip = await getSegmentSkipPreferences(input.userId);
   let segments: PlaybackSegment[] = [];
-  if (segmentSkip.enabled) {
-    const introDbLookup = await introDbLookupForMediaItem(input.mediaItemId);
-    const introDbRecord = introDbLookup ? await fetchIntroDbMedia(introDbLookup, playback.file.duration_seconds) : null;
+  if (segmentSkip.enabled && introDbLookup) {
+    const introDbRecord = await fetchIntroDbMedia(introDbLookup, playback.file.duration_seconds);
     segments = clampPlaybackSegments(
       introDbRecord ? playbackSegmentsFromMediaRecord(introDbRecord) : [],
       playback.file.duration_seconds,

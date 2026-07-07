@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Playback prepare now loads segment skip preferences and IntroDB lookup metadata in parallel with the playback decision, and caches successful IntroDB responses for 24 hours.
+
 ### Added
 
 - Added on-play IntroDB intro/recap/credits skip markers in playback responses via the official `theintrodb` client (TMDb lookup), with manual skip buttons in the web player ([TheIntroDB](https://theintrodb.org)).
