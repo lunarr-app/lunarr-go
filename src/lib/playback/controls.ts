@@ -572,6 +572,28 @@ export function playerSurfaceClickAction(input: {
   return "toggle-playback";
 }
 
+export type SeekSliderHoverPreview = {
+  seconds: number;
+  ratio: number;
+};
+
+export function seekSliderHoverPreview(input: {
+  clientX: number;
+  left: number;
+  width: number;
+  durationSeconds: number | null;
+}): SeekSliderHoverPreview | null {
+  const width = Number.isFinite(input.width) && input.width > 0 ? input.width : 0;
+  const durationSeconds = normalizedDurationSeconds(input.durationSeconds);
+  if (width === 0 || durationSeconds === null) return null;
+  const relativeX = Number.isFinite(input.clientX) ? input.clientX - input.left : width / 2;
+  const ratio = Math.min(Math.max(relativeX / width, 0), 1);
+  return {
+    ratio,
+    seconds: clampPlaybackSeconds({ seconds: ratio * durationSeconds, durationSeconds }),
+  };
+}
+
 export type PlayerSurfaceInteractionIntent =
   "close-subtitle-menu" | "show-controls" | "hide-controls" | "surface-control" | "none";
 

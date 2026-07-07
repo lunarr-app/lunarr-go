@@ -81,6 +81,26 @@
   padding: 0 0.9rem 0.8rem;
 }
 
+.seek-slider-track {
+  position: relative;
+  width: 100%;
+}
+
+.seek-hover-preview {
+  position: absolute;
+  bottom: calc(100% + 0.35rem);
+  transform: translateX(-50%);
+  border-radius: 4px;
+  background: rgba(8, 12, 16, 0.92);
+  color: var(--color-text);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.35);
+}
+
 .control-row {
   min-height: 2.5rem;
   display: flex;

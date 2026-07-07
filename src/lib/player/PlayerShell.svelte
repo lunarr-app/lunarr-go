@@ -46,16 +46,18 @@
     </div>
 
     <div class="bottom-controls" aria-hidden="true">
-      <input
-        class="seek-slider"
-        type="range"
-        min="0"
-        max="1"
-        value="0"
-        style="--seek-fill: 0%"
-        tabindex="-1"
-        disabled
-      />
+      <div class="seek-slider-track">
+        <input
+          class="seek-slider"
+          type="range"
+          min="0"
+          max="1"
+          value="0"
+          style="--seek-fill: 0%"
+          tabindex="-1"
+          disabled
+        />
+      </div>
       <div class="control-row">
         <div class="primary-controls">
           <button class="control-button primary-play" type="button" disabled>

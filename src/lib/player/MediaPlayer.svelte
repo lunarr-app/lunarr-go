@@ -30,6 +30,7 @@
     castControlLabel,
     clampPlaybackSeconds,
     defaultSubtitleTrackId,
+    formatPlaybackTime,
     fullscreenAction,
     hasAirPlayPicker,
     mediaTimelineSeconds,
@@ -45,6 +46,7 @@
     playerStatusOverlayState,
     PLAYER_OVERLAY_DISMISS_MS,
     primaryPlaybackButtonState,
+    seekSliderHoverPreview,
     shouldAutoHideControls,
     shouldCloseSubtitleMenuOnPlayerKeydown,
     shouldHandlePlayerShortcut,
@@ -125,6 +127,8 @@
   let currentPlaybackSeconds = $state(0);
   let durationSeconds = $state<number | null>(null);
   let seekPreviewSeconds = $state<number | null>(null);
+  let seekSliderTrackEl = $state<HTMLDivElement | undefined>();
+  let seekHoverPreview = $state<{ seconds: number; ratio: number } | null>(null);
   let volume = $state(1);
   let muted = $state(false);
   let subtitleMenuOpen = $state(false);
@@ -310,6 +314,28 @@
     const value = displayedPlaybackSeconds();
     if (!Number.isFinite(max) || max <= 0 || !Number.isFinite(value)) return 0;
     return Math.min(100, Math.max(0, (value / max) * 100));
+  }
+
+  function clearSeekHoverPreview() {
+    seekHoverPreview = null;
+  }
+
+  function updateSeekHoverPreview(event: PointerEvent) {
+    if (event.pointerType !== "mouse" || seekPreviewSeconds !== null) {
+      clearSeekHoverPreview();
+      return;
+    }
+
+    const track = seekSliderTrackEl;
+    if (!track) return;
+
+    const rect = track.getBoundingClientRect();
+    seekHoverPreview = seekSliderHoverPreview({
+      clientX: event.clientX,
+      left: rect.left,
+      width: rect.width,
+      durationSeconds,
+    });
   }
 
   function showControls() {
@@ -1220,25 +1246,42 @@
         </div>
 
         <div class="bottom-controls">
-          <input
-            class="seek-slider"
-            type="range"
-            min="0"
-            max={seekSliderMax()}
-            step="0.1"
-            value={displayedPlaybackSeconds()}
-            style={`--seek-fill: ${seekSliderFillPercent()}%`}
-            aria-label="Playback position"
-            aria-valuemin={seekSliderAria.valueMin}
-            aria-valuemax={seekSliderAria.valueMax}
-            aria-valuenow={seekSliderAria.valueNow}
-            aria-valuetext={seekSliderAria.valueText}
-            oninput={(event) => {
-              seekPreviewSeconds = Number(event.currentTarget.value);
-              showControls();
-            }}
-            onchange={(event) => seekToPlaybackSeconds(Number(event.currentTarget.value))}
-          />
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="seek-slider-track"
+            bind:this={seekSliderTrackEl}
+            onpointermove={updateSeekHoverPreview}
+            onpointerleave={clearSeekHoverPreview}
+          >
+            {#if seekHoverPreview}
+              <div class="seek-hover-preview" style={`left: ${seekHoverPreview.ratio * 100}%`} aria-hidden="true">
+                {formatPlaybackTime(seekHoverPreview.seconds)}
+              </div>
+            {/if}
+            <input
+              class="seek-slider"
+              type="range"
+              min="0"
+              max={seekSliderMax()}
+              step="0.1"
+              value={displayedPlaybackSeconds()}
+              style={`--seek-fill: ${seekSliderFillPercent()}%`}
+              aria-label="Playback position"
+              aria-valuemin={seekSliderAria.valueMin}
+              aria-valuemax={seekSliderAria.valueMax}
+              aria-valuenow={seekSliderAria.valueNow}
+              aria-valuetext={seekSliderAria.valueText}
+              oninput={(event) => {
+                seekPreviewSeconds = Number(event.currentTarget.value);
+                clearSeekHoverPreview();
+                showControls();
+              }}
+              onchange={(event) => {
+                clearSeekHoverPreview();
+                seekToPlaybackSeconds(Number(event.currentTarget.value));
+              }}
+            />
+          </div>
           <div class="control-row">
             <div class="primary-controls">
               <button

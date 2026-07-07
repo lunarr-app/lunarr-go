@@ -148,6 +148,8 @@ Horizontal zones are measured across the full video width:
 
 A brief on-screen icon confirms seek and play/pause feedback.
 
+On desktop, hovering the seek bar shows a timestamp preview for the position under the pointer. Dragging the seek bar still updates the time readout.
+
 If the subtitle menu is open, a single click on the video closes the menu instead of seeking or toggling playback. Double-clicks are ignored while the menu is open.
 
 ### Keyboard shortcuts

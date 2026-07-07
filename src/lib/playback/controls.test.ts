@@ -31,6 +31,7 @@ import {
   playerSurfaceClickAction,
   playerSurfaceDoubleClickIntent,
   playerSurfaceSingleClickIntent,
+  seekSliderHoverPreview,
   playerStatusOverlayState,
   releaseCastOwnedPlaybackSession,
   shouldAutoHideControls,
@@ -1086,6 +1087,58 @@ describe("custom player controls", () => {
         width: 0,
       }),
     ).toBe("toggle-playback");
+  });
+
+  test("maps seek slider hover position to playback seconds", () => {
+    expect(
+      seekSliderHoverPreview({
+        clientX: 150,
+        left: 0,
+        width: 300,
+        durationSeconds: 120,
+      }),
+    ).toEqual({
+      ratio: 0.5,
+      seconds: 60,
+    });
+    expect(
+      seekSliderHoverPreview({
+        clientX: 0,
+        left: 0,
+        width: 300,
+        durationSeconds: 90,
+      }),
+    ).toEqual({
+      ratio: 0,
+      seconds: 0,
+    });
+    expect(
+      seekSliderHoverPreview({
+        clientX: 400,
+        left: 0,
+        width: 300,
+        durationSeconds: 90,
+      }),
+    ).toEqual({
+      ratio: 1,
+      seconds: 90,
+    });
+    expect(
+      seekSliderHoverPreview({
+        clientX: 150,
+        left: 0,
+        width: 0,
+        durationSeconds: 90,
+      }),
+    ).toBeNull();
+    expect(
+      seekSliderHoverPreview({
+        clientX: 150,
+        left: 0,
+        width: 300,
+        durationSeconds: null,
+      }),
+    ).toBeNull();
   });
 
   test("routes surface single and double clicks based on control visibility", () => {
