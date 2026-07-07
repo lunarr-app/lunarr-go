@@ -7,6 +7,7 @@ import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests,
 import { setTranscodeBackendForTests } from "$lib/server/transcoding/manager";
 import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "$lib/server/transcoding/backend";
 import { getPlaybackData } from ".";
+import { setSegmentSkipPreferences } from "./segment-skip-preferences";
 
 async function completedWindowGeneration(input: HlsSegmentWindowTranscodeInput): Promise<HlsSegmentWindowGeneration> {
   const segment = input.segments[0];
@@ -30,6 +31,10 @@ type WatchLoadResult = {
     endSeconds: number | null;
     label: string;
   }>;
+  segmentSkip: {
+    enabled: boolean;
+    automatic: boolean;
+  };
   playback: {
     mode: "direct" | "remux" | "transcode" | "unavailable";
     status: "ready" | "preparing" | "unavailable";
@@ -294,6 +299,7 @@ describe("playback data", () => {
 
     expect(result.startSeconds).toBe(45);
     expect(result.segments).toEqual([]);
+    expect(result.segmentSkip).toEqual({ enabled: true, automatic: false });
     expect(result.item).toMatchObject({
       id: "movie-1",
       kind: "movie",
@@ -501,5 +507,18 @@ describe("playback data", () => {
       streamStartSeconds: 0,
     });
     expect(result.playback.playbackSessionId).toBeTruthy();
+  });
+
+  test("omits introdb segments when segment skip is disabled", async () => {
+    await setSegmentSkipPreferences("user-1", { enabled: false });
+
+    const result = (await getPlaybackData({
+      mediaItemId: "movie-1",
+      userId: "user-1",
+      url: new URL("http://localhost/movies/movie-1?play=movie-1&file=file-a"),
+    })) as WatchLoadResult;
+
+    expect(result.segments).toEqual([]);
+    expect(result.segmentSkip).toEqual({ enabled: false, automatic: false });
   });
 });

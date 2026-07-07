@@ -8,6 +8,7 @@ import { createApiKeyForUserId, listApiKeys } from "$lib/server/auth/api-keys";
 import { resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
 import { getTranscodePolicy } from "$lib/server/transcoding/policy";
 import { getContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
+import { getSegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
 
 const testUser = {
   id: "user-1",
@@ -91,6 +92,10 @@ describe("profile page server", () => {
         transcodingEnabled: true,
       },
       continueMaxAgeDays: 0,
+      segmentSkip: {
+        enabled: true,
+        automatic: false,
+      },
       apiKeys: [],
     });
   });
@@ -153,6 +158,69 @@ describe("profile page server", () => {
     expect(await getTranscodePolicy("user-1").then((policy) => policy.playbackPreference)).toBe("prefer_transcode");
     expect(await getTranscodePolicy("user-1").then((policy) => policy.preferredAudioLanguage)).toBe("jpn");
     expect(await getTranscodePolicy("user-1").then((policy) => policy.preferredSubtitleLanguage)).toBe("eng");
+  });
+
+  test("saves segment skip preferences for normal users", async () => {
+    const form = new FormData();
+    form.set("segmentSkipEnabled", "1");
+    form.set("segmentSkipAutomatic", "1");
+
+    await expectRedirect(
+      actions.saveSegmentSkip({
+        request: new Request("http://localhost/profile", {
+          method: "POST",
+          body: form,
+        }),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never),
+      "/profile",
+    );
+
+    expect(await getSegmentSkipPreferences("user-1")).toEqual({
+      enabled: true,
+      automatic: true,
+    });
+  });
+
+  test("disables segment skip when the switch is off", async () => {
+    const form = new FormData();
+    form.set("segmentSkipAutomatic", "0");
+
+    await expectRedirect(
+      actions.saveSegmentSkip({
+        request: new Request("http://localhost/profile", {
+          method: "POST",
+          body: form,
+        }),
+        locals: { user: { id: "user-1", role: "user" } },
+      } as never),
+      "/profile",
+    );
+
+    expect(await getSegmentSkipPreferences("user-1")).toEqual({
+      enabled: false,
+      automatic: false,
+    });
+  });
+
+  test("rejects segment skip writes without a user", async () => {
+    const form = new FormData();
+    form.set("segmentSkipEnabled", "1");
+
+    const result = await actions.saveSegmentSkip({
+      request: new Request("http://localhost/profile", {
+        method: "POST",
+        body: form,
+      }),
+      locals: { user: null },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 401,
+      data: {
+        segmentSkipError: "Sign in to update skip settings.",
+      },
+    });
   });
 
   test("saves continue max age for normal users", async () => {

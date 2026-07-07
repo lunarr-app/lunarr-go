@@ -6,13 +6,14 @@ import {
 } from "$lib/playback/capabilities";
 import { normalizePreferredLanguage } from "$lib/media/preferred-language";
 import { getDb } from "../db";
-import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media/files";
 import {
   clampPlaybackSegments,
   fetchIntroDbMedia,
   introDbLookupForMediaItem,
   playbackSegmentsFromMediaRecord,
 } from "../introdb";
+import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media/files";
+import { getSegmentSkipPreferences, type SegmentSkipPreferences } from "./segment-skip-preferences";
 import { nowIso } from "../time";
 import { decidePlaybackMode, type PlaybackModeDecision } from "../transcoding/capabilities";
 import {
@@ -70,6 +71,7 @@ export type PlaybackData = {
   playback: PlaybackDecision;
   startSeconds: number;
   segments: PlaybackSegment[];
+  segmentSkip: SegmentSkipPreferences;
 };
 
 export type PlaybackProgressBody = {
@@ -340,12 +342,16 @@ export async function getPlaybackData(input: {
     playbackTarget: normalizePlaybackTarget(input.url.searchParams.get("target")),
   });
   if (!playback?.file) return null;
-  const introDbLookup = await introDbLookupForMediaItem(input.mediaItemId);
-  const introDbRecord = introDbLookup ? await fetchIntroDbMedia(introDbLookup, playback.file.duration_seconds) : null;
-  const segments = clampPlaybackSegments(
-    introDbRecord ? playbackSegmentsFromMediaRecord(introDbRecord) : [],
-    playback.file.duration_seconds,
-  );
+  const segmentSkip = await getSegmentSkipPreferences(input.userId);
+  let segments: PlaybackSegment[] = [];
+  if (segmentSkip.enabled) {
+    const introDbLookup = await introDbLookupForMediaItem(input.mediaItemId);
+    const introDbRecord = introDbLookup ? await fetchIntroDbMedia(introDbLookup, playback.file.duration_seconds) : null;
+    segments = clampPlaybackSegments(
+      introDbRecord ? playbackSegmentsFromMediaRecord(introDbRecord) : [],
+      playback.file.duration_seconds,
+    );
+  }
   const progress = input.skipProgress
     ? undefined
     : detail.progress.find((item) => item.media_file_id === playback.file.id);
@@ -363,6 +369,7 @@ export async function getPlaybackData(input: {
           ? 0
           : Math.floor(progress?.position_seconds ?? 0),
     segments,
+    segmentSkip,
   };
 }
 

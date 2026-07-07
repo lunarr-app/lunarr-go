@@ -41,11 +41,16 @@ Users can also set a preferred subtitle language in Profile. Lunarr still return
 
 ## Intro and credits skip (TheIntroDB)
 
-When playback starts, Lunarr can look up community-verified intro, recap, and credits timestamps from [TheIntroDB](https://theintrodb.org) and return them in `GET /api/playback/:mediaItemId` as a `segments` array. The web player shows a manual **Skip intro**, **Skip recap**, or **Skip credits** button while the playhead is inside the matching window.
+When playback starts, Lunarr can look up community-verified intro, recap, and credits timestamps from [TheIntroDB](https://theintrodb.org) and return them in `GET /api/playback/:mediaItemId` as a `segments` array. Playback responses also include `segmentSkip` with the signed-in user's skip preferences (`enabled`, `automatic`).
 
 - Lookup uses the show or movie **TMDb ID** from metadata (`provider=tmdb`). TV episodes also require season and episode numbers. Titles without TMDb metadata return `segments: []`.
 - IntroDB is queried on each playback prepare request (no local segment cache in v1) using the **selected file duration** (`duration_ms`) so timestamps can match submissions for similar runtimes. Titles without a known file duration omit that hint. Failures or missing data return `segments: []` and playback continues normally.
 - Segment markers are per metadata identity, not per file, so different releases may be slightly off.
+- When `segmentSkip.enabled` is `false`, Lunarr skips the IntroDB lookup and returns `segments: []`.
+- When enabled and `segmentSkip.automatic` is `false`, the web player shows a manual **Skip intro**, **Skip recap**, or **Skip credits** button while the playhead is inside the matching window.
+- When enabled and `segmentSkip.automatic` is `true`, the web player seeks past each segment once per title and shows a brief **Skipped intro/recap/credits** notice. Seeking back into a segment does not auto-skip again during the same playback session.
+
+Users configure segment skip on **Profile → Skip intro & credits** or through `PUT /api/profile` with `segmentSkipEnabled` and `segmentSkipAutomatic`. Defaults are enabled with manual skip. See [API](api.md#user).
 
 ## Playback Targets
 

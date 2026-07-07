@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { PlaybackSegment } from "$lib/server/playback";
-import { activePlaybackSegment, segmentSkipLabel, segmentSkipTargetSeconds } from "./segments";
+import {
+  activePlaybackSegment,
+  playbackSegmentKey,
+  segmentSkippedLabel,
+  segmentSkipLabel,
+  segmentSkipTargetSeconds,
+} from "./segments";
 
 const segments: PlaybackSegment[] = [
   {
@@ -50,5 +56,23 @@ describe("playback segment helpers", () => {
         120,
       ),
     ).toBe(120);
+  });
+
+  test("builds a stable key for auto-skip deduplication", () => {
+    expect(playbackSegmentKey(segments[0])).toBe("intro:10:40");
+    expect(
+      playbackSegmentKey({
+        type: "credits",
+        startSeconds: 100,
+        endSeconds: null,
+        label: segmentSkipLabel("credits"),
+      }),
+    ).toBe("credits:100:end");
+  });
+
+  test("labels skipped segments for auto-skip feedback", () => {
+    expect(segmentSkippedLabel("intro")).toBe("Skipped intro");
+    expect(segmentSkippedLabel("recap")).toBe("Skipped recap");
+    expect(segmentSkippedLabel("credits")).toBe("Skipped credits");
   });
 });

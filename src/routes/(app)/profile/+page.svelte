@@ -5,6 +5,7 @@
   import ProfileContinuePanel from "./_components/ProfileContinuePanel.svelte";
   import ProfileLinkDevicePanel from "./_components/ProfileLinkDevicePanel.svelte";
   import ProfilePlaybackPanel from "./_components/ProfilePlaybackPanel.svelte";
+  import ProfileSegmentSkipPanel from "./_components/ProfileSegmentSkipPanel.svelte";
 
   let { data, form } = $props();
 </script>
@@ -51,6 +52,10 @@
         transcodePolicy={data.transcodePolicy}
         playbackPreferenceError={form?.playbackPreferenceError}
       />
+    </div>
+
+    <div class="profile-panel profile-panel--segment-skip">
+      <ProfileSegmentSkipPanel segmentSkip={data.segmentSkip} segmentSkipError={form?.segmentSkipError} />
     </div>
 
     <div class="profile-panel profile-panel--continue">
@@ -123,8 +128,12 @@
       order: 5;
     }
 
-    .profile-panel--continue {
+    .profile-panel--segment-skip {
       order: 6;
+    }
+
+    .profile-panel--continue {
+      order: 7;
     }
   }
 </style>

@@ -28,6 +28,7 @@ import type {
 } from "$lib/server/libraries";
 import type { getScanJobSummary, listPlaybackSessions, listScanErrorsForJob, listScanJobs } from "$lib/server/jobs";
 import type { PlaybackData } from "$lib/server/playback";
+import type { SegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
 import type { TranscodePolicy } from "$lib/server/transcoding/policy";
 import type { CreateSharePayload, PublicShareRecord, SharePageData, ShareSeasonData } from "$lib/shares/types";
 import type { CatalogPageInfo, MovieRowsResponse, ShowRowsResponse } from "$lib/media/types";
@@ -90,6 +91,7 @@ export type MeResponse = {
   user: NonNullable<App.Locals["user"]>;
   transcodePolicy: TranscodePolicy;
   continueMaxAgeDays: number;
+  segmentSkip: SegmentSkipPreferences;
 };
 
 export type ProfilePreferencesUpdate = {
@@ -97,6 +99,8 @@ export type ProfilePreferencesUpdate = {
   preferredAudioLanguage?: unknown;
   preferredSubtitleLanguage?: unknown;
   continueMaxAgeDays?: unknown;
+  segmentSkipEnabled?: unknown;
+  segmentSkipAutomatic?: unknown;
 };
 
 export type ProfilePreferencesResponse = Omit<MeResponse, "user">;

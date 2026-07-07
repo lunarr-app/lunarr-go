@@ -52,7 +52,12 @@
     volumeStateForMuteToggle,
     volumeStateForSliderValue,
   } from "$lib/playback/controls";
-  import { activePlaybackSegment, segmentSkipTargetSeconds } from "$lib/playback/segments";
+  import {
+    activePlaybackSegment,
+    playbackSegmentKey,
+    segmentSkippedLabel,
+    segmentSkipTargetSeconds,
+  } from "$lib/playback/segments";
   import type { PlaybackData } from "$lib/server/playback";
 
   type PlayerUiState = "starting" | "playing" | "paused" | "buffering" | "seeking" | "autoplayBlocked" | "error";
@@ -274,8 +279,35 @@
   }
 
   const activeSegment = $derived(
-    activePlaybackSegment(data.segments ?? [], seekPreviewSeconds ?? currentPlaybackSeconds, durationSeconds),
+    data.segmentSkip.enabled
+      ? activePlaybackSegment(data.segments ?? [], seekPreviewSeconds ?? currentPlaybackSeconds, durationSeconds)
+      : null,
   );
+
+  let autoSkippedSegmentKeys = $state(new Set<string>());
+  let autoSkipNotice = $state<string | null>(null);
+  let autoSkipNoticeTimeout: number | null = null;
+
+  const AUTO_SKIP_NOTICE_MS = 3200;
+
+  function clearAutoSkipNotice() {
+    autoSkipNotice = null;
+    if (autoSkipNoticeTimeout !== null) {
+      window.clearTimeout(autoSkipNoticeTimeout);
+      autoSkipNoticeTimeout = null;
+    }
+  }
+
+  function showAutoSkipNotice(message: string) {
+    autoSkipNotice = message;
+    if (autoSkipNoticeTimeout !== null) {
+      window.clearTimeout(autoSkipNoticeTimeout);
+    }
+    autoSkipNoticeTimeout = window.setTimeout(() => {
+      autoSkipNotice = null;
+      autoSkipNoticeTimeout = null;
+    }, AUTO_SKIP_NOTICE_MS);
+  }
 
   function skipActiveSegment() {
     if (!activeSegment) return;
@@ -847,6 +879,24 @@
   session.runCleanupEffect();
 
   $effect(() => {
+    const mediaItemId = data.item.id;
+    void mediaItemId;
+    autoSkippedSegmentKeys = new Set();
+    clearAutoSkipNotice();
+  });
+
+  $effect(() => {
+    if (!browser || !data.segmentSkip.enabled || !data.segmentSkip.automatic || !activeSegment) return;
+    if (castLaunchState === "connecting") return;
+    if (!video && !cast.isCasting()) return;
+    const key = playbackSegmentKey(activeSegment);
+    if (autoSkippedSegmentKeys.has(key)) return;
+    autoSkippedSegmentKeys = new Set([...autoSkippedSegmentKeys, key]);
+    showAutoSkipNotice(segmentSkippedLabel(activeSegment.type));
+    skipActiveSegment();
+  });
+
+  $effect(() => {
     if (!browser) return;
     const controlsActivityTick = playerControlsActivityTick;
     void controlsActivityTick;
@@ -966,6 +1016,7 @@
     }
     clearSurfaceSingleClickTimeout();
     clearSignedPlaybackNotice();
+    clearAutoSkipNotice();
     releaseScreenWakeLock();
     session.flushProgress(data);
     cast.destroy();
@@ -1044,12 +1095,19 @@
       </div>
     {/if}
 
-    {#if activeSegment}
+    {#if activeSegment && !data.segmentSkip.automatic}
       <div class="skip-segment-prompt">
         <button class="skip-segment-button" type="button" aria-label={activeSegment.label} onclick={skipActiveSegment}>
           <SkipForward size={16} strokeWidth={2.25} aria-hidden="true" />
           <span>{activeSegment.label}</span>
         </button>
+      </div>
+    {:else if autoSkipNotice}
+      <div class="skip-segment-prompt" aria-live="polite">
+        <div class="skip-segment-notice">
+          <SkipForward size={16} strokeWidth={2.25} aria-hidden="true" />
+          <span>{autoSkipNotice}</span>
+        </div>
       </div>
     {/if}
 
@@ -1519,6 +1577,41 @@
 
   .skip-segment-button span {
     line-height: 1;
+  }
+
+  .skip-segment-notice {
+    min-height: 2.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.35rem;
+    border: 2px solid rgba(255, 255, 255, 0.72);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.62);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 0 14px rgba(255, 255, 255, 0.12),
+      0 0.35rem 1rem rgba(0, 0, 0, 0.35);
+    animation: skip-segment-notice-in 180ms ease;
+    pointer-events: none;
+  }
+
+  @keyframes skip-segment-notice-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.35rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .player-controls {

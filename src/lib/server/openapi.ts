@@ -1738,11 +1738,34 @@ export const openApiDocument = {
             description:
               "Hide idle in-progress items from Continue rails after this many days. 0 disables staleness filtering.",
           },
+          segmentSkipEnabled: {
+            type: "boolean",
+            description: "Enable intro, recap, and credits skip prompts during playback.",
+          },
+          segmentSkipAutomatic: {
+            type: "boolean",
+            description:
+              "When segment skip is enabled, skip matching segments automatically instead of showing a button.",
+          },
+        },
+      },
+      SegmentSkipPreferences: {
+        type: "object",
+        required: ["enabled", "automatic"],
+        properties: {
+          enabled: {
+            type: "boolean",
+            description: "Whether intro, recap, and credits skip is enabled.",
+          },
+          automatic: {
+            type: "boolean",
+            description: "When enabled, skip matching segments automatically instead of showing a button.",
+          },
         },
       },
       ProfilePreferencesResponse: {
         type: "object",
-        required: ["transcodePolicy", "continueMaxAgeDays"],
+        required: ["transcodePolicy", "continueMaxAgeDays", "segmentSkip"],
         properties: {
           transcodePolicy: { $ref: "#/components/schemas/TranscodePolicy" },
           continueMaxAgeDays: {
@@ -1750,11 +1773,12 @@ export const openApiDocument = {
             minimum: 0,
             maximum: 3650,
           },
+          segmentSkip: { $ref: "#/components/schemas/SegmentSkipPreferences" },
         },
       },
       MeResponse: {
         type: "object",
-        required: ["user", "transcodePolicy", "continueMaxAgeDays"],
+        required: ["user", "transcodePolicy", "continueMaxAgeDays", "segmentSkip"],
         properties: {
           user: { $ref: "#/components/schemas/User" },
           transcodePolicy: { $ref: "#/components/schemas/TranscodePolicy" },
@@ -1763,6 +1787,7 @@ export const openApiDocument = {
             minimum: 0,
             maximum: 3650,
           },
+          segmentSkip: { $ref: "#/components/schemas/SegmentSkipPreferences" },
         },
       },
       TranscodePolicy: {
@@ -2904,7 +2929,7 @@ export const openApiDocument = {
       },
       PlaybackDataResponse: {
         type: "object",
-        required: ["item", "playback", "startSeconds", "segments"],
+        required: ["item", "playback", "startSeconds", "segments", "segmentSkip"],
         properties: {
           item: { $ref: "#/components/schemas/PlaybackItem" },
           playback: { $ref: "#/components/schemas/PlaybackDecision" },
@@ -2913,6 +2938,7 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/PlaybackSegment" },
           },
+          segmentSkip: { $ref: "#/components/schemas/SegmentSkipPreferences" },
         },
       },
       PlaybackSegment: {

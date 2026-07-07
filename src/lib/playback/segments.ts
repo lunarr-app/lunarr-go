@@ -13,6 +13,17 @@ export function segmentSkipLabel(type: PlaybackSegmentType) {
   }
 }
 
+export function segmentSkippedLabel(type: PlaybackSegmentType) {
+  switch (type) {
+    case "intro":
+      return "Skipped intro";
+    case "recap":
+      return "Skipped recap";
+    case "credits":
+      return "Skipped credits";
+  }
+}
+
 function segmentWindowEnd(segment: PlaybackSegment, durationSeconds: number | null | undefined) {
   const resolvedEnd =
     segment.endSeconds ??
@@ -34,6 +45,10 @@ export function activePlaybackSegment(segments: PlaybackSegment[], seconds: numb
   }
 
   return null;
+}
+
+export function playbackSegmentKey(segment: PlaybackSegment) {
+  return `${segment.type}:${segment.startSeconds}:${segment.endSeconds ?? "end"}`;
 }
 
 export function segmentSkipTargetSeconds(segment: PlaybackSegment, durationSeconds: number | null | undefined) {

@@ -219,3 +219,5 @@ Each signed-in user can set a staleness window on **Profile** (0–3650 days). `
 Affected surfaces: the Continue page, home-screen `continueWatching` / `nextUp` rails, and `GET /api/continue`. Browse `all` rails and detail pages are not filtered.
 
 API: `GET /api/me` returns `continueMaxAgeDays`. Update preferences with `PUT /api/profile` and a partial body such as `{ "continueMaxAgeDays": 90 }`.
+
+Segment skip preferences (`segmentSkip.enabled`, `segmentSkip.automatic`) are also available from `GET /api/me` and playback responses. Update them with `PUT /api/profile` using `segmentSkipEnabled` and `segmentSkipAutomatic`. See [Playback](playback.md#intro-and-credits-skip-theintrodb).

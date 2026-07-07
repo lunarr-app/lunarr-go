@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SettingsSwitchField from "./SettingsSwitchField.svelte";
+  import SwitchField from "$lib/components/SwitchField.svelte";
 
   let {
     signupOpen: initialSignupOpen,
@@ -30,7 +30,7 @@
   </div>
 
   <div class="ops-panel-body">
-    <SettingsSwitchField
+    <SwitchField
       name="signupOpen"
       title="Allow new users"
       description={signupOpen ? "Registration open" : "Registration closed"}

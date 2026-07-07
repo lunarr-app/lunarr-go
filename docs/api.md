@@ -104,20 +104,22 @@ GET /api/me
 PUT /api/profile
 ```
 
-`GET /api/me` returns the signed-in `user`, `transcodePolicy`, and `continueMaxAgeDays`.
+`GET /api/me` returns the signed-in `user`, `transcodePolicy`, `continueMaxAgeDays`, and `segmentSkip`.
 
-`PUT /api/profile` accepts a partial JSON body and updates only the fields you send. At least one field is required. The response returns the updated preference snapshot (`transcodePolicy`, `continueMaxAgeDays`).
+`PUT /api/profile` accepts a partial JSON body and updates only the fields you send. At least one field is required. The response returns the updated preference snapshot (`transcodePolicy`, `continueMaxAgeDays`, `segmentSkip`).
 
 ```json
 {
   "playbackPreference": "auto",
   "preferredAudioLanguage": "eng",
   "preferredSubtitleLanguage": "eng",
-  "continueMaxAgeDays": 90
+  "continueMaxAgeDays": 90,
+  "segmentSkipEnabled": true,
+  "segmentSkipAutomatic": false
 }
 ```
 
-Supported playback and language values are normalized by the server. `continueMaxAgeDays` is 0–3650; use `0` to disable Continue staleness filtering.
+Supported playback and language values are normalized by the server. `continueMaxAgeDays` is 0–3650. Use `0` to disable Continue staleness filtering. `segmentSkipEnabled` controls whether intro, recap, and credits skip is available during playback. When enabled, `segmentSkipAutomatic` chooses between showing a skip button and skipping automatically.
 
 ## Catalog
 

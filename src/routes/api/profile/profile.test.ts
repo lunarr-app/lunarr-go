@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
+import { getSegmentSkipPreferences, setSegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
 import {
   getTranscodePolicy,
   setUserPlaybackPreference,
@@ -63,6 +64,10 @@ describe("PUT /api/profile", () => {
         preferredSubtitleLanguage: "eng",
       },
       continueMaxAgeDays: 0,
+      segmentSkip: {
+        enabled: true,
+        automatic: false,
+      },
     });
     expect(await getTranscodePolicy("user-1")).toMatchObject({
       playbackPreference: "prefer_transcode",
@@ -135,6 +140,25 @@ describe("PUT /api/profile", () => {
         preferredAudioLanguage: "jpn",
         preferredSubtitleLanguage: "eng",
       },
+    });
+  });
+
+  test("updates segment skip preferences", async () => {
+    const response = await putProfile({
+      segmentSkipEnabled: false,
+      segmentSkipAutomatic: true,
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      segmentSkip: {
+        enabled: false,
+        automatic: true,
+      },
+    });
+    expect(await getSegmentSkipPreferences("user-1")).toEqual({
+      enabled: false,
+      automatic: true,
     });
   });
 });

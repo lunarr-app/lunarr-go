@@ -134,6 +134,20 @@ export const actions: Actions = {
 
     throw redirect(303, "/profile");
   },
+  saveSegmentSkip: async ({ request, locals }) => {
+    if (!locals.user)
+      return fail(401, {
+        segmentSkipError: "Sign in to update skip settings.",
+      });
+
+    const form = await request.formData();
+    await updateUserProfilePreferences(locals.user.id, {
+      segmentSkipEnabled: form.has("segmentSkipEnabled"),
+      segmentSkipAutomatic: form.get("segmentSkipAutomatic"),
+    });
+
+    throw redirect(303, "/profile");
+  },
   saveContinueMaxAge: async ({ request, locals }) => {
     if (!locals.user)
       return fail(401, {

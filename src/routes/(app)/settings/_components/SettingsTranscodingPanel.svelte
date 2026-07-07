@@ -1,7 +1,7 @@
 <script lang="ts">
   import { formatGibibytes } from "$lib/media/format";
   import SettingsActionRow from "./SettingsActionRow.svelte";
-  import SettingsSwitchField from "./SettingsSwitchField.svelte";
+  import SwitchField from "$lib/components/SwitchField.svelte";
   import { Trash2 } from "@lucide/svelte";
 
   let {
@@ -61,7 +61,7 @@
 
   <form method="POST" action="?/saveTranscoding" bind:this={transcodingForm}>
     <div class="ops-panel-body">
-      <SettingsSwitchField
+      <SwitchField
         name="transcodingEnabled"
         title="Allow transcoding"
         description={transcodingEnabled ? "Unsupported files can use HLS playback" : "Direct play only"}

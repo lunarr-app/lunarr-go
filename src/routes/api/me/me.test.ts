@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
+import { setSegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
 import { setUserPlaybackPreference } from "$lib/server/transcoding/policy";
 import { GET } from "./+server";
 
@@ -16,6 +17,7 @@ describe("GET /api/me", () => {
     await migrateDatabase();
     await setUserPlaybackPreference("user-1", "prefer_direct");
     await setUserContinueMaxAgeDays("user-1", 90);
+    await setSegmentSkipPreferences("user-1", { enabled: false, automatic: true });
   });
 
   afterEach(async () => {
@@ -44,6 +46,10 @@ describe("GET /api/me", () => {
         role: "user",
       },
       continueMaxAgeDays: 90,
+      segmentSkip: {
+        enabled: false,
+        automatic: true,
+      },
       transcodePolicy: {
         playbackPreference: "prefer_direct",
       },
