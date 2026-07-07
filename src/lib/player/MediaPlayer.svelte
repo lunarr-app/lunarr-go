@@ -1343,16 +1343,14 @@
     --color-text: #f8fafc;
     --color-text-soft: rgba(248, 250, 252, 0.82);
     --color-border-strong: rgba(255, 255, 255, 0.18);
-    --color-accent: #00ccff;
-    --color-accent-soft: rgba(0, 168, 214, 0.14);
     --player-border-subtle: rgba(255, 255, 255, 0.28);
-    --player-focus-ring: rgba(0, 204, 255, 0.78);
-    --player-accent: var(--color-accent);
-    --player-accent-strong: var(--color-accent);
-    --player-accent-hover: var(--color-accent-soft);
-    --player-accent-hover-text: var(--color-accent);
-    --player-accent-active: var(--color-accent-soft);
-    --player-accent-active-text: var(--color-accent);
+    --player-focus-ring: rgba(255, 255, 255, 0.75);
+    --player-accent: #f8fafc;
+    --player-accent-strong: #f8fafc;
+    --player-accent-hover: rgba(255, 255, 255, 0.12);
+    --player-accent-hover-text: #f8fafc;
+    --player-accent-active: rgba(255, 255, 255, 0.18);
+    --player-accent-active-text: #f8fafc;
     outline: none;
     color: var(--color-text);
   }
