@@ -1,19 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { PlaybackSegment } from "$lib/server/playback";
-import {
-  activePlaybackSegment,
-  playbackSegmentKey,
-  segmentSkippedLabel,
-  segmentSkipLabel,
-  segmentSkipTargetSeconds,
-} from "./segments";
+import { activePlaybackSegment, playbackSegmentKey, segmentSkipTargetSeconds } from "./segments";
 
 const segments: PlaybackSegment[] = [
   {
     type: "intro",
     startSeconds: 10,
     endSeconds: 40,
-    label: segmentSkipLabel("intro"),
+    label: "Skip intro",
   },
 ];
 
@@ -33,7 +27,7 @@ describe("playback segment helpers", () => {
         type: "credits",
         startSeconds: 100,
         endSeconds: null,
-        label: segmentSkipLabel("credits"),
+        label: "Skip credits",
       },
     ];
 
@@ -51,7 +45,7 @@ describe("playback segment helpers", () => {
           type: "credits",
           startSeconds: 100,
           endSeconds: null,
-          label: segmentSkipLabel("credits"),
+          label: "Skip credits",
         },
         120,
       ),
@@ -65,14 +59,8 @@ describe("playback segment helpers", () => {
         type: "credits",
         startSeconds: 100,
         endSeconds: null,
-        label: segmentSkipLabel("credits"),
+        label: "Skip credits",
       }),
     ).toBe("credits:100:end");
-  });
-
-  test("labels skipped segments for auto-skip feedback", () => {
-    expect(segmentSkippedLabel("intro")).toBe("Skipped intro");
-    expect(segmentSkippedLabel("recap")).toBe("Skipped recap");
-    expect(segmentSkippedLabel("credits")).toBe("Skipped credits");
   });
 });

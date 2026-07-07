@@ -736,9 +736,6 @@
     seekToPlaybackSeconds,
   });
 
-  const activeSegment = $derived(segments.activeSegment);
-  const autoSkipNotice = $derived(segments.autoSkipNotice);
-
   async function toggleFullscreen() {
     if (!browser || !playerShell) return;
     const safariVideo = video as SafariVideoElement | undefined;
@@ -1050,23 +1047,23 @@
       </div>
     {/if}
 
-    {#if activeSegment && !data.segmentSkip.automatic}
+    {#if segments.activeSegment && !data.segmentSkip.automatic}
       <div class="skip-segment-prompt">
         <button
           class="skip-segment-button"
           type="button"
-          aria-label={activeSegment.label}
+          aria-label={segments.activeSegment.label}
           onclick={segments.skipActiveSegment}
         >
           <SkipForward size={16} strokeWidth={2.25} aria-hidden="true" />
-          <span>{activeSegment.label}</span>
+          <span>{segments.activeSegment.label}</span>
         </button>
       </div>
-    {:else if autoSkipNotice}
+    {:else if segments.autoSkipNotice}
       <div class="skip-segment-prompt" aria-live="polite">
         <div class="skip-segment-notice">
           <SkipForward size={16} strokeWidth={2.25} aria-hidden="true" />
-          <span>{autoSkipNotice}</span>
+          <span>{segments.autoSkipNotice}</span>
         </div>
       </div>
     {/if}

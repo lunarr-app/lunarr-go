@@ -2,7 +2,7 @@ import { browser } from "$app/environment";
 import {
   activePlaybackSegment,
   playbackSegmentKey,
-  segmentSkippedLabel,
+  SEGMENT_LABELS,
   segmentSkipTargetSeconds,
 } from "$lib/playback/segments";
 import type { PlaybackData, PlaybackSegment } from "$lib/server/playback";
@@ -21,7 +21,7 @@ export function createMediaPlayerSegments(deps: MediaPlayerSegmentsDeps) {
   const activeSegment = $derived.by(() => {
     const data = deps.getData();
     if (!data.segmentSkip.enabled) return null;
-    return activePlaybackSegment(data.segments ?? [], deps.getDisplayedPlaybackSeconds(), deps.getDurationSeconds());
+    return activePlaybackSegment(data.segments, deps.getDisplayedPlaybackSeconds(), deps.getDurationSeconds());
   });
 
   let autoSkippedSegmentKeys = $state(new Set<string>());
@@ -72,7 +72,7 @@ export function createMediaPlayerSegments(deps: MediaPlayerSegmentsDeps) {
       const key = playbackSegmentKey(segment);
       if (autoSkippedSegmentKeys.has(key)) return;
       autoSkippedSegmentKeys = new Set([...autoSkippedSegmentKeys, key]);
-      showAutoSkipNotice(segmentSkippedLabel(segment.type));
+      showAutoSkipNotice(SEGMENT_LABELS[segment.type].skipped);
       skipActiveSegment();
     });
   }

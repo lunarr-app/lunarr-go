@@ -1,9 +1,9 @@
 import type { ProfilePreferencesUpdate } from "$lib/server/api/types";
 import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
 import {
+  DEFAULT_SEGMENT_SKIP_PREFERENCES,
   getSegmentSkipPreferences,
-  normalizeSegmentSkipAutomatic,
-  normalizeSegmentSkipEnabled,
+  normalizeBooleanSetting,
   setSegmentSkipPreferences,
   type SegmentSkipPreferences,
 } from "$lib/server/playback/segment-skip-preferences";
@@ -43,13 +43,15 @@ export async function updateUserProfilePreferences(userId: string, body: Profile
   }
   const segmentSkipUpdate: Partial<SegmentSkipPreferences> = {};
   if ("segmentSkipEnabled" in body) {
-    segmentSkipUpdate.enabled = normalizeSegmentSkipEnabled(
+    segmentSkipUpdate.enabled = normalizeBooleanSetting(
       body.segmentSkipEnabled as string | boolean | null | undefined,
+      DEFAULT_SEGMENT_SKIP_PREFERENCES.enabled,
     );
   }
   if ("segmentSkipAutomatic" in body) {
-    segmentSkipUpdate.automatic = normalizeSegmentSkipAutomatic(
+    segmentSkipUpdate.automatic = normalizeBooleanSetting(
       body.segmentSkipAutomatic as string | boolean | null | undefined,
+      DEFAULT_SEGMENT_SKIP_PREFERENCES.automatic,
     );
   }
   if (Object.keys(segmentSkipUpdate).length > 0) {

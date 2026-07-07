@@ -6,12 +6,7 @@ import {
 } from "$lib/playback/capabilities";
 import { normalizePreferredLanguage } from "$lib/media/preferred-language";
 import { getDb } from "../db";
-import {
-  clampPlaybackSegments,
-  fetchIntroDbMedia,
-  introDbLookupForMediaItem,
-  playbackSegmentsFromMediaRecord,
-} from "../introdb";
+import { loadPlaybackSegmentsForMediaItem } from "../introdb";
 import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media/files";
 import { getSegmentSkipPreferences, type SegmentSkipPreferences } from "./segment-skip-preferences";
 import { nowIso } from "../time";
@@ -345,17 +340,9 @@ export async function getPlaybackData(input: {
     getSegmentSkipPreferences(input.userId),
   ]);
   if (!playback?.file) return null;
-  let segments: PlaybackSegment[] = [];
-  if (segmentSkip.enabled) {
-    const introDbLookup = await introDbLookupForMediaItem(input.mediaItemId);
-    if (introDbLookup) {
-      const introDbRecord = await fetchIntroDbMedia(introDbLookup, playback.file.duration_seconds);
-      segments = clampPlaybackSegments(
-        introDbRecord ? playbackSegmentsFromMediaRecord(introDbRecord) : [],
-        playback.file.duration_seconds,
-      );
-    }
-  }
+  const segments = segmentSkip.enabled
+    ? await loadPlaybackSegmentsForMediaItem(input.mediaItemId, playback.file.duration_seconds)
+    : [];
   const progress = input.skipProgress
     ? undefined
     : detail.progress.find((item) => item.media_file_id === playback.file.id);

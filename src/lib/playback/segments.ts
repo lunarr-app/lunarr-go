@@ -2,27 +2,11 @@ import type { PlaybackSegment, PlaybackSegmentType } from "$lib/server/playback"
 
 const SEGMENT_LEAD_OUT_SECONDS = 2;
 
-export function segmentSkipLabel(type: PlaybackSegmentType) {
-  switch (type) {
-    case "intro":
-      return "Skip intro";
-    case "recap":
-      return "Skip recap";
-    case "credits":
-      return "Skip credits";
-  }
-}
-
-export function segmentSkippedLabel(type: PlaybackSegmentType) {
-  switch (type) {
-    case "intro":
-      return "Skipped intro";
-    case "recap":
-      return "Skipped recap";
-    case "credits":
-      return "Skipped credits";
-  }
-}
+export const SEGMENT_LABELS: Record<PlaybackSegmentType, { skip: string; skipped: string }> = {
+  intro: { skip: "Skip intro", skipped: "Skipped intro" },
+  recap: { skip: "Skip recap", skipped: "Skipped recap" },
+  credits: { skip: "Skip credits", skipped: "Skipped credits" },
+};
 
 function segmentWindowEnd(segment: PlaybackSegment, durationSeconds: number | null | undefined) {
   const resolvedEnd =

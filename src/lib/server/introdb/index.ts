@@ -1,4 +1,4 @@
-import { segmentSkipLabel } from "$lib/playback/segments";
+import { SEGMENT_LABELS } from "$lib/playback/segments";
 import { getDb } from "$lib/server/db";
 import type { PlaybackSegment, PlaybackSegmentType } from "$lib/server/playback";
 import { getMedia, type GetMediaParams, type MediaRecord, type NormalizedSegmentTimestamp } from "theintrodb";
@@ -118,6 +118,17 @@ export function clampPlaybackSegments(
   });
 }
 
+export async function loadPlaybackSegmentsForMediaItem(
+  mediaItemId: string,
+  durationSeconds: number | null | undefined,
+): Promise<PlaybackSegment[]> {
+  const introDbLookup = await introDbLookupForMediaItem(mediaItemId);
+  if (!introDbLookup) return [];
+
+  const introDbRecord = await fetchIntroDbMedia(introDbLookup, durationSeconds);
+  return clampPlaybackSegments(introDbRecord ? playbackSegmentsFromMediaRecord(introDbRecord) : [], durationSeconds);
+}
+
 export async function fetchIntroDbMedia(
   lookup: GetMediaParams,
   durationSeconds?: number | null,
@@ -167,7 +178,7 @@ function playbackSegmentFromTimestamp(
     type,
     startSeconds,
     endSeconds,
-    label: segmentSkipLabel(type),
+    label: SEGMENT_LABELS[type].skip,
   };
 }
 

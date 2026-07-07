@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import {
+  DEFAULT_SEGMENT_SKIP_PREFERENCES,
   getSegmentSkipPreferences,
-  normalizeSegmentSkipAutomatic,
-  normalizeSegmentSkipEnabled,
+  normalizeBooleanSetting,
   setSegmentSkipPreferences,
 } from "./segment-skip-preferences";
 
@@ -25,17 +25,17 @@ describe("segment skip preferences", () => {
   });
 
   test("normalizes enabled values", () => {
-    expect(normalizeSegmentSkipEnabled(true)).toBe(true);
-    expect(normalizeSegmentSkipEnabled("on")).toBe(true);
-    expect(normalizeSegmentSkipEnabled("0")).toBe(false);
-    expect(normalizeSegmentSkipEnabled(undefined)).toBe(true);
+    expect(normalizeBooleanSetting(true, DEFAULT_SEGMENT_SKIP_PREFERENCES.enabled)).toBe(true);
+    expect(normalizeBooleanSetting("on", DEFAULT_SEGMENT_SKIP_PREFERENCES.enabled)).toBe(true);
+    expect(normalizeBooleanSetting("0", DEFAULT_SEGMENT_SKIP_PREFERENCES.enabled)).toBe(false);
+    expect(normalizeBooleanSetting(undefined, DEFAULT_SEGMENT_SKIP_PREFERENCES.enabled)).toBe(true);
   });
 
   test("normalizes automatic values", () => {
-    expect(normalizeSegmentSkipAutomatic(true)).toBe(true);
-    expect(normalizeSegmentSkipAutomatic("1")).toBe(true);
-    expect(normalizeSegmentSkipAutomatic("false")).toBe(false);
-    expect(normalizeSegmentSkipAutomatic(undefined)).toBe(false);
+    expect(normalizeBooleanSetting(true, DEFAULT_SEGMENT_SKIP_PREFERENCES.automatic)).toBe(true);
+    expect(normalizeBooleanSetting("1", DEFAULT_SEGMENT_SKIP_PREFERENCES.automatic)).toBe(true);
+    expect(normalizeBooleanSetting("false", DEFAULT_SEGMENT_SKIP_PREFERENCES.automatic)).toBe(false);
+    expect(normalizeBooleanSetting(undefined, DEFAULT_SEGMENT_SKIP_PREFERENCES.automatic)).toBe(false);
   });
 
   test("stores per-user segment skip preferences", async () => {
@@ -58,9 +58,6 @@ describe("segment skip preferences", () => {
   });
 
   test("defaults when user id is missing", async () => {
-    expect(await getSegmentSkipPreferences(null)).toEqual({
-      enabled: true,
-      automatic: false,
-    });
+    expect(await getSegmentSkipPreferences(null)).toEqual(DEFAULT_SEGMENT_SKIP_PREFERENCES);
   });
 });

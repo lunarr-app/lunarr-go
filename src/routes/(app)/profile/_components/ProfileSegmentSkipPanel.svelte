@@ -18,10 +18,6 @@
     segmentSkipEnabled = initialSegmentSkip.enabled;
     segmentSkipAutomatic = initialSegmentSkip.automatic;
   });
-
-  function submitSegmentSkip() {
-    segmentSkipForm?.requestSubmit();
-  }
 </script>
 
 <form class="ops-panel" method="POST" action="?/saveSegmentSkip" bind:this={segmentSkipForm}>
@@ -40,7 +36,7 @@
         ? "Lunarr looks up segment timestamps when playback starts"
         : "Segment skip is turned off"}
       bind:checked={segmentSkipEnabled}
-      onchange={submitSegmentSkip}
+      onchange={() => segmentSkipForm?.requestSubmit()}
     />
 
     <label>
@@ -54,7 +50,7 @@
         disabled={!segmentSkipEnabled}
         onchange={(event) => {
           segmentSkipAutomatic = event.currentTarget.value === "1";
-          submitSegmentSkip();
+          segmentSkipForm?.requestSubmit();
         }}
       >
         <option value="0">Show skip button</option>
