@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added on-play IntroDB intro/recap/credits skip markers in playback responses via the official `theintrodb` client (TMDb lookup), with manual skip buttons in the web player ([TheIntroDB](https://theintrodb.org)).
 - Added per-user Continue staleness filtering on Profile (`continueMaxAgeDays`, 0–3650 days), hiding idle in-progress items from Continue rails while keeping resume on detail pages.
 - Continue rails now ignore accidental starts shorter than 60 seconds.
 - Added scheduled TMDb metadata refresh settings for movies and TV shows, with separate hour-based intervals and staleness windows for admin-controlled background refreshes.

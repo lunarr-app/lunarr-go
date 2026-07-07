@@ -24,6 +24,12 @@ type WatchLoadResult = {
     backHref: string;
   };
   startSeconds: number;
+  segments: Array<{
+    type: string;
+    startSeconds: number;
+    endSeconds: number | null;
+    label: string;
+  }>;
   playback: {
     mode: "direct" | "remux" | "transcode" | "unavailable";
     status: "ready" | "preparing" | "unavailable";
@@ -287,6 +293,7 @@ describe("playback data", () => {
     })) as WatchLoadResult;
 
     expect(result.startSeconds).toBe(45);
+    expect(result.segments).toEqual([]);
     expect(result.item).toMatchObject({
       id: "movie-1",
       kind: "movie",

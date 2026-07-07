@@ -12,6 +12,7 @@
     Pause,
     Play,
     Rewind,
+    SkipForward,
     Volume2,
     VolumeX,
     X,
@@ -51,6 +52,7 @@
     volumeStateForMuteToggle,
     volumeStateForSliderValue,
   } from "$lib/playback/controls";
+  import { activePlaybackSegment, segmentSkipTargetSeconds } from "$lib/playback/segments";
   import type { PlaybackData } from "$lib/server/playback";
 
   type PlayerUiState = "starting" | "playing" | "paused" | "buffering" | "seeking" | "autoplayBlocked" | "error";
@@ -271,6 +273,15 @@
     return seekPreviewSeconds ?? currentPlaybackSeconds;
   }
 
+  const activeSegment = $derived(
+    activePlaybackSegment(data.segments ?? [], seekPreviewSeconds ?? currentPlaybackSeconds, durationSeconds),
+  );
+
+  function skipActiveSegment() {
+    if (!activeSegment) return;
+    seekToPlaybackSeconds(segmentSkipTargetSeconds(activeSegment, durationSeconds));
+  }
+
   function seekSliderMax() {
     return Math.max(1, Math.ceil(durationSeconds ?? currentPlaybackSeconds ?? 1));
   }
@@ -423,6 +434,8 @@
       durationSeconds: duration,
     });
     timelineDurationSeconds = duration;
+    // Keep playhead reactive for overlays (e.g. skip intro) even when controls auto-hide.
+    currentPlaybackSeconds = timelinePlaybackSeconds;
     if (
       shouldSyncTimelineUiNow({
         controlsBarVisible: customControlsVisible,
@@ -432,7 +445,6 @@
         nowMs: browser ? window.performance.now() : 0,
       })
     ) {
-      currentPlaybackSeconds = timelinePlaybackSeconds;
       durationSeconds = timelineDurationSeconds;
       lastTimelineUiSyncAt = browser ? window.performance.now() : 0;
     }
@@ -977,7 +989,6 @@
     onkeydown={handlePlayerKeydown}
     onpointermove={handlePlayerPointerMove}
   >
-    <!-- svelte-ignore a11y_media_has_caption -->
     <video
       bind:this={video}
       playsinline
@@ -985,7 +996,7 @@
       onplay={() => (hasPlaybackActivity = true)}
       onpause={() => session.save(false)}
     >
-      {#each data.playback.tracks as track}
+      {#each data.playback.tracks as track (track.id)}
         <track
           data-track-id={track.id}
           kind="subtitles"
@@ -997,7 +1008,6 @@
       {/each}
     </video>
 
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="video-tap-target"
       aria-hidden="true"
@@ -1031,6 +1041,15 @@
       <div class="signed-playback-notice" aria-live="polite">
         <span class="overlay-error" aria-hidden="true">!</span>
         <p>{signedPlaybackNotice}</p>
+      </div>
+    {/if}
+
+    {#if activeSegment}
+      <div class="skip-segment-prompt">
+        <button class="skip-segment-button" type="button" aria-label={activeSegment.label} onclick={skipActiveSegment}>
+          <SkipForward size={16} strokeWidth={2.25} aria-hidden="true" />
+          <span>{activeSegment.label}</span>
+        </button>
       </div>
     {/if}
 
@@ -1238,7 +1257,7 @@
                       >
                         Off
                       </button>
-                      {#each data.playback.tracks as track}
+                      {#each data.playback.tracks as track (track.id)}
                         <button
                           class:active={selectedSubtitleId === track.id}
                           type="button"
@@ -1445,6 +1464,61 @@
     height: 1.35rem;
     flex: 0 0 auto;
     font-size: 0.9rem;
+  }
+
+  .skip-segment-prompt {
+    position: absolute;
+    right: 1.25rem;
+    /* Fixed above the bottom control chrome (seek + transport), whether controls are visible or not. */
+    bottom: calc(7.75rem + env(safe-area-inset-bottom, 0px));
+    z-index: 4;
+    pointer-events: auto;
+  }
+
+  .skip-segment-button {
+    min-height: 2.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.35rem;
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.58);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 0 14px rgba(255, 255, 255, 0.12),
+      0 0.35rem 1rem rgba(0, 0, 0, 0.35);
+    touch-action: manipulation;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .skip-segment-button:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.72);
+    border-color: #fff;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.16),
+      0 0 18px rgba(255, 255, 255, 0.2),
+      0 0.35rem 1rem rgba(0, 0, 0, 0.4);
+  }
+
+  .skip-segment-button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+  }
+
+  .skip-segment-button span {
+    line-height: 1;
   }
 
   .player-controls {
@@ -1837,6 +1911,17 @@
     .time-readout {
       min-width: 6.6rem;
       font-size: 0.76rem;
+    }
+
+    .skip-segment-prompt {
+      right: 1rem;
+      bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .skip-segment-button {
+      min-height: 2.75rem;
+      padding: 0.55rem 1.15rem;
+      font-size: 0.84rem;
     }
   }
 

@@ -2904,11 +2904,25 @@ export const openApiDocument = {
       },
       PlaybackDataResponse: {
         type: "object",
-        required: ["item", "playback", "startSeconds"],
+        required: ["item", "playback", "startSeconds", "segments"],
         properties: {
           item: { $ref: "#/components/schemas/PlaybackItem" },
           playback: { $ref: "#/components/schemas/PlaybackDecision" },
           startSeconds: { type: "number", minimum: 0 },
+          segments: {
+            type: "array",
+            items: { $ref: "#/components/schemas/PlaybackSegment" },
+          },
+        },
+      },
+      PlaybackSegment: {
+        type: "object",
+        required: ["type", "startSeconds", "endSeconds", "label"],
+        properties: {
+          type: { type: "string", enum: ["intro", "recap", "credits"] },
+          startSeconds: { type: "number", minimum: 0 },
+          endSeconds: { oneOf: [{ type: "number", minimum: 0 }, { type: "null" }] },
+          label: { type: "string" },
         },
       },
       JobSummary: {

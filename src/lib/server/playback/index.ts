@@ -7,6 +7,12 @@ import {
 import { normalizePreferredLanguage } from "$lib/media/preferred-language";
 import { getDb } from "../db";
 import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media/files";
+import {
+  clampPlaybackSegments,
+  fetchIntroDbMedia,
+  introDbLookupForMediaItem,
+  playbackSegmentsFromMediaRecord,
+} from "../introdb";
 import { nowIso } from "../time";
 import { decidePlaybackMode, type PlaybackModeDecision } from "../transcoding/capabilities";
 import {
@@ -50,10 +56,20 @@ export type PlaybackItem = {
   backHref: string;
 };
 
+export type PlaybackSegmentType = "intro" | "recap" | "credits";
+
+export type PlaybackSegment = {
+  type: PlaybackSegmentType;
+  startSeconds: number;
+  endSeconds: number | null;
+  label: string;
+};
+
 export type PlaybackData = {
   item: PlaybackItem;
   playback: PlaybackDecision;
   startSeconds: number;
+  segments: PlaybackSegment[];
 };
 
 export type PlaybackProgressBody = {
@@ -324,6 +340,12 @@ export async function getPlaybackData(input: {
     playbackTarget: normalizePlaybackTarget(input.url.searchParams.get("target")),
   });
   if (!playback?.file) return null;
+  const introDbLookup = await introDbLookupForMediaItem(input.mediaItemId);
+  const introDbRecord = introDbLookup ? await fetchIntroDbMedia(introDbLookup, playback.file.duration_seconds) : null;
+  const segments = clampPlaybackSegments(
+    introDbRecord ? playbackSegmentsFromMediaRecord(introDbRecord) : [],
+    playback.file.duration_seconds,
+  );
   const progress = input.skipProgress
     ? undefined
     : detail.progress.find((item) => item.media_file_id === playback.file.id);
@@ -340,6 +362,7 @@ export async function getPlaybackData(input: {
         : progress?.completed
           ? 0
           : Math.floor(progress?.position_seconds ?? 0),
+    segments,
   };
 }
 

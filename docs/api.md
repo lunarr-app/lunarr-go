@@ -287,7 +287,7 @@ GET /media/playback-sessions/:sessionId/segments/:segment
 HEAD /media/playback-sessions/:sessionId/segments/:segment
 ```
 
-`GET /api/playback/:mediaItemId` prepares playback for a movie or episode. The response includes item metadata, the selected file, subtitle tracks, the resolved playback mode (`direct`, `remux`, `transcode`, or `unavailable`), and a ready `streamUrl` when playback can start.
+`GET /api/playback/:mediaItemId` prepares playback for a movie or episode. The response includes item metadata, the selected file, subtitle tracks, optional IntroDB `segments` for manual intro/recap/credits skip in the web player, the resolved playback mode (`direct`, `remux`, `transcode`, or `unavailable`), and a ready `streamUrl` when playback can start.
 
 Progress body for `POST /api/playback/:mediaItemId`:
 

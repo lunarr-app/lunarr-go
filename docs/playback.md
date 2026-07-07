@@ -39,6 +39,14 @@ Users can set a preferred audio language in Profile. Temporary HLS transcoding p
 
 Users can also set a preferred subtitle language in Profile. Lunarr still returns applicable external subtitle tracks for the selected file, but marks the matching language as the default track when available.
 
+## Intro and credits skip (TheIntroDB)
+
+When playback starts, Lunarr can look up community-verified intro, recap, and credits timestamps from [TheIntroDB](https://theintrodb.org) and return them in `GET /api/playback/:mediaItemId` as a `segments` array. The web player shows a manual **Skip intro**, **Skip recap**, or **Skip credits** button while the playhead is inside the matching window.
+
+- Lookup uses the show or movie **TMDb ID** from metadata (`provider=tmdb`). TV episodes also require season and episode numbers. Titles without TMDb metadata return `segments: []`.
+- IntroDB is queried on each playback prepare request (no local segment cache in v1) using the **selected file duration** (`duration_ms`) so timestamps can match submissions for similar runtimes. Titles without a known file duration omit that hint. Failures or missing data return `segments: []` and playback continues normally.
+- Segment markers are per metadata identity, not per file, so different releases may be slightly off.
+
 ## Playback Targets
 
 `GET /api/playback/:mediaItemId` accepts a `target` query parameter. Lunarr uses the target to choose a client capability profile before it decides between direct play and temporary HLS. The web player omits `target` (equivalent to `web`). Cast, AirPlay, and API clients set `target` explicitly when preparing playback.
