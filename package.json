@@ -31,7 +31,7 @@
     "better-auth": "1.6.23",
     "chokidar": "5.0.0",
     "hls.js": "1.6.16",
-    "kysely": "0.29.2",
+    "kysely": "0.29.3",
     "libsql": "0.5.29",
     "node-av": "6.1.0",
     "ssh2": "1.17.0",
