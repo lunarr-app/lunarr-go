@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatEpisodeCode } from "$lib/media/format";
+  import { formatEpisodeCode, formatFileCountLabel } from "$lib/media/format";
   import { Calendar, Check, CirclePlay, Clock3, RotateCcw } from "@lucide/svelte";
 
   type Episode = {
@@ -92,10 +92,7 @@
               >
             {/if}
             {#if episode.fileId}
-              <span
-                >{episode.fileCount}
-                {episode.fileCount === 1 ? "file" : "files"}</span
-              >
+              <span>{formatFileCountLabel(episode.fileCount)}</span>
             {:else}
               <span class="missing-badge">Missing</span>
             {/if}

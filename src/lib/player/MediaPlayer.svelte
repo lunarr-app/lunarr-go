@@ -169,6 +169,11 @@
     anchorPointerControlsAt(lastPointerClientX, lastPointerClientY);
   }
 
+  function notePointerInteraction(clientX: number, clientY: number) {
+    recordPointerSample(clientX, clientY);
+    anchorPointerControlsAt(clientX, clientY);
+  }
+
   function setPlaybackErrorDetail(message: string | null) {
     const trimmed = message?.trim() ?? "";
     playbackErrorDetail = trimmed.length > 0 ? trimmed : null;
@@ -310,7 +315,6 @@
 
   function hideControls() {
     playerControlsVisible = false;
-    anchorPointerControlsFromLastSample();
   }
 
   function handlePlayerPointerMove(event: PointerEvent) {
@@ -400,20 +404,17 @@
       return;
     }
     if (intent === "hide-controls") {
-      recordPointerSample(event.clientX, event.clientY);
-      anchorPointerControlsAt(event.clientX, event.clientY);
+      notePointerInteraction(event.clientX, event.clientY);
       hideControls();
       return;
     }
     if (intent === "show-controls") {
-      recordPointerSample(event.clientX, event.clientY);
-      anchorPointerControlsAt(event.clientX, event.clientY);
+      notePointerInteraction(event.clientX, event.clientY);
       showControls();
       return;
     }
     if (intent === "surface-control") {
-      recordPointerSample(event.clientX, event.clientY);
-      anchorPointerControlsAt(event.clientX, event.clientY);
+      notePointerInteraction(event.clientX, event.clientY);
       applySurfaceControl(event);
     }
   }
@@ -917,7 +918,7 @@
       })
     ) {
       const timeout = window.setTimeout(() => {
-        playerControlsVisible = false;
+        hideControls();
       }, PLAYER_OVERLAY_DISMISS_MS);
       return () => window.clearTimeout(timeout);
     }
@@ -1070,8 +1071,7 @@
       onpointerdown={(event) => {
         surfacePointerType = event.pointerType;
         if (event.pointerType !== "touch") {
-          recordPointerSample(event.clientX, event.clientY);
-          anchorPointerControlsAt(event.clientX, event.clientY);
+          notePointerInteraction(event.clientX, event.clientY);
         }
         focusPlayerShell();
       }}
