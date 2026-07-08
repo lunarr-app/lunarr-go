@@ -1,7 +1,8 @@
-import { DEFAULT_REMOTE_OPERATION_TIMEOUT_MS, type LibraryStorage } from "../storage";
+import type { LibraryStorage } from "../storage";
+import { DEFAULT_REMOTE_OPERATION_TIMEOUT_MS } from "../storage/remote";
+import { withTimeout } from "../timeout";
 import type { SeekableTranscodeInputSource } from "./backend";
 import { detectContainerFromMagic, resolveNodeAvInputFormat } from "./container-format";
-import { withOperationTimeout } from "./operation-timeout";
 import type { Readable } from "node:stream";
 
 export const REMOTE_READ_CANCELLED_MESSAGE = "Remote media read was cancelled.";
@@ -72,7 +73,7 @@ async function readStreamToBufferWithTimeout(input: {
   label: string;
 }) {
   try {
-    return await withOperationTimeout(streamToBuffer(input.stream, input.signal), input.timeoutMs, input.label);
+    return await withTimeout(streamToBuffer(input.stream, input.signal), input.timeoutMs, input.label);
   } catch (error) {
     input.stream.destroy(error instanceof Error ? error : new Error(String(error)));
     throw error;
@@ -94,16 +95,18 @@ export async function sniffContainerFromStorage(input: {
   const end = Math.min(input.sizeBytes - 1, MAGIC_SNIFF_BYTES - 1);
   const readAbort = linkedAbortSignals(input.setupSignal);
   try {
-    const stream = await withOperationTimeout(
+    const stream = await withTimeout(
       input.storage.createReadStream(input.filePath, { start: 0, end }, { keepOpen: true }),
       timeoutMs,
       `Remote magic sniff ${input.filePath}`,
-      (lateStream) => {
-        lateStream.on("error", () => undefined);
-        lateStream.destroy();
+      {
+        onLateResolve: (lateStream) => {
+          lateStream.on("error", () => undefined);
+          lateStream.destroy();
+        },
+        signal: readAbort.signal,
+        abortMessage: REMOTE_READ_CANCELLED_MESSAGE,
       },
-      readAbort.signal,
-      REMOTE_READ_CANCELLED_MESSAGE,
     );
     const head = await readStreamToBufferWithTimeout({
       stream,
@@ -189,16 +192,18 @@ export async function createSeekableInputSourceFromStorage(input: {
       const readAbort = linkedAbortSignals(input.setupSignal, readSignal);
       let buffer: Buffer;
       try {
-        const stream = await withOperationTimeout(
+        const stream = await withTimeout(
           input.storage.createReadStream(input.file.path, { start, end }, { keepOpen: true }),
           timeoutMs,
           `Remote range read ${input.file.path}`,
-          (lateStream) => {
-            lateStream.on("error", () => undefined);
-            lateStream.destroy();
+          {
+            onLateResolve: (lateStream) => {
+              lateStream.on("error", () => undefined);
+              lateStream.destroy();
+            },
+            signal: readAbort.signal,
+            abortMessage: REMOTE_READ_CANCELLED_MESSAGE,
           },
-          readAbort.signal,
-          REMOTE_READ_CANCELLED_MESSAGE,
         );
         buffer = await readStreamToBufferWithTimeout({
           stream,

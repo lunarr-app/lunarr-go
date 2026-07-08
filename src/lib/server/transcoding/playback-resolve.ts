@@ -41,7 +41,7 @@ import {
 } from "./playback-lifecycle";
 import { getTranscodeBackend } from "./playback-backend";
 import { ensureHlsSegmentForRequest } from "./segment-request-gateway";
-import { withOperationTimeout } from "./operation-timeout";
+import { withTimeout } from "../timeout";
 
 const PLAYBACK_CANCELLED_MESSAGE = "Playback session was cancelled.";
 const PLAYBACK_SESSION_INACTIVE_MESSAGE = "Playback session is no longer active.";
@@ -247,13 +247,15 @@ export async function createSeekableStorageInputSource(
 
   const timeoutMs =
     sftpSeekableOperationTimeoutMsForTests ?? remoteOperationTimeoutMsFromConfig(file.source, file.config_json);
-  const storage = await withOperationTimeout(
+  const storage = await withTimeout(
     storageFactory(file),
     timeoutMs,
     `Remote input setup for ${file.path}`,
-    (lateStorage) => lateStorage.close(),
-    setupSignal,
-    PLAYBACK_CANCELLED_MESSAGE,
+    {
+      onLateResolve: (lateStorage) => lateStorage.close(),
+      signal: setupSignal,
+      abortMessage: PLAYBACK_CANCELLED_MESSAGE,
+    },
   );
   const inputSource = await createSeekableInputSourceFromStorage({
     file: {
