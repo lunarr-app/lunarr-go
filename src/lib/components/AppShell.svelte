@@ -84,12 +84,13 @@
 </script>
 
 <div class="shell">
+  <a class="skip-link" href="#main">Skip to content</a>
   <header class="app-header">
     <div class="header-primary">
       <LunarrBrand href="/movies" />
 
       <nav class="nav-list" aria-label="App navigation">
-        {#each primaryNav as item}
+        {#each primaryNav as item (item.href)}
           {@const Icon = item.icon}
           <a class="nav-item" href={item.href}>
             <Icon size={16} aria-hidden="true" />
@@ -100,7 +101,7 @@
 
       {#if desktopAdminNav.length}
         <nav class="nav-list desktop-admin-nav" aria-label="Admin navigation">
-          {#each desktopAdminNav as item}
+          {#each desktopAdminNav as item (item.href)}
             {@const Icon = item.icon}
             <a class="nav-item" href={item.href}>
               <Icon size={16} aria-hidden="true" />
@@ -162,7 +163,7 @@
     {/if}
   </header>
 
-  <main>
+  <main id="main">
     {@render children()}
   </main>
 
@@ -234,6 +235,26 @@
   .nav-item:hover {
     background: var(--color-surface-muted);
     color: var(--color-text);
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -3rem;
+    left: 0.5rem;
+    z-index: 100;
+    border-radius: 0 0 6px 6px;
+    background: var(--color-accent);
+    color: var(--color-button-text);
+    padding: 0.55rem 0.9rem;
+    font-size: 0.88rem;
+    font-weight: 650;
+    transition: top 0.15s ease;
+  }
+
+  .skip-link:focus-visible {
+    top: 0;
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   .account-menu {
