@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 import { getDb } from "../db";
-import { TV_SHOW_CREATOR_JOBS } from "../metadata/show-creators";
+import { TV_SHOW_CREATOR_JOBS } from "../metadata/tv";
 
 type SimilarPersonKey = { provider: string; provider_id: string };
 

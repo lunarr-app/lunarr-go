@@ -2,7 +2,7 @@ import { sql } from "kysely";
 import { resolveShowSeason } from "$lib/media/seasons";
 import { tmdbImageUrl } from "$lib/media/images";
 import { getDb } from "../../db";
-import { TV_SHOW_CREATOR_JOBS } from "../../metadata/show-creators";
+import { TV_SHOW_CREATOR_JOBS } from "../../metadata/tv";
 import { accessibleLibrarySql } from "../catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
 import { tvEpisodeProgress } from "./episodes";

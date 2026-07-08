@@ -1,6 +1,9 @@
 import { getSetting } from "../settings";
 import { createTtlCache } from "$lib/server/cache/ttl-cache";
-import { PUBLIC_TMDB_ACCESS_TOKEN } from "./public-token";
+
+/** Bundled read-only TMDB access token used as a fallback when no user-configured credentials exist. */
+export const PUBLIC_TMDB_ACCESS_TOKEN =
+  "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzYzM0NTExNGUxNmZiNjM2NWFiMmQxZjA5Y2I5MjlhNyIsIm5iZiI6MTcyNzYwNzQ4OS43NzEwMDYsInN1YiI6IjVlMzVhMzdmNzZlZWNmMDAxNThmNjliZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.R3I6onOpLTybIMa0kRXWMz2fWIKFN0GNlsbQ2oHrUzE";
 
 const TMDB_DETAIL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const TMDB_DETAIL_CACHE_MAX_ENTRIES = 1_000;

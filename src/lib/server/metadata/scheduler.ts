@@ -1,6 +1,5 @@
 import { building } from "$app/environment";
-import { MAX_SCHEDULED_TIMEOUT_MS } from "../scheduling/timeout";
-import { nowIso } from "../time";
+import { MAX_SCHEDULED_TIMEOUT_MS, nowIso } from "../time";
 import { tmdbCredentialsConfigured } from "./tmdb";
 import {
   getLastScheduledMetadataRefreshAt,

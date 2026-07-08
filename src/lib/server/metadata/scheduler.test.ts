@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { MAX_SCHEDULED_TIMEOUT_MS } from "../scheduling/timeout";
+import { MAX_SCHEDULED_TIMEOUT_MS } from "../time";
 import { scheduledMetadataRefreshDelayMs } from "./scheduler";
 
 describe("scheduled metadata refresh", () => {

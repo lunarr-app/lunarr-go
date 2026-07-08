@@ -3,7 +3,7 @@ import { Kysely, SqliteDialect, sql } from "kysely";
 import { Migrator, type Migration, type MigrationProvider } from "kysely/migration";
 import path from "node:path";
 import { mkdir } from "node:fs/promises";
-import { DATA_DIR, DB_FILE } from "../paths";
+import { appEnv } from "../config/env";
 import type { Database } from "./schema";
 import migration0001 from "./migrations/0001_initial.sql?raw";
 import migration0002 from "./migrations/0002_webdav_library_source.sql?raw";
@@ -11,6 +11,9 @@ import migration0003 from "./migrations/0003_playback_hls_cache.sql?raw";
 import migration0004 from "./migrations/0004_admin_user_fields.sql?raw";
 import migration0005 from "./migrations/0005_media_share.sql?raw";
 import migration0006 from "./migrations/0006_device_pairing.sql?raw";
+
+const DATA_DIR = path.resolve(appEnv.LUNARR_DATA_DIR);
+const DB_FILE = path.join(DATA_DIR, "lunarr.db");
 
 const MIGRATION_SOURCES = {
   "0001_initial": migration0001,
