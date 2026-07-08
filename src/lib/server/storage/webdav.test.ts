@@ -104,7 +104,10 @@ describe("parseWebdavConfig errors", () => {
 describe("testWebdavConnection", () => {
   test("accepts an existing remote directory root", async () => {
     await testWebdavConnection(sampleConfig());
-    expect(mockStat).toHaveBeenCalledWith("/media/movies");
+    expect(mockStat).toHaveBeenCalledWith(
+      "/media/movies",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   test("rejects a root that is not a directory", async () => {

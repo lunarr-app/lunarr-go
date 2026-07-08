@@ -64,8 +64,20 @@ function webdavConnect(config: WebdavLibraryConfig): WebDAVClient {
 
 async function webdavStat(client: WebDAVClient, filePath: string, timeoutMs: number, options?: { raw?: boolean }) {
   const target = options?.raw ? filePath : webdavPath(filePath);
-  const result = await withTimeout(client.stat(target), timeoutMs, `WebDAV stat ${filePath}`);
-  return normalizeFileStat(result);
+  const controller = new AbortController();
+  try {
+    const result = await withTimeout(
+      client.stat(target, { signal: controller.signal }),
+      timeoutMs,
+      `WebDAV stat ${filePath}`,
+      {
+        onTimeout: () => controller.abort(),
+      },
+    );
+    return normalizeFileStat(result);
+  } finally {
+    controller.abort();
+  }
 }
 
 async function webdavDirectoryExists(
@@ -83,12 +95,20 @@ async function webdavDirectoryExists(
 }
 
 async function webdavReaddir(client: WebDAVClient, directory: string, timeoutMs: number) {
-  const entries = await withTimeout(
-    client.getDirectoryContents(webdavPath(directory)),
-    timeoutMs,
-    `WebDAV list ${directory}`,
-  );
-  return entries.map(fileStatToRemoteEntry);
+  const controller = new AbortController();
+  try {
+    const entries = await withTimeout(
+      client.getDirectoryContents(webdavPath(directory), { signal: controller.signal }),
+      timeoutMs,
+      `WebDAV list ${directory}`,
+      {
+        onTimeout: () => controller.abort(),
+      },
+    );
+    return entries.map(fileStatToRemoteEntry);
+  } finally {
+    controller.abort();
+  }
 }
 
 export function parseWebdavConfig(configJson: string | null): WebdavLibraryConfig {

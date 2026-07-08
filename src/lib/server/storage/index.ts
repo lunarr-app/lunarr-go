@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import type { LibrarySource } from "../db/schema";
 import { createLocalStorage } from "./local";
-import { createSftpStorage, sftpOperationTimeoutMsFromLibraryConfig } from "./sftp";
+import { createSftpStorage, sftpOperationTimeoutMsFromConfig } from "./sftp";
 import { DEFAULT_REMOTE_OPERATION_TIMEOUT_MS, type StorageFileInfo, type StorageWalkEntry } from "./remote";
 import { createWebdavStorage, webdavOperationTimeoutMsFromConfig } from "./webdav";
 import type { LibraryStorage, StoredLibrary } from "./types";
@@ -19,7 +19,7 @@ export { createLocalStorage } from "./local";
 export { parseSftpConfig, sftpDisplayPath, testSftpConnection } from "./sftp";
 
 export function remoteOperationTimeoutMsFromConfig(source: LibrarySource, configJson: string | null) {
-  if (source === "sftp") return sftpOperationTimeoutMsFromLibraryConfig(configJson);
+  if (source === "sftp") return sftpOperationTimeoutMsFromConfig(configJson);
   if (source === "webdav") return webdavOperationTimeoutMsFromConfig(configJson);
   return DEFAULT_REMOTE_OPERATION_TIMEOUT_MS;
 }

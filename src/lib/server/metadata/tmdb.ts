@@ -674,13 +674,9 @@ function preferredTrailer(detail: TmdbMovieDetails) {
   );
 }
 
-function preferredTvTrailer(detail: TmdbTvDetails) {
-  return preferredTrailer(detail as TmdbMovieDetails);
-}
-
 function mapTvShowMetadata(detail: TmdbTvDetails, first: TmdbTvSearchResult): MatchedTvShowMetadata {
   const firstAirDate = detail.first_air_date || first.first_air_date || null;
-  const trailer = preferredTvTrailer(detail);
+  const trailer = preferredTrailer(detail as TmdbMovieDetails);
   const cast = detail.aggregate_credits?.cast ?? [];
   const crew = detail.aggregate_credits?.crew ?? [];
   const createdBy = (detail.created_by ?? [])

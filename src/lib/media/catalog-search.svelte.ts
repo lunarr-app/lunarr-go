@@ -14,6 +14,15 @@ export function createDebouncedCatalogSearch(
     queryInput = getServerQuery();
   });
 
+  $effect(() => {
+    return () => {
+      if (searchSubmitTimer) {
+        clearTimeout(searchSubmitTimer);
+        searchSubmitTimer = undefined;
+      }
+    };
+  });
+
   function commitSearch(overrides: Omit<CatalogSearchInput, "query"> = {}) {
     if (searchSubmitTimer) {
       clearTimeout(searchSubmitTimer);

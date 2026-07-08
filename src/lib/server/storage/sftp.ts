@@ -32,16 +32,12 @@ export function parseSftpConfig(configJson: string | null): SftpLibraryConfig {
   };
 }
 
-function sftpOperationTimeoutMsFromConfig(configJson: string | null) {
+export function sftpOperationTimeoutMsFromConfig(configJson: string | null) {
   try {
     return parseSftpConfig(configJson).operationTimeoutMs;
   } catch {
     return DEFAULT_REMOTE_OPERATION_TIMEOUT_MS;
   }
-}
-
-export function sftpOperationTimeoutMsFromLibraryConfig(configJson: string | null) {
-  return sftpOperationTimeoutMsFromConfig(configJson);
 }
 
 export function sftpDisplayPath(input: { host: string; port: number; username: string; root: string }) {
