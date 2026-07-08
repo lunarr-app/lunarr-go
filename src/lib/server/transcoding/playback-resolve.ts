@@ -247,16 +247,11 @@ export async function createSeekableStorageInputSource(
 
   const timeoutMs =
     sftpSeekableOperationTimeoutMsForTests ?? remoteOperationTimeoutMsFromConfig(file.source, file.config_json);
-  const storage = await withTimeout(
-    storageFactory(file),
-    timeoutMs,
-    `Remote input setup for ${file.path}`,
-    {
-      onLateResolve: (lateStorage) => lateStorage.close(),
-      signal: setupSignal,
-      abortMessage: PLAYBACK_CANCELLED_MESSAGE,
-    },
-  );
+  const storage = await withTimeout(storageFactory(file), timeoutMs, `Remote input setup for ${file.path}`, {
+    onLateResolve: (lateStorage) => lateStorage.close(),
+    signal: setupSignal,
+    abortMessage: PLAYBACK_CANCELLED_MESSAGE,
+  });
   const inputSource = await createSeekableInputSourceFromStorage({
     file: {
       path: file.path,
