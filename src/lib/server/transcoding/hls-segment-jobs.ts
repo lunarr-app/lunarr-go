@@ -22,8 +22,6 @@ import {
 import { getTranscodePolicy } from "./policy";
 import { getTranscodeSession, updateActiveTranscodeSessionStatus, updateTranscodeSessionMode } from "./sessions";
 import type { TranscodeBackend } from "./backend";
-import type { TranscodeMode } from "../db/schema/streaming";
-
 export const REQUEST_DRIVEN_SEGMENT_TIMEOUT_MS = 120_000;
 const PLAYBACK_SESSION_INACTIVE_MESSAGE = "Playback session is no longer active.";
 export const TRANSCODING_DISABLED_MESSAGE = "Transcoding is disabled by an administrator.";
@@ -34,7 +32,6 @@ class SegmentGenerationAbortedError extends Error {}
 type SegmentJobDeps = {
   transcodeBackend: TranscodeBackend;
   requestDrivenHlsSegmentFormat: (input?: { segment?: string }) => HlsSegmentFormat;
-  requestDrivenGenerationMode: (mode: TranscodeMode) => TranscodeMode;
   selectPlaybackAudioStreamIndex: (input: {
     mediaFileId: string;
     mode: "remux" | "transcode";
@@ -200,16 +197,9 @@ async function startHlsEncodeJob(
       stopSegmentWork: input.stopSegmentWork,
     });
 
-    const generationMode = deps.requestDrivenGenerationMode(session.mode);
-    if (generationMode !== session.mode) {
-      if (!(await updateTranscodeSessionMode(input.sessionId, generationMode))) {
-        throw new SegmentGenerationAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
-      }
-    }
-
     const audioStreamIndex = await deps.selectPlaybackAudioStreamIndex({
       mediaFileId: session.mediaFileId,
-      mode: generationMode,
+      mode: session.mode,
       preferredAudioLanguage: policy.preferredAudioLanguage,
     });
 
@@ -228,7 +218,7 @@ async function startHlsEncodeJob(
       encodeAheadSegmentCount,
       segmentGenerationTimeoutMs: REQUEST_DRIVEN_SEGMENT_TIMEOUT_MS,
       signal: jobController.signal,
-      mode: generationMode,
+      mode: session.mode,
       hardwareAcceleration: policy.hardwareAcceleration,
       hardwareAccelerationRequired: policy.hardwareAccelerationRequired,
       transcodeQuality: policy.transcodeQuality,
@@ -245,7 +235,7 @@ async function startHlsEncodeJob(
     };
 
     try {
-      const generation = await generateRequestedSegment(generationMode);
+      const generation = await generateRequestedSegment(session.mode);
       try {
         await generation.completion;
       } catch (error) {
@@ -261,7 +251,7 @@ async function startHlsEncodeJob(
       if (jobController.signal.aborted || input.signal?.aborted) {
         throw error;
       }
-      if (generationMode !== "remux" || error instanceof SegmentGenerationAbortedError) {
+      if (session.mode !== "remux" || error instanceof SegmentGenerationAbortedError) {
         throw error;
       }
 
@@ -430,10 +420,9 @@ export async function generateHlsSegmentForRequest(
 
   let encodeArtifactDirectory = (await getPlaybackCacheBindingForSession(input.sessionId)).encodeArtifactDirectory;
   if (session.cacheId && (await isPlaybackCacheEntryStale(session.cacheId))) {
-    const generationMode = deps.requestDrivenGenerationMode(session.mode);
     const audioStreamIndex = await deps.selectPlaybackAudioStreamIndex({
       mediaFileId: session.mediaFileId,
-      mode: generationMode,
+      mode: session.mode,
       preferredAudioLanguage: policy.preferredAudioLanguage,
     });
     ({ encodeArtifactDirectory } = await switchPlaybackCacheForSession({
@@ -441,7 +430,7 @@ export async function generateHlsSegmentForRequest(
       mediaFileId: session.mediaFileId,
       fileSizeBytes: file.size_bytes,
       fileMtimeMs: file.mtime_ms,
-      mode: generationMode,
+      mode: session.mode,
       policy,
       segmentFormat,
       audioStreamIndex,

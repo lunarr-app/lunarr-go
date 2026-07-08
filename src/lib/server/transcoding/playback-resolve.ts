@@ -83,7 +83,6 @@ type AudioStreamCandidate = {
 };
 
 class TranscodeStartupAbortedError extends Error {}
-class TranscodePolicyDisabledError extends Error {}
 
 export type HlsPlaybackResult =
   | {
@@ -195,10 +194,6 @@ function compareRemuxAudioCandidates(
   const codecDelta = Number(isAacFamilyCodec(right.codec_name)) - Number(isAacFamilyCodec(left.codec_name));
   if (codecDelta !== 0) return codecDelta;
   return compareTranscodeAudioCandidates(left, right, preferredLanguage);
-}
-
-export function requestDrivenGenerationMode(mode: TranscodeMode): TranscodeMode {
-  return mode;
 }
 
 export async function selectPlaybackAudioStreamIndex(input: {
@@ -320,7 +315,7 @@ async function requireTranscodePolicyEnabled(userId: string) {
   await transcodePolicyRecheckDelayForTests?.();
   const policy = await getTranscodePolicy(userId);
   if (!policy.transcodingEnabled) {
-    throw new TranscodePolicyDisabledError(TRANSCODING_DISABLED_MESSAGE);
+    throw new Error(TRANSCODING_DISABLED_MESSAGE);
   }
   return policy;
 }

@@ -8,12 +8,7 @@ import { getTranscodeSession } from "./sessions";
 import path from "node:path";
 import { getTranscodeBackend } from "./playback-backend";
 import { removeTranscodeSessionArtifacts, requestDrivenHlsSegmentFormat } from "./playback-lifecycle";
-import {
-  createSeekableStorageInputSource,
-  isReadableFile,
-  requestDrivenGenerationMode,
-  selectPlaybackAudioStreamIndex,
-} from "./playback-resolve";
+import { createSeekableStorageInputSource, isReadableFile, selectPlaybackAudioStreamIndex } from "./playback-resolve";
 
 type ActiveSegmentEnsureWaiter = {
   signal?: AbortSignal;
@@ -102,7 +97,6 @@ function segmentJobDeps() {
   return {
     transcodeBackend: getTranscodeBackend(),
     requestDrivenHlsSegmentFormat,
-    requestDrivenGenerationMode,
     selectPlaybackAudioStreamIndex,
     createSeekableStorageInputSource,
     isReadableFile,
