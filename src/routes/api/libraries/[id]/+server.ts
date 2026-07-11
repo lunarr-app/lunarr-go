@@ -1,6 +1,6 @@
 import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { ApiOkResponse, LibraryDetailResponse } from "$lib/server/api/types";
-import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
 import { deleteLibrary, getLibrary, updateLibrary } from "$lib/server/libraries";
 import { parseUpdateLibraryInput } from "$lib/server/libraries/input";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
@@ -22,11 +22,8 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
   if (user instanceof Response) return user;
 
   try {
-    const body = await readJsonBody(request);
-    const library = await updateLibrary(
-      params.id,
-      parseUpdateLibraryInput(typeof body === "object" && body ? (body as Record<string, unknown>) : {}),
-    );
+    const input = await parseBody(request, recordObjectSchema);
+    const library = await updateLibrary(params.id, parseUpdateLibraryInput(input));
     if (!library) return apiError("Library not found.", 404);
     await syncLibraryWatchers();
     await syncScheduledLibraryScans();

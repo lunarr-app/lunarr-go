@@ -1,4 +1,5 @@
 import { apiError } from "./api/json";
+import { z, type ZodType } from "zod";
 
 export { apiError, apiErrorFrom } from "./api/json";
 
@@ -24,6 +25,14 @@ export async function readJsonBody(request: Request) {
   }
 }
 
-export function booleanFromJson(value: unknown) {
-  return value === true || value === "true";
+export async function parseBody<T>(request: Request, schema: ZodType<T>): Promise<T> {
+  const body = await readJsonBody(request);
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    const message = result.error.issues.map((i) => i.message).join(", ");
+    throw new Error(message || "Invalid request body.");
+  }
+  return result.data;
 }
+
+export const recordObjectSchema = z.record(z.string(), z.unknown());

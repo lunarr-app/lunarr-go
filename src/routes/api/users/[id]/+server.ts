@@ -1,6 +1,6 @@
 import { apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { ApiOkResponse, UserResponse } from "$lib/server/api/types";
-import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
 import { parseUpdateUserRoleInput } from "$lib/server/auth/users-input";
 import { deleteManagedUser, updateManagedUserRole, userManagementHttpStatus } from "$lib/server/auth/users-admin";
 import type { RequestHandler } from "./$types";
@@ -10,7 +10,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
   if (user instanceof Response) return user;
 
   try {
-    const body = await readJsonBody(request);
+    const body = await parseBody(request, recordObjectSchema);
     const { role } = parseUpdateUserRoleInput(body);
     const updated = await updateManagedUserRole({
       headers: request.headers,

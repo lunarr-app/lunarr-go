@@ -1,18 +1,22 @@
 import { apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { ApiOkResponse } from "$lib/server/api/types";
-import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { parseBody, requireJsonAdmin } from "$lib/server/api";
 import { updateLibraryAccess } from "$lib/server/libraries";
+import { z } from "zod";
 import type { RequestHandler } from "./$types";
+
+const libraryAccessSchema = z.object({
+  accessMode: z.string().trim().default("all"),
+  userIds: z.array(z.coerce.string()).default([]),
+});
 
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
   const user = requireJsonAdmin(locals);
   if (user instanceof Response) return user;
 
   try {
-    const body = await readJsonBody(request);
-    const input = typeof body === "object" && body ? (body as Record<string, unknown>) : {};
-    const userIds = Array.isArray(input.userIds) ? input.userIds.map((id) => String(id)) : [];
-    await updateLibraryAccess(params.id, String(input.accessMode ?? "all"), userIds);
+    const input = await parseBody(request, libraryAccessSchema);
+    await updateLibraryAccess(params.id, input.accessMode, input.userIds);
     return apiJson<ApiOkResponse>({ ok: true });
   } catch (error) {
     return apiErrorFrom(error, "Could not update library sharing.");

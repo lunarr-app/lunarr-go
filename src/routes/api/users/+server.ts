@@ -1,6 +1,6 @@
 import { apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { UserResponse, UsersResponse } from "$lib/server/api/types";
-import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
 import { parseCreateUserInput } from "$lib/server/auth/users-input";
 import { createManagedUser, listManagedUsers, userManagementHttpStatus } from "$lib/server/auth/users-admin";
 import type { RequestHandler } from "./$types";
@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
   if (user instanceof Response) return user;
 
   try {
-    const body = await readJsonBody(request);
+    const body = await parseBody(request, recordObjectSchema);
     const input = parseCreateUserInput(body);
     const created = await createManagedUser({
       headers: request.headers,

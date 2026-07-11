@@ -1,6 +1,6 @@
 import { apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { ApiOkResponse } from "$lib/server/api/types";
-import { readJsonBody, requireJsonAdmin } from "$lib/server/api";
+import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
 import { updateRegistrationSettings } from "$lib/server/settings-commands";
 import type { RequestHandler } from "./$types";
 
@@ -9,8 +9,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
   if (user instanceof Response) return user;
 
   try {
-    const body = await readJsonBody(request);
-    await updateRegistrationSettings(typeof body === "object" && body ? (body as Record<string, unknown>) : {});
+    const input = await parseBody(request, recordObjectSchema);
+    await updateRegistrationSettings(input);
     return apiJson<ApiOkResponse>({ ok: true });
   } catch (error) {
     return apiErrorFrom(error, "Could not update registration settings.");

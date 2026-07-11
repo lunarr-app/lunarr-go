@@ -1,18 +1,21 @@
 import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { ApiOkResponse } from "$lib/server/api/types";
-import { booleanFromJson, readJsonBody, requireJsonUser } from "$lib/server/api";
+import { parseBody, requireJsonUser } from "$lib/server/api";
 import { markSeasonWatched } from "$lib/server/playback/commands";
+import { z } from "zod";
 import type { RequestHandler } from "./$types";
+
+const seasonWatchedSchema = z.object({
+  completed: z.boolean().optional(),
+});
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
   try {
-    const body = await readJsonBody(request);
-    const completed = booleanFromJson(
-      typeof body === "object" && body ? (body as { completed?: unknown }).completed : undefined,
-    );
+    const body = await parseBody(request, seasonWatchedSchema);
+    const completed = body.completed === true;
     await markSeasonWatched({
       userId: user.id,
       showId: params.id,

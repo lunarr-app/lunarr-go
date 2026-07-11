@@ -1,8 +1,14 @@
 import { createApiKey, listApiKeys, apiKeyHttpStatus } from "$lib/server/auth/api-keys";
 import { apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { ApiKeyListResponse, CreateApiKeyResponse } from "$lib/server/api/types";
-import { readJsonBody, requireJsonUser } from "$lib/server/api";
+import { parseBody, requireJsonUser } from "$lib/server/api";
+import { z } from "zod";
 import type { RequestHandler } from "./$types";
+
+const createApiKeySchema = z.object({
+  name: z.unknown().optional(),
+  expiresIn: z.unknown().optional(),
+});
 
 export const GET: RequestHandler = async ({ locals, request }) => {
   const user = requireJsonUser(locals);
@@ -20,12 +26,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   if (user instanceof Response) return user;
 
   try {
-    const body = await readJsonBody(request);
+    const body = await parseBody(request, createApiKeySchema);
     return apiJson<CreateApiKeyResponse>(
       await createApiKey({
         headers: request.headers,
-        name: typeof body === "object" && body ? (body as { name?: unknown }).name : undefined,
-        expiresIn: typeof body === "object" && body ? (body as { expiresIn?: unknown }).expiresIn : undefined,
+        name: body.name,
+        expiresIn: body.expiresIn,
       }),
       { status: 201 },
     );

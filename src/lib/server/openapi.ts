@@ -3593,7 +3593,7 @@ export const openApiDocument = {
       },
       WatchedRequest: {
         type: "object",
-        required: ["mediaFileId", "completed"],
+        required: ["mediaFileId"],
         properties: {
           mediaFileId: stringSchema,
           completed: { type: "boolean" },
@@ -3601,14 +3601,13 @@ export const openApiDocument = {
       },
       SeasonWatchedRequest: {
         type: "object",
-        required: ["completed"],
         properties: {
           completed: { type: "boolean" },
         },
       },
       PlaybackProgressRequest: {
         type: "object",
-        required: ["mediaFileId", "positionSeconds", "durationSeconds", "completed"],
+        required: ["mediaFileId"],
         properties: {
           mediaFileId: stringSchema,
           positionSeconds: { type: "number", minimum: 0 },

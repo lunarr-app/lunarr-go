@@ -1,4 +1,4 @@
-import type { ProfilePreferencesUpdate } from "$lib/server/api/types";
+import { z } from "zod";
 import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
 import {
   DEFAULT_SEGMENT_SKIP_PREFERENCES,
@@ -14,6 +14,17 @@ import {
   setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
+
+export const profilePreferencesSchema = z.object({
+  playbackPreference: z.unknown().optional(),
+  preferredAudioLanguage: z.unknown().optional(),
+  preferredSubtitleLanguage: z.unknown().optional(),
+  continueMaxAgeDays: z.unknown().optional(),
+  segmentSkipEnabled: z.unknown().optional(),
+  segmentSkipAutomatic: z.unknown().optional(),
+});
+
+export type ProfilePreferencesUpdate = z.infer<typeof profilePreferencesSchema>;
 
 const PROFILE_PREFERENCE_KEYS = [
   "playbackPreference",

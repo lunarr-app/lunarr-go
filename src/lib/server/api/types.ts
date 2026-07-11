@@ -94,15 +94,6 @@ export type MeResponse = {
   segmentSkip: SegmentSkipPreferences;
 };
 
-export type ProfilePreferencesUpdate = {
-  playbackPreference?: unknown;
-  preferredAudioLanguage?: unknown;
-  preferredSubtitleLanguage?: unknown;
-  continueMaxAgeDays?: unknown;
-  segmentSkipEnabled?: unknown;
-  segmentSkipAutomatic?: unknown;
-};
-
 export type ProfilePreferencesResponse = Omit<MeResponse, "user">;
 
 export type LibraryListItem = Awaited<ReturnType<typeof listLibrariesWithScanStatus>>[number];
