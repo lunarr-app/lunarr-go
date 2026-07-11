@@ -4,7 +4,7 @@ import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api
 import { updateTranscodingSettings } from "$lib/server/settings-commands";
 import type { RequestHandler } from "./$types";
 
-export const PUT: RequestHandler = async ({ request, locals }) => {
+export const PATCH: RequestHandler = async ({ request, locals }) => {
   const user = requireJsonAdmin(locals);
   if (user instanceof Response) return user;
 

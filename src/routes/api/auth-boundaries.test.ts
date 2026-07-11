@@ -397,7 +397,7 @@ describe("authenticated API route boundaries", () => {
       } as never);
 
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ ok: true, status: "cancelled" });
+      expect(await response.json()).toEqual({ ok: true });
       const duplicateResponse = await cancelPlaybackSessionPost({
         params: { sessionId: "transcode-2" },
         request: new Request("http://localhost/api/playback-sessions/transcode-2/cancel", {
@@ -405,11 +405,8 @@ describe("authenticated API route boundaries", () => {
         }),
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
-      expect(duplicateResponse.status).toBe(200);
-      expect(await duplicateResponse.json()).toEqual({
-        ok: true,
-        status: "inactive",
-      });
+      expect(duplicateResponse.status).toBe(400);
+      expect((await duplicateResponse.json() as { error: string }).error).toBe("Playback session is not active.");
 
       const job = await db
         .selectFrom("playback_session")

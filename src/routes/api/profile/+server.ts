@@ -9,7 +9,7 @@ import {
 } from "$lib/server/profile/preferences";
 import type { RequestHandler } from "./$types";
 
-export const PUT: RequestHandler = async ({ request, locals }) => {
+export const PATCH: RequestHandler = async ({ request, locals }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 

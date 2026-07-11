@@ -11,14 +11,14 @@ import {
   setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
-import { PUT } from "./+server";
+import { PATCH } from "./+server";
 
 const testUser = { id: "user-1", role: "user" as const };
 
-function putProfile(body: unknown) {
-  return PUT({
+function patchProfile(body: unknown) {
+  return PATCH({
     request: new Request("http://localhost/api/profile", {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify(body),
       headers: { "content-type": "application/json" },
     }),
@@ -26,7 +26,7 @@ function putProfile(body: unknown) {
   } as never);
 }
 
-describe("PUT /api/profile", () => {
+describe("PATCH /api/profile", () => {
   let tempDir: string;
 
   beforeEach(async () => {
@@ -45,7 +45,7 @@ describe("PUT /api/profile", () => {
   });
 
   test("rejects an empty preference body", async () => {
-    const response = await putProfile({});
+    const response = await patchProfile({});
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
@@ -54,7 +54,7 @@ describe("PUT /api/profile", () => {
   });
 
   test("preserves saved languages when only playback preference is updated", async () => {
-    const response = await putProfile({ playbackPreference: "prefer_transcode" });
+    const response = await patchProfile({ playbackPreference: "prefer_transcode" });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -77,7 +77,7 @@ describe("PUT /api/profile", () => {
   });
 
   test("preserves playback preference and omitted subtitle language for language-only updates", async () => {
-    const response = await putProfile({ preferredAudioLanguage: " fra " });
+    const response = await patchProfile({ preferredAudioLanguage: " fra " });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -90,7 +90,7 @@ describe("PUT /api/profile", () => {
   });
 
   test("clears a language when the field is explicitly sent empty", async () => {
-    const response = await putProfile({ preferredSubtitleLanguage: "" });
+    const response = await patchProfile({ preferredSubtitleLanguage: "" });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -103,7 +103,7 @@ describe("PUT /api/profile", () => {
   });
 
   test("updates continue max age for the signed-in user only", async () => {
-    const response = await putProfile({ continueMaxAgeDays: 90 });
+    const response = await patchProfile({ continueMaxAgeDays: 90 });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -117,7 +117,7 @@ describe("PUT /api/profile", () => {
   });
 
   test("normalizes out-of-range continue max age values", async () => {
-    const response = await putProfile({ continueMaxAgeDays: 9999 });
+    const response = await patchProfile({ continueMaxAgeDays: 9999 });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -127,7 +127,7 @@ describe("PUT /api/profile", () => {
   });
 
   test("updates playback and continue preferences in one request", async () => {
-    const response = await putProfile({
+    const response = await patchProfile({
       playbackPreference: "auto",
       continueMaxAgeDays: 30,
     });
@@ -144,7 +144,7 @@ describe("PUT /api/profile", () => {
   });
 
   test("updates segment skip preferences", async () => {
-    const response = await putProfile({
+    const response = await patchProfile({
       segmentSkipEnabled: false,
       segmentSkipAutomatic: true,
     });

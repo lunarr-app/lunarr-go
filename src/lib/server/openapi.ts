@@ -151,12 +151,6 @@ const showBrowseRailParameter = browseRailParameter(
   "When set, returns only the requested rail(s). Comma-separate multiple rails. Episode rails return `EpisodeSummary` items, and show rails return `ShowSummary` items. Each rail also returns a matching `*Page` object. Omit for the full bundled response.",
 );
 
-const commonErrors = {
-  "401": errorResponse,
-  "403": errorResponse,
-  "404": errorResponse,
-};
-
 export const openApiDocument = {
   openapi: "3.1.0",
   info: {
@@ -226,7 +220,7 @@ export const openApiDocument = {
       },
     },
     "/api/profile": {
-      put: {
+      patch: {
         tags: ["Account"],
         summary: "Update signed-in user preferences.",
         description:
@@ -331,7 +325,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/MovieFullResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -345,7 +341,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/MovieOverviewResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -360,7 +358,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/MovieCreditsResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -374,7 +374,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/SimilarMoviesResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -387,7 +389,9 @@ export const openApiDocument = {
         requestBody: { $ref: "#/components/requestBodies/WatchedRequest" },
         responses: {
           "200": okResponse,
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -778,7 +782,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/ShowFullResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -792,7 +798,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/ShowOverviewResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -808,7 +816,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/ShowCreditsResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -822,7 +832,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/SimilarShowsResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -854,7 +866,9 @@ export const openApiDocument = {
         },
         responses: {
           "200": okResponse,
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -873,7 +887,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/ShowSeasonDetailResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -887,7 +903,9 @@ export const openApiDocument = {
           "200": jsonResponse({
             $ref: "#/components/schemas/EpisodeDetailResponse",
           }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -900,7 +918,9 @@ export const openApiDocument = {
         requestBody: { $ref: "#/components/requestBodies/WatchedRequest" },
         responses: {
           "200": okResponse,
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -939,7 +959,9 @@ export const openApiDocument = {
         ],
         responses: {
           "200": jsonResponse({ $ref: "#/components/schemas/PlaybackDataResponse" }),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
           "409": errorResponse,
           "500": errorResponse,
         },
@@ -1063,10 +1085,11 @@ export const openApiDocument = {
         operationId: "cancelPlaybackSession",
         parameters: [pathIdParameter("sessionId", "Playback session identifier.")],
         responses: {
-          "200": jsonResponse({
-            $ref: "#/components/schemas/PlaybackSessionCancelResponse",
-          }),
-          ...commonErrors,
+          "200": okResponse,
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
     },
@@ -1100,7 +1123,7 @@ export const openApiDocument = {
       },
     },
     "/api/settings/registration": {
-      put: {
+      patch: {
         tags: ["Admin"],
         summary: "Update registration settings.",
         operationId: "updateRegistrationSettings",
@@ -1116,7 +1139,7 @@ export const openApiDocument = {
       },
     },
     "/api/settings/metadata": {
-      put: {
+      patch: {
         tags: ["Admin"],
         summary: "Update metadata provider settings.",
         operationId: "updateMetadataSettings",
@@ -1132,7 +1155,7 @@ export const openApiDocument = {
       },
     },
     "/api/settings/transcoding": {
-      put: {
+      patch: {
         tags: ["Admin"],
         summary: "Update transcoding settings.",
         operationId: "updateTranscodingSettings",
@@ -1309,7 +1332,9 @@ export const openApiDocument = {
         responses: {
           "200": binaryResponse("Media byte stream."),
           "206": binaryResponse("Partial media byte stream."),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
       head: {
@@ -1420,7 +1445,9 @@ export const openApiDocument = {
         parameters: [pathIdParameter()],
         responses: {
           "200": textResponse("Subtitle file.", "text/vtt"),
-          ...commonErrors,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
         },
       },
       head: {
@@ -3613,14 +3640,6 @@ export const openApiDocument = {
           positionSeconds: { type: "number", minimum: 0 },
           durationSeconds: nullableNumberSchema,
           completed: { type: "boolean" },
-        },
-      },
-      PlaybackSessionCancelResponse: {
-        type: "object",
-        required: ["ok", "status"],
-        properties: {
-          ok: { type: "boolean" },
-          status: { type: "string" },
         },
       },
     },

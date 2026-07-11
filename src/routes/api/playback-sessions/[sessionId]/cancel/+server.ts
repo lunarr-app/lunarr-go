@@ -1,4 +1,5 @@
 import { apiError, apiJson } from "$lib/server/api/json";
+import type { ApiOkResponse } from "$lib/server/api/types";
 import { isAdmin } from "$lib/server/auth/users";
 import { cancelPlaybackSession } from "$lib/server/transcoding/manager";
 import { getTranscodeSession } from "$lib/server/transcoding/sessions";
@@ -23,5 +24,8 @@ export const POST: RequestHandler = async ({ locals, params }) => {
   }
 
   const result = await cancelPlaybackSession(sessionId);
-  return apiJson({ ok: true, status: result });
+  if (result === "missing") return apiError("Playback session was not found.", 404);
+  if (result === "inactive") return apiError("Playback session is not active.");
+
+  return apiJson<ApiOkResponse>({ ok: true });
 };
