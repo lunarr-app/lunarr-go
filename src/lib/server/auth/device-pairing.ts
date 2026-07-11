@@ -10,6 +10,7 @@ import { devicePairingApiKeyExpiresInSeconds } from "$lib/server/device-pairing/
 import { randomUUID } from "node:crypto";
 import { getDb } from "../db";
 import type { DevicePairingStatus } from "../db/schema/device-pairing";
+import { nowIso } from "../time";
 import { createApiKeyForUserId } from "./api-keys";
 
 export class DevicePairingError extends Error {
@@ -20,10 +21,6 @@ export class DevicePairingError extends Error {
     this.name = "DevicePairingError";
     this.status = status;
   }
-}
-
-function nowIso() {
-  return new Date().toISOString();
 }
 
 function normalizeDeviceName(value: unknown) {

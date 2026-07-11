@@ -1,4 +1,5 @@
 import { getDb } from "../db";
+import { toIsoDate } from "../time";
 import { auth } from "./index";
 import { countOtherAdmins } from "./admin-safeguards";
 import { UserManagementError, type UserRole } from "./users-input";
@@ -23,13 +24,6 @@ type BetterAuthUserRecord = {
   updatedAt: Date | string | number;
 };
 
-function isoDate(value: Date | string | number | null | undefined) {
-  if (value == null) return new Date(0).toISOString();
-  const date = value instanceof Date ? value : new Date(value);
-  const time = date.getTime();
-  return Number.isFinite(time) ? date.toISOString() : new Date(0).toISOString();
-}
-
 function toManagedUser(user: BetterAuthUserRecord): ManagedUser {
   return {
     id: user.id,
@@ -37,8 +31,8 @@ function toManagedUser(user: BetterAuthUserRecord): ManagedUser {
     email: user.email,
     role: user.role === "admin" ? "admin" : "user",
     banned: Boolean(user.banned),
-    createdAt: isoDate(user.createdAt),
-    updatedAt: isoDate(user.updatedAt),
+    createdAt: toIsoDate(user.createdAt) ?? new Date(0).toISOString(),
+    updatedAt: toIsoDate(user.updatedAt) ?? new Date(0).toISOString(),
   };
 }
 

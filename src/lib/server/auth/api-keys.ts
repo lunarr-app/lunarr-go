@@ -1,4 +1,5 @@
 import { API_KEY_MAX_EXPIRES_IN_DAYS, API_KEY_MAX_EXPIRES_IN_SECONDS, API_KEY_MAX_NAME_LENGTH } from "./api-key-config";
+import { toIsoDate } from "../time";
 import { auth } from "./index";
 
 export type ApiKeySummary = {
@@ -21,22 +22,15 @@ type BetterAuthApiKeyRecord = {
   updatedAt: Date | string;
 };
 
-function isoDate(value: Date | number | string | null | undefined) {
-  if (value == null) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  const time = date.getTime();
-  return Number.isFinite(time) ? date.toISOString() : null;
-}
-
 function toApiKeySummary(row: BetterAuthApiKeyRecord): ApiKeySummary {
   return {
     id: row.id,
     name: row.name ?? "Mobile app",
     tokenPrefix: row.start ?? "",
-    lastUsedAt: isoDate(row.lastRequest ?? null),
-    expiresAt: isoDate(row.expiresAt ?? null),
-    createdAt: isoDate(row.createdAt) ?? new Date(0).toISOString(),
-    updatedAt: isoDate(row.updatedAt) ?? new Date(0).toISOString(),
+    lastUsedAt: toIsoDate(row.lastRequest ?? null),
+    expiresAt: toIsoDate(row.expiresAt ?? null),
+    createdAt: toIsoDate(row.createdAt) ?? new Date(0).toISOString(),
+    updatedAt: toIsoDate(row.updatedAt) ?? new Date(0).toISOString(),
   };
 }
 
