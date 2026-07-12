@@ -2,10 +2,6 @@
 
 ## Unreleased
 
-### Changed
-
-- Playback prepare now loads segment skip preferences and IntroDB lookup metadata in parallel with the playback decision, and caches successful IntroDB responses for 24 hours.
-
 ### Added
 
 - Added on-play IntroDB intro/recap/credits skip markers in playback responses via the official `theintrodb` client (TMDb lookup), with manual skip buttons in the web player ([TheIntroDB](https://theintrodb.org)).
@@ -16,12 +12,25 @@
 - Added optional `page` and `limit` query params (default limit 24) to browse, continue, discover, and similar APIs, with companion `*Page` metadata for every rail and continue section.
 - Added paginated Continue section pages at `/continue/movies`, `/continue/episodes`, and `/continue/next-up`.
 
+### Fixed
+
+- Fixed an encode-coordinator reserved-job leak that could stall new encode reservations.
+- Fixed a duplicate progress beacon firing when the player is destroyed.
+- Fixed a catalog-search timer leak and aborted hung remote operations during metadata search.
+- Fixed the Continue staleness cutoff to use ISO timestamps in SQL.
+- Fixed the device-pairing expiry assertion for an optional seconds return type.
+
 ### Changed
 
-- Replaced `PUT /api/profile/playback-preference` and `PUT /api/profile/continue-max-age` with a single partial-update `PUT /api/profile` that returns an updated preferences snapshot.
+- Playback prepare now loads segment skip preferences and IntroDB lookup metadata in parallel with the playback decision, and caches successful IntroDB responses for 24 hours.
+- Replaced `PUT /api/profile/playback-preference` and `PUT /api/profile/continue-max-age` with a single partial-update `PATCH /api/profile` that returns an updated preferences snapshot, and aligned the playback cancel response shape.
 - Documented Continue filtering for browse rails, transcoding admin settings, and `playback-cache` storage layout.
 - Unified default catalog page size to 24 items. Web full-library pages still request 36 items per page.
 - Continue hub and home rails now link to dedicated section list pages instead of relying on a single unpaginated `/continue` view.
+- Replaced unsafe JSON body casts with zod validation across API routes.
+- Made paired device API-key expiry and signed playback token TTL configurable via environment variables.
+- Added a skip-to-content link and keyboard-navigation landmarks in the app shell for accessibility.
+- Polished the web player: desktop seek-bar hover timestamp preview, reveal controls only after deliberate pointer movement, aligned control scrims, white control accents, and shared slider styling.
 
 ## 0.6.0 - 2026-07-04
 
