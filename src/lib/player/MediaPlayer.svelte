@@ -1076,7 +1076,6 @@
     clearSignedPlaybackNotice();
     segments.destroy();
     releaseScreenWakeLock();
-    session.flushProgress(data);
     cast.destroy();
     session.cancelPlaybackSession(data.playback);
   });
