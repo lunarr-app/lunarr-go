@@ -30,7 +30,7 @@
 - Replaced unsafe JSON body casts with zod validation across API routes.
 - Made paired device API-key expiry and signed playback token TTL configurable via environment variables.
 - Added a skip-to-content link and keyboard-navigation landmarks in the app shell for accessibility.
-- Updated dependencies: SvelteKit 2.69.2, `@sveltejs/vite-plugin-svelte` 7.2.0, Vite 8.1.4, `@types/node` 26.1.1, `kysely` 0.29.3, `node-av` 6.1.1, `svelte-check` 4.7.2, `@lucide/svelte` 1.24.0, and `@ctrl/video-filename-parser` 5.11.1.
+- Updated dependencies: SvelteKit 2.69.2, `@sveltejs/vite-plugin-svelte` 7.2.0, Vite 8.1.4, `@types/node` 24.13.3, `kysely` 0.29.3, `node-av` 6.1.1, `svelte-check` 4.7.2, `@lucide/svelte` 1.24.0, and `@ctrl/video-filename-parser` 5.11.1.
 - Polished the web player: desktop seek-bar hover timestamp preview, reveal controls only after deliberate pointer movement, aligned control scrims, white control accents, and shared slider styling.
 
 ## 0.6.0 - 2026-07-04
