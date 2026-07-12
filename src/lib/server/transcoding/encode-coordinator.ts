@@ -44,6 +44,18 @@ export function jobCovers(job: Pick<ActiveEncodeJob, "firstSegmentIndex" | "last
   return segmentIndex >= job.firstSegmentIndex && segmentIndex <= job.lastSegmentIndex;
 }
 
+export type EnsureSegmentInput = {
+  sessionId: string;
+  segment: string;
+  segmentIndex: number;
+  signal?: AbortSignal;
+  encodeAheadSegmentCount: number;
+  segmentTimeoutMs: number;
+  segmentExists: (segment: string) => Promise<boolean>;
+  assertPlayable: () => Promise<void>;
+  startJob: (segmentIndex: number, signal: AbortSignal) => Promise<EncodeJobHandle | false>;
+};
+
 function ensureKey(cacheKey: string, segment: string) {
   return `${cacheKey}\0${segment}`;
 }
@@ -116,6 +128,19 @@ async function waitForSegmentFile(input: {
     completionError = error;
   });
 
+  const settleOrThrow = async (): Promise<false | undefined> => {
+    if (input.signal?.aborted) {
+      await rethrowCompletionUnlessAborted(input.completion);
+      if (completionError && !isAbortError(completionError)) throw completionError;
+      return false;
+    }
+    if (completionError) {
+      if (isAbortError(completionError)) return false;
+      throw completionError;
+    }
+    return undefined;
+  };
+
   const deadline = Date.now() + Math.max(0, input.timeoutMs);
   let completed = false;
   input.completion
@@ -127,45 +152,15 @@ async function waitForSegmentFile(input: {
     });
 
   while (Date.now() <= deadline) {
-    if (input.signal?.aborted) {
-      await rethrowCompletionUnlessAborted(input.completion);
-      if (completionError) {
-        const error = completionError;
-        completionError = undefined;
-        if (!isAbortError(error)) throw error;
-      }
-      return false;
-    }
-    if (completionError) {
-      const error = completionError;
-      completionError = undefined;
-      if (isAbortError(error)) {
-        return false;
-      }
-      throw error;
-    }
+    const result = await settleOrThrow();
+    if (result === false) return false;
     if (await input.segmentExists()) return true;
     if (completed) break;
     await delay(SEGMENT_POLL_MS, input.signal);
   }
 
-  if (input.signal?.aborted) {
-    await rethrowCompletionUnlessAborted(input.completion);
-    if (completionError) {
-      const error = completionError;
-      completionError = undefined;
-      if (!isAbortError(error)) throw error;
-    }
-    return false;
-  }
-  if (completionError) {
-    const error = completionError;
-    completionError = undefined;
-    if (isAbortError(error)) {
-      return false;
-    }
-    throw error;
-  }
+  const result = await settleOrThrow();
+  if (result === false) return false;
   return await input.segmentExists();
 }
 
@@ -201,7 +196,7 @@ export class EncodeCoordinator {
       .catch(() => undefined);
   }
 
-  private reserveCoveringJob(input: {
+  reserveCoveringJob(input: {
     sessionId: string;
     segmentIndex: number;
     encodeAheadSegmentCount: number;
@@ -220,15 +215,6 @@ export class EncodeCoordinator {
     };
     this.jobs.push(job);
     return job;
-  }
-
-  registerJob(job: ActiveEncodeJob) {
-    this.jobs.push(job);
-    job.completion
-      .finally(() => {
-        this.jobs = this.jobs.filter((entry) => entry.jobId !== job.jobId);
-      })
-      .catch(() => undefined);
   }
 
   cancelSessionJobsOutsideSegment(sessionId: string, segmentIndex: number) {
@@ -257,17 +243,7 @@ export class EncodeCoordinator {
     this.ensureWaiters.clear();
   }
 
-  async ensureSegment(input: {
-    sessionId: string;
-    segment: string;
-    segmentIndex: number;
-    signal?: AbortSignal;
-    encodeAheadSegmentCount: number;
-    segmentTimeoutMs: number;
-    segmentExists: (segment: string) => Promise<boolean>;
-    assertPlayable: () => Promise<void>;
-    startJob: (segmentIndex: number, signal: AbortSignal) => Promise<EncodeJobHandle | false>;
-  }): Promise<boolean> {
+  async ensureSegment(input: EnsureSegmentInput): Promise<boolean> {
     if (input.signal?.aborted) return false;
 
     const key = ensureKey(this.cacheKey, input.segment);
@@ -295,17 +271,7 @@ export class EncodeCoordinator {
     return run;
   }
 
-  private async runEnsureSegment(input: {
-    sessionId: string;
-    segment: string;
-    segmentIndex: number;
-    signal?: AbortSignal;
-    encodeAheadSegmentCount: number;
-    segmentTimeoutMs: number;
-    segmentExists: (segment: string) => Promise<boolean>;
-    assertPlayable: () => Promise<void>;
-    startJob: (segmentIndex: number, signal: AbortSignal) => Promise<EncodeJobHandle | false>;
-  }): Promise<boolean> {
+  private async runEnsureSegment(input: EnsureSegmentInput): Promise<boolean> {
     if (input.signal?.aborted) return false;
     if (await input.segmentExists(input.segment)) return true;
 
@@ -419,6 +385,10 @@ export class EncodeCoordinator {
       let started: EncodeJobHandle | false;
       try {
         started = await input.startJob(input.segmentIndex, jobController.signal);
+      } catch (error) {
+        this.removeJob(reservedJob.jobId);
+        releaseReservation(error instanceof Error ? error : new Error(String(error)));
+        throw error;
       } finally {
         input.signal?.removeEventListener("abort", abortFromRequest);
       }

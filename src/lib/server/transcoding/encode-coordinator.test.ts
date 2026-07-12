@@ -203,12 +203,10 @@ describe("encode-coordinator", () => {
       await writeFile(path.join(tempDir, "segment-00012.ts"), "encoded");
     })();
 
-    coordinator.registerJob({
-      jobId: encodeJobId("session-1", 10),
+    coordinator.reserveCoveringJob({
       sessionId: "session-1",
-      cacheKey: "cache-1",
-      firstSegmentIndex: 10,
-      lastSegmentIndex: 13,
+      segmentIndex: 10,
+      encodeAheadSegmentCount: 4,
       completion,
       abort: () => undefined,
     });
@@ -250,12 +248,10 @@ describe("encode-coordinator", () => {
     });
     abortedCompletion.catch(() => undefined);
 
-    coordinator.registerJob({
-      jobId: encodeJobId("session-1", 10),
+    coordinator.reserveCoveringJob({
       sessionId: "session-1",
-      cacheKey: "cache-1",
-      firstSegmentIndex: 10,
-      lastSegmentIndex: 13,
+      segmentIndex: 10,
+      encodeAheadSegmentCount: 4,
       completion: abortedCompletion,
       abort: () => undefined,
     });
@@ -372,12 +368,10 @@ describe("encode-coordinator", () => {
     const coordinator = new EncodeCoordinator("cache-1");
     let farAborted = false;
 
-    coordinator.registerJob({
-      jobId: encodeJobId("session-1", 30),
+    coordinator.reserveCoveringJob({
       sessionId: "session-1",
-      cacheKey: "cache-1",
-      firstSegmentIndex: 30,
-      lastSegmentIndex: 33,
+      segmentIndex: 30,
+      encodeAheadSegmentCount: 4,
       completion: new Promise(() => undefined),
       abort: () => {
         farAborted = true;
@@ -433,12 +427,10 @@ describe("encode-coordinator", () => {
   test("onNoActiveViewers aborts all jobs and clears pending ensures", async () => {
     const coordinator = new EncodeCoordinator("cache-1");
     let aborted = false;
-    coordinator.registerJob({
-      jobId: encodeJobId("session-1", 0),
+    coordinator.reserveCoveringJob({
       sessionId: "session-1",
-      cacheKey: "cache-1",
-      firstSegmentIndex: 0,
-      lastSegmentIndex: 3,
+      segmentIndex: 0,
+      encodeAheadSegmentCount: 4,
       completion: new Promise(() => undefined),
       abort: () => {
         aborted = true;
@@ -491,12 +483,10 @@ describe("encode-coordinator", () => {
   test("onEncodeCacheIdle drops coordinator for encode-directory-only keys", () => {
     const cacheKey = "/tmp/encode-only-dir";
     const coordinator = getEncodeCoordinator(cacheKey);
-    coordinator.registerJob({
-      jobId: encodeJobId("session-1", 0),
+    coordinator.reserveCoveringJob({
       sessionId: "session-1",
-      cacheKey,
-      firstSegmentIndex: 0,
-      lastSegmentIndex: 3,
+      segmentIndex: 0,
+      encodeAheadSegmentCount: 4,
       completion: new Promise(() => undefined),
       abort: () => undefined,
     });
