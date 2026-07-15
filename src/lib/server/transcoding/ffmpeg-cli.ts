@@ -148,6 +148,15 @@ function maxHeightScaleFilter(maxHeight: number | null | undefined) {
   return `scale=-2:trunc(min(ih\\,${Number(maxHeight)})/2)*2`;
 }
 
+function hardwareScaleArg(mode: FfmpegHardwareMode, maxHeight: number | null | undefined) {
+  const scale = maxHeightScaleFilter(maxHeight);
+  if (!scale) return [];
+  const expr = scale.slice(scale.indexOf("=") + 1);
+  const filterName =
+    mode === "videotoolbox" ? "scale_vt" : mode === "qsv" ? "scale_qsv" : mode === "nvenc" ? "scale_cuda" : "scale";
+  return ["-vf", `${filterName}=${expr}`];
+}
+
 function transcodeQualityKey(input: HlsTranscodeInput) {
   const quality = input.transcodeQuality;
   if (!quality) return "";
@@ -184,13 +193,13 @@ function effectiveHardwareMode(input: HlsTranscodeInput) {
 function hardwareInputArgs(mode: FfmpegHardwareMode) {
   switch (mode) {
     case "videotoolbox":
-      return ["-hwaccel", "videotoolbox"];
+      return ["-hwaccel", "videotoolbox", "-hwaccel_output_format", "videotoolbox_vld"];
     case "vaapi":
       return ["-vaapi_device", process.env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128"];
     case "qsv":
-      return ["-hwaccel", "qsv"];
+      return ["-hwaccel", "qsv", "-hwaccel_output_format", "qsv"];
     case "nvenc":
-      return ["-hwaccel", "cuda"];
+      return ["-hwaccel", "cuda", "-hwaccel_output_format", "cuda"];
     case "amf":
       return [];
   }
@@ -217,7 +226,7 @@ function hardwareVideoArgs(input: {
   switch (input.mode) {
     case "videotoolbox":
       return [
-        ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
+        ...hardwareScaleArg("videotoolbox", input.maxHeight),
         "-c:v",
         "h264_videotoolbox",
         ...common,
@@ -232,7 +241,7 @@ function hardwareVideoArgs(input: {
       ];
     case "qsv":
       return [
-        ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
+        ...hardwareScaleArg("qsv", input.maxHeight),
         "-c:v",
         "h264_qsv",
         "-preset",
@@ -241,7 +250,7 @@ function hardwareVideoArgs(input: {
       ];
     case "nvenc":
       return [
-        ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
+        ...hardwareScaleArg("nvenc", input.maxHeight),
         "-c:v",
         "h264_nvenc",
         "-preset",

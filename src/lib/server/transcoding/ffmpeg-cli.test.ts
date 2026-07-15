@@ -375,6 +375,8 @@ describe("FFmpeg HLS playback backend", () => {
       "-y",
       "-hwaccel",
       "videotoolbox",
+      "-hwaccel_output_format",
+      "videotoolbox_vld",
       "-i",
       "/media/Movie.mkv",
       "-map",
@@ -432,8 +434,46 @@ describe("FFmpeg HLS playback backend", () => {
     );
 
     expect(args).toContain("h264_nvenc");
-    expect(args).toContain("scale=-2:trunc(min(ih\\,720)/2)*2");
+    expect(args).toContain("scale_cuda=-2:trunc(min(ih\\,720)/2)*2");
     expect(args.slice(args.indexOf("-b:v"), args.indexOf("-b:v") + 2)).toEqual(["-b:v", "3M"]);
+  });
+
+  test("uses scale_vt for VideoToolbox height-limited presets", () => {
+    const args = ffmpegHlsArgs(
+      input({
+        hardwareAcceleration: "videotoolbox",
+        hardwareAccelerationRequired: true,
+        transcodeQuality: {
+          preset: "720p",
+          maxHeight: 720,
+          softwareCrf: 24,
+          hardwareBitrate: "3M",
+        },
+      }),
+    );
+
+    expect(args).toContain("scale_vt=-2:trunc(min(ih\\,720)/2)*2");
+    expect(args).toContain("-hwaccel_output_format");
+    expect(args).toContain("videotoolbox_vld");
+  });
+
+  test("uses scale_qsv for QSV height-limited presets", () => {
+    const args = ffmpegHlsArgs(
+      input({
+        hardwareAcceleration: "qsv",
+        hardwareAccelerationRequired: true,
+        transcodeQuality: {
+          preset: "720p",
+          maxHeight: 720,
+          softwareCrf: 24,
+          hardwareBitrate: "3M",
+        },
+      }),
+    );
+
+    expect(args).toContain("scale_qsv=-2:trunc(min(ih\\,720)/2)*2");
+    expect(args).toContain("-hwaccel_output_format");
+    expect(args).toContain("qsv");
   });
 
   test("keeps automatic hardware acceleration on software unless required", () => {
