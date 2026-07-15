@@ -54,7 +54,11 @@ async function writeRange(input: {
       );
     }
     if (!input.response.write(chunk)) {
-      await once(input.response, "drain");
+      try {
+        await once(input.response, "drain", { signal: input.signal });
+      } catch {
+        return;
+      }
     }
     offset += chunk.length;
   }
