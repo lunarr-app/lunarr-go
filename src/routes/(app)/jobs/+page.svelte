@@ -3,7 +3,7 @@
   import ScanJobErrors from "./_components/ScanJobErrors.svelte";
   import { invalidateAll } from "$app/navigation";
   import { formatDateTime, formatElapsedDuration, formatRelativeTime } from "$lib/media/format";
-  import { Activity, XCircle } from "@lucide/svelte";
+  import { Activity } from "@lucide/svelte";
   import { onMount } from "svelte";
 
   let { data, form } = $props();
@@ -252,7 +252,6 @@
                 confirmLabel="Cancel job"
                 buttonClass="secondary compact"
               >
-                <XCircle size={15} aria-hidden="true" />
                 Cancel
               </ConfirmAction>
             {/if}
@@ -318,7 +317,6 @@
                 confirmLabel="Cancel session"
                 buttonClass="secondary compact"
               >
-                <XCircle size={15} aria-hidden="true" />
                 Cancel
               </ConfirmAction>
             {/if}
