@@ -1,6 +1,7 @@
 <script lang="ts">
   import MovieCard from "$lib/components/MovieCard.svelte";
   import EpisodeCard from "$lib/components/EpisodeCard.svelte";
+  import ShowCard from "$lib/components/ShowCard.svelte";
   import Rail from "$lib/components/Rail.svelte";
   import { ChevronRight, Film, Tv } from "@lucide/svelte";
 
@@ -10,7 +11,13 @@
     return `${total} ${total === 1 ? singular : plural}`;
   }
 
-  const hasContent = $derived(data.moviesPage.total > 0 || data.episodesPage.total > 0 || data.nextUpPage.total > 0);
+  const hasContent = $derived(
+    data.moviesPage.total > 0 ||
+      data.episodesPage.total > 0 ||
+      data.nextUpPage.total > 0 ||
+      data.recommendedMovies.length > 0 ||
+      data.recommendedShows.length > 0,
+  );
   const movieCountLabel = $derived(countLabel(data.moviesPage.total, "movie", "movies"));
   const episodeCountLabel = $derived(countLabel(data.episodesPage.total, "episode", "episodes"));
   const nextUpCountLabel = $derived(countLabel(data.nextUpPage.total, "episode", "episodes"));
@@ -84,6 +91,46 @@
       </Rail>
     </section>
   {/if}
+
+  {#if data.recommendedMovies.length}
+    <section class="media-section" aria-labelledby="recommended-movies-heading">
+      <div class="section-heading">
+        <div>
+          <h2 id="recommended-movies-heading" class="section-title">Recommended movies</h2>
+          <p class="muted section-sub">Picks similar to your recent watches.</p>
+        </div>
+        <a class="view-all" href="/movies/discover">
+          <span>View all</span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </a>
+      </div>
+      <Rail items={data.recommendedMovies} variant="poster">
+        {#snippet children(movie)}
+          <MovieCard {movie} />
+        {/snippet}
+      </Rail>
+    </section>
+  {/if}
+
+  {#if data.recommendedShows.length}
+    <section class="media-section" aria-labelledby="recommended-shows-heading">
+      <div class="section-heading">
+        <div>
+          <h2 id="recommended-shows-heading" class="section-title">Recommended shows</h2>
+          <p class="muted section-sub">Picks similar to your recent episode watches.</p>
+        </div>
+        <a class="view-all" href="/shows/discover">
+          <span>View all</span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </a>
+      </div>
+      <Rail items={data.recommendedShows} variant="poster">
+        {#snippet children(show)}
+          <ShowCard {show} />
+        {/snippet}
+      </Rail>
+    </section>
+  {/if}
 {:else}
   <section class="empty">
     <h2 class="empty-title">Nothing in progress</h2>
@@ -117,6 +164,11 @@
   .section-title,
   .empty-title {
     margin: 0;
+  }
+
+  .section-sub {
+    margin: 0.15rem 0 0;
+    font-size: 0.82rem;
   }
 
   .section-meta {

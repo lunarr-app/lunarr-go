@@ -22,6 +22,7 @@
 - Changed the Movies and Shows hub rails (and Discover/Search previews) to always render as single-row horizontal carousels, removing the previous two-row grid fallback for large rail sets. Deleted the now-unused `twoRowRailItems`/related helpers in `src/lib/media/rails.ts` and their tests.
 - Consolidated the three near-identical `MovieRail`, `ShowRail`, and `EpisodeRail` components into a single generic `Rail` component (`$lib/components/Rail.svelte`) that takes the items, a `poster`/`episode` width `variant`, and a card-rendering snippet.
 - Removed the Continue watching (and Next up) rails from the Movies and Shows hub pages so resume lives only on the dedicated Continue page. Those hubs are now pure category browsers (Recently added, Latest, Popular), and their server loads are scoped accordingly (dropping `continueWatching`/`nextUp`).
+- Merged the Discover hub into the Continue (landing) page: the landing page now also shows Recommended movies and Recommended shows rails (with "View all" links to the `/movies/discover` and `/shows/discover` browse pages). Removed the standalone `/discover` route and its primary-nav entry, matching the Plex/Jellyfin-style combined Home.
 
 ## 0.7.0 - 2026-07-12
 
