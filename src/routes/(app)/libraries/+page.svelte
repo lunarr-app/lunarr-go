@@ -94,7 +94,7 @@
     <div class="ops-panel-body">
       <label>
         Name
-        <input name="name" value={formData.name ?? ""} placeholder="Movies" />
+        <input name="name" value={formData.name ?? ""} placeholder="e.g. Family Movies" />
       </label>
       <label>
         Type

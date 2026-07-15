@@ -1,12 +1,10 @@
 <script lang="ts">
   import { Save } from "@lucide/svelte";
-  import type { PageData } from "../$types";
   import LibraryAutomationFields from "./LibraryAutomationFields.svelte";
   import ModalDialog from "$lib/components/ModalDialog.svelte";
   import { libraryRemoteFieldValues } from "./libraryRemoteFieldValues";
   import RemoteLibraryFields from "./RemoteLibraryFields.svelte";
-
-  type Library = PageData["libraries"][number];
+  import type { Library } from "./types";
 
   let {
     library,
@@ -27,16 +25,9 @@
       Name
       <input name="name" value={library.name} />
     </label>
-    {#if library.source === "sftp"}
+    {#if library.source === "sftp" || library.source === "webdav"}
       <RemoteLibraryFields
-        protocol="sftp"
-        values={libraryRemoteFieldValues(library)}
-        passwordPlaceholder="Leave blank to keep current password"
-        rootPlaceholder="media/movies"
-      />
-    {:else if library.source === "webdav"}
-      <RemoteLibraryFields
-        protocol="webdav"
+        protocol={library.source}
         values={libraryRemoteFieldValues(library)}
         passwordPlaceholder="Leave blank to keep current password"
         rootPlaceholder="media/movies"

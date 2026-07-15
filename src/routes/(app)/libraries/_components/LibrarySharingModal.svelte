@@ -1,10 +1,7 @@
 <script lang="ts">
   import { Save } from "@lucide/svelte";
-  import type { PageData } from "../$types";
   import ModalDialog from "$lib/components/ModalDialog.svelte";
-
-  type Library = PageData["libraries"][number];
-  type User = PageData["users"][number];
+  import type { Library, LibraryUser } from "./types";
 
   let {
     library,
@@ -12,7 +9,7 @@
     onClose,
   }: {
     library: Library;
-    users: User[];
+    users: LibraryUser[];
     onClose: () => void;
   } = $props();
 

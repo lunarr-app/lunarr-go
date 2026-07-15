@@ -1,4 +1,4 @@
-import type { PageData } from "../$types";
+import type { Library } from "./types";
 
 export type RemoteLibraryFieldValues = {
   host?: string;
@@ -9,8 +9,6 @@ export type RemoteLibraryFieldValues = {
   root?: string;
   secure?: boolean;
 };
-
-type Library = PageData["libraries"][number];
 
 export function libraryRemoteFieldValues(library: Library): RemoteLibraryFieldValues {
   if (library.source === "sftp") {
