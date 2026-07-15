@@ -406,7 +406,7 @@ describe("authenticated API route boundaries", () => {
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
       expect(duplicateResponse.status).toBe(400);
-      expect((await duplicateResponse.json() as { error: string }).error).toBe("Playback session is not active.");
+      expect(((await duplicateResponse.json()) as { error: string }).error).toBe("Playback session is not active.");
 
       const job = await db
         .selectFrom("playback_session")

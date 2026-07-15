@@ -45,7 +45,7 @@
 </button>
 
 {#if open}
-  <ModalDialog title={title} {titleId} onClose={closeDialog}>
+  <ModalDialog {title} {titleId} onClose={closeDialog}>
     <div class="dialog-form">
       <p class="message">{message}</p>
       <form method="POST" {action} class="form-actions">

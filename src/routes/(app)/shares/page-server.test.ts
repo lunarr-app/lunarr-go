@@ -140,11 +140,7 @@ describe("shares page server", () => {
     expect(result).toEqual({ revokeSuccess: true });
 
     const db = await getDb();
-    const row = await db
-      .selectFrom("media_share")
-      .selectAll()
-      .where("id", "=", "share-1")
-      .executeTakeFirst();
+    const row = await db.selectFrom("media_share").selectAll().where("id", "=", "share-1").executeTakeFirst();
     expect(row?.revoked_at).not.toBeNull();
   });
 

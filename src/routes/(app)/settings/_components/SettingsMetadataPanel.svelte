@@ -156,9 +156,7 @@
     {#if metadataSaveError}
       <p class="error">{metadataSaveError}</p>
     {/if}
-    <button disabled={!metadataChanged}>
-      Save metadata
-    </button>
+    <button disabled={!metadataChanged}>Save metadata</button>
   </div>
 </form>
 

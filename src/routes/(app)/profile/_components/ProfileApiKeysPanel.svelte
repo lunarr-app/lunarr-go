@@ -62,7 +62,9 @@
   </div>
 
   <div class="ops-panel-body api-panel-body">
-    <p class="muted api-docs-note">OpenAPI specification for building custom clients. Authenticate requests with the X-API-Key header.</p>
+    <p class="muted api-docs-note">
+      OpenAPI specification for building custom clients. Authenticate requests with the X-API-Key header.
+    </p>
 
     <div class="api-links" aria-label="API documentation">
       <a class="api-link" href="/api/openapi.json" target="_blank" rel="noreferrer">

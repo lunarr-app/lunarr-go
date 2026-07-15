@@ -243,46 +243,15 @@ function hardwareVideoArgs(input: {
 
   switch (input.mode) {
     case "videotoolbox":
-      return [
-        ...hardwareScaleArg("videotoolbox", input.maxHeight),
-        "-c:v",
-        "h264_videotoolbox",
-        ...common,
-      ];
+      return [...hardwareScaleArg("videotoolbox", input.maxHeight), "-c:v", "h264_videotoolbox", ...common];
     case "vaapi":
-      return [
-        ...hardwareScaleArg("vaapi", input.maxHeight),
-        "-c:v",
-        "h264_vaapi",
-        ...common,
-      ];
+      return [...hardwareScaleArg("vaapi", input.maxHeight), "-c:v", "h264_vaapi", ...common];
     case "qsv":
-      return [
-        ...hardwareScaleArg("qsv", input.maxHeight),
-        "-c:v",
-        "h264_qsv",
-        "-preset",
-        "veryfast",
-        ...common,
-      ];
+      return [...hardwareScaleArg("qsv", input.maxHeight), "-c:v", "h264_qsv", "-preset", "veryfast", ...common];
     case "nvenc":
-      return [
-        ...hardwareScaleArg("nvenc", input.maxHeight),
-        "-c:v",
-        "h264_nvenc",
-        "-preset",
-        "p4",
-        ...common,
-      ];
+      return [...hardwareScaleArg("nvenc", input.maxHeight), "-c:v", "h264_nvenc", "-preset", "p4", ...common];
     case "amf":
-      return [
-        ...hardwareScaleArg("amf", input.maxHeight),
-        "-c:v",
-        "h264_amf",
-        "-quality",
-        "speed",
-        ...common,
-      ];
+      return [...hardwareScaleArg("amf", input.maxHeight), "-c:v", "h264_amf", "-quality", "speed", ...common];
   }
 }
 

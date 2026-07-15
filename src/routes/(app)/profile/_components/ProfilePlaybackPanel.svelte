@@ -98,9 +98,7 @@
       <p class="error">{playbackPreferenceError}</p>
     {/if}
 
-    <button type="submit" disabled={!playbackDirty}>
-      Save playback
-    </button>
+    <button type="submit" disabled={!playbackDirty}>Save playback</button>
   </div>
 </form>
 

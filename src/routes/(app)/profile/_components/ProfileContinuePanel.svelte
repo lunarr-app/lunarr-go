@@ -55,8 +55,6 @@
       <p class="error">{continueMaxAgeError}</p>
     {/if}
 
-    <button type="submit" disabled={!continueDirty}>
-      Save continue settings
-    </button>
+    <button type="submit" disabled={!continueDirty}>Save continue settings</button>
   </div>
 </form>

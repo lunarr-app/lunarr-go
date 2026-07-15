@@ -29,9 +29,7 @@
   const passwordTitleId = `account-password-${Math.random().toString(36).slice(2, 9)}`;
 
   const nameDirty = $derived(displayName.trim() !== (user.name ?? "").trim());
-  const passwordDirty = $derived(
-    currentPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0,
-  );
+  const passwordDirty = $derived(currentPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0);
   const displayNameLabel = $derived(user.name?.trim() || "Not set");
 
   $effect(() => {

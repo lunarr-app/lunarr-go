@@ -170,9 +170,7 @@
 
       {#snippet actions()}
         <form method="POST" action="?/cleanupPlaybackArtifacts">
-          <button type="submit" class="secondary compact-action">
-            Force cleanup
-          </button>
+          <button type="submit" class="secondary compact-action">Force cleanup</button>
         </form>
       {/snippet}
     </SettingsActionRow>
