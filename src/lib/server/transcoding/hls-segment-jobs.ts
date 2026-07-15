@@ -14,6 +14,7 @@ import type { HlsSegmentWindowEntry, HlsSegmentWindowGeneration, HlsSegmentWindo
 import { encodeJobId, encodeLockKey, type EncodeJobHandle, getEncodeCoordinator } from "./encode-coordinator";
 import {
   DEFAULT_HLS_SEGMENT_SECONDS,
+  PREFETCH_SEEK_DISTANCE_SEGMENTS,
   type HlsSegmentFormat,
   hlsSegmentFileExists,
   hlsSegmentIndex,
@@ -533,7 +534,7 @@ export async function ensureHlsLookaheadForSegment(
     }
     if (
       session.lastSegmentIndex !== null &&
-      Math.abs(session.lastSegmentIndex - segmentIndex) > encodeAheadSegmentCount
+      Math.abs(session.lastSegmentIndex - segmentIndex) > PREFETCH_SEEK_DISTANCE_SEGMENTS
     ) {
       return null;
     }

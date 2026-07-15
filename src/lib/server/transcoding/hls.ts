@@ -8,7 +8,12 @@ const SEGMENT_ROUTE_PREFIX = "segments/";
 const DEFAULT_SEGMENT_KEEP_BEHIND = 12;
 export const DEFAULT_HLS_SEGMENT_SECONDS = 16;
 export const ENCODE_AHEAD_SEGMENT_COUNT = 4;
+export const PREFETCH_SEEK_DISTANCE_SEGMENTS = ENCODE_AHEAD_SEGMENT_COUNT;
 export type HlsSegmentFormat = "mpegts" | "fmp4";
+
+export function resolveEncodeAheadSegmentCount(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : ENCODE_AHEAD_SEGMENT_COUNT;
+}
 
 type HlsSegmentPayload = {
   body: Uint8Array;

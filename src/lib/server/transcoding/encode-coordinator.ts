@@ -1,4 +1,5 @@
 import path from "node:path";
+import { resolveEncodeAheadSegmentCount } from "./hls";
 
 const SEGMENT_POLL_MS = 25;
 
@@ -203,7 +204,7 @@ export class EncodeCoordinator {
     completion: Promise<void>;
     abort: () => void;
   }): ActiveEncodeJob {
-    const ahead = Math.max(1, input.encodeAheadSegmentCount);
+    const ahead = resolveEncodeAheadSegmentCount(input.encodeAheadSegmentCount);
     const job: ActiveEncodeJob = {
       jobId: encodeJobId(input.sessionId, input.segmentIndex),
       sessionId: input.sessionId,
@@ -487,7 +488,7 @@ export class EncodeCoordinator {
     segmentExists: (segmentIndex: number, segmentName: string) => Promise<boolean>;
     ensureSegmentAt: (segmentIndex: number, segmentName: string) => Promise<boolean>;
   }): Promise<boolean> {
-    const ahead = Math.max(1, input.encodeAheadSegmentCount);
+    const ahead = resolveEncodeAheadSegmentCount(input.encodeAheadSegmentCount);
     const coveringServedJob = this.findCoveringJob(input.servedSegmentIndex);
     const targetIndex = Math.min(
       input.lastSegmentIndex,

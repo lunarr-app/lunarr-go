@@ -10,7 +10,7 @@ import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { ffmpegPath } from "node-av/ffmpeg";
 import { encodeEventPlaylistPath, encodeFmp4InitFileName, encodeJobId } from "./encode-coordinator";
-import { hlsEventPlaylistHasSegment, ENCODE_AHEAD_SEGMENT_COUNT, type HlsSegmentFormat } from "./hls";
+import { hlsEventPlaylistHasSegment, resolveEncodeAheadSegmentCount, type HlsSegmentFormat } from "./hls";
 
 const STDERR_MAX_BYTES = 32 * 1024;
 const SEGMENT_POLL_MS = 50;
@@ -43,6 +43,7 @@ type ActiveHlsStream = {
   transcodeQualityKey: string;
   hlsSegmentFormat: HlsSegmentFormat;
   startSegmentIndex: number;
+  generatedSegmentCount: number;
 };
 
 const activeFfmpeg = new Map<string, Set<ActiveFfmpeg>>();
@@ -567,7 +568,6 @@ function inputSourceKey(input: HlsSegmentWindowTranscodeInput) {
 }
 
 function reusableHlsStream(input: HlsSegmentWindowTranscodeInput, firstSegment: { segmentIndex: number }) {
-  const ahead = input.encodeAheadSegmentCount ?? ENCODE_AHEAD_SEGMENT_COUNT;
   const prefix = `${input.sessionId}\0`;
   for (const [jobKey, stream] of activeHlsStreams) {
     if (!jobKey.startsWith(prefix)) continue;
@@ -581,7 +581,7 @@ function reusableHlsStream(input: HlsSegmentWindowTranscodeInput, firstSegment: 
     if (stream.transcodeQualityKey !== transcodeQualityKey(input)) continue;
     if (stream.hlsSegmentFormat !== hlsSegmentFormat(input)) continue;
     if (firstSegment.segmentIndex < stream.startSegmentIndex) continue;
-    if (firstSegment.segmentIndex >= stream.startSegmentIndex + ahead) continue;
+    if (firstSegment.segmentIndex >= stream.startSegmentIndex + stream.generatedSegmentCount) continue;
     return stream;
   }
   return null;
@@ -592,6 +592,7 @@ async function startHlsStream(
   firstSegment: { segmentIndex: number; segmentStartSeconds: number },
 ) {
   await mkdir(input.artifactDirectory, { recursive: true });
+  const ahead = resolveEncodeAheadSegmentCount(input.encodeAheadSegmentCount);
   const active = await runFfmpeg(
     {
       ...input,
@@ -599,7 +600,7 @@ async function startHlsStream(
     },
     {
       startSegmentNumber: firstSegment.segmentIndex,
-      maxOutputSeconds: input.segmentSeconds * (input.encodeAheadSegmentCount ?? ENCODE_AHEAD_SEGMENT_COUNT),
+      maxOutputSeconds: input.segmentSeconds * ahead,
     },
   );
   const stream: ActiveHlsStream = {
@@ -615,6 +616,7 @@ async function startHlsStream(
     transcodeQualityKey: transcodeQualityKey(input),
     hlsSegmentFormat: hlsSegmentFormat(input),
     startSegmentIndex: firstSegment.segmentIndex,
+    generatedSegmentCount: ahead,
   };
   const jobKey = encodeJobId(input.sessionId, firstSegment.segmentIndex);
   activeHlsStreams.set(jobKey, stream);

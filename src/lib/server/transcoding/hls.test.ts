@@ -3,11 +3,13 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  ENCODE_AHEAD_SEGMENT_COUNT,
   hlsEventPlaylistContainsSegment,
   hlsPlaylistBodySegmentFormat,
   hlsPlaylistSegmentEntries,
   hlsSegmentName,
   hlsSegmentResponse,
+  resolveEncodeAheadSegmentCount,
   rewriteHlsPlaylistUris,
   virtualHlsPlaylist,
 } from "./hls";
@@ -247,5 +249,20 @@ describe("HLS helpers", () => {
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("resolveEncodeAheadSegmentCount", () => {
+  test("uses a positive value as-is", () => {
+    expect(resolveEncodeAheadSegmentCount(2)).toBe(2);
+    expect(resolveEncodeAheadSegmentCount(8)).toBe(8);
+  });
+
+  test("falls back to the default for missing or non-positive values", () => {
+    expect(resolveEncodeAheadSegmentCount(undefined)).toBe(ENCODE_AHEAD_SEGMENT_COUNT);
+    expect(resolveEncodeAheadSegmentCount(null)).toBe(ENCODE_AHEAD_SEGMENT_COUNT);
+    expect(resolveEncodeAheadSegmentCount(0)).toBe(ENCODE_AHEAD_SEGMENT_COUNT);
+    expect(resolveEncodeAheadSegmentCount(-3)).toBe(ENCODE_AHEAD_SEGMENT_COUNT);
+    expect(resolveEncodeAheadSegmentCount(NaN)).toBe(ENCODE_AHEAD_SEGMENT_COUNT);
   });
 });
