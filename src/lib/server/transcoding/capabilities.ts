@@ -6,8 +6,6 @@ import {
 import type { HlsSegmentFormat } from "./hls";
 import type { PlaybackPreference, TranscodePolicy } from "./policy";
 
-export type PlaybackMode = "direct" | "remux" | "transcode";
-
 export type MediaCapabilityInput = {
   extension: string | null;
   container: string | null;
