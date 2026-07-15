@@ -1,23 +1,12 @@
 <script lang="ts">
   import MovieCard from "$lib/components/MovieCard.svelte";
-  import { twoRowRailItems } from "$lib/media/rails";
   import type { MovieSummary } from "$lib/media/types";
 
-  let {
-    movies,
-    twoRowThreshold = 9,
-  }: {
-    movies: MovieSummary[];
-    twoRowThreshold?: number;
-  } = $props();
-
-  let width = $state(0);
-  const isTwoRow = $derived(movies.length >= twoRowThreshold);
-  const visibleMovies = $derived(isTwoRow ? twoRowRailItems(movies, width) : movies);
+  let { movies }: { movies: MovieSummary[] } = $props();
 </script>
 
-<div class="movie-rail" class:two-row={isTwoRow} bind:clientWidth={width}>
-  {#each visibleMovies as movie (movie.id)}
+<div class="movie-rail">
+  {#each movies as movie (movie.id)}
     <MovieCard {movie} />
   {/each}
 </div>
@@ -37,15 +26,6 @@
     scroll-padding-inline: 0.25rem;
     scrollbar-color: var(--color-scrollbar) transparent;
     scrollbar-width: thin;
-  }
-
-  .movie-rail.two-row {
-    grid-auto-flow: row;
-    grid-auto-columns: unset;
-    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-    grid-template-rows: repeat(2, auto);
-    overflow: visible;
-    scroll-snap-type: none;
   }
 
   .movie-rail :global(.movie) {
@@ -72,10 +52,6 @@
   @media (max-width: 760px) {
     .movie-rail {
       grid-auto-columns: minmax(8.25rem, 38vw);
-    }
-
-    .movie-rail.two-row {
-      grid-template-columns: repeat(auto-fill, minmax(8.25rem, 1fr));
     }
   }
 </style>

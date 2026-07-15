@@ -1,23 +1,12 @@
 <script lang="ts">
   import EpisodeCard from "$lib/components/EpisodeCard.svelte";
-  import { twoRowRailItems } from "$lib/media/rails";
   import type { EpisodeSummary } from "$lib/media/types";
 
-  let {
-    episodes,
-    twoRowThreshold = 5,
-  }: {
-    episodes: EpisodeSummary[];
-    twoRowThreshold?: number;
-  } = $props();
-
-  let width = $state(0);
-  const isTwoRow = $derived(episodes.length >= twoRowThreshold);
-  const visibleEpisodes = $derived(isTwoRow ? twoRowRailItems(episodes, width, { minColumnPx: 240 }) : episodes);
+  let { episodes }: { episodes: EpisodeSummary[] } = $props();
 </script>
 
-<div class="episode-rail" class:two-row={isTwoRow} bind:clientWidth={width}>
-  {#each visibleEpisodes as episode (episode.id)}
+<div class="episode-rail">
+  {#each episodes as episode (episode.id)}
     <EpisodeCard {episode} />
   {/each}
 </div>
@@ -37,15 +26,6 @@
     scroll-padding-inline: 0.25rem;
     scrollbar-color: var(--color-scrollbar) transparent;
     scrollbar-width: thin;
-  }
-
-  .episode-rail.two-row {
-    grid-auto-flow: row;
-    grid-auto-columns: unset;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-    grid-template-rows: repeat(2, auto);
-    overflow: visible;
-    scroll-snap-type: none;
   }
 
   .episode-rail :global(.episode) {
@@ -72,10 +52,6 @@
   @media (max-width: 640px) {
     .episode-rail {
       grid-auto-columns: minmax(15rem, 78vw);
-    }
-
-    .episode-rail.two-row {
-      grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
     }
   }
 </style>

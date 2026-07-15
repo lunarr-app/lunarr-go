@@ -17,6 +17,9 @@
 - Made Continue the primary landing page: the brand logo, root `/`, and post-login/setup/signup redirects now go to `/continue` (previously `/movies`), and Continue is listed first in the primary navigation.
 - Tightened the app layout padding: horizontal max reduced to `2rem` and main vertical padding made symmetric (`1.6rem` top/bottom, was `1.4rem`/`3rem`).
 - Removed the "All movies" and "All shows" rails from the Movies and Shows hub pages and scoped their server loads to only the rails actually rendered (Continue Watching, Recent, Latest, Popular for movies; plus Next Up for shows), dropping the unused `all` payload. The `/movies/all` and `/shows/all` browse pages remain available via Search and direct URL.
+- Changed the Continue hub sections (Movies, Episodes, Next up) to render as single-row horizontal carousels using the shared rail components instead of a wrapping grid, matching the Movies/Shows hubs. Each section loads the default 24-item rail limit.
+- Moved the shared `MovieRail`, `EpisodeRail`, and `ShowRail` components from route-local `_components` into `$lib/components` so every hub page (Continue, Discover, Search, Movies, Shows) uses one implementation.
+- Changed the Movies and Shows hub rails (and Discover/Search previews) to always render as single-row horizontal carousels, removing the previous two-row grid fallback for large rail sets. Deleted the now-unused `twoRowRailItems`/related helpers in `src/lib/media/rails.ts` and their tests.
 
 ## 0.7.0 - 2026-07-12
 

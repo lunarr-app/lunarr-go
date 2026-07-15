@@ -1,23 +1,12 @@
 <script lang="ts">
   import ShowCard from "$lib/components/ShowCard.svelte";
-  import { twoRowRailItems } from "$lib/media/rails";
   import type { ShowSummary } from "$lib/media/types";
 
-  let {
-    shows,
-    twoRowThreshold = 9,
-  }: {
-    shows: ShowSummary[];
-    twoRowThreshold?: number;
-  } = $props();
-
-  let width = $state(0);
-  const isTwoRow = $derived(shows.length >= twoRowThreshold);
-  const visibleShows = $derived(isTwoRow ? twoRowRailItems(shows, width) : shows);
+  let { shows }: { shows: ShowSummary[] } = $props();
 </script>
 
-<div class="show-rail" class:two-row={isTwoRow} bind:clientWidth={width}>
-  {#each visibleShows as show (show.id)}
+<div class="show-rail">
+  {#each shows as show (show.id)}
     <ShowCard {show} />
   {/each}
 </div>
@@ -37,15 +26,6 @@
     scroll-padding-inline: 0.25rem;
     scrollbar-color: var(--color-scrollbar) transparent;
     scrollbar-width: thin;
-  }
-
-  .show-rail.two-row {
-    grid-auto-flow: row;
-    grid-auto-columns: unset;
-    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-    grid-template-rows: repeat(2, auto);
-    overflow: visible;
-    scroll-snap-type: none;
   }
 
   .show-rail :global(.show) {
@@ -72,10 +52,6 @@
   @media (max-width: 640px) {
     .show-rail {
       grid-auto-columns: minmax(8.25rem, 38vw);
-    }
-
-    .show-rail.two-row {
-      grid-template-columns: repeat(auto-fill, minmax(8.25rem, 1fr));
     }
   }
 </style>

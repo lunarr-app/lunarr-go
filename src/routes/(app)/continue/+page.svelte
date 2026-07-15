@@ -1,6 +1,6 @@
 <script lang="ts">
-  import EpisodeCard from "$lib/components/EpisodeCard.svelte";
-  import MovieCard from "$lib/components/MovieCard.svelte";
+  import MovieRail from "$lib/components/MovieRail.svelte";
+  import EpisodeRail from "$lib/components/EpisodeRail.svelte";
   import { ChevronRight, Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();
@@ -36,11 +36,7 @@
           </a>
         </div>
       </div>
-      <div class="movie-grid">
-        {#each data.movies as movie (movie.id)}
-          <MovieCard {movie} />
-        {/each}
-      </div>
+      <MovieRail movies={data.movies} />
     </section>
   {/if}
 
@@ -56,11 +52,7 @@
           </a>
         </div>
       </div>
-      <div class="episode-grid">
-        {#each data.episodes as episode (episode.id)}
-          <EpisodeCard {episode} />
-        {/each}
-      </div>
+      <EpisodeRail episodes={data.episodes} />
     </section>
   {/if}
 
@@ -76,11 +68,7 @@
           </a>
         </div>
       </div>
-      <div class="episode-grid">
-        {#each data.nextUp as episode (episode.id)}
-          <EpisodeCard {episode} />
-        {/each}
-      </div>
+      <EpisodeRail episodes={data.nextUp} />
     </section>
   {/if}
 {:else}
@@ -142,20 +130,6 @@
 
   .view-all:hover {
     color: var(--color-text);
-  }
-
-  .movie-grid,
-  .episode-grid {
-    display: grid;
-    gap: 1.1rem;
-  }
-
-  .movie-grid {
-    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  }
-
-  .episode-grid {
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   }
 
   .empty {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import MovieRail from "./_components/MovieRail.svelte";
+  import MovieRail from "$lib/components/MovieRail.svelte";
   import { ChevronRight, Library } from "@lucide/svelte";
 
   let { data } = $props();
@@ -30,7 +30,6 @@
       href: "/movies/popular",
     },
   ]);
-  const TWO_ROW_MOVIE_RAIL_COUNT = 9;
 </script>
 
 <svelte:head>
@@ -60,7 +59,7 @@
             </a>
           {/if}
         </div>
-        <MovieRail movies={section.movies} twoRowThreshold={TWO_ROW_MOVIE_RAIL_COUNT} />
+        <MovieRail movies={section.movies} />
       </section>
     {/if}
   {/each}

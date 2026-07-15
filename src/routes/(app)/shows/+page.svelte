@@ -1,6 +1,6 @@
 <script lang="ts">
-  import EpisodeRail from "./_components/EpisodeRail.svelte";
-  import ShowRail from "./_components/ShowRail.svelte";
+  import EpisodeRail from "$lib/components/EpisodeRail.svelte";
+  import ShowRail from "$lib/components/ShowRail.svelte";
   import { ChevronRight, Library } from "@lucide/svelte";
 
   let { data } = $props();
@@ -44,8 +44,6 @@
   const hasContent = $derived(
     episodeSections.length > 0 || showSections.some((section) => section.shows.length > 0),
   );
-  const TWO_ROW_EPISODE_RAIL_COUNT = 5;
-  const TWO_ROW_SHOW_RAIL_COUNT = 9;
 </script>
 
 <svelte:head>
@@ -74,7 +72,7 @@
           </a>
         {/if}
       </div>
-      <EpisodeRail episodes={section.episodes} twoRowThreshold={TWO_ROW_EPISODE_RAIL_COUNT} />
+      <EpisodeRail episodes={section.episodes} />
     </section>
   {/each}
 
@@ -90,7 +88,7 @@
             </a>
           {/if}
         </div>
-        <ShowRail shows={section.shows} twoRowThreshold={TWO_ROW_SHOW_RAIL_COUNT} />
+        <ShowRail shows={section.shows} />
       </section>
     {/if}
   {/each}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import SearchField from "$lib/components/SearchField.svelte";
-  import MovieRail from "../movies/_components/MovieRail.svelte";
-  import ShowRail from "../shows/_components/ShowRail.svelte";
+  import MovieRail from "$lib/components/MovieRail.svelte";
+  import ShowRail from "$lib/components/ShowRail.svelte";
   import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
   import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import { ChevronRight } from "@lucide/svelte";

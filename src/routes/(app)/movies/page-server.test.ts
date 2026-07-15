@@ -29,6 +29,13 @@ type MoviesLoadResult = {
   };
 };
 
+type TestEvent = {
+  locals: { user: { id: string; role: string } };
+  url: URL;
+};
+
+const loadMovies = moviesLoad as unknown as (event: TestEvent) => Promise<MoviesLoadResult>;
+
 type ContinueLoadResult = {
   movies: MovieRow[];
   moviesPage: {
@@ -231,10 +238,10 @@ describe("movies page server", () => {
   });
 
   test("ignores browse query parameters and returns scoped rails", async () => {
-    const result = (await moviesLoad({
+    const result = await loadMovies({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/movies?q=rav&status=unwatched&sort=rating"),
-    } as never)) as MoviesLoadResult;
+    });
 
     expect(result).not.toHaveProperty("query");
     expect(result).not.toHaveProperty("status");
@@ -247,10 +254,10 @@ describe("movies page server", () => {
   });
 
   test("ignores invalid browse query parameters", async () => {
-    const result = (await moviesLoad({
+    const result = await loadMovies({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/movies?status=watchedish&sort=unknown"),
-    } as never)) as MoviesLoadResult;
+    });
 
     expect(result).not.toHaveProperty("status");
     expect(result).not.toHaveProperty("sort");

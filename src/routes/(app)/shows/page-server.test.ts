@@ -9,6 +9,16 @@ import { setSetting } from "$lib/server/settings";
 import { actions as showActions, load as showLoad } from "./[id]/+page.server";
 import { actions as seasonActions, load as seasonLoad } from "./[id]/seasons/[seasonId]/+page.server";
 import { load as showsLoad } from "./+page.server";
+import type { ShowRowsResponse } from "$lib/server/api/types";
+
+type ShowsLoadResult = { rows: ShowRowsResponse };
+
+type TestEvent = {
+  locals: { user: { id: string; role: string } };
+  url: URL;
+};
+
+const loadShows = showsLoad as unknown as (event: TestEvent) => Promise<ShowsLoadResult>;
 
 async function expectRedirect(operation: unknown, location: string) {
   try {
@@ -137,10 +147,10 @@ describe("shows page server", () => {
   });
 
   test("loads TV rails and ignores query parameters", async () => {
-    const result = await showsLoad({
+    const result = await loadShows({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/shows?q=exp&sort=latest"),
-    } as never);
+    });
 
     expect(result).not.toHaveProperty("query");
     expect(result).not.toHaveProperty("sort");
@@ -177,10 +187,10 @@ describe("shows page server", () => {
       })
       .execute();
 
-    const result = await showsLoad({
+    const result = await loadShows({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/shows"),
-    } as never);
+    });
 
     expect(result).toMatchObject({
       rows: {
