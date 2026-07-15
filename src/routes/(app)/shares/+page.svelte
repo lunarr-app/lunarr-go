@@ -1,18 +1,17 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
   import Pagination from "$lib/components/Pagination.svelte";
+  import ConfirmAction from "$lib/components/ConfirmAction.svelte";
   import { formatDateTime } from "$lib/media/format";
-  import { revokeShare, shareLinkUrl } from "$lib/shares/client";
+  import { shareLinkUrl } from "$lib/shares/client";
   import { SHARE_LIST_STATUSES, type ShareListStatus } from "$lib/shares/constants";
   import { shareScopeLabel, shareStatusDetail, shareStatusLabel } from "$lib/shares/format";
   import type { AdminShareRecord } from "$lib/shares/types";
-  import { Copy, ExternalLink, Trash2 } from "@lucide/svelte";
+  import { Copy, ExternalLink } from "@lucide/svelte";
 
   let { data } = $props();
 
   let error = $state<string | null>(null);
   let copiedShareId = $state<string | null>(null);
-  let revokingShareId = $state<string | null>(null);
 
   const shares = $derived(data.shares);
   const status = $derived(data.status);
@@ -50,20 +49,6 @@
       }, 2000);
     } catch {
       error = "Could not copy link to clipboard.";
-    }
-  }
-
-  async function revokeShareLink(share: AdminShareRecord) {
-    if (!share.active) return;
-    revokingShareId = share.id;
-    error = null;
-    try {
-      await revokeShare(share.id);
-      await invalidateAll();
-    } catch (revokeError) {
-      error = revokeError instanceof Error ? revokeError.message : "Could not revoke share link.";
-    } finally {
-      revokingShareId = null;
     }
   }
 
@@ -135,15 +120,17 @@
               {copiedShareId === share.id ? "Copied" : "Copy"}
             </button>
             {#if share.active}
-              <button
-                class="ops-action-link danger"
-                type="button"
-                disabled={revokingShareId === share.id}
-                onclick={() => revokeShareLink(share)}
+              <ConfirmAction
+                action="?/revokeShare"
+                fieldName="shareId"
+                fieldValue={share.id}
+                title="Revoke share link?"
+                message={`This disables the guest link for ${share.title}. Anyone with the link will lose access immediately.`}
+                confirmLabel="Revoke"
+                buttonClass="ops-action-link danger"
               >
-                <Trash2 size={15} aria-hidden="true" />
-                {revokingShareId === share.id ? "Revoking…" : "Revoke"}
-              </button>
+                Revoke
+              </ConfirmAction>
             {/if}
           </div>
         </article>

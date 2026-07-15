@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import { expectRejectsToMatchObject } from "$lib/test/async-expect";
-import { load } from "./+page.server";
+import { actions, load } from "./+page.server";
 
 type SharesLoadResult = {
   shares: Array<{
@@ -123,5 +123,46 @@ describe("shares page server", () => {
       } as never),
       { status: 403 },
     );
+  });
+
+  test("revokes an active share link", async () => {
+    const form = new FormData();
+    form.set("shareId", "share-1");
+
+    const result = await actions.revokeShare({
+      request: new Request("http://localhost/shares", {
+        method: "POST",
+        body: form,
+      }),
+      locals: { user: { id: "admin-1", role: "admin" } },
+    } as never);
+
+    expect(result).toEqual({ revokeSuccess: true });
+
+    const db = await getDb();
+    const row = await db
+      .selectFrom("media_share")
+      .selectAll()
+      .where("id", "=", "share-1")
+      .executeTakeFirst();
+    expect(row?.revoked_at).not.toBeNull();
+  });
+
+  test("rejects revoke without a share identifier", async () => {
+    const form = new FormData();
+    form.set("shareId", "");
+
+    const result = await actions.revokeShare({
+      request: new Request("http://localhost/shares", {
+        method: "POST",
+        body: form,
+      }),
+      locals: { user: { id: "admin-1", role: "admin" } },
+    } as never);
+
+    expect(result).toMatchObject({
+      status: 400,
+      data: { revokeError: expect.any(String) },
+    });
   });
 });
