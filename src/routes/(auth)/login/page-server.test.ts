@@ -105,7 +105,7 @@ describe("login page server", () => {
           body: form,
         }),
       } as never),
-      "/movies",
+      "/continue",
     );
 
     expect(signInEmail).toHaveBeenCalledTimes(1);

@@ -42,6 +42,6 @@ export const actions: Actions = {
       });
     }
 
-    throw redirect(303, "/movies");
+    throw redirect(303, "/continue");
   },
 };

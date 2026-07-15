@@ -113,7 +113,7 @@ describe("signup page server", () => {
           body: form,
         }),
       } as never),
-      "/movies",
+      "/continue",
     );
 
     expect(signUpEmail).toHaveBeenCalledTimes(1);

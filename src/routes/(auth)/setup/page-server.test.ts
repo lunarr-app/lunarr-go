@@ -110,7 +110,7 @@ describe("setup page server", () => {
           headers: { "user-agent": "setup-test" },
         }),
       } as never),
-      "/movies",
+      "/continue",
     );
 
     expect(signUpEmail).toHaveBeenCalledTimes(1);

@@ -24,11 +24,11 @@
   let playbackModalLoading = $state(false);
 
   const primaryNav = $derived([
+    { href: "/continue", label: "Continue", icon: Clock3 },
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
     { href: "/search", label: "Search", icon: Search },
     { href: "/discover", label: "Discover", icon: Sparkles },
-    { href: "/continue", label: "Continue", icon: Clock3 },
   ]);
   const adminNav = $derived(
     user?.role === "admin"
@@ -89,7 +89,7 @@
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="app-header">
     <div class="header-primary">
-      <LunarrBrand href="/movies" />
+      <LunarrBrand href="/continue" />
 
       <nav class="nav-list" aria-label="App navigation">
         {#each primaryNav as item (item.href)}

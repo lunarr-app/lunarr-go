@@ -115,7 +115,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   if (event.locals.user && (pathname === "/login" || pathname === "/signup" || pathname === "/setup")) {
     const redirectTo = sanitizePostLoginRedirect(event.url.searchParams.get(POST_LOGIN_REDIRECT_QUERY_PARAM));
-    throw redirect(303, redirectTo ?? "/movies");
+    throw redirect(303, redirectTo ?? "/continue");
   }
 
   if (pathname.startsWith("/api/") && !isAuthApiPath(pathname) && !isPublicApiPath(pathname) && !event.locals.user) {

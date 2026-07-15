@@ -14,6 +14,7 @@
 - Set the Discover "View all" pages to 36 items per page to match the All movies/shows browse pages.
 - Removed the redundant page titles and subtitles from the Discover, Continue, Movies, and Shows pages for a flatter layout (search and status filters are retained on Movies/Shows).
 - Removed the inline search box and watch-status filter from the Movies and Shows hub pages (search now lives on the dedicated Search page), and simplified their server loads.
+- Made Continue the primary landing page: the brand logo, root `/`, and post-login/setup/signup redirects now go to `/continue` (previously `/movies`), and Continue is listed first in the primary navigation.
 
 ## 0.7.0 - 2026-07-12
 
