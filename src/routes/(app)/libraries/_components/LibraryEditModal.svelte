@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Save } from "@lucide/svelte";
   import LibraryAutomationFields from "./LibraryAutomationFields.svelte";
   import ModalDialog from "$lib/components/ModalDialog.svelte";
   import { libraryRemoteFieldValues } from "./libraryRemoteFieldValues";
@@ -45,10 +44,7 @@
     />
     <div class="form-actions">
       <button class="secondary" type="button" onclick={onClose}>Cancel</button>
-      <button class="secondary" disabled={library.scanActive}>
-        <Save size={16} aria-hidden="true" />
-        Save changes
-      </button>
+      <button disabled={library.scanActive}>Save</button>
     </div>
     {#if library.scanActive}
       <p class="muted">Finish or cancel the active scan before editing this library.</p>

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Save } from "@lucide/svelte";
   import ModalDialog from "$lib/components/ModalDialog.svelte";
   import type { Library, LibraryUser } from "./types";
 
@@ -48,10 +47,7 @@
     </fieldset>
     <div class="form-actions">
       <button class="secondary" type="button" onclick={onClose}>Cancel</button>
-      <button class="secondary">
-        <Save size={16} aria-hidden="true" />
-        Save sharing
-      </button>
+      <button>Save</button>
     </div>
   </form>
 </ModalDialog>
