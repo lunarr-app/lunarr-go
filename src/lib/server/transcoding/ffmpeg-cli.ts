@@ -144,15 +144,17 @@ function roundedSegmentFrames(segmentSeconds: number) {
   return Math.max(1, Math.round(segmentSeconds * 30));
 }
 
-function maxHeightScaleFilter(maxHeight: number | null | undefined) {
+function maxHeightScaleExpression(maxHeight: number | null | undefined): string | null {
   if (!Number.isSafeInteger(maxHeight) || Number(maxHeight) <= 0) return null;
-  return `scale=-2:trunc(min(ih\\,${Number(maxHeight)})/2)*2`;
+  return `-2:trunc(min(ih\\,${Number(maxHeight)})/2)*2`;
+}
+
+function scaleFilterArg(filterName: string, maxHeight: number | null | undefined): string[] {
+  const expr = maxHeightScaleExpression(maxHeight);
+  return expr ? ["-vf", `${filterName}=${expr}`] : [];
 }
 
 function hardwareScaleArg(mode: FfmpegHardwareMode, maxHeight: number | null | undefined) {
-  const scale = maxHeightScaleFilter(maxHeight);
-  if (!scale) return [];
-  const expr = scale.slice(scale.indexOf("=") + 1);
   const filterName =
     mode === "videotoolbox"
       ? "scale_vt"
@@ -163,7 +165,7 @@ function hardwareScaleArg(mode: FfmpegHardwareMode, maxHeight: number | null | u
           : mode === "vaapi"
             ? "scale_vaapi"
             : "scale";
-  return ["-vf", `${filterName}=${expr}`];
+  return scaleFilterArg(filterName, maxHeight);
 }
 
 function transcodeQualityKey(input: HlsTranscodeInput) {
@@ -274,7 +276,7 @@ function hardwareVideoArgs(input: {
       ];
     case "amf":
       return [
-        ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
+        ...hardwareScaleArg("amf", input.maxHeight),
         "-c:v",
         "h264_amf",
         "-quality",
@@ -286,7 +288,7 @@ function hardwareVideoArgs(input: {
 
 function softwareVideoArgs(input: { gopSize: number; segmentSeconds: number; crf: number; maxHeight?: number | null }) {
   return [
-    ...(maxHeightScaleFilter(input.maxHeight) ? ["-vf", maxHeightScaleFilter(input.maxHeight) as string] : []),
+    ...scaleFilterArg("scale", input.maxHeight),
     "-c:v",
     "libx264",
     "-preset",
