@@ -1,17 +1,8 @@
 <script lang="ts">
-  import SearchField from "$lib/components/SearchField.svelte";
-  import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
-  import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import MovieRail from "./_components/MovieRail.svelte";
-  import { ChevronRight, Library, Search } from "@lucide/svelte";
+  import { ChevronRight, Library } from "@lucide/svelte";
 
   let { data } = $props();
-  const catalogSearch = createDebouncedCatalogSearch(
-    () => data.query,
-    () => ({ status: data.status }),
-  );
-
-  const hasActiveFilters = $derived(data.query.trim().length > 0 || data.status !== "all");
 
   const sections = $derived([
     {
@@ -24,7 +15,7 @@
       key: "all",
       title: "All movies",
       movies: data.rows.all,
-      href: allMoviesHref(),
+      href: "/movies/all",
     },
     {
       key: "recent",
@@ -46,68 +37,21 @@
     },
   ]);
   const TWO_ROW_MOVIE_RAIL_COUNT = 9;
-
-  function allMoviesHref() {
-    const params = new URLSearchParams();
-    const query = data.query.trim();
-    if (query.length > 0) params.set("q", query);
-    if (data.status !== "all") params.set("status", data.status);
-    const search = params.toString();
-    return search ? `/movies/all?${search}` : "/movies/all";
-  }
-
-  function onStatusChange(event: Event) {
-    const status = (event.currentTarget as HTMLSelectElement).value;
-    catalogSearch.commitSearch({ status });
-  }
 </script>
 
 <svelte:head>
   <title>Movies - Lunarr</title>
-  <meta name="description" content="Browse, search, filter, and resume movies in your Lunarr library." />
+  <meta name="description" content="Browse and resume movies in your Lunarr library." />
 </svelte:head>
-
-<header class="page-header">
-  <form
-    method="GET"
-    role="search"
-    onsubmit={(event) => {
-      event.preventDefault();
-      catalogSearch.commitSearch();
-    }}
-  >
-    <SearchField
-      ariaLabel="Search movies"
-      placeholder={MOVIE_SEARCH_PLACEHOLDER}
-      bind:value={catalogSearch.queryInput}
-      bind:inputRef={catalogSearch.searchInput}
-      oninput={catalogSearch.submitSearchSoon}
-    />
-    <select name="status" aria-label="Watch status" value={data.status} onchange={onStatusChange}>
-      <option value="all" selected={data.status === "all"}>All</option>
-      <option value="unwatched" selected={data.status === "unwatched"}>Unwatched</option>
-      <option value="watched" selected={data.status === "watched"}>Watched</option>
-    </select>
-  </form>
-</header>
 
 {#if sections.every((section) => section.movies.length === 0)}
   <section class="empty">
-    {#if hasActiveFilters}
-      <h2>No matching movies</h2>
-      <p class="muted">Adjust the search or watch-status filter to broaden the results.</p>
-      <a class="button secondary" href="/movies">
-        <Search size={16} aria-hidden="true" />
-        Clear filters
-      </a>
-    {:else}
-      <h2>No movies scanned yet</h2>
-      <p class="muted">Add a movie library and run a scan to populate this page.</p>
-      <a class="button" href="/libraries">
-        <Library size={16} aria-hidden="true" />
-        Add library
-      </a>
-    {/if}
+    <h2>No movies scanned yet</h2>
+    <p class="muted">Add a movie library and run a scan to populate this page.</p>
+    <a class="button" href="/libraries">
+      <Library size={16} aria-hidden="true" />
+      Add library
+    </a>
   </section>
 {:else}
   {#each sections as section}
@@ -129,24 +73,7 @@
 {/if}
 
 <style>
-  .page-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(26rem, 38rem);
-    gap: var(--space-3);
-    align-items: end;
-    margin-bottom: 1.6rem;
-  }
-
-  form {
-    display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(8rem, auto);
-    gap: var(--space-2);
-    grid-column: 2;
-    justify-self: end;
-    width: 100%;
-  }
-
-  .movie-section {
+  .movie-section + .movie-section {
     margin-top: var(--space-5);
   }
 
@@ -186,26 +113,5 @@
 
   .empty h2 {
     margin: 0;
-  }
-
-  @media (max-width: 980px) {
-    .page-header {
-      grid-template-columns: 1fr;
-    }
-
-    form {
-      grid-column: 1;
-    }
-  }
-
-  @media (max-width: 760px) {
-    form {
-      grid-template-columns: 1fr;
-    }
-
-    .section-heading {
-      display: flex;
-      flex-wrap: wrap;
-    }
   }
 </style>

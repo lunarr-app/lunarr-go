@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { page } from "$app/state";
-  import { Activity, Clock3, Film, Library, Link2, LogOut, Settings, Sparkles, Tv, UserRound, Users } from "@lucide/svelte";
+  import { Activity, Clock3, Film, Library, Link2, LogOut, Search, Settings, Sparkles, Tv, UserRound, Users } from "@lucide/svelte";
   import type { Snippet } from "svelte";
   import LunarrBrand from "$lib/components/LunarrBrand.svelte";
   import type PlaybackModalComponent from "$lib/player/PlaybackModal.svelte";
@@ -26,6 +26,7 @@
   const primaryNav = $derived([
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
+    { href: "/search", label: "Search", icon: Search },
     { href: "/discover", label: "Discover", icon: Sparkles },
     { href: "/continue", label: "Continue", icon: Clock3 },
   ]);

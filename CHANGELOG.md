@@ -5,6 +5,7 @@
 ### Added
 
 - Added a top-level Discover hub (`/discover`) with movie and TV recommendation previews, each linking to a dedicated "View all" page. Added Discover to the primary navigation.
+- Added a dedicated Search page (`/search`) in the primary navigation, searching the movie and TV library with per-type result previews and "View all" links to the filtered browse.
 
 ### Changed
 
@@ -12,6 +13,7 @@
 - Removed the per-page "Discover" buttons from the Movies and Shows pages (now reached via the Discover hub).
 - Set the Discover "View all" pages to 36 items per page to match the All movies/shows browse pages.
 - Removed the redundant page titles and subtitles from the Discover, Continue, Movies, and Shows pages for a flatter layout (search and status filters are retained on Movies/Shows).
+- Removed the inline search box and watch-status filter from the Movies and Shows hub pages (search now lives on the dedicated Search page), and simplified their server loads.
 
 ## 0.7.0 - 2026-07-12
 

@@ -1,39 +1,32 @@
 <script lang="ts">
-  import SearchField from "$lib/components/SearchField.svelte";
-  import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
-  import { SHOW_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import EpisodeRail from "./_components/EpisodeRail.svelte";
   import ShowRail from "./_components/ShowRail.svelte";
-  import { ChevronRight, Library, Search } from "@lucide/svelte";
+  import { ChevronRight, Library } from "@lucide/svelte";
 
   let { data } = $props();
-  const catalogSearch = createDebouncedCatalogSearch(() => data.query);
 
-  const hasActiveSearch = $derived(data.query.trim().length > 0);
   const episodeSections = $derived(
-    hasActiveSearch
-      ? []
-      : [
-          {
-            key: "continue",
-            title: "Continue watching",
-            episodes: data.rows.continueWatching,
-            href: "/continue/episodes",
-          },
-          {
-            key: "next-up",
-            title: "Next up",
-            episodes: data.rows.nextUp,
-            href: "/continue/next-up",
-          },
-        ].filter((section) => section.episodes.length > 0),
+    [
+      {
+        key: "continue",
+        title: "Continue watching",
+        episodes: data.rows.continueWatching,
+        href: "/continue/episodes",
+      },
+      {
+        key: "next-up",
+        title: "Next up",
+        episodes: data.rows.nextUp,
+        href: "/continue/next-up",
+      },
+    ].filter((section) => section.episodes.length > 0),
   );
   const showSections = $derived([
     {
       key: "all",
-      title: hasActiveSearch ? "Matching shows" : "All shows",
+      title: "All shows",
       shows: data.rows.all,
-      href: allShowsHref(),
+      href: "/shows/all",
     },
     {
       key: "recent",
@@ -54,60 +47,26 @@
       href: "/shows/popular",
     },
   ]);
-  const hasContent = $derived(episodeSections.length > 0 || showSections.some((section) => section.shows.length > 0));
+  const hasContent = $derived(
+    episodeSections.length > 0 || showSections.some((section) => section.shows.length > 0),
+  );
   const TWO_ROW_EPISODE_RAIL_COUNT = 5;
   const TWO_ROW_SHOW_RAIL_COUNT = 9;
-
-  function allShowsHref() {
-    const params = new URLSearchParams();
-    const query = data.query.trim();
-    if (query.length > 0) params.set("q", query);
-    const search = params.toString();
-    return search ? `/shows/all?${search}` : "/shows/all";
-  }
 </script>
 
 <svelte:head>
   <title>Shows - Lunarr</title>
-  <meta name="description" content="Browse, search, and open scanned TV shows in your Lunarr library." />
+  <meta name="description" content="Browse scanned TV shows in your Lunarr library by show and season." />
 </svelte:head>
-
-<header class="page-header">
-  <form
-    method="GET"
-    role="search"
-    onsubmit={(event) => {
-      event.preventDefault();
-      catalogSearch.commitSearch();
-    }}
-  >
-    <SearchField
-      ariaLabel="Search shows"
-      placeholder={SHOW_SEARCH_PLACEHOLDER}
-      bind:value={catalogSearch.queryInput}
-      bind:inputRef={catalogSearch.searchInput}
-      oninput={catalogSearch.submitSearchSoon}
-    />
-  </form>
-</header>
 
 {#if !hasContent}
   <section class="empty">
-    {#if hasActiveSearch}
-      <h2>No matching shows</h2>
-      <p class="muted">Adjust the search to broaden the results.</p>
-      <a class="button secondary" href="/shows">
-        <Search size={16} aria-hidden="true" />
-        Clear search
-      </a>
-    {:else}
-      <h2>No shows scanned yet</h2>
-      <p class="muted">Add a TV library and run a scan to populate this page.</p>
-      <a class="button" href="/libraries">
-        <Library size={16} aria-hidden="true" />
-        Add library
-      </a>
-    {/if}
+    <h2>No shows scanned yet</h2>
+    <p class="muted">Add a TV library and run a scan to populate this page.</p>
+    <a class="button" href="/libraries">
+      <Library size={16} aria-hidden="true" />
+      Add library
+    </a>
   </section>
 {:else}
   {#each episodeSections as section}
@@ -144,24 +103,7 @@
 {/if}
 
 <style>
-  .page-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(26rem, 38rem);
-    gap: var(--space-3);
-    align-items: end;
-    margin-bottom: 1.6rem;
-  }
-
-  form {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-2);
-    grid-column: 2;
-    justify-self: end;
-    width: 100%;
-  }
-
-  .media-section {
+  .media-section + .media-section {
     margin-top: var(--space-5);
   }
 
@@ -201,22 +143,5 @@
 
   .empty h2 {
     margin: 0;
-  }
-
-  @media (max-width: 820px) {
-    .page-header {
-      grid-template-columns: 1fr;
-    }
-
-    form {
-      grid-column: 1;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .section-heading {
-      display: flex;
-      flex-wrap: wrap;
-    }
   }
 </style>
