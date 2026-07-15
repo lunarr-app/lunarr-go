@@ -476,6 +476,41 @@ describe("FFmpeg HLS playback backend", () => {
     expect(args).toContain("qsv");
   });
 
+  test("uses hardware decode and scale_vaapi for VAAPI height-limited presets", () => {
+    const args = ffmpegHlsArgs(
+      input({
+        hardwareAcceleration: "vaapi",
+        hardwareAccelerationRequired: true,
+        transcodeQuality: {
+          preset: "720p",
+          maxHeight: 720,
+          softwareCrf: 24,
+          hardwareBitrate: "3M",
+        },
+      }),
+    );
+
+    expect(args).toContain("-hwaccel");
+    expect(args).toContain("vaapi");
+    expect(args).toContain("-hwaccel_output_format");
+    expect(args).toContain("-vaapi_device");
+    expect(args).toContain("scale_vaapi=-2:trunc(min(ih\\,720)/2)*2");
+    expect(args).toContain("h264_vaapi");
+  });
+
+  test("VAAPI keeps frames in hardware without an upload filter when unscaled", () => {
+    const args = ffmpegHlsArgs(
+      input({
+        hardwareAcceleration: "vaapi",
+        hardwareAccelerationRequired: true,
+      }),
+    );
+
+    expect(args).toContain("-hwaccel_output_format");
+    expect(args).toContain("vaapi");
+    expect(args).not.toContain("hwupload");
+  });
+
   test("keeps automatic hardware acceleration on software unless required", () => {
     expect(
       ffmpegHlsArgs(

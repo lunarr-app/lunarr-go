@@ -153,7 +153,15 @@ function hardwareScaleArg(mode: FfmpegHardwareMode, maxHeight: number | null | u
   if (!scale) return [];
   const expr = scale.slice(scale.indexOf("=") + 1);
   const filterName =
-    mode === "videotoolbox" ? "scale_vt" : mode === "qsv" ? "scale_qsv" : mode === "nvenc" ? "scale_cuda" : "scale";
+    mode === "videotoolbox"
+      ? "scale_vt"
+      : mode === "qsv"
+        ? "scale_qsv"
+        : mode === "nvenc"
+          ? "scale_cuda"
+          : mode === "vaapi"
+            ? "scale_vaapi"
+            : "scale";
   return ["-vf", `${filterName}=${expr}`];
 }
 
@@ -195,7 +203,14 @@ function hardwareInputArgs(mode: FfmpegHardwareMode) {
     case "videotoolbox":
       return ["-hwaccel", "videotoolbox", "-hwaccel_output_format", "videotoolbox_vld"];
     case "vaapi":
-      return ["-vaapi_device", process.env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128"];
+      return [
+        "-hwaccel",
+        "vaapi",
+        "-hwaccel_output_format",
+        "vaapi",
+        "-vaapi_device",
+        process.env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128",
+      ];
     case "qsv":
       return ["-hwaccel", "qsv", "-hwaccel_output_format", "qsv"];
     case "nvenc":
@@ -233,8 +248,7 @@ function hardwareVideoArgs(input: {
       ];
     case "vaapi":
       return [
-        "-vf",
-        [maxHeightScaleFilter(input.maxHeight), "format=nv12", "hwupload"].filter(Boolean).join(","),
+        ...hardwareScaleArg("vaapi", input.maxHeight),
         "-c:v",
         "h264_vaapi",
         ...common,
