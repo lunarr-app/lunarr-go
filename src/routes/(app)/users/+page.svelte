@@ -2,7 +2,7 @@
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
   import { formatDateTime } from "$lib/media/format";
   import UserCreateModal from "./_components/UserCreateModal.svelte";
-  import { CirclePlus, Shield, Trash2 } from "@lucide/svelte";
+  import { CirclePlus, Shield } from "@lucide/svelte";
 
   let { data, form } = $props();
 
@@ -99,7 +99,6 @@
                 confirmLabel="Delete user"
                 buttonClass="ops-action-link danger"
               >
-                <Trash2 size={15} aria-hidden="true" />
                 Delete
               </ConfirmAction>
             {/if}
@@ -191,6 +190,9 @@
 
   .role-label select {
     min-width: 7rem;
+    min-height: 1.75rem;
+    padding: 0.2rem 2.25rem 0.2rem 0.6rem;
+    font-size: 0.84rem;
   }
 
   .role-readonly {
