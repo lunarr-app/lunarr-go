@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Save } from "@lucide/svelte";
   import { normalizePreferredLanguage } from "$lib/media/preferred-language";
 
   let {
@@ -100,7 +99,6 @@
     {/if}
 
     <button type="submit" disabled={!playbackDirty}>
-      <Save size={16} aria-hidden="true" />
       Save playback
     </button>
   </div>

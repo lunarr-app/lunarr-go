@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Save } from "@lucide/svelte";
   import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
 
   let {
@@ -57,7 +56,6 @@
     {/if}
 
     <button type="submit" disabled={!continueDirty}>
-      <Save size={16} aria-hidden="true" />
       Save continue settings
     </button>
   </div>

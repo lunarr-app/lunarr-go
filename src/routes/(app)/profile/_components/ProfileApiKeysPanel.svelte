@@ -2,7 +2,7 @@
   import { browser } from "$app/environment";
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
   import { formatDateTime } from "$lib/media/format";
-  import { Clipboard, ExternalLink, KeyRound, Plus, Trash2 } from "@lucide/svelte";
+  import { Clipboard, ExternalLink, KeyRound, Plus } from "@lucide/svelte";
 
   type ApiKey = {
     id: string;
@@ -139,7 +139,6 @@
               message={`This immediately disables ${apiKey.name}. Existing clients using it will lose access.`}
               confirmLabel="Revoke"
             >
-              <Trash2 size={16} aria-hidden="true" />
               Revoke
             </ConfirmAction>
           </article>

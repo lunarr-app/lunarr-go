@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { KeyRound, Pencil, Save, UserRound, X } from "@lucide/svelte";
+  import { UserRound } from "@lucide/svelte";
+  import ModalDialog from "$lib/components/ModalDialog.svelte";
+  import { enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
 
   let {
     user,
@@ -15,15 +18,20 @@
     passwordError?: string;
   } = $props();
 
-  let editing = $state(false);
-  let passwordExpanded = $state(false);
+  let nameOpen = $state(false);
+  let passwordOpen = $state(false);
   let displayName = $state("");
   let currentPassword = $state("");
   let newPassword = $state("");
   let confirmPassword = $state("");
 
+  const nameTitleId = `account-name-${Math.random().toString(36).slice(2, 9)}`;
+  const passwordTitleId = `account-password-${Math.random().toString(36).slice(2, 9)}`;
+
   const nameDirty = $derived(displayName.trim() !== (user.name ?? "").trim());
-  const passwordDirty = $derived(currentPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0);
+  const passwordDirty = $derived(
+    currentPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0,
+  );
   const displayNameLabel = $derived(user.name?.trim() || "Not set");
 
   $effect(() => {
@@ -31,12 +39,8 @@
   });
 
   $effect(() => {
-    if (accountError || passwordError) {
-      editing = true;
-      if (passwordError) {
-        passwordExpanded = true;
-      }
-    }
+    if (accountError) nameOpen = true;
+    if (passwordError) passwordOpen = true;
   });
 
   function clearPasswordFields() {
@@ -45,21 +49,23 @@
     confirmPassword = "";
   }
 
-  function startEditing() {
-    editing = true;
-    passwordExpanded = false;
-    clearPasswordFields();
-  }
-
-  function cancelEditing() {
-    editing = false;
-    passwordExpanded = false;
+  function openName() {
     displayName = user.name ?? "";
-    clearPasswordFields();
+    nameOpen = true;
   }
 
-  function collapsePasswordSection() {
-    passwordExpanded = false;
+  function closeName() {
+    nameOpen = false;
+    displayName = user.name ?? "";
+  }
+
+  function openPassword() {
+    clearPasswordFields();
+    passwordOpen = true;
+  }
+
+  function closePassword() {
+    passwordOpen = false;
     clearPasswordFields();
   }
 </script>
@@ -68,138 +74,146 @@
   <div class="ops-panel-header">
     <div>
       <h2>Account</h2>
-      <p class="muted">{editing ? "Edit your account details." : "Your sign-in details."}</p>
+      <p class="muted">Your sign-in details.</p>
     </div>
-    {#if editing}
-      <button type="button" class="secondary account-header-action" onclick={cancelEditing}>
-        <X size={16} aria-hidden="true" />
-        Cancel
-      </button>
-    {:else}
-      <UserRound size={18} aria-hidden="true" />
-    {/if}
+    <UserRound size={18} aria-hidden="true" />
   </div>
 
   <div class="ops-panel-body">
-    {#if !editing}
-      <div class="account-identity">
-        <div class="avatar" aria-hidden="true">
-          <span>{(user.name || user.email || "L").slice(0, 1).toUpperCase()}</span>
-        </div>
-        <span class="role-badge">{user.role === "admin" ? "Admin" : "User"}</span>
+    <div class="account-identity">
+      <div class="avatar" aria-hidden="true">
+        <span>{(user.name || user.email || "L").slice(0, 1).toUpperCase()}</span>
       </div>
+      <span class="role-badge">{user.role === "admin" ? "Admin" : "User"}</span>
+    </div>
 
-      <div class="account-details">
+    <div class="account-details">
+      <div class="detail-row">
         <div class="read-only-field">
           <span>Name</span>
           <p>{displayNameLabel}</p>
         </div>
+        <button type="button" class="secondary field-edit-button" onclick={openName}>Edit</button>
+      </div>
 
-        {#if user.email}
-          <div class="read-only-field">
-            <span>Email</span>
-            <p class="muted">{user.email}</p>
-          </div>
-        {/if}
+      {#if user.email}
+        <div class="read-only-field">
+          <span>Email</span>
+          <p class="muted">{user.email}</p>
+        </div>
+      {/if}
 
+      <div class="detail-row">
         <div class="read-only-field">
           <span>Password</span>
           <p class="muted password-mask" aria-label="Password hidden">••••••••</p>
         </div>
+        <button type="button" class="secondary field-edit-button" onclick={openPassword}>Change</button>
       </div>
-
-      <button type="button" class="secondary account-edit-button" onclick={startEditing}>
-        <Pencil size={16} aria-hidden="true" />
-        Edit account
-      </button>
-    {:else}
-      <form class="account-form" method="POST" action="?/updateAccount">
-        <label>
-          Name
-          <input name="name" autocomplete="name" bind:value={displayName} required />
-        </label>
-
-        {#if user.email}
-          <div class="read-only-field">
-            <span>Email</span>
-            <p class="muted">{user.email}</p>
-          </div>
-        {/if}
-
-        {#if accountError}
-          <p class="error">{accountError}</p>
-        {/if}
-
-        <button type="submit" class:secondary={!nameDirty} disabled={!nameDirty}>
-          <Save size={16} aria-hidden="true" />
-          Save name
-        </button>
-      </form>
-
-      <div class="account-divider" aria-hidden="true"></div>
-
-      {#if passwordExpanded}
-        <form class="password-form" method="POST" action="?/changePassword">
-          <div class="password-form-header">
-            <h3>Password</h3>
-            <button type="button" class="secondary password-collapse-button" onclick={collapsePasswordSection}>
-              Hide
-            </button>
-          </div>
-
-          <label>
-            Current password
-            <input
-              name="currentPassword"
-              type="password"
-              autocomplete="current-password"
-              bind:value={currentPassword}
-              required
-            />
-          </label>
-
-          <label>
-            New password
-            <input
-              name="newPassword"
-              type="password"
-              autocomplete="new-password"
-              minlength="8"
-              bind:value={newPassword}
-              required
-            />
-          </label>
-
-          <label>
-            Confirm new password
-            <input
-              name="confirmPassword"
-              type="password"
-              autocomplete="new-password"
-              minlength="8"
-              bind:value={confirmPassword}
-              required
-            />
-          </label>
-
-          {#if passwordError}
-            <p class="error">{passwordError}</p>
-          {/if}
-
-          <button type="submit" class:secondary={!passwordDirty} disabled={!passwordDirty}>
-            <Save size={16} aria-hidden="true" />
-            Change password
-          </button>
-        </form>
-      {:else}
-        <button type="button" class="secondary password-toggle-button" onclick={() => (passwordExpanded = true)}>
-          <KeyRound size={16} aria-hidden="true" />
-          Change password
-        </button>
-      {/if}
-    {/if}
+    </div>
   </div>
 </section>
+
+{#if nameOpen}
+  <ModalDialog title="Edit name" titleId={nameTitleId} onClose={closeName}>
+    <form
+      class="account-form"
+      method="POST"
+      action="?/updateAccount"
+      use:enhance={() => {
+        return async ({ result, update }) => {
+          if (result.type === "redirect") {
+            nameOpen = false;
+            await goto(result.location);
+          } else {
+            await update();
+          }
+        };
+      }}
+    >
+      <label>
+        Name
+        <input name="name" autocomplete="name" bind:value={displayName} placeholder="Your name" required />
+      </label>
+
+      {#if accountError}
+        <p class="error">{accountError}</p>
+      {/if}
+
+      <div class="form-actions">
+        <button type="button" class="secondary" onclick={closeName}>Cancel</button>
+        <button type="submit" class:secondary={!nameDirty} disabled={!nameDirty}>Save</button>
+      </div>
+    </form>
+  </ModalDialog>
+{/if}
+
+{#if passwordOpen}
+  <ModalDialog title="Change password" titleId={passwordTitleId} onClose={closePassword}>
+    <form
+      class="password-form"
+      method="POST"
+      action="?/changePassword"
+      use:enhance={() => {
+        return async ({ result, update }) => {
+          if (result.type === "redirect") {
+            passwordOpen = false;
+            await goto(result.location);
+          } else {
+            await update();
+          }
+        };
+      }}
+    >
+      <label>
+        Current password
+        <input
+          name="currentPassword"
+          type="password"
+          autocomplete="current-password"
+          bind:value={currentPassword}
+          placeholder="Current password"
+          required
+        />
+      </label>
+
+      <label>
+        New password
+        <input
+          name="newPassword"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          bind:value={newPassword}
+          placeholder="New password"
+          required
+        />
+      </label>
+
+      <label>
+        Confirm new password
+        <input
+          name="confirmPassword"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          bind:value={confirmPassword}
+          placeholder="Confirm new password"
+          required
+        />
+      </label>
+
+      {#if passwordError}
+        <p class="error">{passwordError}</p>
+      {/if}
+
+      <div class="form-actions">
+        <button type="button" class="secondary" onclick={closePassword}>Cancel</button>
+        <button type="submit" class:secondary={!passwordDirty} disabled={!passwordDirty}>Change password</button>
+      </div>
+    </form>
+  </ModalDialog>
+{/if}
 
 <style>
   .account-identity {
@@ -209,45 +223,33 @@
     gap: 0.65rem;
   }
 
-  .account-details,
-  .account-form,
-  .password-form {
+  .account-details {
     display: grid;
     gap: 0.65rem;
   }
 
-  .password-form-header {
+  .detail-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
   }
 
-  .password-form-header h3 {
-    margin: 0;
-    font-size: 0.95rem;
-  }
-
-  .account-edit-button,
-  .account-header-action,
-  .password-toggle-button,
-  .password-collapse-button {
+  .field-edit-button {
     width: fit-content;
-  }
-
-  .account-header-action {
     flex-shrink: 0;
   }
 
-  .account-divider {
-    height: 1px;
-    background: var(--color-border);
-    margin: 0.15rem 0;
+  .account-form,
+  .password-form {
+    display: grid;
+    gap: 0.65rem;
   }
 
   .read-only-field {
     display: grid;
     gap: 0.25rem;
+    min-width: 0;
   }
 
   .read-only-field span {
