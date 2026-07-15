@@ -90,7 +90,7 @@
   .season-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(8.8rem, 1fr));
-    gap: 1rem;
+    gap: var(--space-3);
   }
 
   .season-card {
@@ -126,7 +126,7 @@
   }
 
   .poster span {
-    padding: 1rem;
+    padding: var(--space-3);
     color: var(--color-subtle);
     text-align: center;
     overflow-wrap: anywhere;

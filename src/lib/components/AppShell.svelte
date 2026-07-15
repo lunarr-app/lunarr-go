@@ -190,7 +190,7 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     min-height: 4rem;
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface-strong);
@@ -240,7 +240,7 @@
   .skip-link {
     position: absolute;
     top: -3rem;
-    left: 0.5rem;
+    left: var(--space-2);
     z-index: 100;
     border-radius: 0 0 6px 6px;
     background: var(--color-accent);
@@ -341,7 +341,7 @@
   .account-popover .logout-form button {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
     min-height: 2rem;
     border-radius: 5px;
     color: var(--color-subtle);
@@ -414,7 +414,7 @@
 
     .nav-item {
       min-height: 2rem;
-      padding-inline: 0.5rem;
+      padding-inline: var(--space-2);
       font-size: 0.86rem;
     }
 
@@ -424,7 +424,7 @@
     }
 
     main {
-      padding: 1rem 1rem 2.5rem;
+      padding: var(--space-3) var(--space-3) 2.5rem;
     }
   }
 </style>

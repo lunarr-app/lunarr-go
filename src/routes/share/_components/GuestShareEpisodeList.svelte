@@ -143,7 +143,7 @@
 <style>
   .episodes-section {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-3);
   }
 
   .season-status {

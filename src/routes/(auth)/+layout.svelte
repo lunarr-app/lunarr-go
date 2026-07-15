@@ -22,7 +22,7 @@
     min-height: 100vh;
     display: grid;
     place-items: center;
-    padding: 1rem;
+    padding: var(--space-3);
     background:
       linear-gradient(rgba(2, 8, 12, 0.54), rgba(2, 8, 12, 0.78)),
       url("/images/lunarr-auth-background.png") center / cover;
@@ -63,7 +63,7 @@
 
   .auth-card :global(form) {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-3);
     margin-top: 1.4rem;
   }
 
@@ -72,7 +72,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    margin-top: 1rem;
+    margin-top: var(--space-3);
     font-size: 0.92rem;
   }
 

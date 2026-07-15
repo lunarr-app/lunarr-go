@@ -111,7 +111,7 @@
     border: 1px solid var(--color-warning-border);
     border-radius: 8px;
     background: var(--color-warning-soft);
-    padding: 0.5rem 0.6rem;
+    padding: var(--space-2) 0.6rem;
     font-size: 0.86rem;
   }
 </style>

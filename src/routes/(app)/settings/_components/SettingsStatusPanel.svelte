@@ -156,7 +156,7 @@
   .status-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .status-cards div {
@@ -183,7 +183,7 @@
   .ops-status-dl div {
     display: flex;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     min-width: 0;
   }
 

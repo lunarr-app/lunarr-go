@@ -351,7 +351,7 @@
   }
 
   .overview {
-    margin-top: 1rem;
+    margin-top: var(--space-3);
   }
 
   .overview-copy {
@@ -407,7 +407,7 @@
   }
 
   .job-panels {
-    margin-top: 1rem;
+    margin-top: var(--space-3);
     align-items: start;
   }
 
@@ -429,7 +429,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .job-title strong {

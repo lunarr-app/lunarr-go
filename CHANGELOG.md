@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Adopted spacing and radius design tokens (replacing ad-hoc values) and aligned the dark theme accent with the TV app.
+
 ## 0.7.0 - 2026-07-12
 
 ### Added

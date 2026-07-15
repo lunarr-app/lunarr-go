@@ -130,16 +130,16 @@
 <style>
   .content {
     display: grid;
-    gap: 1rem;
-    margin-top: 1rem;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
   }
 
   .ops-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
-    gap: 0.75rem 1rem;
-    padding: 0.8rem 1rem;
+    gap: 0.75rem var(--space-3);
+    padding: 0.8rem var(--space-3);
   }
 
   .user-summary {
@@ -152,7 +152,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .ops-row span {
@@ -205,7 +205,7 @@
     display: flex;
     align-items: flex-start;
     gap: 0.85rem;
-    padding: 0.85rem 1rem;
+    padding: 0.85rem var(--space-3);
   }
 
   .empty-state {
@@ -215,7 +215,7 @@
 
   .page-error {
     color: var(--color-danger);
-    margin: 0 0 1rem;
+    margin: 0 0 var(--space-3);
   }
 
   .sr-only {

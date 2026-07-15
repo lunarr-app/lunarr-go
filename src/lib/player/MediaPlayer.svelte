@@ -1529,7 +1529,7 @@
     align-content: center;
     justify-items: center;
     gap: 0.75rem;
-    padding: 1rem;
+    padding: var(--space-3);
     pointer-events: none;
     background: rgba(0, 0, 0, 0.12);
     color: var(--color-text);
@@ -1603,7 +1603,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
     padding: 0.55rem 1.35rem;
     border: 2px solid rgba(255, 255, 255, 0.92);
     border-radius: 999px;
@@ -1649,7 +1649,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
     padding: 0.55rem 1.35rem;
     border: 2px solid rgba(255, 255, 255, 0.72);
     border-radius: 999px;
@@ -1763,7 +1763,7 @@
     border: 1px solid var(--color-warning-border);
     border-radius: 8px;
     background: var(--color-warning-soft);
-    padding: 1rem;
+    padding: var(--space-3);
   }
 
   .playback-message h2,
@@ -1787,7 +1787,7 @@
 
   @media (max-width: 640px) {
     .skip-segment-prompt {
-      right: 1rem;
+      right: var(--space-3);
       bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
     }
 

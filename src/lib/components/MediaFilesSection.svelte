@@ -178,7 +178,7 @@
 
   .file-title {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
     align-items: center;
     min-width: 0;
   }
@@ -227,7 +227,7 @@
   .inline-action {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .file-actions {

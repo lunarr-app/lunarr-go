@@ -172,7 +172,7 @@
     border-radius: 6px;
     background: var(--color-surface-faint);
     color: var(--color-text);
-    padding: 0.32rem 0.5rem;
+    padding: 0.32rem var(--space-2);
     font-size: 0.82rem;
   }
 

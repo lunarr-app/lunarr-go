@@ -285,7 +285,7 @@
     border-radius: 999px;
     color: var(--color-text-soft);
     background: var(--color-surface-faint);
-    padding: 0.18rem 0.5rem;
+    padding: 0.18rem var(--space-2);
     font-size: 0.76rem;
     font-weight: 700;
   }

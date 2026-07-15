@@ -112,9 +112,9 @@
 
   .empty {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-3);
     justify-items: start;
-    padding: 1.5rem 0;
+    padding: var(--space-4) 0;
   }
 
   .grid {

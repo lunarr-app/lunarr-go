@@ -89,7 +89,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     margin-top: 1.1rem;
   }
 

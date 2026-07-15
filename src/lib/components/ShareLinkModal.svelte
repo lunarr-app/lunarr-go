@@ -387,7 +387,7 @@
   .check {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
     color: var(--color-text);
     font-size: 0.84rem;
   }
@@ -487,7 +487,7 @@
   .share-list li {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.5rem;
+    gap: var(--space-2);
     align-items: center;
     border: 1px solid var(--color-border);
     border-radius: 6px;

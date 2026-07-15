@@ -76,7 +76,7 @@
     display: grid;
     place-items: center;
     background: rgba(0, 0, 0, 0.58);
-    padding: 1rem;
+    padding: var(--space-3);
   }
 
   .dialog {
@@ -99,8 +99,8 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1rem 0.75rem;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-3) 0.75rem;
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -120,7 +120,7 @@
   }
 
   .dialog-body {
-    padding: 1rem;
+    padding: var(--space-3);
   }
 
   .dialog-body :global(.dialog-form) {
@@ -132,6 +132,6 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 </style>

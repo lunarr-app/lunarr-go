@@ -158,7 +158,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
+    gap: var(--space-3);
     flex-wrap: wrap;
   }
 

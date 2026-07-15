@@ -234,22 +234,22 @@
   .content {
     display: grid;
     grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr);
-    gap: 1rem;
+    gap: var(--space-3);
     align-items: start;
-    margin-top: 1rem;
+    margin-top: var(--space-3);
   }
 
   .notice {
     width: min(100%, 64rem);
-    margin: 1rem 0;
+    margin: var(--space-3) 0;
     border: 1px solid var(--color-warning-border);
     border-radius: 8px;
     background: var(--color-warning-soft);
-    padding: 0.9rem 1rem;
+    padding: 0.9rem var(--space-3);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
   }
 
   .notice > :global(svg) {
@@ -262,16 +262,16 @@
   }
 
   .content .ops-panel-body {
-    gap: 1rem;
-    padding: 1rem;
+    gap: var(--space-3);
+    padding: var(--space-3);
   }
 
   .ops-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
-    gap: 0.75rem 1rem;
-    padding: 0.8rem 1rem;
+    gap: 0.75rem var(--space-3);
+    padding: 0.8rem var(--space-3);
   }
 
   .library-summary {

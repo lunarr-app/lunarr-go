@@ -79,14 +79,14 @@
 <style>
   .media-metadata {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-3);
   }
 
   .media-metadata-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     margin-bottom: 0;
   }
 
@@ -158,7 +158,7 @@
     border-radius: 999px;
     background: var(--color-surface-muted);
     color: var(--color-text-soft);
-    padding: 0.18rem 0.5rem;
+    padding: 0.18rem var(--space-2);
     font-size: 0.78rem;
     font-weight: 700;
   }
@@ -189,14 +189,14 @@
 
   .media-metadata-blocks :global(dl) {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--space-2);
     margin: 0;
   }
 
   .media-metadata-blocks :global(dl div) {
     display: flex;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     min-width: 0;
   }
 

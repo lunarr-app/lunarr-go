@@ -58,7 +58,7 @@
   }
 
   .poster span {
-    padding: 1rem;
+    padding: var(--space-3);
     color: var(--color-subtle);
     text-align: center;
     overflow-wrap: anywhere;

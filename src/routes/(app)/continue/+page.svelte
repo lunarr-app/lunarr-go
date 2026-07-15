@@ -124,7 +124,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     margin-bottom: 0.85rem;
   }
 

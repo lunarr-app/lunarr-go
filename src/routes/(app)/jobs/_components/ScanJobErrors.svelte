@@ -94,7 +94,7 @@
 
   .error-list {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--space-2);
     margin-top: 0.6rem;
   }
 

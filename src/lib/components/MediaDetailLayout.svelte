@@ -23,7 +23,7 @@
 
 <style>
   .details {
-    margin-top: 1rem;
+    margin-top: var(--space-3);
     display: grid;
     grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 0.8fr);
     gap: clamp(1rem, 2vw, 1.4rem);
@@ -38,9 +38,9 @@
 
   .metadata {
     position: sticky;
-    top: 1rem;
+    top: var(--space-3);
     display: grid;
-    gap: 1rem;
+    gap: var(--space-3);
     border-left: 1px solid var(--color-border-strong);
     padding-left: clamp(1rem, 2vw, 1.4rem);
   }
@@ -54,7 +54,7 @@
       position: static;
       border-left: 0;
       border-top: 1px solid var(--color-border-strong);
-      padding: 1rem 0 0;
+      padding: var(--space-3) 0 0;
     }
   }
 </style>

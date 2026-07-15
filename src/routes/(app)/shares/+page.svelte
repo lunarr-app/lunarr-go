@@ -177,13 +177,13 @@
 
   .content {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-3);
     margin-top: 1.25rem;
   }
 
   .ops-panel-header {
     gap: 1.25rem;
-    padding: 1rem 1rem 0.95rem;
+    padding: var(--space-3) var(--space-3) 0.95rem;
   }
 
   .segmented {
@@ -223,8 +223,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
-    gap: 0.75rem 1rem;
-    padding: 0.85rem 1rem;
+    gap: 0.75rem var(--space-3);
+    padding: 0.85rem var(--space-3);
   }
 
   .share-row.inactive {
@@ -287,12 +287,12 @@
   }
 
   .empty-state {
-    padding: 1rem;
+    padding: var(--space-3);
     margin: 0;
   }
 
   .pagination-wrap {
-    padding: 0 1rem 1rem;
+    padding: 0 var(--space-3) var(--space-3);
   }
 
   .pagination-wrap :global(.pagination) {

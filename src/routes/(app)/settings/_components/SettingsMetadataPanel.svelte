@@ -166,7 +166,7 @@
 
 <style>
   .metadata-refresh {
-    margin-top: 1.5rem;
+    margin-top: var(--space-4);
   }
 
   .metadata-refresh-columns {
@@ -177,7 +177,7 @@
   }
 
   .metadata-refresh-columns h3 {
-    margin: 0 0 0.5rem;
+    margin: 0 0 var(--space-2);
     font-size: 0.9rem;
   }
 

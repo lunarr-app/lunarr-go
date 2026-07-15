@@ -141,7 +141,7 @@
     border: 1px solid var(--color-warning-border);
     border-radius: 8px;
     background: var(--color-warning-soft);
-    padding: 1rem;
+    padding: var(--space-3);
   }
 
   .message h2,

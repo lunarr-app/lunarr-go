@@ -133,7 +133,7 @@
   .page-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(26rem, 38rem);
-    gap: 1rem;
+    gap: var(--space-3);
     align-items: end;
     margin-bottom: 1.6rem;
   }
@@ -160,7 +160,7 @@
   form {
     display: grid;
     grid-template-columns: minmax(14rem, 1fr) minmax(8rem, auto);
-    gap: 0.5rem;
+    gap: var(--space-2);
     justify-self: end;
     width: 100%;
   }

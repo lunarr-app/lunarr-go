@@ -116,7 +116,7 @@
     align-content: center;
     justify-items: center;
     gap: 0.75rem;
-    padding: 1rem 1rem 4rem;
+    padding: var(--space-3) var(--space-3) 4rem;
     pointer-events: none;
     background: rgba(0, 0, 0, 0.18);
     color: var(--color-text);

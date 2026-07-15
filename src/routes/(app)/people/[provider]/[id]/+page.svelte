@@ -218,7 +218,7 @@
     display: flex;
     align-items: end;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     margin: 1.7rem 0 0.85rem;
   }
 

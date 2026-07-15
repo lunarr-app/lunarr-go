@@ -85,7 +85,7 @@
     display: grid;
     place-items: center;
     background: rgba(0, 0, 0, 0.58);
-    padding: 1rem;
+    padding: var(--space-3);
   }
 
   .dialog {
@@ -97,7 +97,7 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: 0.85rem;
-    padding: 1rem;
+    padding: var(--space-3);
   }
 
   .icon {
@@ -134,7 +134,7 @@
     grid-column: 1 / -1;
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   @media (max-width: 480px) {

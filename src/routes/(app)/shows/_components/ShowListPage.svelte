@@ -118,7 +118,7 @@
   .page-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(26rem, 38rem);
-    gap: 1rem;
+    gap: var(--space-3);
     align-items: end;
     margin-bottom: 1.6rem;
   }
@@ -145,7 +145,7 @@
   form {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .grid {

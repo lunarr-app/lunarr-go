@@ -44,10 +44,10 @@
   --color-success: #a8efc7;
   --color-success-soft: rgba(98, 211, 137, 0.13);
   --color-success-border: rgba(98, 211, 137, 0.26);
-  --color-accent: #00ccff;
-  --color-accent-strong: #00a8d6;
-  --color-accent-soft: rgba(0, 168, 214, 0.14);
-  --color-accent-border: rgba(0, 168, 214, 0.32);
+  --color-accent: #f7f9fb;
+  --color-accent-strong: #f7f9fb;
+  --color-accent-soft: rgba(247, 249, 251, 0.18);
+  --color-accent-border: rgba(247, 249, 251, 0.45);
   --color-scrollbar: rgba(149, 164, 174, 0.45);
   --color-scrollbar-hover: rgba(149, 164, 174, 0.55);
   --color-shadow: rgba(0, 0, 0, 0.32);
@@ -59,6 +59,19 @@
   --ops-text: var(--color-text);
   --ops-warning: var(--color-warning);
   --ops-radius: 7px;
+  --space-xs: 0.375rem;
+  --space-sm: 0.75rem;
+  --space-md: 1.25rem;
+  --space-lg: 1.75rem;
+  --space-xl: 2.5rem;
+  --space-xxl: 3.5rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-pill: 999px;
 }
 
 :root[data-theme="light"] {
@@ -132,7 +145,7 @@ a {
 button,
 .button {
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--color-button);
   color: var(--color-button-text);
   cursor: pointer;
@@ -175,7 +188,7 @@ button.ops-action-link,
   padding: 0.2rem 0.55rem;
   background: var(--color-button-secondary);
   border: 1px solid var(--color-button-secondary-border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   font-size: 0.84rem;
   font-weight: 650;
   color: var(--color-text-soft);
@@ -206,7 +219,7 @@ select,
 textarea {
   width: 100%;
   border: 1px solid var(--color-border-control);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--color-input-bg);
   color: var(--color-text);
   min-height: 2.55rem;
@@ -321,7 +334,7 @@ label {
   align-items: center;
   justify-content: center;
   min-height: 1.35rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0 0.55rem;
   font-size: 0.72rem;
   font-weight: 850;
@@ -334,8 +347,9 @@ label {
 }
 
 .status-badge.running {
-  background: var(--color-accent-soft);
+  background: transparent;
   color: var(--color-accent);
+  border: 1px solid var(--color-accent-border);
 }
 
 .status-badge.cancelling,
