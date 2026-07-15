@@ -3,7 +3,7 @@
   import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
   import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import MovieRail from "./_components/MovieRail.svelte";
-  import { ChevronRight, Library, Search, Sparkles } from "@lucide/svelte";
+  import { ChevronRight, Library, Search } from "@lucide/svelte";
 
   let { data } = $props();
   const catalogSearch = createDebouncedCatalogSearch(
@@ -71,12 +71,6 @@
   <div>
     <div class="title-row">
       <h1>Movies</h1>
-      {#if !hasActiveFilters}
-        <a class="discover-link button secondary" href="/movies/discover">
-          <Sparkles size={16} aria-hidden="true" />
-          Discover movies
-        </a>
-      {/if}
     </div>
     <p class="muted">Browse scanned local movies and resume playback.</p>
   </div>

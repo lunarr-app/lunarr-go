@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+### Added
+
+- Added a top-level Discover hub (`/discover`) with movie and TV recommendation previews, each linking to a dedicated "View all" page. Added Discover to the primary navigation.
+
 ### Changed
 
 - Adopted spacing and radius design tokens (replacing ad-hoc values) and aligned the dark theme accent with the TV app.
+- Removed the per-page "Discover" buttons from the Movies and Shows pages (now reached via the Discover hub).
+- Set the Discover "View all" pages to 36 items per page to match the All movies/shows browse pages.
 
 ## 0.7.0 - 2026-07-12
 

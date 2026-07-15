@@ -4,7 +4,7 @@
   import { SHOW_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import EpisodeRail from "./_components/EpisodeRail.svelte";
   import ShowRail from "./_components/ShowRail.svelte";
-  import { ChevronRight, Library, Search, Sparkles } from "@lucide/svelte";
+  import { ChevronRight, Library, Search } from "@lucide/svelte";
 
   let { data } = $props();
   const catalogSearch = createDebouncedCatalogSearch(() => data.query);
@@ -76,12 +76,6 @@
   <div>
     <div class="title-row">
       <h1>Shows</h1>
-      {#if !hasActiveSearch}
-        <a class="discover-link button secondary" href="/shows/discover">
-          <Sparkles size={16} aria-hidden="true" />
-          Discover TV shows
-        </a>
-      {/if}
     </div>
     <p class="muted">Browse scanned TV libraries by show and season.</p>
   </div>
