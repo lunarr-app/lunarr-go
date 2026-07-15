@@ -5,8 +5,6 @@ import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
   const rows = await tvRows(locals.user!.id, "", "title", 1, SHOW_PAGE_SIZE, [
-    "continueWatching",
-    "nextUp",
     "recent",
     "latest",
     "popular",

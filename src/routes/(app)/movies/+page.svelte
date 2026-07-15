@@ -7,12 +7,6 @@
 
   const sections = $derived([
     {
-      key: "continue",
-      title: "Continue watching",
-      movies: data.rows.continueWatching,
-      href: "/continue/movies",
-    },
-    {
       key: "recent",
       title: "Recently added",
       movies: data.rows.recent,

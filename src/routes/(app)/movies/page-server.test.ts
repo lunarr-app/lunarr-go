@@ -22,7 +22,6 @@ type MovieRow = {
 
 type MoviesLoadResult = {
   rows: {
-    continueWatching: MovieRow[];
     recent: MovieRow[];
     latest: MovieRow[];
     popular: MovieRow[];
@@ -247,7 +246,6 @@ describe("movies page server", () => {
     expect(result).not.toHaveProperty("status");
     expect(result).not.toHaveProperty("sort");
     expect(result.rows).not.toHaveProperty("all");
-    expect(Array.isArray(result.rows.continueWatching)).toBe(true);
     expect(Array.isArray(result.rows.recent)).toBe(true);
     expect(Array.isArray(result.rows.latest)).toBe(true);
     expect(Array.isArray(result.rows.popular)).toBe(true);

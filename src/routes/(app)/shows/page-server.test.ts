@@ -194,14 +194,6 @@ describe("shows page server", () => {
 
     expect(result).toMatchObject({
       rows: {
-        continueWatching: [
-          {
-            id: "episode-1",
-            showTitle: "The Expanse",
-            fileId: "file-1",
-            progressSeconds: 120,
-          },
-        ],
         latest: [
           {
             id: "show-1",
@@ -217,6 +209,8 @@ describe("shows page server", () => {
       },
     });
     expect(result.rows).not.toHaveProperty("all");
+    expect(result.rows).not.toHaveProperty("continueWatching");
+    expect(result.rows).not.toHaveProperty("nextUp");
   });
 
   test("loads show detail and marks episodes and seasons watched", async () => {

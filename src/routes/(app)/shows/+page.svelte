@@ -1,27 +1,10 @@
 <script lang="ts">
-  import EpisodeCard from "$lib/components/EpisodeCard.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
   import Rail from "$lib/components/Rail.svelte";
   import { ChevronRight, Library } from "@lucide/svelte";
 
   let { data } = $props();
 
-  const episodeSections = $derived(
-    [
-      {
-        key: "continue",
-        title: "Continue watching",
-        episodes: data.rows.continueWatching,
-        href: "/continue/episodes",
-      },
-      {
-        key: "next-up",
-        title: "Next up",
-        episodes: data.rows.nextUp,
-        href: "/continue/next-up",
-      },
-    ].filter((section) => section.episodes.length > 0),
-  );
   const showSections = $derived([
     {
       key: "recent",
@@ -42,9 +25,7 @@
       href: "/shows/popular",
     },
   ]);
-  const hasContent = $derived(
-    episodeSections.length > 0 || showSections.some((section) => section.shows.length > 0),
-  );
+  const hasContent = $derived(showSections.some((section) => section.shows.length > 0));
 </script>
 
 <svelte:head>
@@ -62,25 +43,6 @@
     </a>
   </section>
 {:else}
-  {#each episodeSections as section}
-    <section class="media-section">
-      <div class="section-heading">
-        <h2>{section.title}</h2>
-        {#if section.href}
-          <a class="view-all" href={section.href}>
-            <span>View all</span>
-            <ChevronRight size={16} aria-hidden="true" />
-          </a>
-        {/if}
-      </div>
-      <Rail items={section.episodes} variant="episode">
-        {#snippet children(episode)}
-          <EpisodeCard {episode} />
-        {/snippet}
-      </Rail>
-    </section>
-  {/each}
-
   {#each showSections as section}
     {#if section.shows.length}
       <section class="media-section">
