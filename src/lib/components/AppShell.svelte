@@ -197,7 +197,7 @@
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface-strong);
     backdrop-filter: blur(14px);
-    padding: 0.65rem clamp(1rem, 3vw, 2.4rem);
+    padding: 0.65rem clamp(1rem, 3vw, 2rem);
   }
 
   .header-primary {
@@ -381,7 +381,7 @@
     min-width: 0;
     flex: 1;
     overflow: auto;
-    padding: 1.4rem clamp(1rem, 3vw, 2.4rem) 3rem;
+    padding: 1.6rem clamp(1rem, 3vw, 2rem) 1.6rem;
   }
 
   @media (max-width: 820px) {
