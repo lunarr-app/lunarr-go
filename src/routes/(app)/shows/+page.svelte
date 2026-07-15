@@ -5,6 +5,10 @@
 
   let { data } = $props();
 
+  function countLabel(total: number, singular: string, plural: string) {
+    return `${total} ${total === 1 ? singular : plural}`;
+  }
+
   const showSections = $derived([
     {
       key: "recent",
@@ -45,15 +49,18 @@
 {:else}
   {#each showSections as section}
     {#if section.shows.length}
-      <section class="media-section">
+      <section class="media-section" aria-labelledby={`${section.key}-heading`}>
         <div class="section-heading">
-          <h2>{section.title}</h2>
-          {#if section.href}
-            <a class="view-all" href={section.href}>
-              <span>View all</span>
-              <ChevronRight size={16} aria-hidden="true" />
-            </a>
-          {/if}
+          <h2 id={`${section.key}-heading`}>{section.title}</h2>
+          <div class="section-meta">
+            <span>{countLabel(section.shows.length, "show", "shows")}</span>
+            {#if section.href}
+              <a class="view-all" href={section.href}>
+                <span>View all</span>
+                <ChevronRight size={16} aria-hidden="true" />
+              </a>
+            {/if}
+          </div>
         </div>
         <Rail items={section.shows} variant="poster">
           {#snippet children(show)}
@@ -76,16 +83,28 @@
 
   .section-heading {
     display: flex;
-    gap: 0.75rem;
-    align-items: baseline;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
     margin-bottom: 0.85rem;
+  }
+
+  .section-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .section-meta span {
+    color: var(--color-muted);
+    font-size: 0.86rem;
+    font-weight: 700;
   }
 
   .view-all {
     display: inline-flex;
     align-items: center;
     gap: 0.15rem;
-    margin-left: auto;
     color: var(--color-muted);
     font-size: 0.9rem;
     font-weight: 700;
