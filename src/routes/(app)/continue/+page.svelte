@@ -1,6 +1,7 @@
 <script lang="ts">
-  import MovieRail from "$lib/components/MovieRail.svelte";
-  import EpisodeRail from "$lib/components/EpisodeRail.svelte";
+  import MovieCard from "$lib/components/MovieCard.svelte";
+  import EpisodeCard from "$lib/components/EpisodeCard.svelte";
+  import Rail from "$lib/components/Rail.svelte";
   import { ChevronRight, Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();
@@ -36,7 +37,11 @@
           </a>
         </div>
       </div>
-      <MovieRail movies={data.movies} />
+      <Rail items={data.movies} variant="poster">
+        {#snippet children(movie)}
+          <MovieCard {movie} />
+        {/snippet}
+      </Rail>
     </section>
   {/if}
 
@@ -52,7 +57,11 @@
           </a>
         </div>
       </div>
-      <EpisodeRail episodes={data.episodes} />
+      <Rail items={data.episodes} variant="episode">
+        {#snippet children(episode)}
+          <EpisodeCard {episode} />
+        {/snippet}
+      </Rail>
     </section>
   {/if}
 
@@ -68,7 +77,11 @@
           </a>
         </div>
       </div>
-      <EpisodeRail episodes={data.nextUp} />
+      <Rail items={data.nextUp} variant="episode">
+        {#snippet children(episode)}
+          <EpisodeCard {episode} />
+        {/snippet}
+      </Rail>
     </section>
   {/if}
 {:else}

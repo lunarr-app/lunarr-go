@@ -1,6 +1,7 @@
 <script lang="ts">
-  import MovieRail from "$lib/components/MovieRail.svelte";
-  import ShowRail from "$lib/components/ShowRail.svelte";
+  import MovieCard from "$lib/components/MovieCard.svelte";
+  import ShowCard from "$lib/components/ShowCard.svelte";
+  import Rail from "$lib/components/Rail.svelte";
   import { ChevronRight } from "@lucide/svelte";
 
   let { data } = $props();
@@ -23,7 +24,11 @@
     </a>
   </div>
   {#if data.movies.length}
-    <MovieRail movies={data.movies} />
+    <Rail items={data.movies} variant="poster">
+      {#snippet children(movie)}
+        <MovieCard {movie} />
+      {/snippet}
+    </Rail>
   {:else}
     <p class="muted empty">No recommendations yet — watch a movie and Lunarr will surface similar titles here.</p>
   {/if}
@@ -41,7 +46,11 @@
     </a>
   </div>
   {#if data.shows.length}
-    <ShowRail shows={data.shows} />
+    <Rail items={data.shows} variant="poster">
+      {#snippet children(show)}
+        <ShowCard {show} />
+      {/snippet}
+    </Rail>
   {:else}
     <p class="muted empty">No recommendations yet — watch an episode and Lunarr will surface similar shows here.</p>
   {/if}

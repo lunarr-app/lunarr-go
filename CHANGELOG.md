@@ -20,6 +20,7 @@
 - Changed the Continue hub sections (Movies, Episodes, Next up) to render as single-row horizontal carousels using the shared rail components instead of a wrapping grid, matching the Movies/Shows hubs. Each section loads the default 24-item rail limit.
 - Moved the shared `MovieRail`, `EpisodeRail`, and `ShowRail` components from route-local `_components` into `$lib/components` so every hub page (Continue, Discover, Search, Movies, Shows) uses one implementation.
 - Changed the Movies and Shows hub rails (and Discover/Search previews) to always render as single-row horizontal carousels, removing the previous two-row grid fallback for large rail sets. Deleted the now-unused `twoRowRailItems`/related helpers in `src/lib/media/rails.ts` and their tests.
+- Consolidated the three near-identical `MovieRail`, `ShowRail`, and `EpisodeRail` components into a single generic `Rail` component (`$lib/components/Rail.svelte`) that takes the items, a `poster`/`episode` width `variant`, and a card-rendering snippet.
 
 ## 0.7.0 - 2026-07-12
 

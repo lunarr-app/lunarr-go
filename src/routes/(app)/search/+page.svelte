@@ -1,7 +1,8 @@
 <script lang="ts">
   import SearchField from "$lib/components/SearchField.svelte";
-  import MovieRail from "$lib/components/MovieRail.svelte";
-  import ShowRail from "$lib/components/ShowRail.svelte";
+  import MovieCard from "$lib/components/MovieCard.svelte";
+  import ShowCard from "$lib/components/ShowCard.svelte";
+  import Rail from "$lib/components/Rail.svelte";
   import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
   import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import { ChevronRight } from "@lucide/svelte";
@@ -54,7 +55,11 @@
           <ChevronRight size={16} aria-hidden="true" />
         </a>
       </div>
-      <MovieRail movies={data.movies} />
+      <Rail items={data.movies} variant="poster">
+        {#snippet children(movie)}
+          <MovieCard {movie} />
+        {/snippet}
+      </Rail>
     </section>
   {/if}
 
@@ -67,7 +72,11 @@
           <ChevronRight size={16} aria-hidden="true" />
         </a>
       </div>
-      <ShowRail shows={data.shows} />
+      <Rail items={data.shows} variant="poster">
+        {#snippet children(show)}
+          <ShowCard {show} />
+        {/snippet}
+      </Rail>
     </section>
   {/if}
 {/if}

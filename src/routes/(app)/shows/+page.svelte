@@ -1,6 +1,7 @@
 <script lang="ts">
-  import EpisodeRail from "$lib/components/EpisodeRail.svelte";
-  import ShowRail from "$lib/components/ShowRail.svelte";
+  import EpisodeCard from "$lib/components/EpisodeCard.svelte";
+  import ShowCard from "$lib/components/ShowCard.svelte";
+  import Rail from "$lib/components/Rail.svelte";
   import { ChevronRight, Library } from "@lucide/svelte";
 
   let { data } = $props();
@@ -72,7 +73,11 @@
           </a>
         {/if}
       </div>
-      <EpisodeRail episodes={section.episodes} />
+      <Rail items={section.episodes} variant="episode">
+        {#snippet children(episode)}
+          <EpisodeCard {episode} />
+        {/snippet}
+      </Rail>
     </section>
   {/each}
 
@@ -88,7 +93,11 @@
             </a>
           {/if}
         </div>
-        <ShowRail shows={section.shows} />
+        <Rail items={section.shows} variant="poster">
+          {#snippet children(show)}
+            <ShowCard {show} />
+          {/snippet}
+        </Rail>
       </section>
     {/if}
   {/each}
