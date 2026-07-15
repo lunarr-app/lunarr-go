@@ -12,10 +12,11 @@
 - Adopted spacing and radius design tokens (replacing ad-hoc values) and aligned the dark theme accent with the TV app.
 - Removed the per-page "Discover" buttons from the Movies and Shows pages (now reached via the Discover hub).
 - Set the Discover "View all" pages to 36 items per page to match the All movies/shows browse pages.
-- Removed the redundant page titles and subtitles from the Discover, Continue, Movies, and Shows pages for a flatter layout (search and status filters are retained on Movies/Shows).
+- Removed the redundant page titles and subtitles from the Discover, Continue, Movies, and Shows pages for a flatter layout.
 - Removed the inline search box and watch-status filter from the Movies and Shows hub pages (search now lives on the dedicated Search page), and simplified their server loads.
 - Made Continue the primary landing page: the brand logo, root `/`, and post-login/setup/signup redirects now go to `/continue` (previously `/movies`), and Continue is listed first in the primary navigation.
 - Tightened the app layout padding: horizontal max reduced to `2rem` and main vertical padding made symmetric (`1.6rem` top/bottom, was `1.4rem`/`3rem`).
+- Removed the "All movies" and "All shows" rails from the Movies and Shows hub pages and scoped their server loads to only the rails actually rendered (Continue Watching, Recent, Latest, Popular for movies; plus Next Up for shows), dropping the unused `all` payload. The `/movies/all` and `/shows/all` browse pages remain available via Search and direct URL.
 
 ## 0.7.0 - 2026-07-12
 

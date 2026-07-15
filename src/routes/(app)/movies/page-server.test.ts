@@ -21,20 +21,11 @@ type MovieRow = {
 };
 
 type MoviesLoadResult = {
-  query: string;
-  status: string;
-  sort: string;
   rows: {
-    all: MovieRow[];
     continueWatching: MovieRow[];
-    allPage: {
-      page: number;
-      pageSize: number;
-      total: number;
-      totalPages: number;
-      hasPrevious: boolean;
-      hasNext: boolean;
-    };
+    recent: MovieRow[];
+    latest: MovieRow[];
+    popular: MovieRow[];
   };
 };
 
@@ -239,40 +230,31 @@ describe("movies page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("loads browse rows from search, watch-status, and sort query parameters", async () => {
+  test("ignores browse query parameters and returns scoped rails", async () => {
     const result = (await moviesLoad({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/movies?q=rav&status=unwatched&sort=rating"),
     } as never)) as MoviesLoadResult;
 
-    expect(result).toMatchObject({
-      query: "rav",
-      status: "unwatched",
-      sort: "rating",
-    });
-    expect(result.rows.all).toHaveLength(1);
-    expect(result.rows.all[0]).toMatchObject({
-      id: "movie-bravo",
-      title: "Bravo",
-      resumeFileId: "file-bravo",
-      progressSeconds: 90,
-      completed: false,
-    });
-    expect(result.rows.all[0].path).toBeUndefined();
-    expect(result.rows.all[0].sortTitle).toBeUndefined();
-    expect(result.rows.all[0].progressUpdatedAt).toBeUndefined();
-    expect(result.rows.all[0].latestFileCreatedAt).toBeUndefined();
+    expect(result).not.toHaveProperty("query");
+    expect(result).not.toHaveProperty("status");
+    expect(result).not.toHaveProperty("sort");
+    expect(result.rows).not.toHaveProperty("all");
+    expect(Array.isArray(result.rows.continueWatching)).toBe(true);
+    expect(Array.isArray(result.rows.recent)).toBe(true);
+    expect(Array.isArray(result.rows.latest)).toBe(true);
+    expect(Array.isArray(result.rows.popular)).toBe(true);
   });
 
-  test("normalizes invalid browse query parameters", async () => {
+  test("ignores invalid browse query parameters", async () => {
     const result = (await moviesLoad({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/movies?status=watchedish&sort=unknown"),
     } as never)) as MoviesLoadResult;
 
-    expect(result.status).toBe("all");
-    expect(result.sort).toBe("title");
-    expect(result.rows.all.map((movie) => movie.id)).toEqual(["movie-alpha", "movie-bravo", "movie-charlie"]);
+    expect(result).not.toHaveProperty("status");
+    expect(result).not.toHaveProperty("sort");
+    expect(result.rows).not.toHaveProperty("all");
   });
 
   test("loads only resumable movies for continue watching", async () => {

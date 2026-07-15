@@ -12,12 +12,6 @@
       href: "/continue/movies",
     },
     {
-      key: "all",
-      title: "All movies",
-      movies: data.rows.all,
-      href: "/movies/all",
-    },
-    {
       key: "recent",
       title: "Recently added",
       movies: data.rows.recent,

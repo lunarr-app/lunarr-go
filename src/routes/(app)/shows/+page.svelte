@@ -23,12 +23,6 @@
   );
   const showSections = $derived([
     {
-      key: "all",
-      title: "All shows",
-      shows: data.rows.all,
-      href: "/shows/all",
-    },
-    {
       key: "recent",
       title: "Recently added",
       shows: data.rows.recent,

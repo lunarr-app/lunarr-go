@@ -136,26 +136,31 @@ describe("shows page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("loads shows from query parameters", async () => {
+  test("loads TV rails and ignores query parameters", async () => {
     const result = await showsLoad({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/shows?q=exp&sort=latest"),
     } as never);
 
+    expect(result).not.toHaveProperty("query");
+    expect(result).not.toHaveProperty("sort");
     expect(result).toMatchObject({
-      query: "exp",
-      sort: "latest",
       rows: {
-        all: [
+        latest: [
           {
             id: "show-1",
             title: "The Expanse",
-            episodeCount: 1,
-            seasonCount: 1,
+          },
+        ],
+        popular: [
+          {
+            id: "show-1",
+            title: "The Expanse",
           },
         ],
       },
     });
+    expect(result.rows).not.toHaveProperty("all");
   });
 
   test("loads TV rails for the shows page", async () => {
@@ -199,14 +204,9 @@ describe("shows page server", () => {
             title: "The Expanse",
           },
         ],
-        all: [
-          {
-            id: "show-1",
-            title: "The Expanse",
-          },
-        ],
       },
     });
+    expect(result.rows).not.toHaveProperty("all");
   });
 
   test("loads show detail and marks episodes and seasons watched", async () => {
