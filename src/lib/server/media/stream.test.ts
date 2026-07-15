@@ -2,32 +2,33 @@ import { describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { inlineContentDisposition, parseRange, streamFileHeadResponse, streamFileResponse } from "./stream";
+import { inlineContentDisposition, streamFileHeadResponse, streamFileResponse } from "./stream";
+import { parseByteRange } from "../http/byte-range";
 import { createLocalStorage } from "../storage";
 
-describe("parseRange", () => {
+describe("parseByteRange", () => {
   test("parses explicit byte ranges", () => {
-    expect(parseRange("bytes=10-19", 100)).toEqual({ start: 10, end: 19 });
+    expect(parseByteRange("bytes=10-19", 100)).toEqual({ start: 10, end: 19 });
   });
 
   test("clamps explicit byte ranges to file size", () => {
-    expect(parseRange("bytes=8-99", 10)).toEqual({ start: 8, end: 9 });
+    expect(parseByteRange("bytes=8-99", 10)).toEqual({ start: 8, end: 9 });
   });
 
   test("parses open-ended ranges", () => {
-    expect(parseRange("bytes=95-", 100)).toEqual({ start: 95, end: 99 });
+    expect(parseByteRange("bytes=95-", 100)).toEqual({ start: 95, end: 99 });
   });
 
   test("parses suffix ranges", () => {
-    expect(parseRange("bytes=-25", 100)).toEqual({ start: 75, end: 99 });
+    expect(parseByteRange("bytes=-25", 100)).toEqual({ start: 75, end: 99 });
   });
 
   test("rejects unsatisfiable ranges", () => {
-    expect(parseRange("bytes=100-120", 100)).toBeNull();
-    expect(parseRange("bytes=40-20", 100)).toBeNull();
-    expect(parseRange("bytes=-25", 0)).toBeNull();
-    expect(parseRange("bytes=0-1,3-4", 100)).toBeNull();
-    expect(parseRange("items=0-1", 100)).toBeNull();
+    expect(parseByteRange("bytes=100-120", 100)).toBeNull();
+    expect(parseByteRange("bytes=40-20", 100)).toBeNull();
+    expect(parseByteRange("bytes=-25", 0)).toBeNull();
+    expect(parseByteRange("bytes=0-1,3-4", 100)).toBeNull();
+    expect(parseByteRange("items=0-1", 100)).toBeNull();
   });
 
   test("sanitizes inline content disposition filenames", () => {

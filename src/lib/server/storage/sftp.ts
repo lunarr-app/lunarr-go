@@ -1,4 +1,5 @@
 import path from "node:path";
+import { Readable } from "node:stream";
 import { Client, type ConnectConfig, type FileEntryWithStats, type SFTPWrapper, type Stats } from "ssh2";
 import { decryptSecret } from "../secrets";
 import {
@@ -131,6 +132,8 @@ export async function createSftpStorage(configJson: string | null): Promise<Libr
   const config = parseSftpConfig(configJson);
   const { client, sftp } = await sftpConnect(config);
   const operationTimeoutMs = config.operationTimeoutMs;
+  const activeStreams = new Set<Readable>();
+  let closed = false;
 
   return {
     source: "sftp",
@@ -164,20 +167,23 @@ export async function createSftpStorage(configJson: string | null): Promise<Libr
     },
     async createReadStream(filePath, range, options) {
       const stream = sftp.createReadStream(filePath, range ? { start: range.start, end: range.end } : undefined);
-      if (options?.keepOpen) return stream;
-
-      let closed = false;
-      const close = () => {
-        if (closed) return;
-        closed = true;
-        client.end();
-      };
-      stream.once("close", close);
-      stream.once("error", close);
+      if (!options?.keepOpen) {
+        activeStreams.add(stream);
+        const release = () => activeStreams.delete(stream);
+        stream.once("close", release);
+        stream.once("error", release);
+      }
       return stream;
     },
     async close() {
-      client.end();
+      for (const stream of activeStreams) {
+        if (!stream.destroyed) stream.destroy();
+      }
+      activeStreams.clear();
+      if (!closed) {
+        closed = true;
+        client.end();
+      }
     },
   };
 }

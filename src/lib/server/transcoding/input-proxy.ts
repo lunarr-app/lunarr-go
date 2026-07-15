@@ -1,4 +1,5 @@
 import type { SeekableTranscodeInputSource } from "./backend";
+import { type ByteRange, parseByteRange } from "../http/byte-range";
 import { randomInt, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -9,11 +10,6 @@ const STREAM_CHUNK_BYTES = 1024 * 1024;
 const PROXY_PORT_MIN = 30000;
 const PROXY_PORT_MAX = 40999;
 const PROXY_LISTEN_ATTEMPTS = 25;
-
-type ByteRange = {
-  start: number;
-  end: number;
-};
 
 export type RunningSeekableInputProxy = {
   url: string;
@@ -28,35 +24,6 @@ type SeekableInputProxyInput = {
 };
 
 let listenQueue = Promise.resolve();
-
-function parseRange(rangeHeader: string | undefined, size: number) {
-  if (!rangeHeader || size <= 0) return null;
-  const match = rangeHeader.match(/^bytes=(\d*)-(\d*)$/);
-  if (!match) return null;
-
-  const startText = match[1];
-  const endText = match[2];
-  if (!startText && !endText) return null;
-
-  if (!startText) {
-    const suffixLength = Number(endText);
-    if (!Number.isFinite(suffixLength) || suffixLength <= 0) return null;
-    return {
-      start: Math.max(size - suffixLength, 0),
-      end: size - 1,
-    };
-  }
-
-  const start = Number(startText);
-  const end = endText ? Number(endText) : size - 1;
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
-  if (start > end || start >= size) return null;
-
-  return {
-    start,
-    end: Math.min(end, size - 1),
-  };
-}
 
 function commonHeaders(size: number) {
   return {
@@ -182,7 +149,7 @@ export async function startSeekableInputProxy(input: SeekableInputProxyInput): P
 
       const size = input.inputSource.sizeBytes;
       const rangeHeader = request.headers.range;
-      const range = parseRange(typeof rangeHeader === "string" ? rangeHeader : undefined, size);
+      const range = parseByteRange(typeof rangeHeader === "string" ? rangeHeader : undefined, size);
 
       if (rangeHeader && !range) {
         writeHead(response, 416, {

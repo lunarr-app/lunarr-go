@@ -3,11 +3,7 @@ import { getMediaFile } from "./files";
 import { mediaContentTypeForExtension } from "$lib/playback/content-type";
 import type { LibrarySource } from "../db/schema";
 import { createLibraryStorage, createLocalStorage, type LibraryStorage } from "../storage";
-
-export type ByteRange = {
-  start: number;
-  end: number;
-};
+import { type ByteRange, parseByteRange } from "../http/byte-range";
 
 type StreamableMediaFile = {
   path: string;
@@ -18,23 +14,22 @@ type StreamableMediaFile = {
 };
 
 export function attachStreamAbortCleanup(nodeStream: Readable, storage: LibraryStorage, signal?: AbortSignal | null) {
-  if (!signal) return;
-
+  let closed = false;
   const cleanup = () => {
+    if (closed) return;
+    closed = true;
     if (!nodeStream.destroyed) nodeStream.destroy();
     void storage.close();
   };
 
-  if (signal.aborted) {
+  nodeStream.once("close", cleanup);
+  nodeStream.once("error", cleanup);
+
+  if (signal?.aborted) {
     cleanup();
     return;
   }
-
-  const onAbort = () => cleanup();
-  signal.addEventListener("abort", onAbort, { once: true });
-  const detach = () => signal.removeEventListener("abort", onAbort);
-  nodeStream.once("close", detach);
-  nodeStream.once("error", detach);
+  signal?.addEventListener("abort", cleanup, { once: true });
 }
 
 function streamResponseFromNodeStream(
@@ -52,35 +47,6 @@ function streamResponseFromNodeStream(
     status: prepared.status,
     headers: prepared.headers,
   });
-}
-
-export function parseRange(rangeHeader: string | null, size: number): ByteRange | null {
-  if (!rangeHeader) return null;
-  if (size <= 0) return null;
-  const match = rangeHeader.match(/^bytes=(\d*)-(\d*)$/);
-  if (!match) return null;
-
-  const startText = match[1];
-  const endText = match[2];
-  if (!startText && !endText) return null;
-
-  if (!startText) {
-    const suffixLength = Number(endText);
-    if (!Number.isFinite(suffixLength) || suffixLength <= 0) return null;
-    return {
-      start: Math.max(size - suffixLength, 0),
-      end: size - 1,
-    };
-  }
-
-  const start = Number(startText);
-  const end = endText ? Number(endText) : size - 1;
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) return null;
-
-  return {
-    start,
-    end: Math.min(end, size - 1),
-  };
 }
 
 export function inlineContentDisposition(filename: string) {
@@ -111,7 +77,7 @@ async function prepareStream(
   }
   const size = info.size;
   const contentType = mediaContentTypeForExtension(file.extension);
-  const range = parseRange(rangeHeader, size);
+  const range = parseByteRange(rangeHeader, size);
 
   if (rangeHeader && !range) {
     return {
