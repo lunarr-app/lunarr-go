@@ -23,12 +23,6 @@
   />
 </svelte:head>
 
-<header class="page-header">
-  <div>
-    <h1 class="page-title">Continue Watching</h1>
-  </div>
-</header>
-
 {#if hasContent}
   {#if data.moviesPage.total > 0}
     <section class="media-section" aria-labelledby="movies-heading">
@@ -107,16 +101,7 @@
 {/if}
 
 <style>
-  .page-header {
-    margin-bottom: 1.6rem;
-  }
-
-  .page-title {
-    margin: 0;
-    font-size: clamp(1.55rem, 2.4vw, 2.25rem);
-  }
-
-  .media-section {
+  .media-section + .media-section {
     margin-top: 1.8rem;
   }
 

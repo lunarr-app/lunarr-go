@@ -11,6 +11,7 @@
 - Adopted spacing and radius design tokens (replacing ad-hoc values) and aligned the dark theme accent with the TV app.
 - Removed the per-page "Discover" buttons from the Movies and Shows pages (now reached via the Discover hub).
 - Set the Discover "View all" pages to 36 items per page to match the All movies/shows browse pages.
+- Removed the redundant page titles and subtitles from the Discover, Continue, Movies, and Shows pages for a flatter layout (search and status filters are retained on Movies/Shows).
 
 ## 0.7.0 - 2026-07-12
 

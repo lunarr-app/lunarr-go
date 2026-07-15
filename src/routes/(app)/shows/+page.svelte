@@ -73,12 +73,6 @@
 </svelte:head>
 
 <header class="page-header">
-  <div>
-    <div class="title-row">
-      <h1>Shows</h1>
-    </div>
-    <p class="muted">Browse scanned TV libraries by show and season.</p>
-  </div>
   <form
     method="GET"
     role="search"
@@ -158,25 +152,13 @@
     margin-bottom: 1.6rem;
   }
 
-  .title-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 0.25rem;
-  }
-
   form {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-2);
+    grid-column: 2;
     justify-self: end;
     width: 100%;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(1.55rem, 2.4vw, 2.25rem);
   }
 
   .media-section {
@@ -224,6 +206,10 @@
   @media (max-width: 820px) {
     .page-header {
       grid-template-columns: 1fr;
+    }
+
+    form {
+      grid-column: 1;
     }
   }
 

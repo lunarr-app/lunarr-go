@@ -68,12 +68,6 @@
 </svelte:head>
 
 <header class="page-header">
-  <div>
-    <div class="title-row">
-      <h1>Movies</h1>
-    </div>
-    <p class="muted">Browse scanned local movies and resume playback.</p>
-  </div>
   <form
     method="GET"
     role="search"
@@ -143,25 +137,13 @@
     margin-bottom: 1.6rem;
   }
 
-  .title-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 0.25rem;
-  }
-
   form {
     display: grid;
     grid-template-columns: minmax(14rem, 1fr) minmax(8rem, auto);
     gap: var(--space-2);
+    grid-column: 2;
     justify-self: end;
     width: 100%;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(1.55rem, 2.4vw, 2.25rem);
   }
 
   .movie-section {
@@ -209,6 +191,10 @@
   @media (max-width: 980px) {
     .page-header {
       grid-template-columns: 1fr;
+    }
+
+    form {
+      grid-column: 1;
     }
   }
 

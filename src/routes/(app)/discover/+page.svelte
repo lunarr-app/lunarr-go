@@ -11,15 +11,6 @@
   <meta name="description" content="Personalized movie and TV recommendations based on your Lunarr watch history." />
 </svelte:head>
 
-<header class="page-header">
-  <div>
-    <div class="title-row">
-      <h1>Discover</h1>
-    </div>
-    <p class="muted">Personalized picks based on what you've watched.</p>
-  </div>
-</header>
-
 <section class="discover-section">
   <div class="section-heading">
     <div>
@@ -57,27 +48,7 @@
 </section>
 
 <style>
-  .page-header {
-    margin-bottom: 1.6rem;
-  }
-
-  .title-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 0.25rem;
-  }
-
-  h1 {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0;
-    font-size: clamp(1.55rem, 2.4vw, 2.25rem);
-  }
-
-  .discover-section {
+  .discover-section + .discover-section {
     margin-top: var(--space-5);
   }
 
