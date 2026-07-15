@@ -1,7 +1,9 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import ConfirmAction from "$lib/components/ConfirmAction.svelte";
+  import ModalDialog from "$lib/components/ModalDialog.svelte";
   import { formatDateTime } from "$lib/media/format";
+  import { enhance } from "$app/forms";
   import { Clipboard, ExternalLink, KeyRound, Plus } from "@lucide/svelte";
 
   type ApiKey = {
@@ -27,6 +29,18 @@
 
   let apiKeyExpiresPreset = $state("");
   let copiedToken = $state(false);
+  let createOpen = $state(false);
+
+  const createTitleId = `api-key-create-${Math.random().toString(36).slice(2, 9)}`;
+
+  function openCreate() {
+    apiKeyExpiresPreset = "";
+    createOpen = true;
+  }
+
+  function closeCreate() {
+    createOpen = false;
+  }
 
   async function copyToken(token: string) {
     if (!browser || !navigator.clipboard) return;
@@ -48,16 +62,17 @@
   </div>
 
   <div class="ops-panel-body api-panel-body">
+    <p class="muted api-docs-note">OpenAPI specification for building custom clients. Authenticate requests with the X-API-Key header.</p>
+
     <div class="api-links" aria-label="API documentation">
-      <a class="button secondary" href="/api/openapi.json" target="_blank" rel="noreferrer">
-        JSON
+      <a class="api-link" href="/api/openapi.json" target="_blank" rel="noreferrer">
+        OpenAPI JSON
         <ExternalLink size={14} aria-hidden="true" />
       </a>
-      <a class="button secondary" href="/api/openapi.yaml" target="_blank" rel="noreferrer">
-        YAML
+      <a class="api-link" href="/api/openapi.yaml" target="_blank" rel="noreferrer">
+        OpenAPI YAML
         <ExternalLink size={14} aria-hidden="true" />
       </a>
-      <code>X-API-Key</code>
     </div>
 
     {#if createdApiKeyToken}
@@ -73,50 +88,69 @@
       </div>
     {/if}
 
-    <form class="api-create-form" method="POST" action="?/createApiKey">
-      <label>
-        Name
-        <input name="name" maxlength="80" placeholder="iPhone, scripts, Jellyseerr" />
-      </label>
+    <button class="button create-trigger" type="button" onclick={openCreate}>
+      <Plus size={16} aria-hidden="true" />
+      Create key
+    </button>
 
-      <div class="expiry-grid">
-        <label>
-          Expires
-          <select name="expiresPreset" bind:value={apiKeyExpiresPreset}>
-            <option value="">Never</option>
-            <option value="604800">7 days</option>
-            <option value="2592000">30 days</option>
-            <option value="7776000">90 days</option>
-            <option value="31536000">1 year</option>
-            <option value="custom">Custom seconds</option>
-          </select>
-        </label>
-
-        {#if apiKeyExpiresPreset === "custom"}
+    {#if createOpen}
+      <ModalDialog title="Create API key" titleId={createTitleId} onClose={closeCreate}>
+        <form
+          class="api-create-form"
+          method="POST"
+          action="?/createApiKey"
+          use:enhance={() => {
+            return async ({ result, update }) => {
+              if (result.type === "success") createOpen = false;
+              await update();
+            };
+          }}
+        >
           <label>
-            Seconds
-            <input
-              name="expiresIn"
-              type="number"
-              min="1"
-              max="315360000"
-              step="1"
-              inputmode="numeric"
-              placeholder="2592000"
-            />
+            Name
+            <input name="name" maxlength="80" placeholder="iPhone, scripts" />
           </label>
-        {/if}
-      </div>
 
-      {#if apiKeyError}
-        <p class="error">{apiKeyError}</p>
-      {/if}
+          <div class="expiry-grid">
+            <label>
+              Expires
+              <select name="expiresPreset" bind:value={apiKeyExpiresPreset}>
+                <option value="">Never</option>
+                <option value="604800">7 days</option>
+                <option value="2592000">30 days</option>
+                <option value="7776000">90 days</option>
+                <option value="31536000">1 year</option>
+                <option value="custom">Custom seconds</option>
+              </select>
+            </label>
 
-      <button>
-        <Plus size={16} aria-hidden="true" />
-        Create key
-      </button>
-    </form>
+            {#if apiKeyExpiresPreset === "custom"}
+              <label>
+                Seconds
+                <input
+                  name="expiresIn"
+                  type="number"
+                  min="1"
+                  max="315360000"
+                  step="1"
+                  inputmode="numeric"
+                  placeholder="2592000"
+                />
+              </label>
+            {/if}
+          </div>
+
+          {#if apiKeyError}
+            <p class="error">{apiKeyError}</p>
+          {/if}
+
+          <div class="form-actions">
+            <button type="button" class="secondary" onclick={closeCreate}>Cancel</button>
+            <button>Create key</button>
+          </div>
+        </form>
+      </ModalDialog>
+    {/if}
 
     <div class="api-key-list">
       {#if apiKeys.length > 0}
@@ -162,17 +196,24 @@
     align-items: center;
   }
 
-  .api-links a {
+  .api-docs-note {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  .api-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--color-accent);
+    font-weight: 600;
+    font-size: 0.9rem;
     text-decoration: none;
   }
 
-  .api-links code {
-    border: 1px solid var(--color-border-strong);
-    border-radius: 6px;
-    background: var(--color-surface-faint);
-    color: var(--color-text);
-    padding: 0.32rem var(--space-2);
-    font-size: 0.82rem;
+  .api-link:hover {
+    text-decoration: underline;
   }
 
   .token-reveal {
@@ -205,6 +246,10 @@
   .api-create-form {
     display: grid;
     gap: 0.65rem;
+  }
+
+  .create-trigger {
+    width: fit-content;
   }
 
   .expiry-grid {
