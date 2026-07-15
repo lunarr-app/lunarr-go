@@ -2,7 +2,6 @@
   import { formatGibibytes } from "$lib/media/format";
   import SettingsActionRow from "./SettingsActionRow.svelte";
   import SwitchField from "$lib/components/SwitchField.svelte";
-  import { Trash2 } from "@lucide/svelte";
 
   let {
     transcodePolicy,
@@ -172,7 +171,6 @@
       {#snippet actions()}
         <form method="POST" action="?/cleanupPlaybackArtifacts">
           <button type="submit" class="secondary compact-action">
-            <Trash2 size={16} aria-hidden="true" />
             Force cleanup
           </button>
         </form>

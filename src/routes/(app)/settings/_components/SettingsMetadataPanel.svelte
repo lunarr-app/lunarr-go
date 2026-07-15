@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Save } from "@lucide/svelte";
   import {
     METADATA_REFRESH_FIELDS,
     METADATA_REFRESH_INTERVAL_OPTIONS,
@@ -158,7 +157,6 @@
       <p class="error">{metadataSaveError}</p>
     {/if}
     <button disabled={!metadataChanged}>
-      <Save size={16} aria-hidden="true" />
       Save metadata
     </button>
   </div>
