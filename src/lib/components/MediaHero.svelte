@@ -7,8 +7,8 @@
     backdropUrl,
     overview,
     genres = [],
-    leading,
     facts,
+    subtitle,
     actions,
     secondaryActions,
     below,
@@ -20,8 +20,8 @@
     backdropUrl: string | null;
     overview: string | null;
     genres?: string[];
-    leading?: Snippet;
     facts?: Snippet;
+    subtitle?: Snippet;
     actions?: Snippet;
     secondaryActions?: Snippet;
     below?: Snippet;
@@ -38,11 +38,6 @@
   <div class="hero-bg" aria-hidden="true"></div>
   <div class="hero-inner">
     <div class="poster-column">
-      {#if leading}
-        <div class="leading">
-          {@render leading()}
-        </div>
-      {/if}
       <div class="poster">
         {#if posterUrl}
           <img src={posterUrl} alt="" />
@@ -61,6 +56,10 @@
         {/if}
 
         <h1>{title}</h1>
+
+        {#if subtitle}
+          {@render subtitle()}
+        {/if}
 
         {#if genres.length}
           <div class="genres" aria-label="Genres">
@@ -154,21 +153,6 @@
     gap: 0.65rem;
     align-content: start;
     justify-items: start;
-  }
-
-  .leading :global(a) {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    width: fit-content;
-    color: var(--hero-text-soft);
-    font-size: 0.86rem;
-    font-weight: 750;
-    text-decoration: none;
-  }
-
-  .leading :global(a:hover) {
-    color: var(--hero-text);
   }
 
   .poster {

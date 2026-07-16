@@ -57,7 +57,6 @@
 
 <SeasonDetailHero
   showTitle={data.show.title}
-  showId={data.show.id}
   showYear={data.show.year}
   showStatus={data.show.status}
   voteAverage={data.show.voteAverage}

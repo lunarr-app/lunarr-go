@@ -19,7 +19,8 @@
 
   const episodeCode = $derived(formatEpisodeCode(data.episode));
   const seasonHref = $derived(showSeasonHref(data.show.id, data.season));
-  const seasonLabel = $derived(`${data.show.title} · ${data.season.title}`);
+  const seasonLabel = $derived(data.season.title);
+  const showHref = $derived(`/shows/${data.show.id}`);
   const runtimeLabel = $derived(data.episode.runtimeSeconds ? formatMediaDuration(data.episode.runtimeSeconds) : null);
   const ratingLabel = $derived(formatVoteAverageLabel(data.episode.voteAverage));
   const voteCountLabel = $derived(formatVoteCountLabel(data.episode.voteCount));
@@ -48,6 +49,8 @@
   posterUrl={data.episode.stillUrl ?? data.show.posterUrl}
   backdropUrl={data.show.backdropUrl}
   overview={data.episode.overview}
+  showTitle={data.show.title}
+  {showHref}
   {seasonHref}
   {seasonLabel}
   {episodeCode}

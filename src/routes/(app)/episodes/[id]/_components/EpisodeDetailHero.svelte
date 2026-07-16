@@ -2,13 +2,15 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import MediaHeroPlaybackActions from "$lib/components/MediaHeroPlaybackActions.svelte";
   import MediaHeroResumeBar from "$lib/components/MediaHeroResumeBar.svelte";
-  import { Calendar, ChevronLeft, Clock3, Star } from "@lucide/svelte";
+  import { Calendar, Clock3, Star } from "@lucide/svelte";
 
   let {
     title,
     posterUrl,
     backdropUrl,
     overview,
+    showTitle,
+    showHref,
     seasonHref,
     seasonLabel,
     episodeCode,
@@ -26,6 +28,8 @@
     posterUrl: string | null;
     backdropUrl: string | null;
     overview: string | null;
+    showTitle: string;
+    showHref: string;
     seasonHref: string;
     seasonLabel: string;
     episodeCode: string | null;
@@ -42,11 +46,12 @@
 </script>
 
 <MediaHero {title} {posterUrl} {backdropUrl} {overview}>
-  {#snippet leading()}
-    <a href={seasonHref}>
-      <ChevronLeft size={16} aria-hidden="true" />
-      {seasonLabel}
-    </a>
+  {#snippet subtitle()}
+    <div class="hero-subtitle">
+      <a href={showHref}>{showTitle}</a>
+      <span aria-hidden="true">·</span>
+      <a href={seasonHref}>{seasonLabel}</a>
+    </div>
   {/snippet}
 
   {#snippet facts()}
@@ -72,3 +77,23 @@
     <MediaHeroResumeBar {resumeLabel} {resumePercent} />
   {/snippet}
 </MediaHero>
+
+<style>
+  .hero-subtitle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--hero-text-soft);
+  }
+
+  .hero-subtitle a {
+    color: var(--hero-text-soft);
+    text-decoration: none;
+  }
+
+  .hero-subtitle a:hover {
+    color: var(--hero-text);
+    text-decoration: underline;
+  }
+</style>
