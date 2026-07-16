@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, CirclePlay, RotateCcw } from "@lucide/svelte";
+  import { CirclePlay, Eye, EyeOff } from "@lucide/svelte";
 
   let {
     primaryFile,
@@ -7,7 +7,7 @@
     primaryActionLabel,
     hasCompletedProgress,
   }: {
-    primaryFile: { id: string } | undefined;
+    primaryFile?: { id: string };
     primaryHref: string;
     primaryActionLabel: string;
     hasCompletedProgress: boolean;
@@ -23,11 +23,11 @@
     <input type="hidden" name="fileId" value={primaryFile.id} />
     <button class="secondary" name="completed" value={hasCompletedProgress ? "false" : "true"}>
       {#if hasCompletedProgress}
-        <RotateCcw size={16} aria-hidden="true" />
-        Mark unwatched
+        <EyeOff size={16} aria-hidden="true" />
+        Unwatch
       {:else}
-        <Check size={16} aria-hidden="true" />
-        Mark watched
+        <Eye size={16} aria-hidden="true" />
+        Watched
       {/if}
     </button>
   </form>

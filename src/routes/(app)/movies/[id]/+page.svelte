@@ -58,9 +58,6 @@
   backdropUrl={data.backdropUrl}
   overview={data.movie.overview}
   genres={data.genres}
-  {releaseLabel}
-  {runtimeLabel}
-  {ratingLabel}
   primaryFile={playback.primaryFile}
   {primaryHref}
   primaryActionLabel={playback.primaryActionLabel}

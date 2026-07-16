@@ -2,7 +2,7 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import ShowWatchSummary from "$lib/components/ShowWatchSummary.svelte";
   import { formatEpisodeCode } from "$lib/media/format";
-  import { Calendar, Check, ChevronLeft, CirclePlay, RotateCcw, Star } from "@lucide/svelte";
+  import { Calendar, ChevronLeft, CirclePlay, Eye, EyeOff, Star } from "@lucide/svelte";
 
   let {
     showTitle,
@@ -35,15 +35,13 @@
     overview: string | null;
     genres: string[];
     seasonProgressLabel: string;
-    nextEpisode:
-      | {
-          id: string;
-          fileId: string | null;
-          progressSeconds: number;
-          seasonNumber: number | null;
-          episodeNumber: number | null;
-        }
-      | undefined;
+    nextEpisode?: {
+      id: string;
+      fileId: string | null;
+      progressSeconds: number;
+      seasonNumber: number | null;
+      episodeNumber: number | null;
+    };
     watchHref: (episode: { id: string; fileId: string | null }) => string;
     playableCount: number;
     seasonComplete: boolean;
@@ -83,10 +81,10 @@
         <input type="hidden" name="completed" value={seasonComplete ? "false" : "true"} />
         <button class="button secondary" type="submit">
           {#if seasonComplete}
-            <RotateCcw size={16} aria-hidden="true" />
+            <EyeOff size={16} aria-hidden="true" />
             Unwatch season
           {:else}
-            <Check size={16} aria-hidden="true" />
+            <Eye size={16} aria-hidden="true" />
             Watched season
           {/if}
         </button>

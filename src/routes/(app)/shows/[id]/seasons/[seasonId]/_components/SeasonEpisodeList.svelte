@@ -1,6 +1,6 @@
 <script lang="ts">
   import { formatEpisodeCode, formatFileCountLabel } from "$lib/media/format";
-  import { Calendar, Check, CirclePlay, Clock3, RotateCcw } from "@lucide/svelte";
+  import { Calendar, CirclePlay, Clock3, Eye, EyeOff } from "@lucide/svelte";
 
   type Episode = {
     id: string;
@@ -117,10 +117,10 @@
               <input type="hidden" name="completed" value={episode.completed ? "false" : "true"} />
               <button class="secondary compact">
                 {#if episode.completed}
-                  <RotateCcw size={15} aria-hidden="true" />
+                  <EyeOff size={15} aria-hidden="true" />
                   Unwatch
                 {:else}
-                  <Check size={15} aria-hidden="true" />
+                  <Eye size={15} aria-hidden="true" />
                   Watched
                 {/if}
               </button>

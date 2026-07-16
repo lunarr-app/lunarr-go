@@ -177,6 +177,20 @@ button.danger,
   border: 1px solid var(--color-danger-border);
 }
 
+button.text,
+.button.text {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-soft);
+  padding-inline: 0.4rem;
+}
+
+button.text:hover:not(:disabled),
+.button.text:hover:not(:disabled) {
+  background: transparent;
+  color: var(--color-accent);
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;

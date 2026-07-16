@@ -59,9 +59,10 @@
     background: var(--color-accent);
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 820px) {
     .watch-summary {
       grid-template-columns: 1fr;
+      width: 100%;
     }
   }
 </style>

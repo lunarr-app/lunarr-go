@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { EpisodeSummary } from "$lib/media/types";
+  import { Eye, EyeOff } from "@lucide/svelte";
 
   let { episode, href = `/episodes/${episode.id}` }: { episode: EpisodeSummary; href?: string } = $props();
 
@@ -39,7 +40,14 @@
     <strong>{episode.title}</strong>
     <div class="details">
       <span>{episode.showTitle}</span>
-      <span>{statusLabel}</span>
+      <span>
+        {#if episode.completed}
+          <Eye size={14} aria-hidden="true" />
+        {:else}
+          <EyeOff size={14} aria-hidden="true" />
+        {/if}
+        {statusLabel}
+      </span>
     </div>
     <div class="progress" aria-hidden="true">
       <span style={`width: ${progressPercent}%`}></span>
@@ -121,6 +129,9 @@
 
   .details span:last-child {
     color: var(--color-accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
   }
 
   .episode:not(.has-progress) .details span:last-child {

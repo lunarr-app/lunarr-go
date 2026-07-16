@@ -2,7 +2,7 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import ShowWatchSummary from "$lib/components/ShowWatchSummary.svelte";
   import { formatEpisodeCode } from "$lib/media/format";
-  import { Calendar, CirclePlay, ExternalLink, Link2, Sparkles, Star } from "@lucide/svelte";
+  import { Calendar, CirclePlay, Clapperboard, ExternalLink, Link2, Sparkles, Star } from "@lucide/svelte";
 
   let {
     title,
@@ -35,15 +35,13 @@
     ratingLabel: string | null;
     seasonCountLabel: string;
     episodeCountLabel: string;
-    nextEpisode:
-      | {
-          id: string;
-          fileId: string | null;
-          progressSeconds: number;
-          seasonNumber: number | null;
-          episodeNumber: number | null;
-        }
-      | undefined;
+    nextEpisode?: {
+      id: string;
+      fileId: string | null;
+      progressSeconds: number;
+      seasonNumber: number | null;
+      episodeNumber: number | null;
+    };
     watchHref: (episode: { id: string; fileId: string | null }) => string;
     watchedCount: number;
     totalEpisodes: number;
@@ -72,20 +70,26 @@
         <CirclePlay size={19} aria-hidden="true" />
         {nextEpisode.progressSeconds > 0 ? "Resume" : "Play"}
       </a>
-      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}>{formatEpisodeCode(nextEpisode) || "Episode"}</a>
+      <a class="button secondary" href={`/episodes/${nextEpisode.id}`}>
+        <Clapperboard size={16} aria-hidden="true" />
+        {formatEpisodeCode(nextEpisode) || "Episode"}
+      </a>
     {/if}
+  {/snippet}
+
+  {#snippet secondaryActions()}
     {#if trailerHref}
-      <a class="button secondary" href={trailerHref} target="_blank" rel="noreferrer">
+      <a class="button text" href={trailerHref} target="_blank" rel="noreferrer">
         <ExternalLink size={16} aria-hidden="true" />
         Trailer
       </a>
     {/if}
-    <a class="button secondary" href={similarHref}>
+    <a class="button text" href={similarHref}>
       <Sparkles size={16} aria-hidden="true" />
       Similar
     </a>
     {#if canManageShares}
-      <button class="button secondary" type="button" onclick={onShareOpen}>
+      <button class="button text" type="button" onclick={onShareOpen}>
         <Link2 size={16} aria-hidden="true" />
         Share
       </button>

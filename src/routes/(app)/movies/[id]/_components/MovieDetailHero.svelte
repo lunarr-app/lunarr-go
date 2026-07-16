@@ -2,7 +2,7 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import MediaHeroPlaybackActions from "$lib/components/MediaHeroPlaybackActions.svelte";
   import MediaHeroResumeBar from "$lib/components/MediaHeroResumeBar.svelte";
-  import { Calendar, Clock3, ExternalLink, Link2, Sparkles, Star } from "@lucide/svelte";
+  import { ExternalLink, Link2, Sparkles } from "@lucide/svelte";
 
   let {
     title,
@@ -10,9 +10,6 @@
     backdropUrl,
     overview,
     genres,
-    releaseLabel,
-    runtimeLabel,
-    ratingLabel,
     primaryFile,
     primaryHref,
     primaryActionLabel,
@@ -29,10 +26,7 @@
     backdropUrl: string | null;
     overview: string | null;
     genres: string[];
-    releaseLabel: string | null;
-    runtimeLabel: string | null;
-    ratingLabel: string | null;
-    primaryFile: { id: string } | undefined;
+    primaryFile?: { id: string };
     primaryHref: string;
     primaryActionLabel: string;
     hasCompletedProgress: boolean;
@@ -46,32 +40,23 @@
 </script>
 
 <MediaHero {title} {posterUrl} {backdropUrl} {overview} {genres}>
-  {#snippet facts()}
-    {#if releaseLabel}
-      <span><Calendar size={15} aria-hidden="true" />{releaseLabel}</span>
-    {/if}
-    {#if runtimeLabel}
-      <span><Clock3 size={15} aria-hidden="true" />{runtimeLabel}</span>
-    {/if}
-    {#if ratingLabel}
-      <span><Star size={15} aria-hidden="true" />{ratingLabel}</span>
-    {/if}
-  {/snippet}
-
   {#snippet actions()}
     <MediaHeroPlaybackActions {primaryFile} {primaryHref} {primaryActionLabel} {hasCompletedProgress} />
+  {/snippet}
+
+  {#snippet secondaryActions()}
     {#if trailerHref}
-      <a class="button secondary" href={trailerHref} target="_blank" rel="noreferrer">
+      <a class="button text" href={trailerHref} target="_blank" rel="noreferrer">
         <ExternalLink size={16} aria-hidden="true" />
         Trailer
       </a>
     {/if}
-    <a class="button secondary" href={similarHref}>
+    <a class="button text" href={similarHref}>
       <Sparkles size={16} aria-hidden="true" />
       Similar
     </a>
     {#if canManageShares}
-      <button class="button secondary" type="button" onclick={onShareOpen}>
+      <button class="button text" type="button" onclick={onShareOpen}>
         <Link2 size={16} aria-hidden="true" />
         Share
       </button>

@@ -10,6 +10,7 @@
     leading,
     facts,
     actions,
+    secondaryActions,
     below,
     bottomMargin = "0",
     standalone = false,
@@ -22,6 +23,7 @@
     leading?: Snippet;
     facts?: Snippet;
     actions?: Snippet;
+    secondaryActions?: Snippet;
     below?: Snippet;
     bottomMargin?: string;
     standalone?: boolean;
@@ -33,6 +35,7 @@
   class:standalone
   style={`--backdrop: url('${backdropUrl ?? ""}'); --hero-bottom-margin: ${bottomMargin}`}
 >
+  <div class="hero-bg" aria-hidden="true"></div>
   <div class="hero-inner">
     <div class="poster-column">
       {#if leading}
@@ -50,33 +53,43 @@
     </div>
 
     <div class="copy">
-      {#if facts}
-        <div class="facts">
-          {@render facts()}
-        </div>
-      {/if}
+      <div class="copy-top">
+        {#if facts}
+          <div class="facts">
+            {@render facts()}
+          </div>
+        {/if}
 
-      <h1>{title}</h1>
+        <h1>{title}</h1>
 
-      {#if genres.length}
-        <div class="genres" aria-label="Genres">
-          {#each genres as genre}
-            <span>{genre}</span>
-          {/each}
-        </div>
-      {/if}
+        {#if genres.length}
+          <div class="genres" aria-label="Genres">
+            {#each genres as genre}
+              <span>{genre}</span>
+            {/each}
+          </div>
+        {/if}
+      </div>
 
-      <p class="overview">{overview ?? "No overview available."}</p>
+      <div class="copy-bottom">
+        <p class="overview">{overview ?? "No overview available."}</p>
 
-      {#if actions}
-        <div class="hero-actions">
-          {@render actions()}
-        </div>
-      {/if}
+        {#if actions}
+          <div class="hero-actions">
+            {@render actions()}
+          </div>
+        {/if}
 
-      {#if below}
-        {@render below()}
-      {/if}
+        {#if secondaryActions}
+          <div class="hero-secondary-actions">
+            {@render secondaryActions()}
+          </div>
+        {/if}
+
+        {#if below}
+          {@render below()}
+        {/if}
+      </div>
     </div>
   </div>
 </section>
@@ -85,17 +98,29 @@
   .hero {
     --hero-text: #f8fafc;
     --hero-text-soft: rgba(248, 250, 252, 0.82);
-    --hero-chip-bg: rgba(248, 250, 252, 0.08);
-    --hero-chip-border: rgba(255, 255, 255, 0.18);
-    --hero-genre: #ffd99a;
-    --hero-genre-border: rgba(255, 217, 154, 0.24);
+    --hero-chip-bg: rgba(247, 249, 251, 0.1);
+    --hero-chip-border: rgba(247, 249, 251, 0.22);
+    --hero-genre: #f7f9fb;
+    --hero-genre-border: rgba(247, 249, 251, 0.22);
     position: relative;
     min-height: clamp(20rem, 44vh, 30rem);
     margin: -1.4rem calc(-1 * clamp(1rem, 3vw, 2.4rem)) var(--hero-bottom-margin);
     padding: clamp(1rem, 2vw, 1.5rem) clamp(1rem, 3vw, 2.4rem);
     overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
     background:
-      linear-gradient(90deg, rgba(8, 12, 17, 0.96) 0%, rgba(8, 12, 17, 0.82) 38%, rgba(8, 12, 17, 0.42) 100%),
+      linear-gradient(
+        90deg,
+        rgba(8, 12, 17, 0.96) 0%,
+        rgba(8, 12, 17, 0.82) 35%,
+        rgba(8, 12, 17, 0.2) 65%,
+        rgba(8, 12, 17, 0) 85%
+      ),
       linear-gradient(0deg, #080c11 0%, rgba(8, 12, 17, 0.35) 42%, rgba(8, 12, 17, 0.75) 100%),
       var(--backdrop) center / cover;
   }
@@ -177,11 +202,19 @@
     color: var(--hero-text);
   }
 
+  .copy-top,
+  .copy-bottom {
+    display: grid;
+    justify-items: start;
+    gap: 0.65rem;
+    width: 100%;
+  }
+
   h1 {
     margin: 0;
     max-width: 42rem;
-    font-size: clamp(1.8rem, 4vw, 3.35rem);
-    line-height: 1;
+    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+    line-height: 1.05;
   }
 
   .facts,
@@ -204,6 +237,9 @@
     padding: 0.16rem 0.58rem;
     font-size: 0.82rem;
     font-weight: 700;
+    -webkit-backdrop-filter: blur(9px);
+    backdrop-filter: blur(9px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
   }
 
   .genres span {
@@ -224,27 +260,72 @@
     gap: 0.6rem;
   }
 
+  .hero-secondary-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.25rem;
+  }
+
   .hero-actions :global(.primary-action) {
     min-width: 8rem;
   }
 
   @media (max-width: 820px) {
     .hero:not(.standalone) {
+      --mh: clamp(15rem, 52vh, 22rem);
       margin-inline: -1rem;
-    }
-
-    .hero-inner {
-      align-items: center;
+      overflow: visible;
       min-height: 0;
+      padding: 0;
+    }
+
+    .hero:not(.standalone) .hero-bg {
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: var(--mh);
+      background:
+        linear-gradient(
+          0deg,
+          rgba(8, 12, 17, 0.95) 0%,
+          rgba(8, 12, 17, 0.78) 22%,
+          rgba(8, 12, 17, 0.28) 50%,
+          rgba(8, 12, 17, 0) 82%
+        ),
+        var(--backdrop) center / cover;
+    }
+
+    .hero:not(.standalone) .hero-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      min-height: 0;
+      max-width: none;
+      padding: 0;
+    }
+
+    .hero:not(.standalone) .poster-column {
+      display: none;
+    }
+
+    .hero:not(.standalone) .copy {
+      gap: 0;
+    }
+
+    .hero:not(.standalone) .copy-top {
+      min-height: var(--mh);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      padding: 1rem 1rem 0.75rem;
+    }
+
+    .hero:not(.standalone) .copy-bottom {
       grid-template-columns: 1fr;
-    }
-
-    .poster-column {
-      justify-items: center;
-    }
-
-    .poster {
-      width: min(11rem, 50vw);
+      padding: 1rem;
+      gap: 0.7rem;
     }
   }
 
@@ -254,7 +335,7 @@
     }
 
     h1 {
-      font-size: clamp(2rem, 12vw, 3.4rem);
+      font-size: clamp(1.4rem, 6.5vw, 1.9rem);
     }
   }
 </style>

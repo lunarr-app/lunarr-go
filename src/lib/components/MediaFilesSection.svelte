@@ -2,7 +2,7 @@
   import { page } from "$app/state";
   import { formatClockDuration, formatFileSize, formatMediaDuration } from "$lib/media/format";
   import { playbackModalHref } from "$lib/playback/links";
-  import { Check, CirclePlay, HardDrive, RotateCcw, Tags } from "@lucide/svelte";
+  import { Eye, EyeOff, HardDrive, Play, Tags } from "@lucide/svelte";
 
   type MediaFile = {
     id: string;
@@ -31,7 +31,7 @@
     mediaItemId: string;
     files: MediaFile[];
     progress: Array<FileProgress & { media_file_id: string }>;
-    primaryFileId: string | undefined;
+    primaryFileId?: string;
     formError?: string;
   } = $props();
 
@@ -105,27 +105,25 @@
         <span class="status" class:watched={Boolean(fileProgressRow?.completed)}>{progressLabel(fileProgressRow)}</span>
         <div class="file-actions">
           <a
-            class="button secondary"
+            class="button icon-only"
+            aria-label="Play"
             href={playbackModalHref({
               currentUrl: page.url,
               mediaItemId,
               mediaFileId: file.id,
             })}
           >
-            <CirclePlay size={16} aria-hidden="true" />
-            Play
+            <Play size={20} aria-hidden="true" />
           </a>
           <form class="inline-action" method="POST" action="?/watched">
             <input type="hidden" name="fileId" value={file.id} />
             {#if Boolean(fileProgressRow?.completed)}
-              <button class="secondary compact" name="completed" value="false">
-                <RotateCcw size={14} aria-hidden="true" />
-                Unwatch
+              <button class="secondary icon-only" aria-label="Unwatch" name="completed" value="false">
+                <EyeOff size={18} aria-hidden="true" />
               </button>
             {:else}
-              <button class="secondary compact" name="completed" value="true">
-                <Check size={14} aria-hidden="true" />
-                Watched
+              <button class="secondary icon-only" aria-label="Watched" name="completed" value="true">
+                <Eye size={18} aria-hidden="true" />
               </button>
             {/if}
           </form>
@@ -147,7 +145,7 @@
 
   .files-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr) minmax(12rem, max-content);
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr) minmax(6rem, max-content);
     gap: 0.75rem;
     border-bottom: 1px solid var(--color-border);
     color: var(--color-dim);
@@ -159,15 +157,14 @@
 
   .file-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr) minmax(12rem, max-content);
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr) minmax(6rem, max-content);
     gap: 0.75rem;
     align-items: center;
-    border-bottom: 1px solid var(--color-border);
     padding: 0.65rem 0;
   }
 
   .file-row.featured {
-    border-color: var(--color-accent-border);
+    color: var(--color-accent);
   }
 
   .file-copy {
@@ -223,7 +220,6 @@
     color: var(--color-success);
   }
 
-  .file-actions,
   .inline-action {
     display: flex;
     flex-wrap: wrap;
@@ -231,43 +227,55 @@
   }
 
   .file-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
     justify-content: flex-end;
   }
 
-  .file-actions .compact {
-    min-height: 2rem;
-    padding: 0 0.65rem;
-    font-size: 0.86rem;
+  .icon-only {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    color: var(--color-text-soft);
+  }
+
+  .icon-only:hover {
+    color: var(--color-accent);
+    background: transparent;
   }
 
   @media (max-width: 820px) {
-    .file-row {
-      grid-template-columns: 1fr;
-    }
-
     .files-header {
       display: none;
     }
 
-    .status {
+    .file-row {
+      grid-template-columns: 1fr auto;
+      gap: 0.4rem 0.75rem;
+      align-items: center;
+    }
+
+    .file-copy {
       grid-column: 1 / -1;
     }
 
+    .status {
+      grid-column: 1;
+    }
+
     .file-actions {
-      grid-column: 1 / -1;
-      justify-content: flex-start;
+      grid-column: 2;
+      justify-content: flex-end;
     }
   }
 
   @media (max-width: 560px) {
-    .file-actions,
-    .file-actions form {
-      width: 100%;
-    }
-
-    .file-actions a,
-    .file-actions button {
-      flex: 1 1 10rem;
+    .file-meta {
+      font-size: 0.78rem;
     }
   }
 </style>
