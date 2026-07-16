@@ -3,7 +3,6 @@
   import Pagination from "$lib/components/Pagination.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
   import type { CatalogPageInfo, MovieSummary, ShowSummary } from "$lib/media/types";
-  import { ArrowLeft } from "@lucide/svelte";
 
   let {
     kind,
@@ -40,10 +39,6 @@
 </svelte:head>
 
 <header class="page-header">
-  <a class="back-link" href={backHref}>
-    <ArrowLeft size={16} aria-hidden="true" />
-    Back
-  </a>
   <div>
     <h1>Similar to {title}</h1>
     <p class="muted">
@@ -89,20 +84,6 @@
     display: grid;
     gap: 0.85rem;
     margin-bottom: 1.6rem;
-  }
-
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    width: fit-content;
-    color: var(--color-muted);
-    font-size: 0.92rem;
-    font-weight: 700;
-  }
-
-  .back-link:hover {
-    color: var(--color-text);
   }
 
   h1 {

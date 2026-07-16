@@ -5,7 +5,6 @@
   import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
   import { SHOW_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import type { ShowSummary } from "$lib/media/types";
-  import { ArrowLeft } from "@lucide/svelte";
 
   type PageInfo = {
     page: number;
@@ -24,12 +23,8 @@
     hrefForPage,
     query = "",
     showFilters = false,
-    backHref = "/shows",
-    backLabel = "Shows",
-    emptyHref = "/shows",
     emptyTitle = "No matching shows",
     emptyDescription = "Adjust the filters or return to the show dashboard.",
-    emptyActionLabel = "Back to shows",
   }: {
     title: string;
     description: string;
@@ -38,12 +33,8 @@
     hrefForPage: (page: number) => string;
     query?: string;
     showFilters?: boolean;
-    backHref?: string;
-    backLabel?: string;
-    emptyHref?: string;
     emptyTitle?: string;
     emptyDescription?: string;
-    emptyActionLabel?: string;
   } = $props();
 
   const catalogSearch = createDebouncedCatalogSearch(() => query);
@@ -57,10 +48,6 @@
 
 <header class="page-header">
   <div>
-    <a class="back-link" href={backHref}>
-      <ArrowLeft size={16} aria-hidden="true" />
-      <span>{backLabel}</span>
-    </a>
     <h1>{title}</h1>
     <p class="muted">{description}</p>
   </div>
@@ -107,10 +94,6 @@
   <section class="empty">
     <h2>{emptyTitle}</h2>
     <p class="muted">{emptyDescription}</p>
-    <a class="button secondary" href={emptyHref}>
-      <ArrowLeft size={16} aria-hidden="true" />
-      {emptyActionLabel}
-    </a>
   </section>
 {/if}
 
@@ -121,20 +104,6 @@
     gap: var(--space-3);
     align-items: end;
     margin-bottom: 1.6rem;
-  }
-
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 0.35rem;
-    color: var(--color-muted);
-    font-size: 0.9rem;
-    font-weight: 700;
-  }
-
-  .back-link:hover {
-    color: var(--color-text);
   }
 
   h1 {

@@ -18,11 +18,7 @@
   description="Resume in-progress movies."
   movies={data.movies}
   pageInfo={data.pageInfo}
-  backHref="/continue"
-  backLabel="Continue"
-  emptyHref="/continue"
   emptyTitle="No movies in progress"
   emptyDescription="Start a movie and Lunarr will keep it here until it is watched."
-  emptyActionLabel="Back to continue"
   {hrefForPage}
 />
