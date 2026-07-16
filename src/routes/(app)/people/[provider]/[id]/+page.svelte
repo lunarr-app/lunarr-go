@@ -166,8 +166,7 @@
   }
 
   .person-name,
-  .original-name,
-  .section-heading h2 {
+  .original-name {
     margin: 0;
   }
 

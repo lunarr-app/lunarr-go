@@ -101,10 +101,6 @@
     margin-bottom: 0.85rem;
   }
 
-  .section-heading h2 {
-    margin: 0;
-  }
-
   .view-all {
     display: inline-flex;
     align-items: center;

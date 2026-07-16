@@ -189,8 +189,7 @@
     overflow: hidden;
   }
 
-  p,
-  h2 {
+  p {
     margin: 0;
   }
 

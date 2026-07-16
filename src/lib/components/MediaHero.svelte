@@ -195,7 +195,6 @@
   }
 
   h2 {
-    margin: 0;
     max-width: 42rem;
     font-size: 2rem;
     line-height: 1.05;

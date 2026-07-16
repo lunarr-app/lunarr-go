@@ -70,7 +70,6 @@
     margin-bottom: 0.85rem;
   }
 
-  .section-heading h2,
   .section-heading p {
     margin: 0;
   }

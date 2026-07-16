@@ -90,10 +90,6 @@
     margin-bottom: 0;
   }
 
-  .media-metadata-heading h2 {
-    margin: 0;
-  }
-
   .media-metadata-refresh {
     margin: 0;
     flex-shrink: 0;

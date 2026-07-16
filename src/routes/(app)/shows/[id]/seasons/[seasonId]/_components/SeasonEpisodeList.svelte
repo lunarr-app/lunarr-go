@@ -225,11 +225,6 @@
     font-weight: 800;
   }
 
-  h4 {
-    margin: 0;
-    font-size: 1rem;
-  }
-
   .episode-facts {
     display: flex;
     flex-wrap: wrap;

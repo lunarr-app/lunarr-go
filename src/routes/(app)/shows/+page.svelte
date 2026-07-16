@@ -77,10 +77,6 @@
     margin-top: var(--space-5);
   }
 
-  h2 {
-    margin: 0;
-  }
-
   .section-heading {
     display: flex;
     align-items: center;
@@ -121,9 +117,5 @@
     gap: 0.8rem;
     margin-top: 3rem;
     max-width: 34rem;
-  }
-
-  .empty h2 {
-    margin: 0;
   }
 </style>
