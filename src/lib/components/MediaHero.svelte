@@ -55,7 +55,7 @@
           </div>
         {/if}
 
-        <h1>{title}</h1>
+        <h2>{title}</h2>
 
         {#if subtitle}
           {@render subtitle()}
@@ -194,10 +194,10 @@
     width: 100%;
   }
 
-  h1 {
+  h2 {
     margin: 0;
     max-width: 42rem;
-    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+    font-size: 2rem;
     line-height: 1.05;
   }
 
@@ -236,6 +236,11 @@
     color: var(--hero-text-soft);
     line-height: 1.5;
     margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .hero-actions {
@@ -316,10 +321,6 @@
   @media (max-width: 560px) {
     .hero {
       min-height: 0;
-    }
-
-    h1 {
-      font-size: clamp(1.4rem, 6.5vw, 1.9rem);
     }
   }
 </style>
