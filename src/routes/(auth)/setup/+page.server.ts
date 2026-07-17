@@ -20,7 +20,7 @@ export const actions: Actions = {
     const form = await request.formData();
     const name = String(form.get("name") ?? "").trim();
     const email = String(form.get("email") ?? "").trim();
-    const password = String(form.get("password") ?? "").trim();
+    const password = String(form.get("password") ?? "");
 
     if (!name || !email || !password) {
       return fail(400, {

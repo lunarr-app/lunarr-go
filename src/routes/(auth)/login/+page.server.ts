@@ -15,7 +15,7 @@ export const actions: Actions = {
   signIn: async ({ request }) => {
     const form = await request.formData();
     const email = String(form.get("email") ?? "").trim();
-    const password = String(form.get("password") ?? "").trim();
+    const password = String(form.get("password") ?? "");
     const redirectTo = sanitizePostLoginRedirect(String(form.get(POST_LOGIN_REDIRECT_QUERY_PARAM) ?? ""));
 
     if (!email || !password) {
