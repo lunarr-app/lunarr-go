@@ -76,6 +76,9 @@ const envSchema = z.object({
     (value) => (value === undefined || value === "" ? undefined : value),
     z.coerce.number().int().min(0).max(3650).default(730),
   ),
+  LUNARR_APP_VERSION: z.string().trim().optional(),
+  FFMPEG_PATH: z.string().trim().optional(),
+  FFMPEG_VAAPI_DEVICE: z.string().trim().default("/dev/dri/renderD128"),
 });
 
 export function appEnvDefaultsForEnvironment(env: NodeJS.ProcessEnv) {

@@ -8,6 +8,7 @@ import { startSeekableInputProxy, type RunningSeekableInputProxy } from "./input
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { appEnv } from "../config/env";
 import { ffmpegPath } from "node-av/ffmpeg";
 import { encodeEventPlaylistPath, encodeFmp4InitFileName, encodeJobId } from "./encode-coordinator";
 import { hlsEventPlaylistHasSegment, resolveEncodeAheadSegmentCount, type HlsSegmentFormat } from "./hls";
@@ -104,7 +105,7 @@ export function resolveFfmpegPath(
   } = {},
 ) {
   const configuredPath =
-    input.configuredPath === undefined ? process.env.FFMPEG_PATH?.trim() : input.configuredPath?.trim();
+    input.configuredPath === undefined ? appEnv.FFMPEG_PATH : input.configuredPath?.trim();
   if (configuredPath) return configuredPath;
 
   const canExecute = input.canExecute ?? canExecuteFfmpeg;
@@ -212,7 +213,7 @@ function hardwareInputArgs(mode: FfmpegHardwareMode) {
         "-hwaccel_output_format",
         "vaapi",
         "-vaapi_device",
-        process.env.FFMPEG_VAAPI_DEVICE || "/dev/dri/renderD128",
+        appEnv.FFMPEG_VAAPI_DEVICE,
       ];
     case "qsv":
       return ["-hwaccel", "qsv", "-hwaccel_output_format", "qsv"];
