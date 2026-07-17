@@ -2,13 +2,14 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import MediaHeroPlaybackActions from "$lib/components/MediaHeroPlaybackActions.svelte";
   import MediaHeroResumeBar from "$lib/components/MediaHeroResumeBar.svelte";
-  import { ExternalLink, Link2, Sparkles } from "@lucide/svelte";
+  import { Compass, ExternalLink, Link2 } from "@lucide/svelte";
 
   let {
     title,
     posterUrl,
     backdropUrl,
     overview,
+    year,
     genres,
     primaryFile,
     primaryHref,
@@ -25,6 +26,7 @@
     posterUrl: string | null;
     backdropUrl: string | null;
     overview: string | null;
+    year: number | null;
     genres: string[];
     primaryFile?: { id: string };
     primaryHref: string;
@@ -39,7 +41,7 @@
   } = $props();
 </script>
 
-<MediaHero {title} {posterUrl} {backdropUrl} {overview} {genres}>
+<MediaHero {title} {posterUrl} {backdropUrl} {overview} {year} {genres}>
   {#snippet actions()}
     <MediaHeroPlaybackActions {primaryFile} {primaryHref} {primaryActionLabel} {hasCompletedProgress} />
   {/snippet}
@@ -52,7 +54,7 @@
       </a>
     {/if}
     <a class="button text" href={similarHref}>
-      <Sparkles size={16} aria-hidden="true" />
+      <Compass size={16} aria-hidden="true" />
       Similar
     </a>
     {#if canManageShares}

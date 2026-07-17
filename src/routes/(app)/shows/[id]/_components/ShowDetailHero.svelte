@@ -2,7 +2,7 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import ShowWatchSummary from "$lib/components/ShowWatchSummary.svelte";
   import { formatEpisodeCode } from "$lib/media/format";
-  import { Calendar, CirclePlay, Clapperboard, ExternalLink, Link2, Sparkles, Star } from "@lucide/svelte";
+  import { CirclePlay, Clapperboard, Compass, ExternalLink, Link2 } from "@lucide/svelte";
 
   let {
     title,
@@ -12,7 +12,6 @@
     genres,
     year,
     status,
-    ratingLabel,
     seasonCountLabel,
     episodeCountLabel,
     nextEpisode,
@@ -32,7 +31,6 @@
     genres: string[];
     year: number | null;
     status: string | null;
-    ratingLabel: string | null;
     seasonCountLabel: string;
     episodeCountLabel: string;
     nextEpisode?: {
@@ -53,13 +51,9 @@
   } = $props();
 </script>
 
-<MediaHero {title} {posterUrl} {backdropUrl} {overview} {genres} bottomMargin="2rem">
+<MediaHero {title} {posterUrl} {backdropUrl} {overview} {year} {genres} bottomMargin="2rem">
   {#snippet facts()}
-    {#if year}<span><Calendar size={15} aria-hidden="true" />{year}</span>{/if}
     {#if status}<span>{status}</span>{/if}
-    {#if ratingLabel}
-      <span><Star size={15} aria-hidden="true" />{ratingLabel}</span>
-    {/if}
     <span>{seasonCountLabel}</span>
     <span>{episodeCountLabel}</span>
   {/snippet}
@@ -85,7 +79,7 @@
       </a>
     {/if}
     <a class="button text" href={similarHref}>
-      <Sparkles size={16} aria-hidden="true" />
+      <Compass size={16} aria-hidden="true" />
       Similar
     </a>
     {#if canManageShares}

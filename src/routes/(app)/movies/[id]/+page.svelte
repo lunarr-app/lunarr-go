@@ -57,6 +57,7 @@
   posterUrl={data.posterUrl}
   backdropUrl={data.backdropUrl}
   overview={data.movie.overview}
+  year={data.movie.year}
   genres={data.genres}
   primaryFile={playback.primaryFile}
   {primaryHref}

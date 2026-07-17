@@ -6,6 +6,7 @@
     posterUrl,
     backdropUrl,
     overview,
+    year,
     genres = [],
     facts,
     subtitle,
@@ -19,6 +20,7 @@
     posterUrl: string | null;
     backdropUrl: string | null;
     overview: string | null;
+    year?: number | null;
     genres?: string[];
     facts?: Snippet;
     subtitle?: Snippet;
@@ -49,23 +51,24 @@
 
     <div class="copy">
       <div class="copy-top">
-        {#if facts}
-          <div class="facts">
-            {@render facts()}
-          </div>
-        {/if}
-
         <h2>{title}</h2>
 
         {#if subtitle}
           {@render subtitle()}
         {/if}
 
-        {#if genres.length}
-          <div class="genres" aria-label="Genres">
+        {#if year || genres.length}
+          <div class="genres" aria-label="Genres and release year">
+            {#if year}<span>{year}</span>{/if}
             {#each genres as genre}
               <span>{genre}</span>
             {/each}
+          </div>
+        {/if}
+
+        {#if facts}
+          <div class="facts">
+            {@render facts()}
           </div>
         {/if}
       </div>

@@ -56,7 +56,6 @@
   {episodeCode}
   {releaseLabel}
   {runtimeLabel}
-  {ratingLabel}
   primaryFile={playback.primaryFile}
   {primaryHref}
   primaryActionLabel={playback.primaryActionLabel}

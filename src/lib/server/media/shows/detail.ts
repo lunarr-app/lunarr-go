@@ -413,6 +413,8 @@ export async function getShowSeasonDetail(showId: string, seasonKey: string, use
       id: season.id,
       title: season.title,
       seasonNumber: season.season_number,
+      year: season.year,
+      voteAverage: season.vote_average,
       overview: season.overview,
       posterUrl: tmdbImageUrl(season.poster_path),
       episodes: episodeRows.map((episode) => publicShowEpisodeDetail(episode, progress)),

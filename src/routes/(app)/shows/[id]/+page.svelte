@@ -51,7 +51,6 @@
   genres={data.show.genres.slice(0, 4)}
   year={data.show.year}
   status={data.show.status}
-  {ratingLabel}
   {seasonCountLabel}
   {episodeCountLabel}
   {nextEpisode}

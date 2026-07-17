@@ -2,11 +2,11 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import ShowWatchSummary from "$lib/components/ShowWatchSummary.svelte";
   import { formatEpisodeCode } from "$lib/media/format";
-  import { Calendar, CirclePlay, Eye, EyeOff, Star } from "@lucide/svelte";
+  import { CirclePlay, Eye, EyeOff, Star } from "@lucide/svelte";
 
   let {
     showTitle,
-    showYear,
+    seasonYear,
     showStatus,
     voteAverage,
     seasonTitle,
@@ -24,7 +24,7 @@
     progressPercent,
   }: {
     showTitle: string;
-    showYear: number | null;
+    seasonYear: number | null;
     showStatus: string | null;
     voteAverage: number | null;
     seasonTitle: string;
@@ -49,9 +49,8 @@
   } = $props();
 </script>
 
-<MediaHero title={`${showTitle} · ${seasonTitle}`} {posterUrl} {backdropUrl} {overview} {genres} bottomMargin="1.6rem">
+<MediaHero title={`${showTitle} · ${seasonTitle}`} {posterUrl} {backdropUrl} {overview} year={seasonYear} {genres} bottomMargin="1.6rem">
   {#snippet facts()}
-    {#if showYear}<span><Calendar size={15} aria-hidden="true" />{showYear}</span>{/if}
     {#if showStatus}<span>{showStatus}</span>{/if}
     {#if voteAverage}
       <span><Star size={15} aria-hidden="true" />{voteAverage.toFixed(1)}</span>

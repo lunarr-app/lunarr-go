@@ -57,9 +57,9 @@
 
 <SeasonDetailHero
   showTitle={data.show.title}
-  showYear={data.show.year}
+  seasonYear={data.season.year}
   showStatus={data.show.status}
-  voteAverage={data.show.voteAverage}
+  voteAverage={data.season.voteAverage}
   seasonTitle={data.season.title}
   posterUrl={data.season.posterUrl ?? data.show.posterUrl}
   backdropUrl={data.show.backdropUrl}

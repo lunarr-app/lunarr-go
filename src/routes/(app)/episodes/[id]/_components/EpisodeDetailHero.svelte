@@ -2,7 +2,7 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import MediaHeroPlaybackActions from "$lib/components/MediaHeroPlaybackActions.svelte";
   import MediaHeroResumeBar from "$lib/components/MediaHeroResumeBar.svelte";
-  import { Calendar, Clock3, Star } from "@lucide/svelte";
+  import { Calendar, Clock3 } from "@lucide/svelte";
 
   let {
     title,
@@ -16,7 +16,6 @@
     episodeCode,
     releaseLabel,
     runtimeLabel,
-    ratingLabel,
     primaryFile,
     primaryHref,
     primaryActionLabel,
@@ -35,7 +34,6 @@
     episodeCode: string | null;
     releaseLabel: string | null;
     runtimeLabel: string | null;
-    ratingLabel: string | null;
     primaryFile: { id: string } | undefined;
     primaryHref: string;
     primaryActionLabel: string;
@@ -63,9 +61,6 @@
     {/if}
     {#if runtimeLabel}
       <span><Clock3 size={15} aria-hidden="true" />{runtimeLabel}</span>
-    {/if}
-    {#if ratingLabel}
-      <span><Star size={15} aria-hidden="true" />{ratingLabel}</span>
     {/if}
   {/snippet}
 
