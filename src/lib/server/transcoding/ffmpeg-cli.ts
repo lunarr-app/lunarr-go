@@ -104,8 +104,7 @@ export function resolveFfmpegPath(
     canExecute?: (binaryPath: string) => boolean;
   } = {},
 ) {
-  const configuredPath =
-    input.configuredPath === undefined ? appEnv.FFMPEG_PATH : input.configuredPath?.trim();
+  const configuredPath = input.configuredPath === undefined ? appEnv.FFMPEG_PATH : input.configuredPath?.trim();
   if (configuredPath) return configuredPath;
 
   const canExecute = input.canExecute ?? canExecuteFfmpeg;
@@ -207,14 +206,7 @@ function hardwareInputArgs(mode: FfmpegHardwareMode) {
     case "videotoolbox":
       return ["-hwaccel", "videotoolbox", "-hwaccel_output_format", "videotoolbox_vld"];
     case "vaapi":
-      return [
-        "-hwaccel",
-        "vaapi",
-        "-hwaccel_output_format",
-        "vaapi",
-        "-vaapi_device",
-        appEnv.FFMPEG_VAAPI_DEVICE,
-      ];
+      return ["-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi", "-vaapi_device", appEnv.FFMPEG_VAAPI_DEVICE];
     case "qsv":
       return ["-hwaccel", "qsv", "-hwaccel_output_format", "qsv"];
     case "nvenc":

@@ -49,7 +49,15 @@
   } = $props();
 </script>
 
-<MediaHero title={`${showTitle} · ${seasonTitle}`} {posterUrl} {backdropUrl} {overview} year={seasonYear} {genres} bottomMargin="1.6rem">
+<MediaHero
+  title={`${showTitle} · ${seasonTitle}`}
+  {posterUrl}
+  {backdropUrl}
+  {overview}
+  year={seasonYear}
+  {genres}
+  bottomMargin="1.6rem"
+>
   {#snippet facts()}
     {#if showStatus}<span>{showStatus}</span>{/if}
     {#if voteAverage}
