@@ -11,7 +11,7 @@
     tmdbApiKeyConfigured,
     tmdbAccessTokenSaved,
     tmdbApiKeySaved,
-    metadataSaveError,
+    metadataError,
     movieMetadataRefreshIntervalHours,
     tvMetadataRefreshIntervalHours,
     movieMetadataStalenessDays,
@@ -21,7 +21,7 @@
     tmdbApiKeyConfigured: boolean;
     tmdbAccessTokenSaved: boolean;
     tmdbApiKeySaved: boolean;
-    metadataSaveError?: string;
+    metadataError?: string;
     movieMetadataRefreshIntervalHours: number | null;
     tvMetadataRefreshIntervalHours: number | null;
     movieMetadataStalenessDays: number;
@@ -153,8 +153,8 @@
       </div>
     </fieldset>
 
-    {#if metadataSaveError}
-      <p class="error">{metadataSaveError}</p>
+    {#if metadataError}
+      <p class="error">{metadataError}</p>
     {/if}
     <button disabled={!metadataChanged}>Save metadata</button>
   </div>

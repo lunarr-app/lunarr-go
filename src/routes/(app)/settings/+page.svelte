@@ -45,7 +45,7 @@
       tvMetadataRefreshIntervalHours={data.tvMetadataRefreshIntervalHours}
       movieMetadataStalenessDays={data.movieMetadataStalenessDays}
       tvMetadataStalenessDays={data.tvMetadataStalenessDays}
-      metadataSaveError={form?.metadataSaveError}
+      metadataError={form?.metadataError}
     />
   </section>
 

@@ -30,7 +30,7 @@ export const actions: Actions = {
   saveMetadata: async ({ request, locals }) => {
     if (!isAdmin(locals.user))
       return fail(403, {
-        metadataSaveError: "Only admins can update metadata settings.",
+        metadataError: "Only admins can update metadata settings.",
       });
 
     const form = await request.formData();

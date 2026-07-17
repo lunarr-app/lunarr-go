@@ -403,7 +403,7 @@ describe("settings page server", () => {
     expect(metadataResult).toMatchObject({
       status: 403,
       data: {
-        metadataSaveError: "Only admins can update metadata settings.",
+        metadataError: "Only admins can update metadata settings.",
       },
     });
 
