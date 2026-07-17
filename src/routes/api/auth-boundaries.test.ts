@@ -354,11 +354,11 @@ describe("authenticated API route boundaries", () => {
         .select(["status", "error_message", "last_heartbeat_at"])
         .where("id", "=", "transcode-1")
         .executeTakeFirstOrThrow();
-      expect(disabledHeartbeatedJob).toEqual({
+      expect(disabledHeartbeatedJob).toMatchObject({
         status: "cancelled",
         error_message: "Transcoding is disabled by an administrator.",
-        last_heartbeat_at: oldHeartbeat,
       });
+      expect(disabledHeartbeatedJob.last_heartbeat_at).not.toBe(oldHeartbeat);
 
       await setTranscodingEnabled(true);
       await db

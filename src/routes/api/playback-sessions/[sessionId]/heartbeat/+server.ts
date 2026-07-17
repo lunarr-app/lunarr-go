@@ -19,12 +19,6 @@ export const POST: RequestHandler = async ({ params, locals, request }) => {
     return apiError("Playback session is not active.", 409);
   }
 
-  const policy = await getTranscodePolicy(locals.user.id);
-  if (!policy.transcodingEnabled) {
-    await cancelPlaybackSession(sessionId, TRANSCODING_DISABLED_MESSAGE);
-    return apiError(TRANSCODING_DISABLED_MESSAGE, 409);
-  }
-
   const touched = await touchTranscodeSessionHeartbeat(sessionId, locals.user.id, {
     signal: request.signal,
   });
