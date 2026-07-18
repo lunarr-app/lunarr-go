@@ -194,6 +194,16 @@ export type WatchlistPageResponse = {
   showsPage: CatalogPageInfo;
 };
 
+export type WatchlistMoviesResponse = {
+  movies: MovieSummary[];
+  pageInfo: CatalogPageInfo;
+};
+
+export type WatchlistShowsResponse = {
+  shows: ShowSummary[];
+  pageInfo: CatalogPageInfo;
+};
+
 export type { ManagedUser } from "$lib/server/auth/users-admin";
 export type { ApiKeySummary } from "$lib/server/auth/api-keys";
 
@@ -275,4 +285,6 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "ScanStartResponse",
   "WatchlistToggleResponse",
   "WatchlistPageResponse",
+  "WatchlistMoviesResponse",
+  "WatchlistShowsResponse",
 ] as const;

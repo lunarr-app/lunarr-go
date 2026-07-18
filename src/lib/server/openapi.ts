@@ -1505,6 +1505,30 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/watchlist/movies": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get movies in the user's watchlist.",
+        operationId: "getWatchlistMovies",
+        parameters: [pageParameter, limitParameter],
+        responses: {
+          "200": jsonResponse({ $ref: "#/components/schemas/WatchlistMoviesResponse" }),
+          "401": errorResponse,
+        },
+      },
+    },
+    "/api/watchlist/shows": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get shows in the user's watchlist.",
+        operationId: "getWatchlistShows",
+        parameters: [pageParameter, limitParameter],
+        responses: {
+          "200": jsonResponse({ $ref: "#/components/schemas/WatchlistShowsResponse" }),
+          "401": errorResponse,
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -3714,6 +3738,28 @@ export const openApiDocument = {
             items: { $ref: "#/components/schemas/ShowSummary" },
           },
           showsPage: { $ref: "#/components/schemas/PageMetadata" },
+        },
+      },
+      WatchlistMoviesResponse: {
+        type: "object",
+        required: ["movies", "pageInfo"],
+        properties: {
+          movies: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          pageInfo: { $ref: "#/components/schemas/PageMetadata" },
+        },
+      },
+      WatchlistShowsResponse: {
+        type: "object",
+        required: ["shows", "pageInfo"],
+        properties: {
+          shows: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          pageInfo: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
     },
