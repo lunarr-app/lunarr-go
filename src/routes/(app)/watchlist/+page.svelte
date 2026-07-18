@@ -1,27 +1,10 @@
 <script lang="ts">
   import MovieCard from "$lib/components/MovieCard.svelte";
-  import Pagination from "$lib/components/Pagination.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
+  import Rail from "$lib/components/Rail.svelte";
+  import { Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();
-
-  function hrefForPage(page: number) {
-    const params = new URLSearchParams();
-    if (page > 1) params.set("page", String(page));
-    const search = params.toString();
-    return search ? `/watchlist?${search}` : "/watchlist";
-  }
-
-  const movieRange = $derived({
-    first: data.moviesPage.total === 0 ? 0 : (data.moviesPage.page - 1) * data.moviesPage.pageSize + 1,
-    last: Math.min(data.moviesPage.page * data.moviesPage.pageSize, data.moviesPage.total),
-  });
-  const showRange = $derived({
-    first: data.showsPage.total === 0 ? 0 : (data.showsPage.page - 1) * data.showsPage.pageSize + 1,
-    last: Math.min(data.showsPage.page * data.showsPage.pageSize, data.showsPage.total),
-  });
-  const movieSummary = $derived(`Showing ${movieRange.first}-${movieRange.last} of ${data.moviesPage.total}`);
-  const showSummary = $derived(`Showing ${showRange.first}-${showRange.last} of ${data.showsPage.total}`);
 
   const isEmpty = $derived(data.movies.length === 0 && data.shows.length === 0);
 </script>
@@ -43,52 +26,42 @@
     <h2>Your watchlist is empty</h2>
     <p class="muted">Browse your library and add movies or shows to your watchlist.</p>
     <div class="empty-actions">
-      <a class="button" href="/movies">Browse Movies</a>
-      <a class="button secondary" href="/shows">Browse Shows</a>
+      <a class="button" href="/movies">
+        <Film size={16} aria-hidden="true" />
+        Browse Movies
+      </a>
+      <a class="button secondary" href="/shows">
+        <Tv size={16} aria-hidden="true" />
+        Browse Shows
+      </a>
     </div>
   </section>
 {:else}
   {#if data.movies.length > 0}
-    <section>
-      <h2 class="section-title">Movies</h2>
-      <div class="grid">
-        {#each data.movies as movie}
-          <MovieCard {movie} />
-        {/each}
+    <section class="media-section" aria-labelledby="movies-heading">
+      <div class="section-heading">
+        <h2 id="movies-heading" class="section-title">Movies</h2>
+        <span class="count">{data.moviesPage.total} {data.moviesPage.total === 1 ? "movie" : "movies"}</span>
       </div>
-      {#if data.moviesPage.totalPages > 1}
-        <Pagination
-          page={data.moviesPage.page}
-          totalPages={data.moviesPage.totalPages}
-          hasPrevious={data.moviesPage.hasPrevious}
-          hasNext={data.moviesPage.hasNext}
-          {hrefForPage}
-          summary={movieSummary}
-          ariaLabel="Watchlist movie pages"
-        />
-      {/if}
+      <Rail items={data.movies} variant="poster">
+        {#snippet children(movie)}
+          <MovieCard {movie} />
+        {/snippet}
+      </Rail>
     </section>
   {/if}
 
   {#if data.shows.length > 0}
-    <section>
-      <h2 class="section-title">Shows</h2>
-      <div class="grid">
-        {#each data.shows as show}
-          <ShowCard {show} />
-        {/each}
+    <section class="media-section" aria-labelledby="shows-heading">
+      <div class="section-heading">
+        <h2 id="shows-heading" class="section-title">Shows</h2>
+        <span class="count">{data.showsPage.total} {data.showsPage.total === 1 ? "show" : "shows"}</span>
       </div>
-      {#if data.showsPage.totalPages > 1}
-        <Pagination
-          page={data.showsPage.page}
-          totalPages={data.showsPage.totalPages}
-          hasPrevious={data.showsPage.hasPrevious}
-          hasNext={data.showsPage.hasNext}
-          {hrefForPage}
-          summary={showSummary}
-          ariaLabel="Watchlist show pages"
-        />
-      {/if}
+      <Rail items={data.shows} variant="poster">
+        {#snippet children(show)}
+          <ShowCard {show} />
+        {/snippet}
+      </Rail>
     </section>
   {/if}
 {/if}
@@ -103,19 +76,25 @@
     font-size: clamp(1.55rem, 2.4vw, 2.25rem);
   }
 
+  .media-section + .media-section {
+    margin-top: 1.8rem;
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+
   .section-title {
-    margin: 0 0 1rem;
-    font-size: 1.25rem;
+    margin: 0;
   }
 
-  section {
-    margin-bottom: 2.5rem;
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-    gap: 1.1rem;
+  .count {
+    color: var(--color-muted);
+    font-size: 0.86rem;
+    font-weight: 700;
   }
 
   .empty {
@@ -132,7 +111,7 @@
 
   .empty-actions {
     display: flex;
-    gap: var(--space-2);
-    margin-top: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.65rem;
   }
 </style>
