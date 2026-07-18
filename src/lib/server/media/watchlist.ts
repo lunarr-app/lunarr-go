@@ -50,28 +50,27 @@ export async function getWatchlistMovies(
 ): Promise<{ movies: MovieSummary[]; pageInfo: CatalogPageInfo }> {
   const db = await getDb();
 
-  const watchlistItemIds = await db
+  const countRow = await db
     .selectFrom("watchlist")
-    .select("media_item_id")
-    .where("user_id", "=", userId)
-    .orderBy("created_at", "desc")
-    .execute();
+    .innerJoin("media_item", "media_item.id", "watchlist.media_item_id")
+    .where("watchlist.user_id", "=", userId)
+    .where("media_item.kind", "=", "movie")
+    .select(sql<number>`count(*)`.as("count"))
+    .executeTakeFirst();
 
-  const movieIds: string[] = [];
-  for (const w of watchlistItemIds) {
-    const item = await db.selectFrom("media_item").select("kind").where("id", "=", w.media_item_id).executeTakeFirst();
-    if (item?.kind === "movie") movieIds.push(w.media_item_id);
+  const total = Number(countRow?.count ?? 0);
+  const pageInfo = catalogPageInfo(page, pageSize, total);
+
+  if (total === 0) {
+    return { movies: [], pageInfo };
   }
 
-  if (movieIds.length === 0) {
-    return { movies: [], pageInfo: catalogPageInfo(page, pageSize, 0) };
-  }
-
-  const orderMap = new Map(movieIds.map((id, index) => [id, index]));
+  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
   const rows = await db
-    .selectFrom("media_item")
+    .selectFrom("watchlist")
+    .innerJoin("media_item", "media_item.id", "watchlist.media_item_id")
     .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
-    .where("media_item.id", "in", movieIds)
+    .where("watchlist.user_id", "=", userId)
     .where("media_item.kind", "=", "movie")
     .where(accessibleLibrarySql(userId))
     .select([
@@ -87,31 +86,22 @@ export async function getWatchlistMovies(
       sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
     ])
     .groupBy("media_item.id")
+    .orderBy("watchlist.created_at", "desc")
+    .limit(pageInfo.pageSize)
+    .offset(offset)
     .execute();
 
-  const sorted = rows
-    .map((row) => ({ ...row, _order: orderMap.get(row.id) ?? Infinity }))
-    .sort((a, b) => a._order - b._order);
-
-  const total = sorted.length;
-  const pageInfo = catalogPageInfo(page, pageSize, total);
-  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
-  const paged = sorted.slice(offset, offset + pageInfo.pageSize);
-
+  const movieIds = rows.map((r) => r.id);
   const progressRows = await db
     .selectFrom("watch_progress")
     .select(["media_item_id", "media_file_id", "position_seconds", "duration_seconds", "completed", "updated_at"])
     .where("user_id", "=", userId)
-    .where(
-      "media_item_id",
-      "in",
-      paged.map((m) => m.id),
-    )
+    .where("media_item_id", "in", movieIds)
     .orderBy("updated_at", "desc")
     .execute();
 
   const progress = summarizeMovieProgress(progressRows);
-  const movies = paged.map((movie) => publicMovieSummary(movie, progress));
+  const movies = rows.map((movie) => publicMovieSummary(movie, progress));
 
   return { movies, pageInfo };
 }
@@ -123,30 +113,29 @@ export async function getWatchlistShows(
 ): Promise<{ shows: ShowSummary[]; pageInfo: CatalogPageInfo }> {
   const db = await getDb();
 
-  const watchlistItemIds = await db
+  const countRow = await db
     .selectFrom("watchlist")
-    .select("media_item_id")
-    .where("user_id", "=", userId)
-    .orderBy("created_at", "desc")
-    .execute();
+    .innerJoin("media_item", "media_item.id", "watchlist.media_item_id")
+    .where("watchlist.user_id", "=", userId)
+    .where("media_item.kind", "=", "show")
+    .select(sql<number>`count(*)`.as("count"))
+    .executeTakeFirst();
 
-  const showIds: string[] = [];
-  for (const w of watchlistItemIds) {
-    const item = await db.selectFrom("media_item").select("kind").where("id", "=", w.media_item_id).executeTakeFirst();
-    if (item?.kind === "show") showIds.push(w.media_item_id);
+  const total = Number(countRow?.count ?? 0);
+  const pageInfo = catalogPageInfo(page, pageSize, total);
+
+  if (total === 0) {
+    return { shows: [], pageInfo };
   }
 
-  if (showIds.length === 0) {
-    return { shows: [], pageInfo: catalogPageInfo(page, pageSize, 0) };
-  }
-
-  const orderMap = new Map(showIds.map((id, index) => [id, index]));
+  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
   const rows = await db
-    .selectFrom("media_item as show")
+    .selectFrom("watchlist")
+    .innerJoin("media_item as show", "show.id", "watchlist.media_item_id")
     .innerJoin("media_item as season", "season.parent_id", "show.id")
     .innerJoin("media_item as episode", "episode.parent_id", "season.id")
     .innerJoin("media_file", "media_file.media_item_id", "episode.id")
-    .where("show.id", "in", showIds)
+    .where("watchlist.user_id", "=", userId)
     .where("show.kind", "=", "show")
     .where("season.kind", "=", "season")
     .where("episode.kind", "=", "episode")
@@ -168,18 +157,12 @@ export async function getWatchlistShows(
       sql<string | null>`max(episode.release_date)`.as("latest_episode_release_date"),
     ])
     .groupBy("show.id")
+    .orderBy("watchlist.created_at", "desc")
+    .limit(pageInfo.pageSize)
+    .offset(offset)
     .execute();
 
-  const sorted = rows
-    .map((row) => ({ ...row, _order: orderMap.get(row.id) ?? Infinity }))
-    .sort((a, b) => a._order - b._order);
-
-  const total = sorted.length;
-  const pageInfo = catalogPageInfo(page, pageSize, total);
-  const offset = (pageInfo.page - 1) * pageInfo.pageSize;
-  const paged = sorted.slice(offset, offset + pageInfo.pageSize);
-
-  const shows: ShowSummary[] = paged.map((show) => ({
+  const shows: ShowSummary[] = rows.map((show) => ({
     id: show.id,
     title: show.title,
     year: show.year,
