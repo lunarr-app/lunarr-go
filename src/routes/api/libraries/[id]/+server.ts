@@ -1,5 +1,5 @@
 import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse, LibraryDetailResponse } from "$lib/server/api/types";
+import type { LibraryDetailResponse } from "$lib/server/api/types";
 import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
 import { deleteLibrary, getLibrary, updateLibrary } from "$lib/server/libraries";
 import { parseUpdateLibraryInput } from "$lib/server/libraries/input";
@@ -41,7 +41,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     await deleteLibrary(params.id);
     await syncLibraryWatchers();
     await syncScheduledLibraryScans();
-    return apiJson<ApiOkResponse>({ ok: true });
+    return new Response(null, { status: 204 });
   } catch (error) {
     return apiErrorFrom(error, "Could not remove library.");
   }

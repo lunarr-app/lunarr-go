@@ -1,5 +1,5 @@
 import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse, UserResponse } from "$lib/server/api/types";
+import type { UserResponse } from "$lib/server/api/types";
 import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
 import { parseUpdateUserRoleInput } from "$lib/server/auth/users-input";
 import { deleteManagedUser, updateManagedUserRole, userManagementHttpStatus } from "$lib/server/auth/users-admin";
@@ -32,7 +32,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
       headers: request.headers,
       userId: params.id,
     });
-    return apiJson<ApiOkResponse>({ ok: true });
+    return new Response(null, { status: 204 });
   } catch (error) {
     return apiErrorFrom(error, "Could not delete user.", userManagementHttpStatus(error));
   }

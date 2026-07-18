@@ -47,6 +47,10 @@ const okResponse = {
   },
 };
 
+const noContentResponse = {
+  description: "Resource deleted.",
+};
+
 const acceptedResponse = (schema: Record<string, unknown>, description = "Operation accepted.") =>
   jsonResponse(schema, description);
 const textResponse = (description: string, contentType: string) => ({
@@ -629,7 +633,7 @@ export const openApiDocument = {
         operationId: "deleteLibrary",
         parameters: [pathIdParameter()],
         responses: {
-          "200": okResponse,
+          "204": noContentResponse,
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -729,7 +733,7 @@ export const openApiDocument = {
         operationId: "deleteUser",
         parameters: [pathIdParameter("id", "User identifier.")],
         responses: {
-          "200": okResponse,
+          "204": noContentResponse,
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -1528,7 +1532,7 @@ export const openApiDocument = {
         operationId: "removeFromWatchlist",
         parameters: [pathIdParameter()],
         responses: {
-          "200": okResponse,
+          "204": noContentResponse,
           "401": errorResponse,
         },
       },

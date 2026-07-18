@@ -453,8 +453,7 @@ describe("watchlist API", () => {
       params: { mediaItemId: "movie-1" },
     } as never);
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true });
+    expect(response.status).toBe(204);
 
     const checkResponse = await watchlistGet({
       locals: { user: { id: "user-1", role: "user" } },

@@ -1,5 +1,4 @@
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse } from "$lib/server/api/types";
+import { apiErrorFrom } from "$lib/server/api/json";
 import { requireJsonUser } from "$lib/server/api";
 import { removeFromWatchlist } from "$lib/server/media/watchlist";
 import type { RequestHandler } from "./$types";
@@ -14,5 +13,5 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     return apiErrorFrom(error, "Could not remove from watchlist.");
   }
 
-  return apiJson<ApiOkResponse>({ ok: true });
+  return new Response(null, { status: 204 });
 };

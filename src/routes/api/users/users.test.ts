@@ -152,7 +152,7 @@ describe("users API routes", () => {
       request: new Request(`http://localhost/api/users/${createdBody.user.id}`, { headers: requestHeaders() }),
       locals: { user: admin },
     } as never);
-    expect(deleted.status).toBe(200);
+    expect(deleted.status).toBe(204);
 
     const listed = await GET({
       locals: { user: admin },
