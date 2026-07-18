@@ -594,7 +594,7 @@ describe("guest share routes", () => {
     expect(second.status).toBe(200);
     expect(third.status).toBe(429);
     const limitedBody = await third.json();
-    expect(limitedBody.error).toBe("Too many requests. Try again later.");
+    expect(limitedBody.detail).toBe("Too many requests. Try again later.");
 
     resetGuestShareRateLimitsForTests();
     setGuestShareRateLimitOverridesForTests({ "share:playback": 2 });

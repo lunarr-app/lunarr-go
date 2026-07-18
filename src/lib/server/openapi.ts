@@ -32,7 +32,7 @@ const nullableIntegerSchema = { type: ["integer", "null"] };
 const errorResponse = {
   description: "Request failed.",
   content: {
-    "application/json": {
+    "application/problem+json": {
       schema: { $ref: "#/components/schemas/ErrorResponse" },
     },
   },
@@ -1680,8 +1680,14 @@ export const openApiDocument = {
     schemas: {
       ErrorResponse: {
         type: "object",
-        required: ["error"],
-        properties: { error: stringSchema },
+        description: "RFC 9457 problem details.",
+        required: ["type", "title", "status", "detail"],
+        properties: {
+          type: { type: "string", description: "A URI reference identifying the problem type." },
+          title: { type: "string", description: "A short, human-readable summary of the problem type." },
+          status: { type: "integer", description: "The HTTP status code for this occurrence." },
+          detail: { type: "string", description: "A human-readable explanation specific to this occurrence." },
+        },
       },
       OkResponse: {
         type: "object",

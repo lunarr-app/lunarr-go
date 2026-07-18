@@ -256,7 +256,7 @@ describe("similar catalog API", () => {
     } as never);
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "Movie not found." });
+    expect(await response.json()).toMatchObject({ detail: "Movie not found." });
   });
 
   test("returns ranked similar shows with pagination metadata", async () => {
@@ -575,6 +575,6 @@ describe("similar catalog API", () => {
     } as never);
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "Show not found." });
+    expect(await response.json()).toMatchObject({ detail: "Show not found." });
   });
 });

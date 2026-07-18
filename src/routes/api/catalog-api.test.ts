@@ -162,7 +162,7 @@ describe("catalog API access", () => {
       url: new URL("http://localhost/api/movies?rail=nextUp"),
     } as never);
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: expect.stringContaining("Invalid rail") });
+    expect(await response.json()).toMatchObject({ detail: expect.stringContaining("Invalid rail") });
   });
 
   test("movie API can return multiple browse rails", async () => {

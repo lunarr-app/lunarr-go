@@ -1,7 +1,7 @@
 import { authorizeDirectMediaStream } from "$lib/server/shares/media-auth";
 import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "$lib/server/playback/signed-token";
 import { mediaStreamHeadResponse, mediaStreamResponse } from "$lib/server/media/stream";
-import { json } from "@sveltejs/kit";
+import { apiError } from "$lib/server/api/json";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, request, locals, url }) => {
@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ params, request, locals, url }) => {
     url,
   });
   if (!auth) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const response = await mediaStreamResponse(params.id, auth.userId, request.headers.get("range"), request.signal);

@@ -14,7 +14,7 @@ import {
   touchTranscodeSessionSegmentRequest,
   type AuthorizedHlsArtifact,
 } from "$lib/server/transcoding/sessions";
-import { json } from "@sveltejs/kit";
+import { apiError } from "$lib/server/api/json";
 import {
   currentPlayableHlsArtifact,
   currentUnchangedPlayableHlsArtifact,
@@ -56,7 +56,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
     playbackSessionId: params.sessionId,
     url,
   });
-  if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth) return apiError("Unauthorized", 401);
 
   const artifact = await currentPlayableHlsArtifact(params.sessionId, auth.userId, {
     cancelledResponse: staleCancelledPlaybackSegmentResponse,
@@ -88,23 +88,13 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
         if (failedArtifact?.status === "cancelled") {
           return withSignedPlaybackHeaders(
             staleCancelledPlaybackSegmentResponse(failedArtifact) ??
-              json(
-                {
-                  error: playbackRouteError(failedArtifact.errorMessage ?? "Playback session is not playable."),
-                },
-                { status: 409 },
-              ),
+              apiError(playbackRouteError(failedArtifact.errorMessage ?? "Playback session is not playable."), 409),
             auth.signed,
           );
         }
         if (failedArtifact?.status === "failed") {
           return withSignedPlaybackHeaders(
-            json(
-              {
-                error: playbackRouteError(failedArtifact.errorMessage ?? "Playback session is not playable."),
-              },
-              { status: 409 },
-            ),
+            apiError(playbackRouteError(failedArtifact.errorMessage ?? "Playback session is not playable."), 409),
             auth.signed,
           );
         }
@@ -175,7 +165,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
     return withSignedPlaybackHeaders(response, auth.signed);
   } catch {
     if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledSegmentResponse(), auth.signed);
-    return withSignedPlaybackHeaders(json({ error: "Playback segment was not found." }, { status: 404 }), auth.signed);
+    return withSignedPlaybackHeaders(apiError("Playback segment was not found.", 404), auth.signed);
   }
 };
 
@@ -185,7 +175,7 @@ export const HEAD: RequestHandler = async ({ params, locals, request, url }) => 
     playbackSessionId: params.sessionId,
     url,
   });
-  if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth) return apiError("Unauthorized", 401);
 
   const artifact = await currentPlayableHlsArtifact(params.sessionId, auth.userId, {
     cancelledResponse: staleCancelledPlaybackSegmentResponse,

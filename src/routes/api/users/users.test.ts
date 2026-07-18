@@ -170,6 +170,6 @@ describe("users API routes", () => {
       locals: { user: admin },
     } as never);
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain("yourself");
+    expect((await response.json()).detail).toContain("yourself");
   });
 });

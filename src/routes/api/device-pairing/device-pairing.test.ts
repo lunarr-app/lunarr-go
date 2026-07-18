@@ -208,7 +208,7 @@ describe("device pairing API", () => {
     } as never);
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("enforces shared approve rate limits", () => {

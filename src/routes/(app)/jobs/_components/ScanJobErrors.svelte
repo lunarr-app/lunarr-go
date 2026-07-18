@@ -21,8 +21,8 @@
     try {
       const response = await fetch(`/api/jobs/${jobId}/errors`);
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? "Could not load errors.");
+        const body = (await response.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(body?.detail ?? "Could not load errors.");
       }
       const body = (await response.json()) as { errors: ScanJobError[] };
       errors = body.errors;

@@ -79,7 +79,7 @@ describe("server hook route boundaries", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("returns JSON 401 for media stream requests before setup exists", async () => {
@@ -89,7 +89,7 @@ describe("server hook route boundaries", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("does not treat auth-prefixed sibling API paths as public before setup", async () => {
@@ -99,7 +99,7 @@ describe("server hook route boundaries", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("lets OpenAPI docs resolve before setup", async () => {
@@ -195,7 +195,7 @@ describe("server hook route boundaries", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("returns JSON 401 for media subtitle requests without a session", async () => {
@@ -205,7 +205,7 @@ describe("server hook route boundaries", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("returns JSON 401 for HLS playback-session requests without a session", async () => {
@@ -215,7 +215,7 @@ describe("server hook route boundaries", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("lets signed-token media requests reach route handlers without a session", async () => {
@@ -246,7 +246,7 @@ describe("server hook route boundaries", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("lets OpenAPI docs resolve without a session", async () => {
@@ -334,6 +334,6 @@ describe("server hook route boundaries", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 });

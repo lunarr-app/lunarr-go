@@ -1,5 +1,6 @@
 import { SHARE_RATE_LIMIT_PLAYBACK_PER_MINUTE, SHARE_RATE_LIMIT_RESOLVE_PER_MINUTE } from "$lib/shares/constants";
 import { createSlidingWindowRateLimiter } from "$lib/server/cache/sliding-window-rate-limit";
+import { apiError } from "$lib/server/api/json";
 import type { RequestEvent } from "@sveltejs/kit";
 
 export type GuestShareRateLimitBucket = "share:resolve" | "share:playback";
@@ -36,8 +37,5 @@ export function enforceGuestShareRateLimit(event: RequestEvent, bucket: GuestSha
   if (!requestLimiter.isLimited(key, limitForBucket(bucket))) {
     return null;
   }
-  return new Response(JSON.stringify({ error: "Too many requests. Try again later." }), {
-    status: 429,
-    headers: { "content-type": "application/json" },
-  });
+  return apiError("Too many requests. Try again later.", 429);
 }

@@ -424,7 +424,7 @@ Recommended guest flow for TV shares:
 
 Movie shares still include the playable file on the initial response.
 
-Guest share endpoints are rate limited per client IP (60 resolve requests/minute, 30 playback prep requests/minute). Excess requests return `429` with `{ "error": "Too many requests. Try again later." }`.
+Guest share endpoints are rate limited per client IP (60 resolve requests/minute, 30 playback prep requests/minute). Excess requests return `429` with a problem details body whose `detail` is `"Too many requests. Try again later."`.
 
 Signed stream, HLS, and subtitle URLs include both `remoteToken` and `shareToken` for scoped guest access.
 
@@ -618,11 +618,14 @@ Job-starting actions (`scanAll`, metadata refresh, probe repair) return **202**.
 
 ## Responses
 
-Most API errors return a JSON body:
+Most API errors return an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html) problem details body with the `application/problem+json` content type:
 
 ```json
 {
-  "error": "Message"
+  "type": "about:blank",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "Message"
 }
 ```
 

@@ -143,7 +143,7 @@ describe("API key routes", () => {
     } as never);
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("does not revoke another user's API key", async () => {
@@ -164,6 +164,6 @@ describe("API key routes", () => {
     } as never);
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "API key not found." });
+    expect(await response.json()).toMatchObject({ detail: "API key not found." });
   });
 });

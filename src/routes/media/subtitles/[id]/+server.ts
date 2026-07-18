@@ -1,7 +1,7 @@
 import { externalMovieSubtitleResponse } from "$lib/server/media/subtitles";
 import { authorizeSubtitleMedia } from "$lib/server/shares/media-auth";
 import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "$lib/server/playback/signed-token";
-import { json } from "@sveltejs/kit";
+import { apiError } from "$lib/server/api/json";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals, request, url }) => {
@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
     url,
   });
   if (!auth) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const response = await externalMovieSubtitleResponse(params.id, auth.userId, true, request?.signal);

@@ -46,7 +46,10 @@ export type {
 } from "$lib/media/types";
 
 export type ApiErrorResponse = {
-  error: string;
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
 };
 
 export type ApiOkResponse = {

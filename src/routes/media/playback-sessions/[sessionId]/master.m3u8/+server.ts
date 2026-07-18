@@ -14,7 +14,7 @@ import {
   virtualHlsPlaylistResponse,
 } from "$lib/server/transcoding/hls";
 import { touchTranscodeSessionHeartbeat } from "$lib/server/transcoding/sessions";
-import { json } from "@sveltejs/kit";
+import { apiError } from "$lib/server/api/json";
 import {
   currentPlayableHlsArtifact,
   currentUnchangedPlayableHlsArtifact,
@@ -23,7 +23,7 @@ import {
 import type { RequestHandler } from "./$types";
 
 function cancelledPlaylistResponse() {
-  return json({ error: "Playback playlist was not found." }, { status: 404 });
+  return apiError("Playback playlist was not found.", 404);
 }
 
 function cancelledPlaylistHeadResponse() {
@@ -48,7 +48,7 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
     playbackSessionId: params.sessionId,
     url,
   });
-  if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth) return apiError("Unauthorized", 401);
   const token = url?.searchParams.get(SIGNED_PLAYBACK_TOKEN_QUERY_PARAM) ?? null;
 
   const artifact = await currentPlayableHlsArtifact(params.sessionId, auth.userId);
@@ -56,13 +56,13 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
 
   if (url?.searchParams.get("playlist") === "virtual" || shouldServeVirtualPlaylistByDefault(artifact)) {
     if (artifact.status !== "running") {
-      return json({ error: "Virtual HLS playlist is not available for this session." }, { status: 409 });
+      return apiError("Virtual HLS playlist is not available for this session.", 409);
     }
     if (!(await hlsPlaylistFileExists(artifact.playlistPath))) {
-      return json({ error: "Playback playlist was not found." }, { status: 404 });
+      return apiError("Playback playlist was not found.", 404);
     }
     if (!artifact.durationSeconds || artifact.durationSeconds <= 0) {
-      return json({ error: "Virtual HLS playlist requires known media duration." }, { status: 409 });
+      return apiError("Virtual HLS playlist requires known media duration.", 409);
     }
     const segmentFormat = await hlsPlaylistSegmentFormat(artifact.playlistPath, { signal: request?.signal });
     const current = await currentUnchangedPlayableHlsArtifact({
@@ -133,7 +133,7 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
     return withSignedPlaybackHeaders(response, auth.signed);
   } catch {
     if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
-    return withSignedPlaybackHeaders(json({ error: "Playback playlist was not found." }, { status: 404 }), auth.signed);
+    return withSignedPlaybackHeaders(apiError("Playback playlist was not found.", 404), auth.signed);
   }
 };
 
@@ -143,20 +143,20 @@ export const HEAD: RequestHandler = async ({ params, locals, url, request }) => 
     playbackSessionId: params.sessionId,
     url,
   });
-  if (!auth) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth) return apiError("Unauthorized", 401);
 
   const artifact = await currentPlayableHlsArtifact(params.sessionId, auth.userId);
   if (artifact instanceof Response) return withSignedPlaybackHeaders(artifact, auth.signed);
 
   if (url?.searchParams.get("playlist") === "virtual" || shouldServeVirtualPlaylistByDefault(artifact)) {
     if (artifact.status !== "running") {
-      return json({ error: "Virtual HLS playlist is not available for this session." }, { status: 409 });
+      return apiError("Virtual HLS playlist is not available for this session.", 409);
     }
     if (!(await hlsPlaylistFileExists(artifact.playlistPath))) {
       return new Response(null, { status: 404 });
     }
     if (!artifact.durationSeconds || artifact.durationSeconds <= 0) {
-      return json({ error: "Virtual HLS playlist requires known media duration." }, { status: 409 });
+      return apiError("Virtual HLS playlist requires known media duration.", 409);
     }
     const current = await currentUnchangedPlayableHlsArtifact({
       sessionId: params.sessionId,

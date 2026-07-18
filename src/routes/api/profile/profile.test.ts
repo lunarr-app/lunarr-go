@@ -49,7 +49,7 @@ describe("PATCH /api/profile", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      error: "At least one preference field is required.",
+      detail: "At least one preference field is required.",
     });
   });
 

@@ -2,7 +2,7 @@ import type { CreateSharePayload, PublicShareRecord, ShareSeasonData } from "$li
 
 async function readJsonError(response: Response, fallback: string) {
   const body = await response.json().catch(() => null);
-  throw new Error(body?.error ?? fallback);
+  throw new Error(body?.detail ?? fallback);
 }
 
 export async function listSharesForMedia(mediaItemId: string) {

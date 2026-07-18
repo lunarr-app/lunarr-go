@@ -21,7 +21,8 @@ import {
   POST_LOGIN_REDIRECT_QUERY_PARAM,
   sanitizePostLoginRedirect,
 } from "$lib/auth/post-login-redirect";
-import { json, redirect, type Handle, type RequestEvent } from "@sveltejs/kit";
+import { redirect, type Handle, type RequestEvent } from "@sveltejs/kit";
+import { apiError } from "$lib/server/api/json";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
 let startupPromise: Promise<void> | undefined;
@@ -108,8 +109,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const canResolveUnauthenticatedMedia = isMediaResourcePath(pathname) && canResolveUnauthenticatedMediaResource(event);
 
   if (!hasUsers && pathname !== "/setup" && !isAuthApiPath(pathname) && !isPublicApiPath(pathname)) {
-    if (pathname.startsWith("/api/") || isMediaResourcePath(pathname))
-      return json({ error: "Unauthorized" }, { status: 401 });
+    if (pathname.startsWith("/api/") || isMediaResourcePath(pathname)) return apiError("Unauthorized", 401);
     throw redirect(303, "/setup");
   }
 
@@ -119,11 +119,11 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   if (pathname.startsWith("/api/") && !isAuthApiPath(pathname) && !isPublicApiPath(pathname) && !event.locals.user) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   if (isMediaResourcePath(pathname) && !event.locals.user && !canResolveUnauthenticatedMedia) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   if (hasUsers && !event.locals.user && !isPublicPath(pathname) && !canResolveUnauthenticatedMedia) {

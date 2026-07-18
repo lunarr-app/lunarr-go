@@ -43,7 +43,7 @@
       .then(async (response) => {
         if (!response.ok) {
           const body = await response.json().catch(() => null);
-          throw new Error(body?.error ?? "Playback could not be started.");
+          throw new Error(body?.detail ?? "Playback could not be started.");
         }
         if (token !== reloadToken) return;
         playbackData = (await response.json()) as PlaybackData;

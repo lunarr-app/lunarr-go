@@ -592,8 +592,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session was cancelled.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback session was cancelled.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -671,8 +671,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -716,8 +716,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session changed while serving playlist.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback session changed while serving playlist.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -765,8 +765,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session was cancelled.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback session was cancelled.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -806,8 +806,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({
-      error: "Playback playlist was not found.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback playlist was not found.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -847,8 +847,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({
-      error: "Playback playlist was not found.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback playlist was not found.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -890,8 +890,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session was cancelled.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback session was cancelled.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -929,8 +929,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -974,8 +974,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session changed while serving playlist.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback session changed while serving playlist.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -1011,8 +1011,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({
-      error: "Playback playlist was not found.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback playlist was not found.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -1051,8 +1051,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({
-      error: "Playback playlist was not found.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback playlist was not found.",
     });
     expect(head.status).toBe(404);
     const job = await db
@@ -1091,8 +1091,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({
-      error: "Playback playlist was not found.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback playlist was not found.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -1322,8 +1322,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -1361,8 +1361,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session changed while serving segment.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback session changed while serving segment.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -1439,13 +1439,13 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(playlist.status).toBe(409);
-    expect(await playlist.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await playlist.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     expect(playlistHead.status).toBe(409);
     expect(existingSegment.status).toBe(409);
-    expect(await existingSegment.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await existingSegment.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     expect(missingSegment.status).toBe(409);
     expect(segmentHead.status).toBe(409);
@@ -1499,12 +1499,12 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(playlist.status).toBe(409);
-    expect(await playlist.json()).toEqual({
-      error: "FFmpeg segment validation failed.",
+    expect(await playlist.json()).toMatchObject({
+      detail: "FFmpeg segment validation failed.",
     });
     expect(segment.status).toBe(409);
-    expect(await segment.json()).toEqual({
-      error: "FFmpeg segment validation failed.",
+    expect(await segment.json()).toMatchObject({
+      detail: "FFmpeg segment validation failed.",
     });
     expect(cancelCount).toBe(0);
   });
@@ -1530,12 +1530,12 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(playlist.status).toBe(409);
-    expect(await playlist.json()).toEqual({
-      error: "Playback session is not playable.",
+    expect(await playlist.json()).toMatchObject({
+      detail: "Playback session is not playable.",
     });
     expect(segment.status).toBe(409);
-    expect(await segment.json()).toEqual({
-      error: "Playback session is not playable.",
+    expect(await segment.json()).toMatchObject({
+      detail: "Playback session is not playable.",
     });
   });
 
@@ -1563,8 +1563,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(playlist.status).toBe(409);
-    expect(await playlist.json()).toEqual({
-      error: "Playback session was cancelled.",
+    expect(await playlist.json()).toMatchObject({
+      detail: "Playback session was cancelled.",
     });
     expect(segment.status).toBe(204);
     expect(await segment.text()).toBe("");
@@ -1733,8 +1733,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -1772,8 +1772,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Playback session changed while serving segment.",
+    expect(await response.json()).toMatchObject({
+      detail: "Playback session changed while serving segment.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -3411,8 +3411,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Remote range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
+    expect(await response.json()).toMatchObject({
+      detail: "Remote range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
     });
     expect(generationCount).toBe(1);
 
@@ -3466,8 +3466,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Remote range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
+    expect(await response.json()).toMatchObject({
+      detail: "Remote range read /movies/Movie.Remote.mkv returned 3 bytes for a 8 byte request.",
     });
     expect(generationCount).toBe(1);
 
@@ -3553,8 +3553,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "SFTP connection failed.",
+    expect(await response.json()).toMatchObject({
+      detail: "SFTP connection failed.",
     });
     expect(generationCount).toBe(0);
     const job = await db
@@ -3596,8 +3596,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Media file is no longer available.",
+    expect(await response.json()).toMatchObject({
+      detail: "Media file is no longer available.",
     });
     expect(generationCount).toBe(0);
 
@@ -3641,8 +3641,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Remote input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
+    expect(await response.json()).toMatchObject({
+      detail: "Remote input setup for /movies/Movie.Remote.mkv timed out after 5ms.",
     });
     expect(generationCount).toBe(0);
 
@@ -3799,8 +3799,8 @@ describe.serial("playback-session HLS routes", () => {
     const response = await responsePromise;
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     expect(generationCount).toBe(0);
     expect(cancelCount).toBeGreaterThanOrEqual(1);
@@ -3863,8 +3863,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Remote range read /movies/Movie.Remote.mkv timed out after 5ms.",
+    expect(await response.json()).toMatchObject({
+      detail: "Remote range read /movies/Movie.Remote.mkv timed out after 5ms.",
     });
     expect(generationCount).toBe(1);
     expect(storageClosed).toBe(true);
@@ -3930,8 +3930,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Remote range read /movies/Movie.Remote.mkv was cancelled.",
+    expect(await response.json()).toMatchObject({
+      detail: "Remote range read /movies/Movie.Remote.mkv was cancelled.",
     });
     expect(generationCount).toBe(1);
     expect(storageClosed).toBe(true);
@@ -4000,8 +4000,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Remote range read /movies/Movie.Remote.mkv timed out after 5ms.",
+    expect(await response.json()).toMatchObject({
+      detail: "Remote range read /movies/Movie.Remote.mkv timed out after 5ms.",
     });
     expect(generationCount).toBe(1);
     expect(streamDestroyed).toBe(true);
@@ -4279,8 +4279,8 @@ describe.serial("playback-session HLS routes", () => {
 
     expect(response.status).toBe(409);
     expect(requestedModes).toEqual(["remux"]);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     const job = await db
       .selectFrom("playback_session")
@@ -4385,7 +4385,7 @@ describe.serial("playback-session HLS routes", () => {
     expect(response.status).toBe(409);
     expect(requestedModes).toEqual(["remux", "transcode"]);
     const body = await response.json();
-    expect(body.error).toMatch(/Transcoding is disabled by an administrator|fallback noticed disabled policy late/);
+    expect(body.detail).toMatch(/Transcoding is disabled by an administrator|fallback noticed disabled policy late/);
     const job = await db
       .selectFrom("playback_session")
       .select(["status", "mode", "error_message"])
@@ -4495,8 +4495,8 @@ describe.serial("playback-session HLS routes", () => {
     ]);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     expect(backendSignalAborted).toBe(true);
     expect(backendCancelCount).toBeGreaterThanOrEqual(1);
@@ -4662,8 +4662,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     expect(generationCount).toBe(1);
     const job = await db
@@ -4708,8 +4708,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     expect(generationCount).toBe(1);
     const job = await db
@@ -4755,8 +4755,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Transcoding is disabled by an administrator.",
+    expect(await response.json()).toMatchObject({
+      detail: "Transcoding is disabled by an administrator.",
     });
     expect(generationCount).toBe(0);
     const job = await db
@@ -4803,7 +4803,7 @@ describe.serial("playback-session HLS routes", () => {
       "Remux segment generation failed, and the full transcode fallback also failed: Request-driven HLS segment generation completed without publishing segment-00003.ts.";
     expect(response.status).toBe(409);
     expect(requestedModes).toEqual(["remux", "transcode"]);
-    expect(await response.json()).toEqual({ error: message });
+    expect(await response.json()).toMatchObject({ detail: message });
     const job = await db
       .selectFrom("playback_session")
       .select(["status", "mode", "error_message"])
@@ -4840,7 +4840,7 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({ error: "segment encoder failed" });
+    expect(await response.json()).toMatchObject({ detail: "segment encoder failed" });
     const job = await db
       .selectFrom("playback_session")
       .select(["status", "error_message"])
@@ -4884,8 +4884,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Request-driven HLS segment generation completed without publishing segment-00011.ts.",
+    expect(await response.json()).toMatchObject({
+      detail: "Request-driven HLS segment generation completed without publishing segment-00011.ts.",
     });
     expect(generationCount).toBe(1);
     const job = await db
@@ -5038,12 +5038,12 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(playlist.status).toBe(410);
-    expect(await playlist.json()).toEqual({
-      error: "Ended playback session is no longer active.",
+    expect(await playlist.json()).toMatchObject({
+      detail: "Ended playback session is no longer active.",
     });
     expect(segment.status).toBe(410);
-    expect(await segment.json()).toEqual({
-      error: "Ended playback session is no longer active.",
+    expect(await segment.json()).toMatchObject({
+      detail: "Ended playback session is no longer active.",
     });
     expect(playlistHead.status).toBe(410);
     expect(segmentHead.status).toBe(410);
@@ -5083,8 +5083,8 @@ describe.serial("playback-session HLS routes", () => {
     } as never);
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Virtual HLS playlist is not available for this session.",
+    expect(await response.json()).toMatchObject({
+      detail: "Virtual HLS playlist is not available for this session.",
     });
     expect(head.status).toBe(409);
   });
@@ -5111,8 +5111,8 @@ describe.serial("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
     } as never);
     expect(pending.status).toBe(409);
-    expect(await pending.json()).toEqual({
-      error: "Playback session is not ready.",
+    expect(await pending.json()).toMatchObject({
+      detail: "Playback session is not ready.",
     });
 
     await registerTranscodeHlsArtifact({
@@ -5126,8 +5126,8 @@ describe.serial("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
     } as never);
     expect(queuedWithArtifact.status).toBe(409);
-    expect(await queuedWithArtifact.json()).toEqual({
-      error: "Playback session is not ready.",
+    expect(await queuedWithArtifact.json()).toMatchObject({
+      detail: "Playback session is not ready.",
     });
 
     await updateTranscodeSessionStatus(sessionId, "running");

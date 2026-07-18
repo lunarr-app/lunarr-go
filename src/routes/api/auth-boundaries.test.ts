@@ -29,7 +29,7 @@ describe("authenticated API route boundaries", () => {
     } as never);
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(await response.json()).toMatchObject({ detail: "Unauthorized" });
 
     const getResponse = await playbackGet({
       params: { id: "movie-1" },
@@ -38,7 +38,7 @@ describe("authenticated API route boundaries", () => {
     } as never);
 
     expect(getResponse.status).toBe(401);
-    expect(await getResponse.json()).toEqual({ error: "Unauthorized" });
+    expect(await getResponse.json()).toMatchObject({ detail: "Unauthorized" });
   });
 
   test("saves playback progress for authenticated playback API calls", async () => {
@@ -164,8 +164,8 @@ describe("authenticated API route boundaries", () => {
     } as never);
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      error: "Request body must be valid JSON.",
+    expect(await response.json()).toMatchObject({
+      detail: "Request body must be valid JSON.",
     });
   });
 
@@ -184,8 +184,8 @@ describe("authenticated API route boundaries", () => {
     } as never);
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      error: "Position must be a finite number.",
+    expect(await response.json()).toMatchObject({
+      detail: "Position must be a finite number.",
     });
   });
 
@@ -316,8 +316,8 @@ describe("authenticated API route boundaries", () => {
       } as never);
 
       expect(cancelledHeartbeatResponse.status).toBe(409);
-      expect(await cancelledHeartbeatResponse.json()).toEqual({
-        error: "Playback session is not active.",
+      expect(await cancelledHeartbeatResponse.json()).toMatchObject({
+        detail: "Playback session is not active.",
       });
       const cancelledHeartbeatedJob = await db
         .selectFrom("playback_session")
@@ -346,8 +346,8 @@ describe("authenticated API route boundaries", () => {
       } as never);
 
       expect(disabledHeartbeatResponse.status).toBe(409);
-      expect(await disabledHeartbeatResponse.json()).toEqual({
-        error: "Transcoding is disabled by an administrator.",
+      expect(await disabledHeartbeatResponse.json()).toMatchObject({
+        detail: "Transcoding is disabled by an administrator.",
       });
       const disabledHeartbeatedJob = await db
         .selectFrom("playback_session")
@@ -406,7 +406,7 @@ describe("authenticated API route boundaries", () => {
         locals: { user: { id: "user-1", role: "user" } },
       } as never);
       expect(duplicateResponse.status).toBe(400);
-      expect(((await duplicateResponse.json()) as { error: string }).error).toBe("Playback session is not active.");
+      expect(((await duplicateResponse.json()) as { detail: string }).detail).toBe("Playback session is not active.");
 
       const job = await db
         .selectFrom("playback_session")
@@ -792,7 +792,7 @@ describe("authenticated API route boundaries", () => {
     } as never);
 
     expect(getResponse.status).toBe(401);
-    expect(await getResponse.json()).toEqual({ error: "Unauthorized" });
+    expect(await getResponse.json()).toMatchObject({ detail: "Unauthorized" });
     expect(headResponse.status).toBe(401);
   });
 
@@ -903,7 +903,7 @@ describe("authenticated API route boundaries", () => {
     } as never);
 
     expect(getResponse.status).toBe(401);
-    expect(await getResponse.json()).toEqual({ error: "Unauthorized" });
+    expect(await getResponse.json()).toMatchObject({ detail: "Unauthorized" });
     expect(headResponse.status).toBe(401);
   });
 
@@ -1015,13 +1015,13 @@ describe("authenticated API route boundaries", () => {
       locals: { user: null },
     } as never);
     expect(unauthenticated.status).toBe(401);
-    expect(await unauthenticated.json()).toEqual({ error: "Unauthorized" });
+    expect(await unauthenticated.json()).toMatchObject({ detail: "Unauthorized" });
 
     const nonAdmin = await jobsGet({
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
     expect(nonAdmin.status).toBe(403);
-    expect(await nonAdmin.json()).toEqual({ error: "Admin access required" });
+    expect(await nonAdmin.json()).toMatchObject({ detail: "Admin access required" });
   });
 
   test("distinguishes unauthenticated and non-admin users API calls", async () => {
@@ -1029,13 +1029,13 @@ describe("authenticated API route boundaries", () => {
       locals: { user: null },
     } as never);
     expect(unauthenticated.status).toBe(401);
-    expect(await unauthenticated.json()).toEqual({ error: "Unauthorized" });
+    expect(await unauthenticated.json()).toMatchObject({ detail: "Unauthorized" });
 
     const nonAdmin = await usersGet({
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
     expect(nonAdmin.status).toBe(403);
-    expect(await nonAdmin.json()).toEqual({ error: "Admin access required" });
+    expect(await nonAdmin.json()).toMatchObject({ detail: "Admin access required" });
 
     const patchRequest = new Request("http://localhost/api/users/user-2", {
       method: "PATCH",
@@ -1048,14 +1048,14 @@ describe("authenticated API route boundaries", () => {
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
     expect(forbiddenPatch.status).toBe(403);
-    expect(await forbiddenPatch.json()).toEqual({ error: "Admin access required" });
+    expect(await forbiddenPatch.json()).toMatchObject({ detail: "Admin access required" });
 
     const forbiddenDelete = await deleteUserDelete({
       params: { id: "user-2" },
       locals: { user: { id: "user-1", role: "user" } },
     } as never);
     expect(forbiddenDelete.status).toBe(403);
-    expect(await forbiddenDelete.json()).toEqual({ error: "Admin access required" });
+    expect(await forbiddenDelete.json()).toMatchObject({ detail: "Admin access required" });
   });
 
   test("returns scan jobs and playback sessions for admin jobs API calls", async () => {

@@ -6,7 +6,7 @@ import {
   type AuthorizedHlsArtifact,
 } from "$lib/server/transcoding/sessions";
 import { normalizePlaybackSessionMessage } from "$lib/server/transcoding/messages";
-import { json } from "@sveltejs/kit";
+import { apiError } from "$lib/server/api/json";
 
 export type PlayableHlsArtifact = AuthorizedHlsArtifact & {
   playlistPath: string;
@@ -26,42 +26,32 @@ export async function currentPlayableHlsArtifact(
   options: CurrentPlayableHlsArtifactOptions = {},
 ): Promise<PlayableHlsArtifact | Response> {
   const artifact = await getAuthorizedHlsArtifact(sessionId, userId);
-  if (!artifact) return json({ error: "Not found" }, { status: 404 });
+  if (!artifact) return apiError("Not found", 404);
 
   if (artifact.status === "cancelled") {
     return (
       options.cancelledResponse?.(artifact) ??
-      json(
-        {
-          error: playbackRouteError(artifact.errorMessage ?? "Playback session is not playable."),
-        },
-        { status: 409 },
-      )
+      apiError(playbackRouteError(artifact.errorMessage ?? "Playback session is not playable."), 409)
     );
   }
   if (artifact.status === "failed") {
-    return json(
-      {
-        error: playbackRouteError(artifact.errorMessage ?? "Playback session is not playable."),
-      },
-      { status: 409 },
-    );
+    return apiError(playbackRouteError(artifact.errorMessage ?? "Playback session is not playable."), 409);
   }
 
   const policy = await getTranscodePolicy(userId);
   if (!policy.transcodingEnabled) {
     await cancelPlaybackSession(sessionId, TRANSCODING_DISABLED_MESSAGE);
-    return json({ error: TRANSCODING_DISABLED_MESSAGE }, { status: 409 });
+    return apiError(TRANSCODING_DISABLED_MESSAGE, 409);
   }
 
   if (artifact.status !== "running" && artifact.status !== "completed") {
-    return json({ error: "Playback session is not ready." }, { status: 409 });
+    return apiError("Playback session is not ready.", 409);
   }
   if (artifact.status === "completed" && !isEndedPlaybackArtifactFresh(artifact)) {
-    return json({ error: "Ended playback session is no longer active." }, { status: 410 });
+    return apiError("Ended playback session is no longer active.", 410);
   }
   if (!artifact.playlistPath) {
-    return json({ error: "Playback session is not ready." }, { status: 409 });
+    return apiError("Playback session is not ready.", 409);
   }
 
   return { ...artifact, playlistPath: artifact.playlistPath };
@@ -73,7 +63,7 @@ export function hlsArtifactChangedResponse(
   artifact: "playlist" | "segment",
 ) {
   if (current.playlistPath === previousPlaylistPath) return null;
-  return json({ error: `Playback session changed while serving ${artifact}.` }, { status: 409 });
+  return apiError(`Playback session changed while serving ${artifact}.`, 409);
 }
 
 export async function currentUnchangedPlayableHlsArtifact(input: {
@@ -100,5 +90,5 @@ export async function hlsFailedActivityResponse(input: {
   const current = await currentUnchangedPlayableHlsArtifact(input);
   if (current instanceof Response) return current;
   if (input.allowCompleted && current.status === "completed") return null;
-  return json({ error: input.notReadyMessage ?? "Playback session is not ready." }, { status: 409 });
+  return apiError(input.notReadyMessage ?? "Playback session is not ready.", 409);
 }
