@@ -1,9 +1,10 @@
 import {
+  SHOW_BROWSE_RAILS,
   SHOW_PAGE_SIZE,
   normalizeLimit,
   normalizePage,
   normalizeShowSort,
-  parseShowBrowseRails,
+  parseBrowseRails,
 } from "$lib/server/media/catalog";
 import { tvRows } from "$lib/server/media/shows/episodes";
 import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
@@ -15,7 +16,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
-  const rails = parseShowBrowseRails(url.searchParams.get("rail"));
+  const rails = parseBrowseRails(url.searchParams.get("rail"), SHOW_BROWSE_RAILS);
   if (rails === null) {
     return apiErrorFrom(null, "Invalid rail. Expected one of: continueWatching, nextUp, all, recent, latest, popular.");
   }

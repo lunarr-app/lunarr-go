@@ -4,10 +4,24 @@ import { accessibleLibrarySql } from "./catalog";
 export async function getWatchItemDetail(id: string, userId: string) {
   const db = await getDb();
   const item = await db
-    .selectFrom("media_item")
-    .select(["id", "kind", "title", "parent_id", "season_number", "episode_number"])
-    .where("id", "=", id)
-    .where("kind", "in", ["movie", "episode"])
+    .selectFrom("media_item as item")
+    .leftJoin("media_item as season", (join) =>
+      join.onRef("season.id", "=", "item.parent_id").on("season.kind", "=", "season"),
+    )
+    .leftJoin("media_item as show", (join) =>
+      join.onRef("show.id", "=", "season.parent_id").on("show.kind", "=", "show"),
+    )
+    .select([
+      "item.id",
+      "item.kind",
+      "item.title",
+      "item.season_number",
+      "item.episode_number",
+      "show.id as show_id",
+      "show.title as show_title",
+    ])
+    .where("item.id", "=", id)
+    .where("item.kind", "in", ["movie", "episode"])
     .executeTakeFirst();
   if (!item) return null;
 
@@ -48,27 +62,11 @@ export async function getWatchItemDetail(id: string, userId: string) {
 
   let title = item.title;
   let backHref = `/episodes/${item.id}`;
-  if (item.parent_id) {
-    const season = await db
-      .selectFrom("media_item")
-      .select(["id", "parent_id"])
-      .where("id", "=", item.parent_id)
-      .where("kind", "=", "season")
-      .executeTakeFirst();
-    if (season?.parent_id) {
-      const show = await db
-        .selectFrom("media_item")
-        .select(["id", "title"])
-        .where("id", "=", season.parent_id)
-        .where("kind", "=", "show")
-        .executeTakeFirst();
-      if (show) {
-        const seasonNumber = item.season_number === null ? "?" : String(item.season_number).padStart(2, "0");
-        const episodeNumber = item.episode_number === null ? "?" : String(item.episode_number).padStart(2, "0");
-        title = `${show.title} - S${seasonNumber}E${episodeNumber} - ${item.title}`;
-        backHref = `/shows/${show.id}`;
-      }
-    }
+  if (item.show_id) {
+    const seasonNumber = item.season_number === null ? "?" : String(item.season_number).padStart(2, "0");
+    const episodeNumber = item.episode_number === null ? "?" : String(item.episode_number).padStart(2, "0");
+    title = `${item.show_title} - S${seasonNumber}E${episodeNumber} - ${item.title}`;
+    backHref = `/shows/${item.show_id}`;
   }
 
   return {

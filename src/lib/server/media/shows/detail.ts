@@ -459,29 +459,34 @@ export async function getShowDetail(id: string, userId: string) {
 
 export async function getEpisodeDetail(id: string, userId: string) {
   const db = await getDb();
-  const episode = await db
-    .selectFrom("media_item")
-    .selectAll()
-    .where("id", "=", id)
-    .where("kind", "=", "episode")
+  const row = await db
+    .selectFrom("media_item as episode")
+    .innerJoin("media_item as season", "season.id", "episode.parent_id")
+    .innerJoin("media_item as show", "show.id", "season.parent_id")
+    .select([
+      "episode.id as episode_id",
+      "episode.title as episode_title",
+      "episode.overview as episode_overview",
+      "episode.season_number as episode_season_number",
+      "episode.episode_number as episode_episode_number",
+      "episode.release_date as episode_release_date",
+      "episode.runtime_seconds as episode_runtime_seconds",
+      "episode.poster_path as episode_poster_path",
+      "episode.vote_average as episode_vote_average",
+      "episode.vote_count as episode_vote_count",
+      "season.id as season_id",
+      "season.title as season_title",
+      "show.id as show_id",
+      "show.title as show_title",
+      "show.poster_path as show_poster_path",
+      "show.backdrop_path as show_backdrop_path",
+    ])
+    .where("episode.id", "=", id)
+    .where("episode.kind", "=", "episode")
+    .where("season.kind", "=", "season")
+    .where("show.kind", "=", "show")
     .executeTakeFirst();
-  if (!episode?.parent_id) return null;
-
-  const season = await db
-    .selectFrom("media_item")
-    .selectAll()
-    .where("id", "=", episode.parent_id)
-    .where("kind", "=", "season")
-    .executeTakeFirst();
-  if (!season?.parent_id) return null;
-
-  const show = await db
-    .selectFrom("media_item")
-    .selectAll()
-    .where("id", "=", season.parent_id)
-    .where("kind", "=", "show")
-    .executeTakeFirst();
-  if (!show) return null;
+  if (!row) return null;
 
   const files = await db
     .selectFrom("media_file")
@@ -518,27 +523,27 @@ export async function getEpisodeDetail(id: string, userId: string) {
 
   return {
     show: {
-      id: show.id,
-      title: show.title,
-      posterUrl: tmdbImageUrl(show.poster_path),
-      backdropUrl: tmdbImageUrl(show.backdrop_path, "w1280"),
+      id: row.show_id,
+      title: row.show_title,
+      posterUrl: tmdbImageUrl(row.show_poster_path),
+      backdropUrl: tmdbImageUrl(row.show_backdrop_path, "w1280"),
     },
     season: {
-      id: season.id,
-      title: season.title,
-      seasonNumber: season.season_number,
+      id: row.season_id,
+      title: row.season_title,
+      seasonNumber: row.episode_season_number,
     },
     episode: {
-      id: episode.id,
-      title: episode.title,
-      overview: episode.overview,
-      seasonNumber: episode.season_number,
-      episodeNumber: episode.episode_number,
-      releaseDate: episode.release_date,
-      runtimeSeconds: episode.runtime_seconds,
-      stillUrl: tmdbImageUrl(episode.poster_path, "w780"),
-      voteAverage: episode.vote_average,
-      voteCount: episode.vote_count,
+      id: row.episode_id,
+      title: row.episode_title,
+      overview: row.episode_overview,
+      seasonNumber: row.episode_season_number,
+      episodeNumber: row.episode_episode_number,
+      releaseDate: row.episode_release_date,
+      runtimeSeconds: row.episode_runtime_seconds,
+      stillUrl: tmdbImageUrl(row.episode_poster_path, "w780"),
+      voteAverage: row.episode_vote_average,
+      voteCount: row.episode_vote_count,
     },
     files,
     progress,

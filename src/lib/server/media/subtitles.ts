@@ -1,8 +1,9 @@
 import { Readable } from "node:stream";
+import { sql } from "kysely";
 import { getDb } from "../db";
 import { createLibraryStorage } from "../storage";
 import { attachStreamAbortCleanup, inlineContentDisposition } from "./stream";
-import { sql } from "kysely";
+import { accessibleLibrarySql } from "./catalog";
 
 export async function getExternalMovieSubtitleTrack(id: string, userId: string) {
   const db = await getDb();
@@ -31,21 +32,7 @@ export async function getExternalMovieSubtitleTrack(id: string, userId: string) 
     .where("subtitle_track.id", "=", id)
     .where("subtitle_track.source_kind", "=", "external")
     .where("media_item.kind", "in", ["movie", "episode"])
-    .where(
-      sql<boolean>`(
-      exists (
-        select 1 from user
-        where user.id = ${userId}
-          and user.role = 'admin'
-      )
-      or library.access_mode = 'all'
-      or exists (
-        select 1 from library_user
-        where library_user.library_id = storage_file.library_id
-          and library_user.user_id = ${userId}
-      )
-    )`,
-    )
+    .where(accessibleLibrarySql(userId, "storage_file.library_id"))
     .orderBy("storage_file.basename", "asc")
     .executeTakeFirst();
 }

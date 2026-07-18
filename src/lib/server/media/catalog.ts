@@ -48,14 +48,6 @@ export function parseBrowseRails<T extends string>(
   return rails;
 }
 
-export function parseMovieBrowseRails(value: string | null): MovieBrowseRail[] | null | undefined {
-  return parseBrowseRails(value, MOVIE_BROWSE_RAILS);
-}
-
-export function parseShowBrowseRails(value: string | null): ShowBrowseRail[] | null | undefined {
-  return parseBrowseRails(value, SHOW_BROWSE_RAILS);
-}
-
 export function normalizePage(value: string | number | null | undefined) {
   const page = Number(value ?? 1);
   return Number.isInteger(page) && page > 0 ? page : 1;

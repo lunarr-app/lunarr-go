@@ -19,6 +19,7 @@ import {
 import { normalizePlaybackSessionMessage } from "../transcoding/messages";
 import { getTranscodePolicy } from "../transcoding/policy";
 import { sql } from "kysely";
+import { accessibleLibrarySql } from "../media/catalog";
 
 export type SubtitleTrack = {
   id: string;
@@ -390,21 +391,7 @@ export async function saveProgress(input: {
     .where("media_file.id", "=", input.mediaFileId)
     .where("media_file.media_item_id", "=", input.mediaItemId)
     .where("media_item.kind", "in", ["movie", "episode"])
-    .where(
-      sql<boolean>`(
-      exists (
-        select 1 from user
-        where user.id = ${input.userId}
-          and user.role = 'admin'
-      )
-      or library.access_mode = 'all'
-      or exists (
-        select 1 from library_user
-        where library_user.library_id = media_file.library_id
-          and library_user.user_id = ${input.userId}
-      )
-    )`,
-    )
+    .where(accessibleLibrarySql(input.userId, "media_file.library_id"))
     .executeTakeFirst();
 
   if (!file) {

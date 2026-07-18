@@ -3,7 +3,7 @@ import { hlsSegmentIndex } from "./hls";
 import type { TranscodePipeline, TranscodeSessionStatus, TranscodeMode } from "../db/schema/streaming";
 import { nowIso } from "../time";
 import { randomUUID } from "node:crypto";
-import { sql } from "kysely";
+import { accessibleLibrarySql } from "../media/catalog";
 import { releasePlaybackCacheForSession } from "./cache";
 import {
   clearPlaybackSessionArtifacts,
@@ -222,30 +222,9 @@ export async function updateTranscodeSessionPipeline(sessionId: string, pipeline
 export async function registerTranscodeHlsArtifact(input: RegisterTranscodeHlsArtifactInput) {
   const db = await getDb();
   const now = nowIso();
-  const existing = await db
-    .selectFrom("playback_hls_artifact")
-    .select("id")
-    .where("playback_session_id", "=", input.sessionId)
-    .executeTakeFirst();
-
-  if (existing) {
-    await db
-      .updateTable("playback_hls_artifact")
-      .set({
-        media_file_id: input.mediaFileId,
-        path: input.path,
-        mime_type: input.mimeType ?? null,
-        updated_at: now,
-      })
-      .where("id", "=", existing.id)
-      .execute();
-
-    return existing.id;
-  }
-
   const artifactId = randomUUID();
 
-  await db
+  const row = await db
     .insertInto("playback_hls_artifact")
     .values({
       id: artifactId,
@@ -256,9 +235,18 @@ export async function registerTranscodeHlsArtifact(input: RegisterTranscodeHlsAr
       created_at: now,
       updated_at: now,
     })
-    .execute();
+    .onConflict((oc) =>
+      oc.column("playback_session_id").doUpdateSet({
+        media_file_id: input.mediaFileId,
+        path: input.path,
+        mime_type: input.mimeType ?? null,
+        updated_at: now,
+      }),
+    )
+    .returning("id")
+    .executeTakeFirst();
 
-  return artifactId;
+  return row?.id ?? artifactId;
 }
 
 export async function deleteTranscodeHlsArtifacts(sessionId: string) {
@@ -440,25 +428,7 @@ export async function getAuthorizedHlsArtifact(
       "playback_session.last_segment_request_at as lastSegmentRequestAt",
     ])
     .where("playback_session.id", "=", sessionId)
-    .where(
-      sql<boolean>`(
-      exists (
-        select 1 from user
-        where user.id = ${userId}
-          and user.role = 'admin'
-      )
-      or exists (
-        select 1 from library
-        where library.id = media_file.library_id
-          and library.access_mode = 'all'
-      )
-      or exists (
-        select 1 from library_user
-        where library_user.library_id = media_file.library_id
-          and library_user.user_id = ${userId}
-      )
-    )`,
-    )
+    .where(accessibleLibrarySql(userId, "media_file.library_id"))
     .executeTakeFirst();
 
   if (!row || row.userId !== userId) return null;

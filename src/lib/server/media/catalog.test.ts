@@ -2,14 +2,15 @@ import { describe, expect, test } from "bun:test";
 import {
   BROWSE_RAIL_LIMIT,
   catalogPageInfo,
+  MOVIE_BROWSE_RAILS,
   normalizeLimit,
   normalizeMovieSort,
   normalizeMovieStatusFilter,
   normalizePage,
   normalizeShowSort,
   paginatedSlice,
-  parseMovieBrowseRails,
-  parseShowBrowseRails,
+  parseBrowseRails,
+  SHOW_BROWSE_RAILS,
 } from "./catalog";
 
 describe("movie browse parameters", () => {
@@ -39,20 +40,20 @@ describe("movie browse parameters", () => {
   });
 
   test("parses browse rail query params", () => {
-    expect(parseMovieBrowseRails(null)).toBeUndefined();
-    expect(parseMovieBrowseRails("")).toBeUndefined();
-    expect(parseMovieBrowseRails("recent")).toEqual(["recent"]);
-    expect(parseMovieBrowseRails("continueWatching")).toEqual(["continueWatching"]);
-    expect(parseMovieBrowseRails("continueWatching,recent")).toEqual(["continueWatching", "recent"]);
-    expect(parseMovieBrowseRails("recent, recent")).toEqual(["recent"]);
-    expect(parseMovieBrowseRails("nextUp")).toBeNull();
-    expect(parseMovieBrowseRails("recent,bogus")).toBeNull();
+    expect(parseBrowseRails(null, MOVIE_BROWSE_RAILS)).toBeUndefined();
+    expect(parseBrowseRails("", MOVIE_BROWSE_RAILS)).toBeUndefined();
+    expect(parseBrowseRails("recent", MOVIE_BROWSE_RAILS)).toEqual(["recent"]);
+    expect(parseBrowseRails("continueWatching", MOVIE_BROWSE_RAILS)).toEqual(["continueWatching"]);
+    expect(parseBrowseRails("continueWatching,recent", MOVIE_BROWSE_RAILS)).toEqual(["continueWatching", "recent"]);
+    expect(parseBrowseRails("recent, recent", MOVIE_BROWSE_RAILS)).toEqual(["recent"]);
+    expect(parseBrowseRails("nextUp", MOVIE_BROWSE_RAILS)).toBeNull();
+    expect(parseBrowseRails("recent,bogus", MOVIE_BROWSE_RAILS)).toBeNull();
 
-    expect(parseShowBrowseRails(null)).toBeUndefined();
-    expect(parseShowBrowseRails("nextUp")).toEqual(["nextUp"]);
-    expect(parseShowBrowseRails("continueWatching")).toEqual(["continueWatching"]);
-    expect(parseShowBrowseRails("nextUp,popular")).toEqual(["nextUp", "popular"]);
-    expect(parseShowBrowseRails("bogus")).toBeNull();
+    expect(parseBrowseRails(null, SHOW_BROWSE_RAILS)).toBeUndefined();
+    expect(parseBrowseRails("nextUp", SHOW_BROWSE_RAILS)).toEqual(["nextUp"]);
+    expect(parseBrowseRails("continueWatching", SHOW_BROWSE_RAILS)).toEqual(["continueWatching"]);
+    expect(parseBrowseRails("nextUp,popular", SHOW_BROWSE_RAILS)).toEqual(["nextUp", "popular"]);
+    expect(parseBrowseRails("bogus", SHOW_BROWSE_RAILS)).toBeNull();
   });
 
   test("normalizes page numbers", () => {

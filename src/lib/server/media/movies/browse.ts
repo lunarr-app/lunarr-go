@@ -147,47 +147,47 @@ export async function movieRows(
   const popularOrder = (query: ReturnType<typeof movieSelect>) =>
     withTitleOrder(query.orderBy("media_item.popularity", "desc").orderBy("media_item.vote_average", "desc"));
 
+  const completedMovieIdsQuery = () =>
+    db
+      .selectFrom("watch_progress")
+      .select("watch_progress.media_item_id")
+      .where("watch_progress.user_id", "=", userId)
+      .where(sql<boolean>`watch_progress.completed = 1`)
+      .distinct()
+      .as("completed_movies");
+
   const applyMovieContinueWatchingFilters = (query: ReturnType<typeof movieSelect>) =>
     query
-      .where((eb) =>
-        eb.not(
-          eb.exists(
-            eb
-              .selectFrom("watch_progress")
-              .select("watch_progress.media_item_id")
-              .where("watch_progress.user_id", "=", userId)
-              .whereRef("watch_progress.media_item_id", "=", "media_item.id")
-              .where(sql<boolean>`watch_progress.completed = 1`),
-          ),
-        ),
+      .leftJoin(completedMovieIdsQuery(), (join) => join.onRef("completed_movies.media_item_id", "=", "media_item.id"))
+      .leftJoin(latestContinueProgressQuery(), (join) =>
+        join.onRef("continue_progress.media_item_id", "=", "media_item.id"),
       )
-      .where((eb) =>
-        eb.exists(
-          eb
-            .selectFrom("watch_progress")
-            .select("watch_progress.media_item_id")
-            .where("watch_progress.user_id", "=", userId)
-            .whereRef("watch_progress.media_item_id", "=", "media_item.id")
-            .where(sql<boolean>`watch_progress.completed = 0`)
-            .where("watch_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
-            .$if(maxAgeDays > 0, (qb) =>
-              qb.where("watch_progress.updated_at", ">", continueMaxAgeCutoffSqlForDays(maxAgeDays)),
-            ),
-        ),
-      );
+      .where("completed_movies.media_item_id", "is", null)
+      .where("continue_progress.media_item_id", "is not", null);
+
+  const latestContinueProgressQuery = () => {
+    let query = db
+      .selectFrom("watch_progress")
+      .select([
+        "watch_progress.media_item_id",
+        sql<string | null>`max(watch_progress.updated_at)`.as("latest_continue_updated_at"),
+      ])
+      .where("watch_progress.user_id", "=", userId)
+      .where(sql<boolean>`watch_progress.completed = 0`)
+      .where("watch_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
+      .groupBy("watch_progress.media_item_id");
+
+    if (maxAgeDays > 0) {
+      query = query.where("watch_progress.updated_at", ">", continueMaxAgeCutoffSqlForDays(maxAgeDays));
+    }
+
+    return query.as("continue_progress");
+  };
 
   const continueOrder = () =>
     withTitleOrder(
       applyMovieContinueWatchingFilters(movieSelect()).orderBy(
-        sql<string | null>`(
-          select max(watch_progress.updated_at)
-          from watch_progress
-          where watch_progress.user_id = ${userId}
-            and watch_progress.media_item_id = media_item.id
-            and watch_progress.completed = 0
-            and watch_progress.position_seconds >= ${MIN_CONTINUE_POSITION_SECONDS}
-            ${maxAgeDays > 0 ? sql`and watch_progress.updated_at > ${continueMaxAgeCutoffSqlForDays(maxAgeDays)}` : sql``}
-        )`,
+        sql<string | null>`continue_progress.latest_continue_updated_at`,
         "desc",
       ),
     );
