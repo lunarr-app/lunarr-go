@@ -252,6 +252,34 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/continue/movies": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get movies in continue watching.",
+        operationId: "getContinueWatchingMovies",
+        parameters: [pageParameter, limitParameter],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ContinueWatchingMoviesResponse",
+          }),
+          "401": errorResponse,
+        },
+      },
+    },
+    "/api/continue/episodes": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get episodes in continue watching.",
+        operationId: "getContinueWatchingEpisodes",
+        parameters: [pageParameter, limitParameter],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/ContinueWatchingEpisodesResponse",
+          }),
+          "401": errorResponse,
+        },
+      },
+    },
     "/api/movies/discover": {
       get: {
         tags: ["Catalog"],
@@ -2630,6 +2658,33 @@ export const openApiDocument = {
             items: { $ref: "#/components/schemas/MovieSummary" },
           },
           moviesPage: { $ref: "#/components/schemas/PageMetadata" },
+          episodes: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EpisodeSummary" },
+          },
+          episodesPage: { $ref: "#/components/schemas/PageMetadata" },
+          nextUp: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EpisodeSummary" },
+          },
+          nextUpPage: { $ref: "#/components/schemas/PageMetadata" },
+        },
+      },
+      ContinueWatchingMoviesResponse: {
+        type: "object",
+        required: ["movies", "pageInfo"],
+        properties: {
+          movies: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          pageInfo: { $ref: "#/components/schemas/PageMetadata" },
+        },
+      },
+      ContinueWatchingEpisodesResponse: {
+        type: "object",
+        required: ["episodes", "episodesPage", "nextUp", "nextUpPage"],
+        properties: {
           episodes: {
             type: "array",
             items: { $ref: "#/components/schemas/EpisodeSummary" },

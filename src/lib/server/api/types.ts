@@ -80,6 +80,18 @@ export type ContinueWatchingResponse = {
   nextUpPage: CatalogPageInfo;
 };
 
+export type ContinueWatchingMoviesResponse = {
+  movies: MovieRowsResponse["continueWatching"];
+  pageInfo: CatalogPageInfo;
+};
+
+export type ContinueWatchingEpisodesResponse = {
+  episodes: ShowRowsResponse["continueWatching"];
+  episodesPage: CatalogPageInfo;
+  nextUp: ShowRowsResponse["nextUp"];
+  nextUpPage: CatalogPageInfo;
+};
+
 export type GuestSharePageResponse = {
   share: SharePageData;
 };
@@ -287,4 +299,6 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "WatchlistPageResponse",
   "WatchlistMoviesResponse",
   "WatchlistShowsResponse",
+  "ContinueWatchingMoviesResponse",
+  "ContinueWatchingEpisodesResponse",
 ] as const;
