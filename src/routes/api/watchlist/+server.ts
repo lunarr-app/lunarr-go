@@ -2,7 +2,7 @@ import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { ApiOkResponse } from "$lib/server/api/types";
 import { parseBody, requireJsonUser } from "$lib/server/api";
 import { toggleWatchlist, getWatchlistMovies, getWatchlistShows } from "$lib/server/media/watchlist";
-import { normalizePage } from "$lib/server/media/catalog";
+import { FULL_LIBRARY_PAGE_SIZE, normalizeLimit, normalizePage } from "$lib/server/media/catalog";
 import { z } from "zod";
 import type { RequestHandler } from "./$types";
 
@@ -15,10 +15,11 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   if (user instanceof Response) return user;
 
   const page = normalizePage(url.searchParams.get("page"));
+  const limit = normalizeLimit(url.searchParams.get("limit"), FULL_LIBRARY_PAGE_SIZE);
 
   const [movieResult, showResult] = await Promise.all([
-    getWatchlistMovies(user.id, page),
-    getWatchlistShows(user.id, page),
+    getWatchlistMovies(user.id, page, limit),
+    getWatchlistShows(user.id, page, limit),
   ]);
 
   return apiJson({

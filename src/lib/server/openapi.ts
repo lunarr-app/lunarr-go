@@ -1475,14 +1475,7 @@ export const openApiDocument = {
         tags: ["Catalog"],
         summary: "Get the user's watchlist.",
         operationId: "getWatchlist",
-        parameters: [
-          {
-            name: "page",
-            in: "query",
-            required: false,
-            schema: { type: "integer", minimum: 1, default: 1 },
-          },
-        ],
+        parameters: [pageParameter, limitParameter],
         responses: {
           "200": jsonResponse({ $ref: "#/components/schemas/WatchlistPageResponse" }),
           "401": errorResponse,
