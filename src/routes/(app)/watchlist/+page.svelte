@@ -2,9 +2,13 @@
   import MovieCard from "$lib/components/MovieCard.svelte";
   import ShowCard from "$lib/components/ShowCard.svelte";
   import Rail from "$lib/components/Rail.svelte";
-  import { Film, Tv } from "@lucide/svelte";
+  import { ChevronRight, Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();
+
+  function countLabel(total: number, singular: string, plural: string) {
+    return `${total} ${total === 1 ? singular : plural}`;
+  }
 
   const isEmpty = $derived(data.movies.length === 0 && data.shows.length === 0);
 </script>
@@ -41,7 +45,13 @@
     <section class="media-section" aria-labelledby="movies-heading">
       <div class="section-heading">
         <h2 id="movies-heading" class="section-title">Movies</h2>
-        <span class="count">{data.moviesPage.total} {data.moviesPage.total === 1 ? "movie" : "movies"}</span>
+        <div class="section-meta">
+          <span>{countLabel(data.moviesPage.total, "movie", "movies")}</span>
+          <a class="view-all" href="/watchlist/movies">
+            <span>View all</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </a>
+        </div>
       </div>
       <Rail items={data.movies} variant="poster">
         {#snippet children(movie)}
@@ -55,7 +65,13 @@
     <section class="media-section" aria-labelledby="shows-heading">
       <div class="section-heading">
         <h2 id="shows-heading" class="section-title">Shows</h2>
-        <span class="count">{data.showsPage.total} {data.showsPage.total === 1 ? "show" : "shows"}</span>
+        <div class="section-meta">
+          <span>{countLabel(data.showsPage.total, "show", "shows")}</span>
+          <a class="view-all" href="/watchlist/shows">
+            <span>View all</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </a>
+        </div>
       </div>
       <Rail items={data.shows} variant="poster">
         {#snippet children(show)}
@@ -83,7 +99,8 @@
   .section-heading {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    justify-content: space-between;
+    gap: var(--space-3);
     margin-bottom: 0.85rem;
   }
 
@@ -91,10 +108,30 @@
     margin: 0;
   }
 
-  .count {
+  .section-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .section-meta span {
     color: var(--color-muted);
     font-size: 0.86rem;
     font-weight: 700;
+  }
+
+  .view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .view-all:hover {
+    color: var(--color-text);
   }
 
   .empty {

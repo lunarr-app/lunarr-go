@@ -1,4 +1,4 @@
-import { normalizePage, type ShowSort } from "$lib/server/media/catalog";
+import { FULL_LIBRARY_PAGE_SIZE, normalizePage, type ShowSort } from "$lib/server/media/catalog";
 import { showBrowseRows } from "$lib/server/media/shows/browse";
 
 type ShowListLoadEvent = {
@@ -9,7 +9,7 @@ type ShowListLoadEvent = {
 export function createPresetShowListLoad(sort: ShowSort) {
   return async ({ locals, url }: ShowListLoadEvent) => {
     const page = normalizePage(url.searchParams.get("page"));
-    const rows = await showBrowseRows(locals.user!.id, "", sort, page);
+    const rows = await showBrowseRows(locals.user!.id, "", sort, page, FULL_LIBRARY_PAGE_SIZE);
 
     return {
       shows: rows.all,
