@@ -3,8 +3,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { GET as librariesGet, POST as librariesPost } from "./+server";
-import { GET as libraryGet, PATCH as libraryPatch, DELETE as libraryDelete } from "./[id]/+server";
+import { GET as librariesGet } from "./+server";
+import { GET as libraryGet, DELETE as libraryDelete } from "./[id]/+server";
 
 describe("libraries API", () => {
   let tempDir: string | undefined;

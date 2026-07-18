@@ -1,4 +1,4 @@
-import { requireJsonUser } from "$lib/server/api";
+import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
 import { apiError, apiJson } from "$lib/server/api/json";
 import type { EpisodeDetailResponse } from "$lib/server/api/types";
 import { getEpisodeDetail } from "$lib/server/media/shows/detail";
@@ -8,8 +8,12 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
-  const detail = await getEpisodeDetail(params.id, user.id);
-  if (!detail) return apiError("Episode not found.", 404);
+  try {
+    const detail = await getEpisodeDetail(params.id, user.id);
+    if (!detail) return apiError("Episode not found.", 404);
 
-  return apiJson<EpisodeDetailResponse>(detail);
+    return apiJson<EpisodeDetailResponse>(detail);
+  } catch (error) {
+    return apiErrorFrom(error, "Could not load episode.");
+  }
 };

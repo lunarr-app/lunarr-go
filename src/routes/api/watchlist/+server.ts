@@ -14,20 +14,24 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
-  const page = normalizePage(url.searchParams.get("page"));
-  const limit = normalizeLimit(url.searchParams.get("limit"), FULL_LIBRARY_PAGE_SIZE);
+  try {
+    const page = normalizePage(url.searchParams.get("page"));
+    const limit = normalizeLimit(url.searchParams.get("limit"), FULL_LIBRARY_PAGE_SIZE);
 
-  const [movieResult, showResult] = await Promise.all([
-    getWatchlistMovies(user.id, page, limit),
-    getWatchlistShows(user.id, page, limit),
-  ]);
+    const [movieResult, showResult] = await Promise.all([
+      getWatchlistMovies(user.id, page, limit),
+      getWatchlistShows(user.id, page, limit),
+    ]);
 
-  return apiJson({
-    movies: movieResult.movies,
-    moviesPage: movieResult.pageInfo,
-    shows: showResult.shows,
-    showsPage: showResult.pageInfo,
-  });
+    return apiJson({
+      movies: movieResult.movies,
+      moviesPage: movieResult.pageInfo,
+      shows: showResult.shows,
+      showsPage: showResult.pageInfo,
+    });
+  } catch (error) {
+    return apiErrorFrom(error, "Could not load watchlist.");
+  }
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {

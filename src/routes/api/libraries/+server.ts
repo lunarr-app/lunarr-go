@@ -12,11 +12,15 @@ export const GET: RequestHandler = async ({ locals }) => {
   const user = requireJsonAdmin(locals);
   if (user instanceof Response) return user;
 
-  return apiJson<LibrariesResponse>({
-    libraries: await listLibrariesWithScanStatus(),
-    users: await listLibraryShareUsers(),
-    tmdbConfigured: await tmdbCredentialsConfigured(),
-  });
+  try {
+    return apiJson<LibrariesResponse>({
+      libraries: await listLibrariesWithScanStatus(),
+      users: await listLibraryShareUsers(),
+      tmdbConfigured: await tmdbCredentialsConfigured(),
+    });
+  } catch (error) {
+    return apiErrorFrom(error, "Could not load libraries.");
+  }
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {

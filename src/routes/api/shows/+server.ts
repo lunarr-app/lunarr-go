@@ -25,9 +25,13 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const page = normalizePage(url.searchParams.get("page"));
   const limit = normalizeLimit(url.searchParams.get("limit"), SHOW_PAGE_SIZE);
 
-  if (rails && rails.length > 0) {
-    return apiJson<ShowBrowseRailResponse>(await tvRows(user.id, search, sort, page, limit, rails));
-  }
+  try {
+    if (rails && rails.length > 0) {
+      return apiJson<ShowBrowseRailResponse>(await tvRows(user.id, search, sort, page, limit, rails));
+    }
 
-  return apiJson<ShowRowsResponse>(await tvRows(user.id, search, sort, page, limit));
+    return apiJson<ShowRowsResponse>(await tvRows(user.id, search, sort, page, limit));
+  } catch (error) {
+    return apiErrorFrom(error, "Could not load shows.");
+  }
 };

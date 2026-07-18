@@ -9,17 +9,17 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
-  const playback = await getPlaybackData({
-    mediaItemId: params.id,
-    userId: user.id,
-    url,
-  });
-
-  if (!playback) {
-    return apiError("Playable item not found.", 404);
-  }
-
   try {
+    const playback = await getPlaybackData({
+      mediaItemId: params.id,
+      userId: user.id,
+      url,
+    });
+
+    if (!playback) {
+      return apiError("Playable item not found.", 404);
+    }
+
     return apiJson<PlaybackDataResponse>(
       await withSignedPlaybackSource({
         data: playback,
@@ -31,7 +31,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
     if (error instanceof PlaybackSourceRequestError) {
       return apiError(error.message, error.status);
     }
-    return apiError("Could not prepare playback source.", 500);
+    return apiErrorFrom(error, "Could not load playback data.", 500);
   }
 };
 

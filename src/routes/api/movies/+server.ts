@@ -27,9 +27,13 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   const page = normalizePage(url.searchParams.get("page"));
   const limit = normalizeLimit(url.searchParams.get("limit"), MOVIE_PAGE_SIZE);
 
-  if (rails && rails.length > 0) {
-    return apiJson<MovieBrowseRailResponse>(await movieRows(user.id, search, status, sort, page, limit, rails));
-  }
+  try {
+    if (rails && rails.length > 0) {
+      return apiJson<MovieBrowseRailResponse>(await movieRows(user.id, search, status, sort, page, limit, rails));
+    }
 
-  return apiJson<MovieRowsResponse>(await movieRows(user.id, search, status, sort, page, limit));
+    return apiJson<MovieRowsResponse>(await movieRows(user.id, search, status, sort, page, limit));
+  } catch (error) {
+    return apiErrorFrom(error, "Could not load movies.");
+  }
 };

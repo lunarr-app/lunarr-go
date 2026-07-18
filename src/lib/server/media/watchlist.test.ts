@@ -338,7 +338,6 @@ describe("watchlist service", () => {
   test("getWatchlistMovies only returns items for specified user", async () => {
     await setupWatchlist();
     const db = await getDb();
-    const now = new Date().toISOString();
 
     await db
       .insertInto("user")
