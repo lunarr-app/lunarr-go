@@ -7,6 +7,7 @@
     Film,
     Library,
     Link2,
+    List,
     LogOut,
     Search,
     Settings,
@@ -39,6 +40,7 @@
     { href: "/continue", label: "Continue", icon: Clock3 },
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
+    { href: "/watchlist", label: "Watchlist", icon: List },
     { href: "/search", label: "Search", icon: Search },
   ]);
   const adminNav = $derived(

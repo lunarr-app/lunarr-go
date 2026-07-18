@@ -2,7 +2,7 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import MediaHeroPlaybackActions from "$lib/components/MediaHeroPlaybackActions.svelte";
   import MediaHeroResumeBar from "$lib/components/MediaHeroResumeBar.svelte";
-  import { Compass, ExternalLink, Link2 } from "@lucide/svelte";
+  import { Bookmark, BookmarkCheck, Compass, ExternalLink, Link2 } from "@lucide/svelte";
 
   let {
     title,
@@ -19,6 +19,7 @@
     resumePercent,
     trailerHref,
     similarHref,
+    inWatchlist,
     canManageShares,
     onShareOpen,
   }: {
@@ -36,6 +37,7 @@
     resumePercent: number;
     trailerHref: string | null;
     similarHref: string;
+    inWatchlist: boolean;
     canManageShares: boolean;
     onShareOpen: () => void;
   } = $props();
@@ -57,6 +59,17 @@
       <Compass size={16} aria-hidden="true" />
       Similar
     </a>
+    <form class="inline-action" method="POST" action="?/watchlist">
+      <button class="text" type="submit">
+        {#if inWatchlist}
+          <BookmarkCheck size={16} aria-hidden="true" />
+          In Watchlist
+        {:else}
+          <Bookmark size={16} aria-hidden="true" />
+          Watchlist
+        {/if}
+      </button>
+    </form>
     {#if canManageShares}
       <button class="button text" type="button" onclick={onShareOpen}>
         <Link2 size={16} aria-hidden="true" />

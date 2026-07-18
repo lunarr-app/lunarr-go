@@ -1,0 +1,45 @@
+import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
+import type { ApiOkResponse } from "$lib/server/api/types";
+import { parseBody, requireJsonUser } from "$lib/server/api";
+import { toggleWatchlist, getWatchlistMovies, getWatchlistShows } from "$lib/server/media/watchlist";
+import { normalizePage } from "$lib/server/media/catalog";
+import { z } from "zod";
+import type { RequestHandler } from "./$types";
+
+const toggleSchema = z.object({
+  mediaItemId: z.string().min(1, "Media item is required."),
+});
+
+export const GET: RequestHandler = async ({ locals, url }) => {
+  const user = requireJsonUser(locals);
+  if (user instanceof Response) return user;
+
+  const page = normalizePage(url.searchParams.get("page"));
+
+  const [movieResult, showResult] = await Promise.all([
+    getWatchlistMovies(user.id, page),
+    getWatchlistShows(user.id, page),
+  ]);
+
+  return apiJson({
+    movies: movieResult.movies,
+    moviesPage: movieResult.pageInfo,
+    shows: showResult.shows,
+    showsPage: showResult.pageInfo,
+  });
+};
+
+export const POST: RequestHandler = async ({ request, locals }) => {
+  const user = requireJsonUser(locals);
+  if (user instanceof Response) return user;
+
+  try {
+    const body = await parseBody(request, toggleSchema);
+    if (!body.mediaItemId) return apiError("Media item is required.");
+
+    const inWatchlist = await toggleWatchlist(user.id, body.mediaItemId);
+    return apiJson<ApiOkResponse & { inWatchlist: boolean }>({ ok: true, inWatchlist });
+  } catch (error) {
+    return apiErrorFrom(error, "Could not update watchlist.");
+  }
+};

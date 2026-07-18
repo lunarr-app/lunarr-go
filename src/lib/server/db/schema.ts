@@ -29,6 +29,7 @@ import type {
   PlaybackSessionTable,
   PlaybackHlsArtifactTable,
 } from "./schema/streaming";
+import type { WatchlistTable } from "./schema/watchlist";
 
 export type * from "./schema/auth";
 export type * from "./schema/common";
@@ -39,6 +40,7 @@ export type * from "./schema/scanner";
 export type * from "./schema/device-pairing";
 export type * from "./schema/shares";
 export type * from "./schema/streaming";
+export type * from "./schema/watchlist";
 
 export type Database = {
   user: UserTable;
@@ -68,4 +70,5 @@ export type Database = {
   media_stream_info: MediaStreamInfoTable;
   media_share: MediaShareTable;
   device_pairing: DevicePairingTable;
+  watchlist: WatchlistTable;
 };

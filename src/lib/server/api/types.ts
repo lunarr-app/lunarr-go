@@ -1,4 +1,5 @@
 import type { getHealthStatus } from "$lib/server/health";
+import type { getWatchlistMovies, getWatchlistShows, toggleWatchlist } from "$lib/server/media/watchlist";
 import type { approveDevicePairing, pollDevicePairing, startDevicePairing } from "$lib/server/auth/device-pairing";
 import type { runSettingsAction, getAdminSettingsResponse } from "$lib/server/settings-commands";
 import type { startAllLibraryScans } from "$lib/server/scanner";
@@ -31,7 +32,7 @@ import type { PlaybackData } from "$lib/server/playback";
 import type { SegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
 import type { TranscodePolicy } from "$lib/server/transcoding/policy";
 import type { CreateSharePayload, PublicShareRecord, SharePageData, ShareSeasonData } from "$lib/shares/types";
-import type { CatalogPageInfo, MovieRowsResponse, ShowRowsResponse } from "$lib/media/types";
+import type { CatalogPageInfo, MovieRowsResponse, MovieSummary, ShowRowsResponse, ShowSummary } from "$lib/media/types";
 
 export type {
   CatalogPageInfo,
@@ -181,6 +182,18 @@ export type ApiKeyListResponse = {
 
 export type CreateApiKeyResponse = Awaited<ReturnType<typeof createApiKey>>;
 
+export type WatchlistToggleResponse = {
+  ok: boolean;
+  inWatchlist: boolean;
+};
+
+export type WatchlistPageResponse = {
+  movies: MovieSummary[];
+  moviesPage: CatalogPageInfo;
+  shows: ShowSummary[];
+  showsPage: CatalogPageInfo;
+};
+
 export type { ManagedUser } from "$lib/server/auth/users-admin";
 export type { ApiKeySummary } from "$lib/server/auth/api-keys";
 
@@ -260,4 +273,6 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "LibrariesResponse",
   "MetadataRefreshResponse",
   "ScanStartResponse",
+  "WatchlistToggleResponse",
+  "WatchlistPageResponse",
 ] as const;

@@ -1,5 +1,6 @@
 import { isAdmin } from "$lib/server/auth/users";
 import { getMovieDetail } from "$lib/server/media/movies/detail";
+import { isInWatchlist, toggleWatchlist } from "$lib/server/media/watchlist";
 import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
 import { refreshMovieMetadataResult } from "$lib/server/metadata/movies";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
@@ -8,10 +9,15 @@ import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-  const detail = await getMovieDetail(params.id, locals.user!.id);
+  const userId = locals.user!.id;
+  const [detail, inWatchlist] = await Promise.all([
+    getMovieDetail(params.id, userId),
+    isInWatchlist(userId, params.id),
+  ]);
   if (!detail) throw error(404, "Movie not found");
   return {
     ...detail,
+    inWatchlist,
     canManageMetadata: isAdmin(locals.user),
     canManageShares: isAdmin(locals.user),
     tmdbConfigured: await tmdbCredentialsConfigured(),
@@ -35,6 +41,17 @@ export const actions: Actions = {
     } catch (error) {
       return fail(400, {
         error: error instanceof Error ? error.message : "Could not update watched status.",
+      });
+    }
+
+    throw redirect(303, `/movies/${params.id}`);
+  },
+  watchlist: async ({ params, locals }) => {
+    try {
+      await toggleWatchlist(locals.user!.id, params.id);
+    } catch (error) {
+      return fail(400, {
+        error: error instanceof Error ? error.message : "Could not update watchlist.",
       });
     }
 

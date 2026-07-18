@@ -67,6 +67,7 @@
   resumePercent={playback.resumePercent}
   {trailerHref}
   similarHref={`/movies/${data.movie.id}/similar`}
+  inWatchlist={data.inWatchlist}
   canManageShares={data.canManageShares}
   onShareOpen={() => (shareModalOpen = true)}
 />

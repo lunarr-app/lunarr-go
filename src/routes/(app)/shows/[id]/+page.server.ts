@@ -1,5 +1,6 @@
 import { isAdmin } from "$lib/server/auth/users";
 import { getShowCredits, getShowOverview, getShowResumeEpisode } from "$lib/server/media/shows/detail";
+import { isInWatchlist, toggleWatchlist } from "$lib/server/media/watchlist";
 import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
 import { refreshTvShowMetadataResult } from "$lib/server/metadata/tv";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
@@ -8,10 +9,11 @@ import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
   const userId = locals.user!.id;
-  const [overview, credits, nextEpisode] = await Promise.all([
+  const [overview, credits, nextEpisode, inWatchlist] = await Promise.all([
     getShowOverview(params.id, userId),
     getShowCredits(params.id, userId),
     getShowResumeEpisode(params.id, userId),
+    isInWatchlist(userId, params.id),
   ]);
   if (!overview || !credits) throw error(404, "Show not found");
 
@@ -19,6 +21,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     ...overview,
     cast: credits.cast,
     nextEpisode,
+    inWatchlist,
     canManageMetadata: isAdmin(locals.user),
     canManageShares: isAdmin(locals.user),
     tmdbConfigured: await tmdbCredentialsConfigured(),
@@ -26,6 +29,17 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
+  watchlist: async ({ params, locals }) => {
+    try {
+      await toggleWatchlist(locals.user!.id, params.id);
+    } catch (error) {
+      return fail(400, {
+        error: error instanceof Error ? error.message : "Could not update watchlist.",
+      });
+    }
+
+    throw redirect(303, `/shows/${params.id}`);
+  },
   refreshMetadata: async ({ params, locals }) => {
     const prerequisiteFailure = await metadataRefreshPrerequisites(locals.user);
     if (prerequisiteFailure) return prerequisiteFailure;

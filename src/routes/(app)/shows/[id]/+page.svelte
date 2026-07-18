@@ -60,6 +60,7 @@
   {progressPercent}
   {trailerHref}
   similarHref={`/shows/${data.show.id}/similar`}
+  inWatchlist={data.inWatchlist}
   canManageShares={data.canManageShares}
   onShareOpen={() => (shareModalOpen = true)}
 />

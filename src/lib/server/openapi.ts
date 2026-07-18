@@ -1470,6 +1470,48 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/watchlist": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Get the user's watchlist.",
+        operationId: "getWatchlist",
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            required: false,
+            schema: { type: "integer", minimum: 1, default: 1 },
+          },
+        ],
+        responses: {
+          "200": jsonResponse({ $ref: "#/components/schemas/WatchlistPageResponse" }),
+          "401": errorResponse,
+        },
+      },
+      post: {
+        tags: ["Catalog"],
+        summary: "Toggle an item in the watchlist.",
+        operationId: "toggleWatchlist",
+        requestBody: { $ref: "#/components/requestBodies/WatchlistToggleRequest" },
+        responses: {
+          "200": jsonResponse({ $ref: "#/components/schemas/WatchlistToggleResponse" }),
+          "400": errorResponse,
+          "401": errorResponse,
+        },
+      },
+    },
+    "/api/watchlist/{mediaItemId}": {
+      delete: {
+        tags: ["Catalog"],
+        summary: "Remove an item from the watchlist.",
+        operationId: "removeFromWatchlist",
+        parameters: [pathIdParameter()],
+        responses: {
+          "200": okResponse,
+          "401": errorResponse,
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -1516,6 +1558,14 @@ export const openApiDocument = {
         content: {
           "application/json": {
             schema: { $ref: "#/components/schemas/SeasonWatchedRequest" },
+          },
+        },
+      },
+      WatchlistToggleRequest: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/WatchlistToggleRequest" },
           },
         },
       },
@@ -3640,6 +3690,37 @@ export const openApiDocument = {
           positionSeconds: { type: "number", minimum: 0 },
           durationSeconds: nullableNumberSchema,
           completed: { type: "boolean" },
+        },
+      },
+      WatchlistToggleRequest: {
+        type: "object",
+        required: ["mediaItemId"],
+        properties: {
+          mediaItemId: stringSchema,
+        },
+      },
+      WatchlistToggleResponse: {
+        type: "object",
+        required: ["ok", "inWatchlist"],
+        properties: {
+          ok: { type: "boolean", enum: [true] },
+          inWatchlist: { type: "boolean" },
+        },
+      },
+      WatchlistPageResponse: {
+        type: "object",
+        required: ["movies", "moviesPage", "shows", "showsPage"],
+        properties: {
+          movies: {
+            type: "array",
+            items: { $ref: "#/components/schemas/MovieSummary" },
+          },
+          moviesPage: { $ref: "#/components/schemas/PageMetadata" },
+          shows: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ShowSummary" },
+          },
+          showsPage: { $ref: "#/components/schemas/PageMetadata" },
         },
       },
     },

@@ -2,7 +2,7 @@
   import MediaHero from "$lib/components/MediaHero.svelte";
   import ShowWatchSummary from "$lib/components/ShowWatchSummary.svelte";
   import { formatEpisodeCode } from "$lib/media/format";
-  import { CirclePlay, Clapperboard, Compass, ExternalLink, Link2 } from "@lucide/svelte";
+  import { Bookmark, BookmarkCheck, CirclePlay, Clapperboard, Compass, ExternalLink, Link2 } from "@lucide/svelte";
 
   let {
     title,
@@ -21,6 +21,7 @@
     progressPercent,
     trailerHref,
     similarHref,
+    inWatchlist,
     canManageShares,
     onShareOpen,
   }: {
@@ -46,6 +47,7 @@
     progressPercent: number;
     trailerHref: string | null;
     similarHref: string;
+    inWatchlist: boolean;
     canManageShares: boolean;
     onShareOpen: () => void;
   } = $props();
@@ -82,6 +84,17 @@
       <Compass size={16} aria-hidden="true" />
       Similar
     </a>
+    <form class="inline-action" method="POST" action="?/watchlist">
+      <button class="text" type="submit">
+        {#if inWatchlist}
+          <BookmarkCheck size={16} aria-hidden="true" />
+          In Watchlist
+        {:else}
+          <Bookmark size={16} aria-hidden="true" />
+          Watchlist
+        {/if}
+      </button>
+    </form>
     {#if canManageShares}
       <button class="button text" type="button" onclick={onShareOpen}>
         <Link2 size={16} aria-hidden="true" />
