@@ -49,16 +49,6 @@
   {/snippet}
 
   {#snippet secondaryActions()}
-    {#if trailerHref}
-      <a class="button text" href={trailerHref} target="_blank" rel="noreferrer">
-        <ExternalLink size={16} aria-hidden="true" />
-        Trailer
-      </a>
-    {/if}
-    <a class="button text" href={similarHref}>
-      <Compass size={16} aria-hidden="true" />
-      Similar
-    </a>
     <form class="inline-action" method="POST" action="?/watchlist">
       <button class="text" type="submit">
         {#if inWatchlist}
@@ -70,6 +60,16 @@
         {/if}
       </button>
     </form>
+    <a class="button text" href={similarHref}>
+      <Compass size={16} aria-hidden="true" />
+      Similar
+    </a>
+    {#if trailerHref}
+      <a class="button text" href={trailerHref} target="_blank" rel="noreferrer">
+        <ExternalLink size={16} aria-hidden="true" />
+        Trailer
+      </a>
+    {/if}
     {#if canManageShares}
       <button class="button text" type="button" onclick={onShareOpen}>
         <Link2 size={16} aria-hidden="true" />
