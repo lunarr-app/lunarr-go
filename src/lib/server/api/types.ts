@@ -1,5 +1,4 @@
 import type { getHealthStatus } from "$lib/server/health";
-import type { getWatchlistMovies, getWatchlistShows, toggleWatchlist } from "$lib/server/media/watchlist";
 import type { approveDevicePairing, pollDevicePairing, startDevicePairing } from "$lib/server/auth/device-pairing";
 import type { runSettingsAction, getAdminSettingsResponse } from "$lib/server/settings-commands";
 import type { startAllLibraryScans } from "$lib/server/scanner";
