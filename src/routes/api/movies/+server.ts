@@ -34,6 +34,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
     return apiJson<MovieRowsResponse>(await movieRows(user.id, search, status, sort, page, limit));
   } catch (error) {
-    return apiErrorFrom(error, "Could not load movies.");
+    return apiErrorFrom(error, "Could not load movies.", 500);
   }
 };

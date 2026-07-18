@@ -14,6 +14,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
     return apiJson<ShowSeasonDetailResponse>(detail);
   } catch (error) {
-    return apiErrorFrom(error, "Could not load show season.");
+    return apiErrorFrom(error, "Could not load show season.", 500);
   }
 };

@@ -30,7 +30,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       showsPage: showResult.pageInfo,
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load watchlist.");
+    return apiErrorFrom(error, "Could not load watchlist.", 500);
   }
 };
 

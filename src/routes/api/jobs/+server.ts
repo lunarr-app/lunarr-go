@@ -19,6 +19,6 @@ export const GET: RequestHandler = async ({ locals }) => {
       jobs,
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load jobs.");
+    return apiErrorFrom(error, "Could not load jobs.", 500);
   }
 };

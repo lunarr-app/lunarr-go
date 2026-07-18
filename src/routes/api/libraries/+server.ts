@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ locals }) => {
       tmdbConfigured: await tmdbCredentialsConfigured(),
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load libraries.");
+    return apiErrorFrom(error, "Could not load libraries.", 500);
   }
 };
 

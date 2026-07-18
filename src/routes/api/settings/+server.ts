@@ -11,6 +11,6 @@ export const GET: RequestHandler = async ({ locals }) => {
   try {
     return apiJson<SettingsResponse>(await getAdminSettingsResponse(user.id));
   } catch (error) {
-    return apiErrorFrom(error, "Could not load settings.");
+    return apiErrorFrom(error, "Could not load settings.", 500);
   }
 };

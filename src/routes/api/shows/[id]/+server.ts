@@ -14,6 +14,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
     return apiJson<ShowFullResponse>(detail);
   } catch (error) {
-    return apiErrorFrom(error, "Could not load show.");
+    return apiErrorFrom(error, "Could not load show.", 500);
   }
 };

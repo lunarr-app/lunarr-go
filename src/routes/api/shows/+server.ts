@@ -32,6 +32,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
     return apiJson<ShowRowsResponse>(await tvRows(user.id, search, sort, page, limit));
   } catch (error) {
-    return apiErrorFrom(error, "Could not load shows.");
+    return apiErrorFrom(error, "Could not load shows.", 500);
   }
 };

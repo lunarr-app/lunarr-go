@@ -14,6 +14,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
     const limit = normalizeLimit(url.searchParams.get("limit"), MOVIE_PAGE_SIZE);
     return apiJson<DiscoverMoviesResponse>(await listBecauseYouWatchedMovies(user.id, page, limit));
   } catch (error) {
-    return apiErrorFrom(error, "Could not load movie recommendations.");
+    return apiErrorFrom(error, "Could not load movie recommendations.", 500);
   }
 };

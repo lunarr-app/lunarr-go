@@ -14,6 +14,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
     const limit = normalizeLimit(url.searchParams.get("limit"), SHOW_PAGE_SIZE);
     return apiJson<DiscoverShowsResponse>(await listBecauseYouWatchedShows(user.id, page, limit));
   } catch (error) {
-    return apiErrorFrom(error, "Could not load show recommendations.");
+    return apiErrorFrom(error, "Could not load show recommendations.", 500);
   }
 };

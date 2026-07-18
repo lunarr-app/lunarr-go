@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
         shares: await listAllShares(),
       });
     } catch (error) {
-      return apiErrorFrom(error, "Could not list shares.");
+      return apiErrorFrom(error, "Could not list shares.", 500);
     }
   }
 
@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       shares: await listSharesForMedia(mediaItemId),
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not list shares.");
+    return apiErrorFrom(error, "Could not list shares.", 500);
   }
 };
 

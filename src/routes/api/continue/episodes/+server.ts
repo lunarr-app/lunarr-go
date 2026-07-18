@@ -24,6 +24,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       nextUpPage: nextUpResult.nextUpPage,
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load continue watching episodes.");
+    return apiErrorFrom(error, "Could not load continue watching episodes.", 500);
   }
 };

@@ -17,6 +17,6 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
 
     return apiJson<SimilarMoviesResponse>(result);
   } catch (error) {
-    return apiErrorFrom(error, "Could not load similar movies.");
+    return apiErrorFrom(error, "Could not load similar movies.", 500);
   }
 };

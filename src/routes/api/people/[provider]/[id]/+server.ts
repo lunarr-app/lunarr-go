@@ -18,6 +18,6 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
 
     return apiJson<PersonDetailResponse>(detail);
   } catch (error) {
-    return apiErrorFrom(error, "Could not load person.");
+    return apiErrorFrom(error, "Could not load person.", 500);
   }
 };

@@ -28,6 +28,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       nextUpPage: tvResults.nextUpPage,
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load continue watching.");
+    return apiErrorFrom(error, "Could not load continue watching.", 500);
   }
 };

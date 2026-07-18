@@ -19,6 +19,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       pageInfo: result.pageInfo,
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load watchlist shows.");
+    return apiErrorFrom(error, "Could not load watchlist shows.", 500);
   }
 };

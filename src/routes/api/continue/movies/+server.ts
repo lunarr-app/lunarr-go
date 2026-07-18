@@ -19,6 +19,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       pageInfo: result.continueWatchingPage,
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load continue watching movies.");
+    return apiErrorFrom(error, "Could not load continue watching movies.", 500);
   }
 };

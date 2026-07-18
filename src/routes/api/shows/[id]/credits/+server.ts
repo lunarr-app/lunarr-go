@@ -14,6 +14,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
     return apiJson<ShowCreditsResponse>(credits);
   } catch (error) {
-    return apiErrorFrom(error, "Could not load show credits.");
+    return apiErrorFrom(error, "Could not load show credits.", 500);
   }
 };

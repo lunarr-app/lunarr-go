@@ -16,6 +16,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
       limit: SCAN_ERROR_PER_JOB_LIMIT,
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load job errors.");
+    return apiErrorFrom(error, "Could not load job errors.", 500);
   }
 };

@@ -16,6 +16,6 @@ export const GET: RequestHandler = async ({ locals }) => {
       ...preferences,
     });
   } catch (error) {
-    return apiErrorFrom(error, "Could not load profile.");
+    return apiErrorFrom(error, "Could not load profile.", 500);
   }
 };

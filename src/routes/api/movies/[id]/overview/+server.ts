@@ -14,6 +14,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
     return apiJson<MovieOverviewResponse>(overview);
   } catch (error) {
-    return apiErrorFrom(error, "Could not load movie overview.");
+    return apiErrorFrom(error, "Could not load movie overview.", 500);
   }
 };
