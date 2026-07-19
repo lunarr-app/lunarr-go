@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
 import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
 import {
   DEFAULT_SEGMENT_SKIP_PREFERENCES,
@@ -10,21 +11,11 @@ import {
 import {
   getTranscodePolicy,
   normalizePlaybackPreference,
+  PLAYBACK_PREFERENCES,
   setUserPlaybackPreference,
   setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
 } from "$lib/server/transcoding/policy";
-
-export const profilePreferencesSchema = z.object({
-  playbackPreference: z.unknown().optional(),
-  preferredAudioLanguage: z.unknown().optional(),
-  preferredSubtitleLanguage: z.unknown().optional(),
-  continueMaxAgeDays: z.unknown().optional(),
-  segmentSkipEnabled: z.unknown().optional(),
-  segmentSkipAutomatic: z.unknown().optional(),
-});
-
-export type ProfilePreferencesUpdate = z.infer<typeof profilePreferencesSchema>;
 
 const PROFILE_PREFERENCE_KEYS = [
   "playbackPreference",
@@ -35,11 +26,23 @@ const PROFILE_PREFERENCE_KEYS = [
   "segmentSkipAutomatic",
 ] as const;
 
-export function hasProfilePreferenceUpdate(body: ProfilePreferencesUpdate) {
+export const profilePreferencesSchema = z.object({
+  playbackPreference: z.enum(PLAYBACK_PREFERENCES).optional(),
+  preferredAudioLanguage: z.string().nullable().optional(),
+  preferredSubtitleLanguage: z.string().nullable().optional(),
+  continueMaxAgeDays: z.number().int().min(CONTINUE_MAX_AGE_DAYS_MIN).max(CONTINUE_MAX_AGE_DAYS_MAX).optional(),
+  segmentSkipEnabled: z.boolean().optional(),
+  segmentSkipAutomatic: z.boolean().optional(),
+});
+
+export type ProfilePreferencesUpdate = z.infer<typeof profilePreferencesSchema>;
+export type ProfilePreferencesInput = Partial<Record<(typeof PROFILE_PREFERENCE_KEYS)[number], unknown>>;
+
+export function hasProfilePreferenceUpdate(body: ProfilePreferencesInput | ProfilePreferencesUpdate) {
   return PROFILE_PREFERENCE_KEYS.some((key) => key in body);
 }
 
-export async function updateUserProfilePreferences(userId: string, body: ProfilePreferencesUpdate) {
+export async function updateUserProfilePreferences(userId: string, body: ProfilePreferencesInput) {
   if ("playbackPreference" in body) {
     await setUserPlaybackPreference(userId, normalizePlaybackPreference(String(body.playbackPreference ?? "")));
   }

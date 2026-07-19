@@ -1,3 +1,4 @@
+import { API_KEY_MAX_EXPIRES_IN_SECONDS, API_KEY_MAX_NAME_LENGTH } from "$lib/server/auth/api-key-config";
 import { createApiKey, listApiKeys, apiKeyHttpStatus } from "$lib/server/auth/api-keys";
 import { apiErrorFrom, apiJson } from "$lib/server/api/json";
 import type { ApiKeyListResponse, CreateApiKeyResponse } from "$lib/server/api/types";
@@ -6,8 +7,8 @@ import { z } from "zod";
 import type { RequestHandler } from "./$types";
 
 const createApiKeySchema = z.object({
-  name: z.unknown().optional(),
-  expiresIn: z.unknown().optional(),
+  name: z.string().max(API_KEY_MAX_NAME_LENGTH).optional(),
+  expiresIn: z.number().int().min(1).max(API_KEY_MAX_EXPIRES_IN_SECONDS).nullable().optional(),
 });
 
 export const GET: RequestHandler = async ({ locals, request }) => {

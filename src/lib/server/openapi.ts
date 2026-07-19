@@ -1,5 +1,13 @@
 import { APP_VERSION } from "./version";
 import { CLIENT_PLAYBACK_CAPABILITY_KEYS, PLAYBACK_TARGETS } from "$lib/playback/capabilities";
+import {
+  HARDWARE_ACCELERATION_MODES,
+  PLAYBACK_PREFERENCES,
+  TRANSCODE_QUALITY_PRESETS,
+} from "$lib/server/transcoding/policy";
+import { PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS } from "$lib/server/transcoding/session-artifacts";
+import { API_KEY_MAX_EXPIRES_IN_SECONDS, API_KEY_MAX_NAME_LENGTH } from "./auth/api-key-config";
+import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
 
 function playbackCapabilityParameters() {
   return CLIENT_PLAYBACK_CAPABILITY_KEYS.map((name) => ({
@@ -1841,8 +1849,17 @@ export const openApiDocument = {
       CreateApiKeyRequest: {
         type: "object",
         properties: {
-          name: stringSchema,
-          expiresIn: nullableIntegerSchema,
+          name: {
+            type: "string",
+            maxLength: API_KEY_MAX_NAME_LENGTH,
+            description: "Display name for the API key. Empty or omitted defaults to 'Mobile app'.",
+          },
+          expiresIn: {
+            ...nullableIntegerSchema,
+            minimum: 1,
+            maximum: API_KEY_MAX_EXPIRES_IN_SECONDS,
+            description: "Lifetime of the key in seconds. Null or omitted creates a non-expiring key.",
+          },
         },
       },
       CreateApiKeyResponse: {
@@ -1859,14 +1876,20 @@ export const openApiDocument = {
         properties: {
           playbackPreference: {
             type: "string",
-            enum: ["auto", "prefer_direct", "prefer_transcode"],
+            enum: [...PLAYBACK_PREFERENCES],
           },
-          preferredAudioLanguage: nullableStringSchema,
-          preferredSubtitleLanguage: nullableStringSchema,
+          preferredAudioLanguage: {
+            ...nullableStringSchema,
+            description: "Preferred audio language as an ISO-639-2 code. Empty string clears the preference.",
+          },
+          preferredSubtitleLanguage: {
+            ...nullableStringSchema,
+            description: "Preferred subtitle language as an ISO-639-2 code. Empty string clears the preference.",
+          },
           continueMaxAgeDays: {
             type: "integer",
-            minimum: 0,
-            maximum: 3650,
+            minimum: CONTINUE_MAX_AGE_DAYS_MIN,
+            maximum: CONTINUE_MAX_AGE_DAYS_MAX,
             description:
               "Hide idle in-progress items from Continue rails after this many days. 0 disables staleness filtering.",
           },
@@ -1938,18 +1961,18 @@ export const openApiDocument = {
           transcodingEnabled: { type: "boolean" },
           playbackPreference: {
             type: "string",
-            enum: ["auto", "prefer_direct", "prefer_transcode"],
+            enum: [...PLAYBACK_PREFERENCES],
           },
           preferredAudioLanguage: nullableStringSchema,
           preferredSubtitleLanguage: nullableStringSchema,
           hardwareAcceleration: {
             type: "string",
-            enum: ["off", "auto", "videotoolbox", "vaapi", "qsv", "nvenc", "amf"],
+            enum: [...HARDWARE_ACCELERATION_MODES],
           },
           hardwareAccelerationRequired: { type: "boolean" },
           transcodeQualityPreset: {
             type: "string",
-            enum: ["auto", "720p", "1080p", "original"],
+            enum: [...TRANSCODE_QUALITY_PRESETS],
           },
           transcodeQuality: { $ref: "#/components/schemas/TranscodeQualityTarget" },
         },
@@ -3395,22 +3418,45 @@ export const openApiDocument = {
       },
       LibraryInput: {
         type: "object",
+        description:
+          "Create or update library payload. Accepted for both JSON and form-data submissions. Unknown fields are ignored. Boolean/numeric values may be submitted as strings (e.g. 'true', '1').",
         additionalProperties: true,
         properties: {
-          source: { type: "string", enum: ["local", "sftp", "webdav"] },
-          kind: { type: "string", enum: ["movie", "tv"] },
+          source: {
+            type: "string",
+            enum: ["local", "sftp", "webdav"],
+            description: "Library storage source. Defaults to 'local' when omitted.",
+          },
+          kind: {
+            type: "string",
+            enum: ["movie", "tv"],
+            description: "Media kind. Defaults to 'movie' on create when omitted.",
+          },
           name: stringSchema,
-          path: stringSchema,
-          host: stringSchema,
-          port: { type: "integer" },
-          username: stringSchema,
-          password: stringSchema,
-          root: stringSchema,
-          secure: { type: "boolean" },
-          walkConcurrency: { type: "integer" },
-          operationTimeoutMs: { type: "integer" },
-          watchEnabled: { type: "boolean" },
-          scanIntervalMinutes: nullableIntegerSchema,
+          path: { ...stringSchema, description: "Absolute local path. Required for local libraries." },
+          host: { ...stringSchema, description: "Remote host. Required for sftp and webdav libraries." },
+          port: { type: "integer", description: "Remote port. Defaults to 22 for sftp and 443 for webdav." },
+          username: { ...stringSchema, description: "Remote username. Required for sftp and webdav." },
+          password: { ...stringSchema, description: "Remote password. Required on create for sftp and webdav." },
+          root: { ...stringSchema, description: "Root directory on the remote server." },
+          secure: {
+            type: "boolean",
+            description: "Use HTTPS for webdav. May also be sent as 'useHttps' or 'use_https'. Defaults to true.",
+          },
+          walkConcurrency: { type: "integer", description: "Concurrent directory traversal limit. Default 4." },
+          operationTimeoutMs: {
+            type: "integer",
+            description: "Remote operation timeout in milliseconds. Default 30000.",
+          },
+          watchEnabled: {
+            type: "boolean",
+            description: "Enable filesystem watching. May also be sent as 'watch_enabled'. Default true.",
+          },
+          scanIntervalMinutes: {
+            ...nullableIntegerSchema,
+            description:
+              "Automatic scan interval in minutes. May also be sent as 'scan_interval_minutes'. Null disables scheduled scans.",
+          },
         },
       },
       LibraryAccessRequest: {
@@ -3637,21 +3683,34 @@ export const openApiDocument = {
         type: "object",
         properties: {
           transcodingEnabled: { type: "boolean" },
-          hardwareAcceleration: stringSchema,
+          hardwareAcceleration: {
+            type: "string",
+            enum: [...HARDWARE_ACCELERATION_MODES],
+            description: "Hardware acceleration mode. Unsupported values are treated as 'off'.",
+          },
           hardwareAccelerationRequired: { type: "boolean" },
-          transcodeQualityPreset: stringSchema,
+          transcodeQualityPreset: {
+            type: "string",
+            enum: [...TRANSCODE_QUALITY_PRESETS],
+            description: "Transcode quality preset. Unsupported values fall back to 'auto'.",
+          },
           playbackSessionArtifactMaxBytes: {
             ...nullableIntegerSchema,
-            description: "Combined byte limit for playback-sessions playlists and playback-cache segments.",
+            enum: [null, ...PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS],
+            description:
+              "Combined byte limit for playback-sessions playlists and playback-cache segments. Invalid values fall back to the default.",
           },
           encodeAheadSegmentCount: {
-            ...nullableIntegerSchema,
-            description: "Request-driven HLS encode-ahead window in segments. Minimum 1.",
+            type: "integer",
+            minimum: 1,
+            description: "Request-driven HLS encode-ahead window in segments.",
           },
           playbackCacheTtlHours: {
             type: "number",
+            exclusiveMinimum: true,
             minimum: 0,
-            description: "Idle TTL for unreferenced shared HLS cache entries, in hours. Minimum 1 minute when saved.",
+            description:
+              "Idle TTL for unreferenced shared HLS cache entries, in hours. Values at or below 0 are ignored.",
           },
         },
       },

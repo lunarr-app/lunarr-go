@@ -116,14 +116,14 @@ describe("PATCH /api/profile", () => {
     expect(await getContinueMaxAgeDays("user-2")).toBe(120);
   });
 
-  test("normalizes out-of-range continue max age values", async () => {
+  test("rejects out-of-range continue max age values", async () => {
     const response = await patchProfile({ continueMaxAgeDays: 9999 });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      continueMaxAgeDays: 3650,
+      detail: expect.stringContaining("3650"),
     });
-    expect(await getContinueMaxAgeDays("user-1")).toBe(3650);
+    expect(await getContinueMaxAgeDays("user-1")).toBe(0);
   });
 
   test("updates playback and continue preferences in one request", async () => {
