@@ -578,7 +578,7 @@ describe("showRows", () => {
     expect(rows.all[0]).toMatchObject({ id: "show-1", episodeCount: 2 });
   });
 
-  test("hides stale continue watching and next up without removing season progress", async () => {
+  test("hides stale continue watching without removing season progress", async () => {
     const nowMs = Date.now();
     const now = new Date(nowMs).toISOString();
     const staleUpdatedAt = new Date(nowMs - 100 * 24 * 60 * 60 * 1000).toISOString();
@@ -687,7 +687,8 @@ describe("showRows", () => {
     const rows = await tvRows("user-1");
 
     expect(rows.continueWatching).toEqual([]);
-    expect(rows.nextUp).toEqual([]);
+    expect(rows.nextUp).toHaveLength(1);
+    expect(rows.nextUp[0].id).toBe("episode-3");
 
     const season = await getShowSeasonDetail("show-1", "season-1", "user-1");
     expect(season?.season.episodes.find((episode) => episode.id === "episode-2")).toMatchObject({

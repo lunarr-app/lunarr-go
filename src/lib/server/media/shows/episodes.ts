@@ -10,7 +10,6 @@ import {
   catalogPageSize,
   normalizePage,
   paginatedGroupedRail,
-  paginatedSlice,
   type ShowSort,
   type ShowBrowseRail,
 } from "../catalog";
@@ -18,7 +17,6 @@ import { publicMovieSummary, summarizeMovieProgress } from "../progress";
 import {
   continueMaxAgeCutoffSqlForDays,
   getContinueMaxAgeDays,
-  isContinueProgressFresh,
   MIN_CONTINUE_POSITION_SECONDS,
 } from "../continue-max-age";
 import type { EpisodeBrowseRow } from "../types";
@@ -115,8 +113,6 @@ function episodeBrowseSelect(filtered: ReturnType<typeof filteredEpisodeBrowse>)
     .groupBy("episode.id");
 }
 
-type EpisodeBrowseQuery = ReturnType<typeof episodeBrowseSelect>;
-
 function completedEpisodeIdsQuery(db: Kysely<Database>, userId: string) {
   return db
     .selectFrom("watch_progress")
@@ -172,30 +168,6 @@ function orderContinueEpisodes(query: ReturnType<typeof applyEpisodeContinueWatc
     .orderBy("episode.title", "asc");
 }
 
-function applyWithProgressShowFilter(query: EpisodeBrowseQuery, userId: string) {
-  return query.where((eb) =>
-    eb.exists(
-      eb
-        .selectFrom("watch_progress as any_progress")
-        .innerJoin("media_item as progressed_episode", "progressed_episode.id", "any_progress.media_item_id")
-        .innerJoin("media_item as progressed_season", "progressed_season.id", "progressed_episode.parent_id")
-        .select("any_progress.media_item_id")
-        .where("any_progress.user_id", "=", userId)
-        .where("progressed_episode.kind", "=", "episode")
-        .where("progressed_season.kind", "=", "season")
-        .whereRef("progressed_season.parent_id", "=", "show.id"),
-    ),
-  );
-}
-
-function orderEpisodeBrowseDefault(query: EpisodeBrowseQuery) {
-  return query
-    .orderBy("show.sort_title", "asc")
-    .orderBy("episode.season_number", "asc")
-    .orderBy("episode.episode_number", "asc")
-    .orderBy("episode.title", "asc");
-}
-
 async function paginatedContinueEpisodeRows(userId: string, page: number, limit: number, maxAgeDays: number) {
   const db = await getDb();
   const ordered = orderContinueEpisodes(
@@ -215,69 +187,133 @@ async function paginatedContinueEpisodeRows(userId: string, page: number, limit:
   );
 }
 
-async function allWithProgressEpisodeRows(userId: string) {
-  const db = await getDb();
-  return orderEpisodeBrowseDefault(
-    applyWithProgressShowFilter(episodeBrowseSelect(filteredEpisodeBrowse(db, userId)), userId),
-  ).execute();
-}
-
-async function buildNextUpEpisodeRows(userId: string, maxAgeDays: number) {
-  const rows = await allWithProgressEpisodeRows(userId);
-  if (rows.length === 0) return [] as EpisodeBrowseRow[];
-
-  const progress = await tvEpisodeProgress(
-    userId,
-    rows.map((episode) => episode.id),
-  );
-  const completedEpisodes = progress.completedMovies;
-  const inProgressEpisodes = new Set(
-    rows
-      .filter((episode) => {
-        const latest = progress.latestIncompleteProgress.get(episode.id);
-        return latest && Number(latest.position_seconds ?? 0) >= MIN_CONTINUE_POSITION_SECONDS;
-      })
-      .map((episode) => episode.id),
-  );
-  const activeShowIds =
-    maxAgeDays > 0
-      ? new Set(
-          rows
-            .filter((episode) => {
-              const latest = progress.latestProgress.get(episode.id);
-              return latest?.updated_at ? isContinueProgressFresh(latest.updated_at, { maxAgeDays }) : false;
-            })
-            .map((episode) => episode.show_id),
+function nextUpEpisodeQuery(db: Kysely<Database>, userId: string) {
+  return db
+    .with("latest_completed", (creator) =>
+      creator
+        .selectFrom("watch_progress")
+        .innerJoin("media_item as episode", "episode.id", "watch_progress.media_item_id")
+        .innerJoin("media_item as season", "season.id", "episode.parent_id")
+        .innerJoin("media_item as show", "show.id", "season.parent_id")
+        .select([
+          sql<string>`show.id`.as("show_id"),
+          "episode.season_number",
+          "episode.episode_number",
+          sql<number>`row_number() over (partition by show.id order by episode.season_number desc, episode.episode_number desc)`.as(
+            "rn",
+          ),
+        ])
+        .where("watch_progress.user_id", "=", userId)
+        .where(sql<boolean>`watch_progress.completed = 1`),
+    )
+    .with("candidate_next", (creator) =>
+      creator
+        .selectFrom("latest_completed")
+        .innerJoin("media_item as show", "show.id", "latest_completed.show_id")
+        .innerJoin("media_item as season", "season.parent_id", "show.id")
+        .innerJoin("media_item as episode", "episode.parent_id", "season.id")
+        .innerJoin("media_file", "media_file.media_item_id", "episode.id")
+        .leftJoin("watch_progress as completed_progress", (join) =>
+          join
+            .onRef("completed_progress.media_item_id", "=", "episode.id")
+            .on("completed_progress.user_id", "=", userId)
+            .on(sql<boolean>`completed_progress.completed = 1`),
         )
-      : null;
-  const byShow = new Map<string, EpisodeBrowseRow[]>();
-  for (const row of rows) {
-    if (activeShowIds && !activeShowIds.has(row.show_id)) continue;
-    const showRows = byShow.get(row.show_id) ?? [];
-    showRows.push(row);
-    byShow.set(row.show_id, showRows);
-  }
-
-  const nextRows: EpisodeBrowseRow[] = [];
-  for (const showEpisodes of byShow.values()) {
-    const latestCompletedIndex = showEpisodes.reduce(
-      (latest, episode, index) => (completedEpisodes.has(episode.id) ? index : latest),
-      -1,
-    );
-    if (latestCompletedIndex === -1) continue;
-    const next = showEpisodes
-      .slice(latestCompletedIndex + 1)
-      .find((episode) => !completedEpisodes.has(episode.id) && !inProgressEpisodes.has(episode.id));
-    if (next) nextRows.push(next);
-  }
-
-  return nextRows;
+        .leftJoin("watch_progress as in_progress", (join) =>
+          join
+            .onRef("in_progress.media_item_id", "=", "episode.id")
+            .on("in_progress.user_id", "=", userId)
+            .on(sql<boolean>`in_progress.completed = 0`)
+            .on("in_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS),
+        )
+        .select([
+          "episode.id",
+          "episode.title",
+          "episode.overview",
+          "episode.season_number",
+          "episode.episode_number",
+          "episode.release_date",
+          "episode.runtime_seconds",
+          "episode.poster_path",
+          "episode.popularity",
+          "episode.vote_average",
+          sql<string>`season.id`.as("season_id"),
+          sql<string>`season.title`.as("season_title"),
+          sql<string>`show.id`.as("show_id"),
+          sql<string>`show.title`.as("show_title"),
+          sql<string>`show.sort_title`.as("show_sort_title"),
+          sql<number | null>`show.year`.as("show_year"),
+          sql<string | null>`show.poster_path`.as("show_poster_path"),
+          sql<string | null>`show.backdrop_path`.as("show_backdrop_path"),
+          sql<number>`count(distinct media_file.id)`.as("file_count"),
+          sql<string | null>`min(media_file.id)`.as("first_file_id"),
+          sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
+          sql<number>`row_number() over (partition by show.id order by episode.season_number asc, episode.episode_number asc)`.as(
+            "rn",
+          ),
+        ])
+        .where("latest_completed.rn", "=", 1)
+        .where(accessibleLibrarySql(userId))
+        .where(
+          sql<boolean>`(
+          episode.season_number > latest_completed.season_number
+          or (
+            episode.season_number = latest_completed.season_number
+            and episode.episode_number > latest_completed.episode_number
+          )
+        )`,
+        )
+        .where("completed_progress.media_item_id", "is", null)
+        .where("in_progress.media_item_id", "is", null)
+        .groupBy("episode.id"),
+    )
+    .selectFrom("candidate_next")
+    .select([
+      "candidate_next.id",
+      "candidate_next.title",
+      "candidate_next.overview",
+      "candidate_next.season_number",
+      "candidate_next.episode_number",
+      "candidate_next.release_date",
+      "candidate_next.runtime_seconds",
+      "candidate_next.poster_path",
+      "candidate_next.popularity",
+      "candidate_next.vote_average",
+      "candidate_next.season_id",
+      "candidate_next.season_title",
+      "candidate_next.show_id",
+      "candidate_next.show_title",
+      "candidate_next.show_sort_title",
+      "candidate_next.show_year",
+      "candidate_next.show_poster_path",
+      "candidate_next.show_backdrop_path",
+      "candidate_next.file_count",
+      "candidate_next.first_file_id",
+      "candidate_next.latest_file_created_at",
+    ])
+    .where("candidate_next.rn", "=", 1)
+    .orderBy("candidate_next.show_sort_title", "asc")
+    .orderBy("candidate_next.season_number", "asc")
+    .orderBy("candidate_next.episode_number", "asc")
+    .orderBy("candidate_next.title", "asc")
+    .$castTo<EpisodeBrowseRow>();
 }
 
-async function paginatedNextUpEpisodeRows(userId: string, page: number, limit: number, maxAgeDays: number) {
-  const allNextRows = await buildNextUpEpisodeRows(userId, maxAgeDays);
-  const { items, page: pageInfo } = paginatedSlice(page, limit, allNextRows);
-  return { items, page: pageInfo };
+async function paginatedNextUpEpisodeRows(userId: string, page: number, limit: number) {
+  const db = await getDb();
+  const ordered = nextUpEpisodeQuery(db, userId);
+  return paginatedGroupedRail(
+    ordered,
+    async () => {
+      const totalRow = await db
+        .selectFrom(ordered.as("next_up_rows"))
+        .select(sql<number>`count(*)`.as("total"))
+        .executeTakeFirst();
+      return Number(totalRow?.total ?? 0);
+    },
+    page,
+    limit,
+  );
 }
 
 async function mapEpisodeSummaries(userId: string, episodes: EpisodeBrowseRow[]) {
@@ -314,8 +350,7 @@ export async function tvRows(
 ): Promise<ShowRowsResponse | Partial<ShowRowsResponse>> {
   const page = normalizePage(pageInput);
   const limit = catalogPageSize(pageSize);
-  const needsContinueMaxAge =
-    !rails || rails.length === 0 || rails.some((rail) => rail === "continueWatching" || rail === "nextUp");
+  const needsContinueMaxAge = !rails || rails.length === 0 || rails.some((rail) => rail === "continueWatching");
   const maxAgeDays = needsContinueMaxAge ? await getContinueMaxAgeDays(userId) : 0;
 
   const fetchRail = async (rail: ShowBrowseRail): Promise<Partial<ShowRowsResponse>> => {
@@ -328,7 +363,7 @@ export async function tvRows(
     }
 
     if (rail === "nextUp") {
-      const { items, page: railPage } = await paginatedNextUpEpisodeRows(userId, page, limit, maxAgeDays);
+      const { items, page: railPage } = await paginatedNextUpEpisodeRows(userId, page, limit);
       return {
         nextUp: await mapEpisodeSummaries(userId, items),
         nextUpPage: railPage,
@@ -346,7 +381,7 @@ export async function tvRows(
   const [browse, continueRail, nextUpRail] = await Promise.all([
     showBrowseRows(userId, search, sort, pageInput, pageSize),
     paginatedContinueEpisodeRows(userId, page, limit, maxAgeDays),
-    paginatedNextUpEpisodeRows(userId, page, limit, maxAgeDays),
+    paginatedNextUpEpisodeRows(userId, page, limit),
   ]);
   const episodeIds = [...new Set([...continueRail.items, ...nextUpRail.items].map((episode) => episode.id))];
   const progress = await tvEpisodeProgress(userId, episodeIds);
@@ -389,12 +424,10 @@ export async function nextUpEpisodeRows(
   userId: string,
   pageInput = 1,
   pageSize = BROWSE_RAIL_LIMIT,
-  maxAgeDaysInput?: number,
 ): Promise<Pick<ShowRowsResponse, "nextUp" | "nextUpPage">> {
   const page = normalizePage(pageInput);
   const limit = catalogPageSize(pageSize);
-  const maxAgeDays = maxAgeDaysInput ?? (await getContinueMaxAgeDays(userId));
-  const nextUpRail = await paginatedNextUpEpisodeRows(userId, page, limit, maxAgeDays);
+  const nextUpRail = await paginatedNextUpEpisodeRows(userId, page, limit);
 
   return {
     nextUp: await mapEpisodeSummaries(userId, nextUpRail.items),
@@ -410,7 +443,7 @@ export async function continueTvRows(
   const maxAgeDays = await getContinueMaxAgeDays(userId);
   const [continueResults, nextUpResults] = await Promise.all([
     continueEpisodeRows(userId, pageInput, pageSize, maxAgeDays),
-    nextUpEpisodeRows(userId, pageInput, pageSize, maxAgeDays),
+    nextUpEpisodeRows(userId, pageInput, pageSize),
   ]);
 
   return {
