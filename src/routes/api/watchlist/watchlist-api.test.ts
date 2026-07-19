@@ -7,6 +7,7 @@ import { GET as watchlistGet } from "./+server";
 import { GET as watchlistMoviesGet } from "./movies/+server";
 import { GET as watchlistShowsGet } from "./shows/+server";
 import { POST as watchlistPost } from "./+server";
+import { GET as watchlistStatusGet } from "./[mediaItemId]/+server";
 import { DELETE as watchlistDelete } from "./[mediaItemId]/+server";
 
 describe("watchlist API", () => {
@@ -439,6 +440,64 @@ describe("watchlist API", () => {
       totalPages: 2,
       hasNext: true,
     });
+  });
+
+  test("watchlist status endpoint returns true for watchlisted item", async () => {
+    await setupWatchlist();
+    const db = await getDb();
+    const now = new Date().toISOString();
+
+    await db.insertInto("watchlist").values({ user_id: "user-1", media_item_id: "movie-1", created_at: now }).execute();
+
+    const response = await watchlistStatusGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      params: { mediaItemId: "movie-1" },
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ inWatchlist: true });
+  });
+
+  test("watchlist status endpoint returns false for non-watchlisted item", async () => {
+    await setupWatchlist();
+
+    const response = await watchlistStatusGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      params: { mediaItemId: "movie-1" },
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ inWatchlist: false });
+  });
+
+  test("watchlist status endpoint only checks for the authenticated user", async () => {
+    await setupWatchlist();
+    const db = await getDb();
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+
+    await db
+      .insertInto("user")
+      .values({
+        id: "user-2",
+        name: "Other",
+        email: "other@example.com",
+        role: "user",
+        email_verified: 0,
+        image: null,
+        created_at: nowMs,
+        updated_at: nowMs,
+      })
+      .execute();
+    await db.insertInto("watchlist").values({ user_id: "user-2", media_item_id: "movie-1", created_at: now }).execute();
+
+    const response = await watchlistStatusGet({
+      locals: { user: { id: "user-1", role: "user" } },
+      params: { mediaItemId: "movie-1" },
+    } as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ inWatchlist: false });
   });
 
   test("delete watchlist endpoint removes item", async () => {

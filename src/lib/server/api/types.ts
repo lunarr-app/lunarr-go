@@ -201,6 +201,10 @@ export type WatchlistToggleResponse = {
   inWatchlist: boolean;
 };
 
+export type WatchlistStatusResponse = {
+  inWatchlist: boolean;
+};
+
 export type WatchlistPageResponse = {
   movies: MovieSummary[];
   moviesPage: CatalogPageInfo;
@@ -298,6 +302,7 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "MetadataRefreshResponse",
   "ScanStartResponse",
   "WatchlistToggleResponse",
+  "WatchlistStatusResponse",
   "WatchlistPageResponse",
   "WatchlistMoviesResponse",
   "WatchlistShowsResponse",

@@ -1534,11 +1534,21 @@ export const openApiDocument = {
       },
     },
     "/api/watchlist/{mediaItemId}": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Check whether a media item is in the user's watchlist.",
+        operationId: "getWatchlistStatus",
+        parameters: [pathIdParameter("mediaItemId", "Media item identifier.")],
+        responses: {
+          "200": jsonResponse({ $ref: "#/components/schemas/WatchlistStatusResponse" }),
+          "401": errorResponse,
+        },
+      },
       delete: {
         tags: ["Catalog"],
         summary: "Remove an item from the watchlist.",
         operationId: "removeFromWatchlist",
-        parameters: [pathIdParameter()],
+        parameters: [pathIdParameter("mediaItemId", "Media item identifier.")],
         responses: {
           "204": noContentResponse,
           "401": errorResponse,
@@ -3845,6 +3855,13 @@ export const openApiDocument = {
         required: ["ok", "inWatchlist"],
         properties: {
           ok: { type: "boolean", enum: [true] },
+          inWatchlist: { type: "boolean" },
+        },
+      },
+      WatchlistStatusResponse: {
+        type: "object",
+        required: ["inWatchlist"],
+        properties: {
           inWatchlist: { type: "boolean" },
         },
       },
