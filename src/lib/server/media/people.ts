@@ -96,65 +96,93 @@ function personShowCreditsQuery(
     .orderBy("show.sort_title", "asc");
 }
 
-async function countPersonMovieCredits(
+async function personMovieStats(
   db: Awaited<ReturnType<typeof getDb>>,
   provider: string,
   providerId: string,
   userId: string,
 ) {
-  const grouped = personMovieCreditsQuery(db, provider, providerId, userId);
-  const row = await db
-    .selectFrom(grouped.as("credits"))
-    .select(sql<number>`count(*)`.as("total"))
+  return db
+    .selectFrom("media_item_credit")
+    .innerJoin("media_item", "media_item.id", "media_item_credit.media_item_id")
+    .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+    .select([
+      sql<number>`count(distinct media_item.id || ':' || coalesce(media_item_credit.character_name, ''))`.as("total"),
+      sql<number | null>`min(media_item.year)`.as("year_min"),
+      sql<number | null>`max(media_item.year)`.as("year_max"),
+      sql<string | null>`group_concat(distinct media_item_credit.character_name)`.as("characters"),
+    ])
+    .where("media_item.kind", "=", "movie")
+    .where("media_item_credit.credit_type", "=", "cast")
+    .where("media_item_credit.provider", "=", provider)
+    .where("media_item_credit.provider_id", "=", providerId)
+    .where(accessibleLibrarySql(userId))
     .executeTakeFirst();
-  return Number(row?.total ?? 0);
 }
 
-async function countPersonShowCredits(
+async function personShowStats(
   db: Awaited<ReturnType<typeof getDb>>,
   provider: string,
   providerId: string,
   userId: string,
 ) {
-  const grouped = personShowCreditsQuery(db, provider, providerId, userId);
-  const row = await db
-    .selectFrom(grouped.as("credits"))
-    .select(sql<number>`count(*)`.as("total"))
+  return db
+    .selectFrom("media_item_credit")
+    .innerJoin("media_item as show", "show.id", "media_item_credit.media_item_id")
+    .innerJoin("media_item as season", "season.parent_id", "show.id")
+    .innerJoin("media_item as episode", "episode.parent_id", "season.id")
+    .innerJoin("media_file", "media_file.media_item_id", "episode.id")
+    .select([
+      sql<number>`count(distinct show.id || ':' || coalesce(media_item_credit.character_name, ''))`.as("total"),
+      sql<number | null>`min(show.year)`.as("year_min"),
+      sql<number | null>`max(show.year)`.as("year_max"),
+      sql<string | null>`group_concat(distinct media_item_credit.character_name)`.as("characters"),
+    ])
+    .where("show.kind", "=", "show")
+    .where("season.kind", "=", "season")
+    .where("episode.kind", "=", "episode")
+    .where("media_item_credit.credit_type", "=", "cast")
+    .where("media_item_credit.provider", "=", provider)
+    .where("media_item_credit.provider_id", "=", providerId)
+    .where(accessibleLibrarySql(userId))
     .executeTakeFirst();
-  return Number(row?.total ?? 0);
 }
 
-async function fetchPersonFilmographyStats(
+function parseCharacterList(raw: string | null | undefined) {
+  if (!raw) return [];
+  const split = raw.split(",");
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of split) {
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+export async function fetchPersonFilmographyStats(
   db: Awaited<ReturnType<typeof getDb>>,
   provider: string,
   providerId: string,
   userId: string,
 ): Promise<PersonFilmographyStats> {
-  const [movieCount, showCount, movieYears, showYears, movieCharacters, showCharacters] = await Promise.all([
-    countPersonMovieCredits(db, provider, providerId, userId),
-    countPersonShowCredits(db, provider, providerId, userId),
-    personMovieCreditsQuery(db, provider, providerId, userId).clearSelect().select("media_item.year as year").execute(),
-    personShowCreditsQuery(db, provider, providerId, userId).clearSelect().select("show.year as year").execute(),
-    personMovieCreditsQuery(db, provider, providerId, userId)
-      .clearSelect()
-      .select("media_item_credit.character_name as character")
-      .execute(),
-    personShowCreditsQuery(db, provider, providerId, userId)
-      .clearSelect()
-      .select("media_item_credit.character_name as character")
-      .execute(),
+  const [movieRow, showRow] = await Promise.all([
+    personMovieStats(db, provider, providerId, userId),
+    personShowStats(db, provider, providerId, userId),
   ]);
 
-  const years = [...movieYears, ...showYears]
-    .map((row) => row.year)
-    .filter((year): year is number => typeof year === "number");
-  const characters = [...movieCharacters, ...showCharacters]
-    .map((row) => row.character)
-    .filter((character): character is string => Boolean(character));
+  const years = [movieRow?.year_min, movieRow?.year_max, showRow?.year_min, showRow?.year_max].filter(
+    (year): year is number => typeof year === "number",
+  );
+  const characters = [...parseCharacterList(movieRow?.characters), ...parseCharacterList(showRow?.characters)];
 
   return {
-    movieCount,
-    showCount,
+    movieCount: Number(movieRow?.total ?? 0),
+    showCount: Number(showRow?.total ?? 0),
     yearMin: years.length > 0 ? Math.min(...years) : null,
     yearMax: years.length > 0 ? Math.max(...years) : null,
     characters: [...new Set(characters)].slice(0, 6),
