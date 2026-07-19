@@ -1,11 +1,13 @@
 import { Readable } from "node:stream";
+import { buffer } from "node:stream/consumers";
 import { sql } from "kysely";
 import { getDb } from "../db";
-import { createLibraryStorage } from "../storage";
+import { createLibraryStorage, type LibraryStorage } from "../storage";
 import { attachStreamAbortCleanup, inlineContentDisposition } from "./stream";
 import { accessibleLibrarySql } from "./catalog";
+import { convertSrtToVtt } from "./srt-to-vtt";
 
-export async function getExternalMovieSubtitleTrack(id: string, userId: string) {
+export async function getExternalSubtitleTrack(id: string, userId: string) {
   const db = await getDb();
   return db
     .selectFrom("subtitle_track")
@@ -37,13 +39,13 @@ export async function getExternalMovieSubtitleTrack(id: string, userId: string) 
     .executeTakeFirst();
 }
 
-export async function externalMovieSubtitleResponse(
+export async function externalSubtitleResponse(
   id: string,
   userId: string,
   includeBody = true,
   signal?: AbortSignal | null,
 ) {
-  const track = await getExternalMovieSubtitleTrack(id, userId);
+  const track = await getExternalSubtitleTrack(id, userId);
   if (!track?.path || !track.source) return new Response(includeBody ? "Not found" : null, { status: 404 });
 
   const storage = await createLibraryStorage(track);
@@ -53,10 +55,18 @@ export async function externalMovieSubtitleResponse(
     return new Response(includeBody ? "Subtitle file is no longer available" : null, { status: 404 });
   }
 
-  const headers = {
-    "content-type": track.mime_type ?? "text/vtt",
-    "content-length": String(info.size),
+  const commonHeaders = {
     "content-disposition": inlineContentDisposition(track.label),
+  };
+
+  if (track.mime_type === "application/x-subrip") {
+    return srtSubtitleResponse(storage, track.path, commonHeaders, includeBody, signal);
+  }
+
+  const headers = {
+    ...commonHeaders,
+    "content-type": "text/vtt",
+    "content-length": String(info.size),
   };
 
   if (!includeBody) {
@@ -83,4 +93,33 @@ export async function externalMovieSubtitleResponse(
   return new Response(Readable.toWeb(stream) as unknown as BodyInit, {
     headers,
   });
+}
+
+async function srtSubtitleResponse(
+  storage: LibraryStorage,
+  filePath: string,
+  commonHeaders: Record<string, string>,
+  includeBody: boolean,
+  signal?: AbortSignal | null,
+) {
+  if (signal?.aborted) {
+    await storage.close();
+    return new Response(null, { status: 499 });
+  }
+
+  try {
+    const srtBuffer = await buffer(await storage.createReadStream(filePath));
+    await storage.close();
+    const vttText = convertSrtToVtt(srtBuffer.toString("utf-8"));
+    const vttBuffer = Buffer.from(vttText, "utf-8");
+    const headers = {
+      ...commonHeaders,
+      "content-type": "text/vtt",
+      "content-length": String(vttBuffer.length),
+    };
+    return new Response(includeBody ? vttBuffer : null, { headers });
+  } catch (error) {
+    await storage.close();
+    throw error;
+  }
 }

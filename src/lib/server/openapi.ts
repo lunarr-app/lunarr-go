@@ -1488,7 +1488,7 @@ export const openApiDocument = {
         operationId: "getSubtitle",
         parameters: [pathIdParameter()],
         responses: {
-          "200": textResponse("Subtitle file.", "text/vtt"),
+          "200": textResponse("Subtitle file. SRT sidecars are normalized to WebVTT.", "text/vtt"),
           "401": errorResponse,
           "403": errorResponse,
           "404": errorResponse,

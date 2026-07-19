@@ -1,7 +1,7 @@
 import path from "node:path";
 import { getDb } from "../db";
 import { createId } from "../id";
-import { isSidecarSubtitlePath } from "./media-files";
+import { isSidecarSubtitlePath, sidecarSubtitleMimeType } from "./media-files";
 import { readCachedDirectoryEntries } from "./scan-context";
 import type { ScanContext } from "./scan-types";
 
@@ -45,6 +45,10 @@ async function findSidecarSubtitleFiles(videoPath: string, context: ScanContext)
     .sort((left, right) => left.localeCompare(right));
 }
 
+function isVttSubtitle(filePath: string) {
+  return path.extname(filePath).toLowerCase() === ".vtt";
+}
+
 export async function syncSidecarSubtitleTracks(
   mediaItemId: string,
   mediaFileId: string,
@@ -55,19 +59,33 @@ export async function syncSidecarSubtitleTracks(
   const db = await getDb();
   const subtitlePaths = await findSidecarSubtitleFiles(filePath, context);
   if (!subtitlePaths) return;
-  const seenPaths = new Set(subtitlePaths);
 
-  for (const [index, subtitlePath] of subtitlePaths.entries()) {
-    const metadata = sidecarSubtitleMetadata(filePath, subtitlePath, index);
+  const candidates = subtitlePaths.map((subtitlePath, index) => ({
+    path: subtitlePath,
+    ...sidecarSubtitleMetadata(filePath, subtitlePath, index),
+    mimeType: sidecarSubtitleMimeType(subtitlePath),
+  }));
+
+  const languageToCandidate = new Map<string, (typeof candidates)[number]>();
+  for (const candidate of candidates) {
+    const existing = languageToCandidate.get(candidate.language);
+    if (!existing || (isVttSubtitle(candidate.path) && !isVttSubtitle(existing.path))) {
+      languageToCandidate.set(candidate.language, candidate);
+    }
+  }
+  const deduped = candidates.filter((candidate) => languageToCandidate.get(candidate.language) === candidate);
+  const seenPaths = new Set(deduped.map((candidate) => candidate.path));
+
+  for (const [index, candidate] of deduped.entries()) {
     const values = {
       media_item_id: mediaItemId,
       media_file_id: mediaFileId,
-      label: metadata.label,
-      language: metadata.language,
+      label: candidate.label,
+      language: candidate.language,
       source_kind: "external" as const,
-      path: subtitlePath,
-      mime_type: "text/vtt",
-      is_default: metadata.isDefault ? 1 : 0,
+      path: candidate.path,
+      mime_type: candidate.mimeType,
+      is_default: candidate.isDefault || index === 0 ? 1 : 0,
       updated_at: now,
     };
     const existing = await db
@@ -75,7 +93,7 @@ export async function syncSidecarSubtitleTracks(
       .select("id")
       .where("media_file_id", "=", mediaFileId)
       .where("source_kind", "=", "external")
-      .where("path", "=", subtitlePath)
+      .where("path", "=", candidate.path)
       .executeTakeFirst();
 
     if (existing) {

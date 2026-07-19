@@ -1,4 +1,4 @@
-import { externalMovieSubtitleResponse } from "$lib/server/media/subtitles";
+import { externalSubtitleResponse } from "$lib/server/media/subtitles";
 import { authorizeSubtitleMedia } from "$lib/server/shares/media-auth";
 import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "$lib/server/playback/signed-token";
 import { apiError } from "$lib/server/api/json";
@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
     return apiError("Unauthorized", 401);
   }
 
-  const response = await externalMovieSubtitleResponse(params.id, auth.userId, true, request?.signal);
+  const response = await externalSubtitleResponse(params.id, auth.userId, true, request?.signal);
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 
@@ -28,7 +28,7 @@ export const HEAD: RequestHandler = async ({ params, locals, request, url }) => 
     return new Response(null, { status: 401 });
   }
 
-  const response = await externalMovieSubtitleResponse(params.id, auth.userId, false, request?.signal);
+  const response = await externalSubtitleResponse(params.id, auth.userId, false, request?.signal);
   return withSignedPlaybackHeaders(response, auth.signed);
 };
 

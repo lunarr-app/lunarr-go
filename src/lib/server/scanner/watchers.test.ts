@@ -5,6 +5,7 @@ describe("library scan watchers", () => {
   test("reacts to supported media and subtitle paths", () => {
     expect(shouldReactToLibraryWatchEvent("/movies/The Matrix (1999)/The Matrix.mkv")).toBe(true);
     expect(shouldReactToLibraryWatchEvent("/movies/The Matrix (1999)/The Matrix.en.vtt")).toBe(true);
+    expect(shouldReactToLibraryWatchEvent("/movies/The Matrix (1999)/The Matrix.en.srt")).toBe(true);
     expect(shouldReactToLibraryWatchEvent("/movies/The Matrix (1999)")).toBe(true);
   });
 

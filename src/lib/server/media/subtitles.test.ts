@@ -5,9 +5,9 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
-import { externalMovieSubtitleResponse, getExternalMovieSubtitleTrack } from "./subtitles";
+import { externalSubtitleResponse, getExternalSubtitleTrack } from "./subtitles";
 
-describe("getExternalMovieSubtitleTrack", () => {
+describe("getExternalSubtitleTrack", () => {
   let tempDir: string;
   let db: Kysely<Database>;
 
@@ -153,6 +153,19 @@ describe("getExternalMovieSubtitleTrack", () => {
           updated_at: now,
         },
         {
+          id: "srt-subtitle",
+          media_item_id: "movie-1",
+          media_file_id: "movie-file",
+          label: "English",
+          language: "en",
+          source_kind: "external",
+          path: path.join(tempDir, "Movie.en.srt"),
+          mime_type: "application/x-subrip",
+          is_default: 0,
+          created_at: now,
+          updated_at: now,
+        },
+        {
           id: "embedded-subtitle",
           media_item_id: "movie-1",
           media_file_id: "movie-file",
@@ -178,27 +191,27 @@ describe("getExternalMovieSubtitleTrack", () => {
   });
 
   test("returns only external subtitle tracks for movie items", async () => {
-    expect(await getExternalMovieSubtitleTrack("movie-subtitle", "user-1")).toMatchObject({
+    expect(await getExternalSubtitleTrack("movie-subtitle", "user-1")).toMatchObject({
       label: "English",
       mime_type: "text/vtt",
     });
-    expect(await getExternalMovieSubtitleTrack("shared-movie-subtitle", "user-1")).toMatchObject({
+    expect(await getExternalSubtitleTrack("shared-movie-subtitle", "user-1")).toMatchObject({
       label: "Shared English",
       mime_type: "text/vtt",
     });
-    expect(await getExternalMovieSubtitleTrack("show-subtitle", "user-1")).toBeUndefined();
-    expect(await getExternalMovieSubtitleTrack("embedded-subtitle", "user-1")).toBeUndefined();
+    expect(await getExternalSubtitleTrack("show-subtitle", "user-1")).toBeUndefined();
+    expect(await getExternalSubtitleTrack("embedded-subtitle", "user-1")).toBeUndefined();
   });
 
   test("serves external movie subtitle bodies and HEAD metadata", async () => {
-    const response = await externalMovieSubtitleResponse("movie-subtitle", "user-1");
+    const response = await externalSubtitleResponse("movie-subtitle", "user-1");
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/vtt");
     expect(response.headers.get("content-length")).toBe("44");
     expect(response.headers.get("content-disposition")).toBe('inline; filename="English"');
     expect(await response.text()).toBe("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n");
 
-    const headResponse = await externalMovieSubtitleResponse("movie-subtitle", "user-1", false);
+    const headResponse = await externalSubtitleResponse("movie-subtitle", "user-1", false);
     expect(headResponse.status).toBe(200);
     expect(headResponse.headers.get("content-type")).toBe("text/vtt");
     expect(headResponse.headers.get("content-length")).toBe("44");
@@ -206,7 +219,7 @@ describe("getExternalMovieSubtitleTrack", () => {
   });
 
   test("serves shared external movie subtitles without a media file id", async () => {
-    const response = await externalMovieSubtitleResponse("shared-movie-subtitle", "user-1");
+    const response = await externalSubtitleResponse("shared-movie-subtitle", "user-1");
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/vtt");
@@ -215,19 +228,42 @@ describe("getExternalMovieSubtitleTrack", () => {
     expect(await response.text()).toBe("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nShared\n");
   });
 
+  test("serves external SRT subtitles as converted WebVTT", async () => {
+    const srtPath = path.join(tempDir, "Movie.en.srt");
+    await writeFile(
+      srtPath,
+      "1\n00:00:00,000 --> 00:00:02,000\nHello SRT\n\n2\n00:00:02,000 --> 00:00:03,500\nLine two\n",
+    );
+
+    const response = await externalSubtitleResponse("srt-subtitle", "user-1");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/vtt");
+    const body = await response.text();
+    expect(body.startsWith("WEBVTT\n\n")).toBe(true);
+    expect(body).toContain("00:00:00.000 --> 00:00:02.000");
+    expect(body).toContain("Hello SRT");
+    expect(body).toContain("00:00:02.000 --> 00:00:03.500");
+
+    const headResponse = await externalSubtitleResponse("srt-subtitle", "user-1", false);
+    expect(headResponse.status).toBe(200);
+    expect(headResponse.headers.get("content-type")).toBe("text/vtt");
+    expect(Number(headResponse.headers.get("content-length"))).toBeGreaterThan(0);
+    expect(headResponse.body).toBeNull();
+  });
+
   test("returns not found for missing subtitle files", async () => {
-    const response = await externalMovieSubtitleResponse("missing-subtitle", "user-1");
+    const response = await externalSubtitleResponse("missing-subtitle", "user-1");
     expect(response.status).toBe(404);
 
     await rm(path.join(tempDir, "Movie.en.vtt"));
-    const staleResponse = await externalMovieSubtitleResponse("movie-subtitle", "user-1", false);
+    const staleResponse = await externalSubtitleResponse("movie-subtitle", "user-1", false);
     expect(staleResponse.status).toBe(404);
     expect(staleResponse.body).toBeNull();
   });
 
   test("returns 499 when the client disconnects before subtitle streaming starts", async () => {
     const signal = AbortSignal.abort();
-    const response = await externalMovieSubtitleResponse("movie-subtitle", "user-1", true, signal);
+    const response = await externalSubtitleResponse("movie-subtitle", "user-1", true, signal);
 
     expect(response.status).toBe(499);
     expect(response.body).toBeNull();
@@ -237,11 +273,11 @@ describe("getExternalMovieSubtitleTrack", () => {
     await rm(path.join(tempDir, "Movie.en.vtt"));
     await mkdir(path.join(tempDir, "Movie.en.vtt"));
 
-    const response = await externalMovieSubtitleResponse("movie-subtitle", "user-1");
+    const response = await externalSubtitleResponse("movie-subtitle", "user-1");
     expect(response.status).toBe(404);
     expect(await response.text()).toBe("Subtitle file is no longer available");
 
-    const headResponse = await externalMovieSubtitleResponse("movie-subtitle", "user-1", false);
+    const headResponse = await externalSubtitleResponse("movie-subtitle", "user-1", false);
     expect(headResponse.status).toBe(404);
     expect(headResponse.body).toBeNull();
   });
