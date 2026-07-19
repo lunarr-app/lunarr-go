@@ -5,6 +5,7 @@ import { getDb } from "../../db";
 import { TV_SHOW_CREATOR_JOBS } from "../../metadata/tv";
 import { accessibleLibrarySql } from "../catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
+import { isInWatchlist } from "../watchlist";
 import { tvEpisodeProgress } from "./episodes";
 
 type ShowEpisodeRow = {
@@ -343,7 +344,11 @@ export async function getShowOverview(id: string, userId: string) {
   const show = await fetchAccessibleShowRecord(id, userId);
   if (!show) return null;
 
-  const [metadata, seasonRows] = await Promise.all([fetchShowOverviewMetadata(id), fetchShowSeasonRecords(id)]);
+  const [metadata, seasonRows, inWatchlist] = await Promise.all([
+    fetchShowOverviewMetadata(id),
+    fetchShowSeasonRecords(id),
+    isInWatchlist(userId, id),
+  ]);
   const seasonIds = seasonRows.map((season) => season.id);
   const counts = await fetchSeasonStubCounts(seasonIds, userId);
 
@@ -352,6 +357,7 @@ export async function getShowOverview(id: string, userId: string) {
     creators: metadata.creators,
     keywords: metadata.keywords,
     productionCompanies: metadata.productionCompanies,
+    inWatchlist,
     seasons: seasonRows.map((season) => {
       const seasonCounts = counts.get(season.id) ?? { episodeCount: 0, playableCount: 0, watchedCount: 0 };
       return {
@@ -431,7 +437,11 @@ export async function getShowDetail(id: string, userId: string) {
   const show = await fetchAccessibleShowRecord(id, userId);
   if (!show) return null;
 
-  const [enrichment, seasonRows] = await Promise.all([fetchShowEnrichment(id), fetchShowSeasonRecords(id)]);
+  const [enrichment, seasonRows, inWatchlist] = await Promise.all([
+    fetchShowEnrichment(id),
+    fetchShowSeasonRecords(id),
+    isInWatchlist(userId, id),
+  ]);
   const seasonIds = seasonRows.map((season) => season.id);
   const episodeRows = await fetchShowEpisodeRows(seasonIds, userId);
   const progress = await tvEpisodeProgress(
@@ -446,6 +456,7 @@ export async function getShowDetail(id: string, userId: string) {
     keywords: enrichment.keywords,
     productionCompanies: enrichment.productionCompanies,
     cast: enrichment.cast,
+    inWatchlist,
     seasons: seasonRows.map((season) => ({
       id: season.id,
       title: season.title,

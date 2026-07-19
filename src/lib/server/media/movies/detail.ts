@@ -1,6 +1,7 @@
 import { tmdbImageUrl } from "$lib/media/images";
 import { getDb } from "../../db";
 import { accessibleLibrarySql } from "../catalog";
+import { isInWatchlist } from "../watchlist";
 
 const MOVIE_DETAIL_SELECT = [
   "id",
@@ -96,7 +97,7 @@ async function fetchAccessibleMovieDetail(id: string, userId: string) {
   if (files.length === 0) return null;
 
   const { poster_path: posterPath, backdrop_path: backdropPath, ...movie } = movieRow;
-  const progress = await fetchMovieProgress(id, userId);
+  const [progress, inWatchlist] = await Promise.all([fetchMovieProgress(id, userId), isInWatchlist(userId, id)]);
 
   return {
     movie,
@@ -104,6 +105,7 @@ async function fetchAccessibleMovieDetail(id: string, userId: string) {
     backdropPath,
     files,
     progress,
+    inWatchlist,
   };
 }
 
@@ -195,6 +197,7 @@ export async function getMovieOverview(id: string, userId: string) {
     movie: detail.movie,
     files: detail.files,
     progress: detail.progress,
+    inWatchlist: detail.inWatchlist,
     genres: metadata.genres,
     directors: metadata.directors,
     writers: metadata.writers,

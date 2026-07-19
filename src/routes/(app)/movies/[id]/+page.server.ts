@@ -1,6 +1,6 @@
 import { isAdmin } from "$lib/server/auth/users";
 import { getMovieDetail } from "$lib/server/media/movies/detail";
-import { isInWatchlist, toggleWatchlist } from "$lib/server/media/watchlist";
+import { toggleWatchlist } from "$lib/server/media/watchlist";
 import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
 import { refreshMovieMetadataResult } from "$lib/server/metadata/movies";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
@@ -10,14 +10,10 @@ import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
   const userId = locals.user!.id;
-  const [detail, inWatchlist] = await Promise.all([
-    getMovieDetail(params.id, userId),
-    isInWatchlist(userId, params.id),
-  ]);
+  const detail = await getMovieDetail(params.id, userId);
   if (!detail) throw error(404, "Movie not found");
   return {
     ...detail,
-    inWatchlist,
     canManageMetadata: isAdmin(locals.user),
     canManageShares: isAdmin(locals.user),
     tmdbConfigured: await tmdbCredentialsConfigured(),

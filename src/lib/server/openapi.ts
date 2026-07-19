@@ -2092,6 +2092,7 @@ export const openApiDocument = {
           "movie",
           "files",
           "progress",
+          "inWatchlist",
           "genres",
           "directors",
           "writers",
@@ -2110,6 +2111,7 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/MovieProgressRecord" },
           },
+          inWatchlist: { type: "boolean" },
           genres: {
             type: "array",
             items: stringSchema,
@@ -2159,6 +2161,7 @@ export const openApiDocument = {
           "movie",
           "files",
           "progress",
+          "inWatchlist",
           "genres",
           "cast",
           "directors",
@@ -2178,6 +2181,7 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/MovieProgressRecord" },
           },
+          inWatchlist: { type: "boolean" },
           genres: {
             type: "array",
             items: stringSchema,
@@ -2372,7 +2376,7 @@ export const openApiDocument = {
       },
       ShowOverviewResponse: {
         type: "object",
-        required: ["show", "creators", "keywords", "productionCompanies", "seasons"],
+        required: ["show", "creators", "keywords", "productionCompanies", "inWatchlist", "seasons"],
         properties: {
           show: { $ref: "#/components/schemas/ShowMetadata" },
           creators: {
@@ -2387,6 +2391,7 @@ export const openApiDocument = {
             type: "array",
             items: stringSchema,
           },
+          inWatchlist: { type: "boolean" },
           seasons: {
             type: "array",
             items: { $ref: "#/components/schemas/SeasonOverviewStub" },
@@ -2422,7 +2427,7 @@ export const openApiDocument = {
       },
       ShowFullResponse: {
         type: "object",
-        required: ["show", "creators", "keywords", "productionCompanies", "cast", "seasons"],
+        required: ["show", "creators", "keywords", "productionCompanies", "cast", "inWatchlist", "seasons"],
         properties: {
           show: { $ref: "#/components/schemas/ShowMetadata" },
           creators: {
@@ -2441,6 +2446,7 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/ShowCastCredit" },
           },
+          inWatchlist: { type: "boolean" },
           seasons: {
             type: "array",
             items: {
