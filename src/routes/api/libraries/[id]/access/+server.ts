@@ -1,5 +1,4 @@
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse } from "$lib/server/api/types";
+import { apiErrorFrom } from "$lib/server/api/json";
 import { parseBody, requireJsonAdmin } from "$lib/server/api";
 import { updateLibraryAccess } from "$lib/server/libraries";
 import { z } from "zod";
@@ -17,7 +16,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
   try {
     const input = await parseBody(request, libraryAccessSchema);
     await updateLibraryAccess(params.id, input.accessMode, input.userIds);
-    return apiJson<ApiOkResponse>({ ok: true });
+    return new Response(null, { status: 204 });
   } catch (error) {
     return apiErrorFrom(error, "Could not update library sharing.");
   }

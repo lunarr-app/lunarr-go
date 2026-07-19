@@ -1,5 +1,4 @@
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse } from "$lib/server/api/types";
+import { apiErrorFrom } from "$lib/server/api/json";
 import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
 import { updateRegistrationSettings } from "$lib/server/settings-commands";
 import type { RequestHandler } from "./$types";
@@ -11,7 +10,7 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
   try {
     const input = await parseBody(request, recordObjectSchema);
     await updateRegistrationSettings(input);
-    return apiJson<ApiOkResponse>({ ok: true });
+    return new Response(null, { status: 204 });
   } catch (error) {
     return apiErrorFrom(error, "Could not update registration settings.");
   }

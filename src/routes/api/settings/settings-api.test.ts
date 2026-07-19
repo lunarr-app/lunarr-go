@@ -104,8 +104,7 @@ describe("settings API", () => {
       request: jsonRequest({ signupOpen: true }),
     } as never);
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true });
+    expect(response.status).toBe(204);
 
     const check = await settingsGet({
       locals: { user: { id: "admin-1", role: "admin" } },
@@ -133,8 +132,7 @@ describe("settings API", () => {
       request: jsonRequest({ movieMetadataStalenessDays: 90 }),
     } as never);
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true });
+    expect(response.status).toBe(204);
   });
 
   test("PATCH /api/settings/metadata returns 403 for non-admin", async () => {
@@ -156,8 +154,7 @@ describe("settings API", () => {
       request: jsonRequest({ hardwareAcceleration: "auto" }),
     } as never);
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true });
+    expect(response.status).toBe(204);
   });
 
   test("PATCH /api/settings/transcoding returns 403 for non-admin", async () => {

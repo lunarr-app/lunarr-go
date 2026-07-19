@@ -59,6 +59,10 @@ const noContentResponse = {
   description: "Resource deleted.",
 };
 
+const updatedNoContentResponse = {
+  description: "Resource updated.",
+};
+
 const acceptedResponse = (schema: Record<string, unknown>, description = "Operation accepted.") =>
   jsonResponse(schema, description);
 const textResponse = (description: string, contentType: string) => ({
@@ -653,12 +657,12 @@ export const openApiDocument = {
         tags: ["Admin"],
         summary: "Update library sharing access.",
         operationId: "updateLibraryAccess",
-        parameters: [pathIdParameter()],
+        parameters: [pathIdParameter("id", "Library identifier.")],
         requestBody: {
           $ref: "#/components/requestBodies/LibraryAccessRequest",
         },
         responses: {
-          "200": okResponse,
+          "204": updatedNoContentResponse,
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -1171,7 +1175,7 @@ export const openApiDocument = {
           $ref: "#/components/requestBodies/RegistrationSettingsRequest",
         },
         responses: {
-          "200": okResponse,
+          "204": updatedNoContentResponse,
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -1187,7 +1191,7 @@ export const openApiDocument = {
           $ref: "#/components/requestBodies/MetadataSettingsRequest",
         },
         responses: {
-          "200": okResponse,
+          "204": updatedNoContentResponse,
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
@@ -1203,7 +1207,7 @@ export const openApiDocument = {
           $ref: "#/components/requestBodies/TranscodingSettingsRequest",
         },
         responses: {
-          "200": okResponse,
+          "204": updatedNoContentResponse,
           "400": errorResponse,
           "401": errorResponse,
           "403": errorResponse,
