@@ -106,6 +106,54 @@ function normalizedStartTimeSeconds(value: number | null | undefined) {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+type ActiveHlsArtifactRow = Awaited<ReturnType<ReturnType<typeof activeHlsArtifactBaseQuery>["execute"]>>[number];
+
+function activeHlsArtifactBaseQuery(db: Awaited<ReturnType<typeof getDb>>) {
+  return db
+    .selectFrom("playback_session")
+    .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
+    .leftJoin("playback_hls_artifact", (join) =>
+      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
+    )
+    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
+    .select([
+      "playback_session.id as sessionId",
+      "playback_session.media_file_id as mediaFileId",
+      "playback_session.user_id as userId",
+      "playback_session.mode as mode",
+      "playback_session.pipeline as pipeline",
+      "playback_session.status as status",
+      "playback_session.error_message as errorMessage",
+      "playback_hls_artifact.path as playlistPath",
+      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
+      "playback_session.start_time_seconds as startTimeSeconds",
+      "media_file.duration_seconds as durationSeconds",
+      "playback_session.created_at as createdAt",
+      "playback_session.updated_at as updatedAt",
+      "playback_session.last_heartbeat_at as lastHeartbeatAt",
+      "playback_session.last_segment_request_at as lastSegmentRequestAt",
+    ]);
+}
+
+function toActiveHlsArtifact(row: ActiveHlsArtifactRow): ActiveHlsArtifact {
+  return {
+    sessionId: row.sessionId,
+    mediaFileId: row.mediaFileId,
+    userId: row.userId,
+    mode: row.mode,
+    pipeline: row.pipeline,
+    status: row.status,
+    errorMessage: row.errorMessage,
+    playlistPath: row.playlistPath,
+    encodeArtifactDirectory: row.encodeArtifactDirectory,
+    startTimeSeconds: row.startTimeSeconds,
+    durationSeconds: row.durationSeconds,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    lastSegmentRequestAt: row.lastSegmentRequestAt,
+  };
+}
+
 export async function createTranscodeSession(input: CreateTranscodeSessionInput) {
   const db = await getDb();
   const now = nowIso();
@@ -405,34 +453,13 @@ export async function getAuthorizedHlsArtifact(
   userId: string,
 ): Promise<AuthorizedHlsArtifact | null> {
   const db = await getDb();
-  const row = await db
-    .selectFrom("playback_session")
-    .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
-    .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
-    )
-    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
-    .select([
-      "playback_session.id as sessionId",
-      "playback_session.media_file_id as mediaFileId",
-      "playback_session.user_id as userId",
-      "playback_session.mode as mode",
-      "playback_session.pipeline as pipeline",
-      "playback_session.status as status",
-      "playback_session.error_message as errorMessage",
-      "playback_hls_artifact.path as playlistPath",
-      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
-      "playback_session.start_time_seconds as startTimeSeconds",
-      "media_file.duration_seconds as durationSeconds",
-      "playback_session.updated_at as updatedAt",
-      "playback_session.last_segment_request_at as lastSegmentRequestAt",
-    ])
+  const row = await activeHlsArtifactBaseQuery(db)
     .where("playback_session.id", "=", sessionId)
     .where(accessibleLibrarySql(userId, "media_file.library_id"))
     .executeTakeFirst();
 
   if (!row || row.userId !== userId) return null;
-  return row;
+  return toActiveHlsArtifact(row);
 }
 
 export async function findActiveHlsArtifact(
@@ -442,30 +469,7 @@ export async function findActiveHlsArtifact(
   startTimeSeconds: number | null = 0,
 ): Promise<ActiveHlsArtifact | null> {
   const db = await getDb();
-  const rows = await db
-    .selectFrom("playback_session")
-    .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
-    .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
-    )
-    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
-    .select([
-      "playback_session.id as sessionId",
-      "playback_session.media_file_id as mediaFileId",
-      "playback_session.user_id as userId",
-      "playback_session.mode as mode",
-      "playback_session.pipeline as pipeline",
-      "playback_session.status as status",
-      "playback_session.error_message as errorMessage",
-      "playback_hls_artifact.path as playlistPath",
-      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
-      "playback_session.start_time_seconds as startTimeSeconds",
-      "media_file.duration_seconds as durationSeconds",
-      "playback_session.created_at as createdAt",
-      "playback_session.updated_at as updatedAt",
-      "playback_session.last_heartbeat_at as lastHeartbeatAt",
-      "playback_session.last_segment_request_at as lastSegmentRequestAt",
-    ])
+  const rows = await activeHlsArtifactBaseQuery(db)
     .where("playback_session.media_file_id", "=", mediaFileId)
     .where("playback_session.user_id", "=", userId)
     .where("playback_session.mode", "=", mode)
@@ -479,24 +483,7 @@ export async function findActiveHlsArtifact(
       (item.status === "queued" || item.status === "running"),
   );
 
-  return row
-    ? {
-        sessionId: row.sessionId,
-        mediaFileId: row.mediaFileId,
-        userId: row.userId,
-        mode: row.mode,
-        pipeline: row.pipeline,
-        status: row.status,
-        errorMessage: row.errorMessage,
-        playlistPath: row.playlistPath,
-        encodeArtifactDirectory: row.encodeArtifactDirectory,
-        startTimeSeconds: row.startTimeSeconds,
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-        lastSegmentRequestAt: row.lastSegmentRequestAt,
-      }
-    : null;
+  return row ? toActiveHlsArtifact(row) : null;
 }
 
 export async function findRecentFailedHlsPlayback(
@@ -507,29 +494,7 @@ export async function findRecentFailedHlsPlayback(
 ): Promise<ActiveHlsArtifact | null> {
   const db = await getDb();
   const failedPlaybackCutoff = new Date(Date.now() - RECENT_FAILED_PLAYBACK_SESSION_MAX_IDLE_MS).toISOString();
-  const rows = await db
-    .selectFrom("playback_session")
-    .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
-    .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
-    )
-    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
-    .select([
-      "playback_session.id as sessionId",
-      "playback_session.media_file_id as mediaFileId",
-      "playback_session.user_id as userId",
-      "playback_session.mode as mode",
-      "playback_session.pipeline as pipeline",
-      "playback_session.status as status",
-      "playback_session.error_message as errorMessage",
-      "playback_hls_artifact.path as playlistPath",
-      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
-      "playback_session.start_time_seconds as startTimeSeconds",
-      "media_file.duration_seconds as durationSeconds",
-      "playback_session.created_at as createdAt",
-      "playback_session.updated_at as updatedAt",
-      "playback_session.last_segment_request_at as lastSegmentRequestAt",
-    ])
+  const rows = await activeHlsArtifactBaseQuery(db)
     .where("playback_session.media_file_id", "=", mediaFileId)
     .where("playback_session.user_id", "=", userId)
     .where("playback_session.mode", "=", mode)
@@ -543,24 +508,7 @@ export async function findRecentFailedHlsPlayback(
       Math.abs(item.startTimeSeconds - startTimeSeconds) <= ACTIVE_TRANSCODE_START_TIME_TOLERANCE_SECONDS,
   );
 
-  return row
-    ? {
-        sessionId: row.sessionId,
-        mediaFileId: row.mediaFileId,
-        userId: row.userId,
-        mode: row.mode,
-        pipeline: row.pipeline,
-        status: row.status,
-        errorMessage: row.errorMessage,
-        playlistPath: row.playlistPath,
-        encodeArtifactDirectory: row.encodeArtifactDirectory,
-        startTimeSeconds: row.startTimeSeconds,
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-        lastSegmentRequestAt: row.lastSegmentRequestAt,
-      }
-    : null;
+  return row ? toActiveHlsArtifact(row) : null;
 }
 
 export async function listActiveHlsPlaybackSessionsForMedia(
@@ -569,30 +517,7 @@ export async function listActiveHlsPlaybackSessionsForMedia(
   mode: TranscodeMode,
 ): Promise<ActiveHlsArtifact[]> {
   const db = await getDb();
-  const rows = await db
-    .selectFrom("playback_session")
-    .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
-    .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
-    )
-    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
-    .select([
-      "playback_session.id as sessionId",
-      "playback_session.media_file_id as mediaFileId",
-      "playback_session.user_id as userId",
-      "playback_session.mode as mode",
-      "playback_session.pipeline as pipeline",
-      "playback_session.status as status",
-      "playback_session.error_message as errorMessage",
-      "playback_hls_artifact.path as playlistPath",
-      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
-      "playback_session.start_time_seconds as startTimeSeconds",
-      "media_file.duration_seconds as durationSeconds",
-      "playback_session.created_at as createdAt",
-      "playback_session.updated_at as updatedAt",
-      "playback_session.last_heartbeat_at as lastHeartbeatAt",
-      "playback_session.last_segment_request_at as lastSegmentRequestAt",
-    ])
+  const rows = await activeHlsArtifactBaseQuery(db)
     .where("playback_session.media_file_id", "=", mediaFileId)
     .where("playback_session.user_id", "=", userId)
     .where("playback_session.mode", "=", mode)
@@ -600,22 +525,7 @@ export async function listActiveHlsPlaybackSessionsForMedia(
     .orderBy("playback_session.updated_at", "desc")
     .execute();
 
-  return rows.map((row) => ({
-    sessionId: row.sessionId,
-    mediaFileId: row.mediaFileId,
-    userId: row.userId,
-    mode: row.mode,
-    pipeline: row.pipeline,
-    status: row.status,
-    errorMessage: row.errorMessage,
-    playlistPath: row.playlistPath,
-    encodeArtifactDirectory: row.encodeArtifactDirectory,
-    startTimeSeconds: row.startTimeSeconds,
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    lastSegmentRequestAt: row.lastSegmentRequestAt,
-  }));
+  return rows.map(toActiveHlsArtifact);
 }
 
 export async function listMismatchedActiveHlsArtifacts(
@@ -625,30 +535,7 @@ export async function listMismatchedActiveHlsArtifacts(
   startTimeSeconds: number,
 ): Promise<ActiveHlsArtifact[]> {
   const db = await getDb();
-  const rows = await db
-    .selectFrom("playback_session")
-    .innerJoin("media_file", "media_file.id", "playback_session.media_file_id")
-    .leftJoin("playback_hls_artifact", (join) =>
-      join.onRef("playback_hls_artifact.playback_session_id", "=", "playback_session.id"),
-    )
-    .leftJoin("playback_hls_cache", "playback_hls_cache.id", "playback_session.cache_id")
-    .select([
-      "playback_session.id as sessionId",
-      "playback_session.media_file_id as mediaFileId",
-      "playback_session.user_id as userId",
-      "playback_session.mode as mode",
-      "playback_session.pipeline as pipeline",
-      "playback_session.status as status",
-      "playback_session.error_message as errorMessage",
-      "playback_hls_artifact.path as playlistPath",
-      "playback_hls_cache.artifact_dir as encodeArtifactDirectory",
-      "playback_session.start_time_seconds as startTimeSeconds",
-      "media_file.duration_seconds as durationSeconds",
-      "playback_session.created_at as createdAt",
-      "playback_session.updated_at as updatedAt",
-      "playback_session.last_heartbeat_at as lastHeartbeatAt",
-      "playback_session.last_segment_request_at as lastSegmentRequestAt",
-    ])
+  const rows = await activeHlsArtifactBaseQuery(db)
     .where("playback_session.media_file_id", "=", mediaFileId)
     .where("playback_session.user_id", "=", userId)
     .where("playback_session.mode", "=", mode)
@@ -666,22 +553,7 @@ export async function listMismatchedActiveHlsArtifacts(
           item.status === "running" ||
           endedPlaybackArtifactActivityAt(item) >= endedArtifactCutoff),
     )
-    .map((row) => ({
-      sessionId: row.sessionId,
-      mediaFileId: row.mediaFileId,
-      userId: row.userId,
-      mode: row.mode,
-      pipeline: row.pipeline,
-      status: row.status,
-      errorMessage: row.errorMessage,
-      playlistPath: row.playlistPath,
-      encodeArtifactDirectory: row.encodeArtifactDirectory,
-      startTimeSeconds: row.startTimeSeconds,
-      durationSeconds: row.durationSeconds,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      lastSegmentRequestAt: row.lastSegmentRequestAt,
-    }));
+    .map(toActiveHlsArtifact);
 }
 
 export async function getTranscodeSession(sessionId: string): Promise<TranscodeSessionRecord | null> {
