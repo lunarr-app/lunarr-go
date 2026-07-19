@@ -546,7 +546,7 @@ describe("movieRows", () => {
 
     const credits = await getMovieCredits("movie-a", "user-1");
     expect(credits).toMatchObject({
-      show: { id: "movie-a", title: "Alpha" },
+      movie: { id: "movie-a", title: "Alpha" },
       cast: [{ name: "Keanu Reeves", character: "Neo" }],
       directors: ["Lana Wachowski"],
       writers: [],

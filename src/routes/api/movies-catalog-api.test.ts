@@ -170,7 +170,7 @@ describe("movie catalog API", () => {
     } as never);
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
-      show: { id: "movie-1", title: "The Matrix" },
+      movie: { id: "movie-1", title: "The Matrix" },
       cast: [{ name: "Keanu Reeves", character: "Neo" }],
       directors: ["Lana Wachowski"],
       writers: [],

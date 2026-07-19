@@ -2138,9 +2138,9 @@ export const openApiDocument = {
       },
       MovieCreditsResponse: {
         type: "object",
-        required: ["show", "cast", "directors", "writers"],
+        required: ["movie", "cast", "directors", "writers"],
         properties: {
-          show: { $ref: "#/components/schemas/MediaHeader" },
+          movie: { $ref: "#/components/schemas/MediaHeader" },
           cast: {
             type: "array",
             items: { $ref: "#/components/schemas/ShowCastCredit" },

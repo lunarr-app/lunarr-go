@@ -214,7 +214,7 @@ export async function getMovieCredits(id: string, userId: string) {
   const [cast, metadata] = await Promise.all([fetchMovieCast(id), fetchMovieOverviewMetadata(id)]);
 
   return {
-    show: {
+    movie: {
       id: detail.movie.id,
       title: detail.movie.title,
     },
