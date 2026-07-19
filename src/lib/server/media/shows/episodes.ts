@@ -73,20 +73,39 @@ export async function tvEpisodeProgress(userId: string, episodeIds: string[]) {
   return summarizeMovieProgress(rows);
 }
 
-function filteredEpisodeBrowse(db: Kysely<Database>, userId: string) {
+function continueEpisodeQuery(db: Kysely<Database>, userId: string, maxAgeDays: number) {
   return db
-    .selectFrom("media_item as episode")
+    .with("continue_progress", (creator) => {
+      let query = creator
+        .selectFrom("watch_progress")
+        .select([
+          "watch_progress.media_item_id",
+          sql<string | null>`max(watch_progress.updated_at)`.as("latest_continue_updated_at"),
+        ])
+        .where("watch_progress.user_id", "=", userId)
+        .where(sql<boolean>`watch_progress.completed = 0`)
+        .where("watch_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
+        .groupBy("watch_progress.media_item_id");
+
+      if (maxAgeDays > 0) {
+        query = query.where("watch_progress.updated_at", ">", continueMaxAgeCutoffSqlForDays(maxAgeDays));
+      }
+
+      return query;
+    })
+    .selectFrom("continue_progress")
+    .innerJoin("media_item as episode", "episode.id", "continue_progress.media_item_id")
     .innerJoin("media_item as season", "season.id", "episode.parent_id")
     .innerJoin("media_item as show", "show.id", "season.parent_id")
     .innerJoin("media_file", "media_file.media_item_id", "episode.id")
-    .where("episode.kind", "=", "episode")
-    .where("season.kind", "=", "season")
-    .where("show.kind", "=", "show")
-    .where(accessibleLibrarySql(userId));
-}
-
-function episodeBrowseSelect(filtered: ReturnType<typeof filteredEpisodeBrowse>) {
-  return filtered
+    .leftJoin("watch_progress as completed_progress", (join) =>
+      join
+        .onRef("completed_progress.media_item_id", "=", "episode.id")
+        .on("completed_progress.user_id", "=", userId)
+        .on(sql<boolean>`completed_progress.completed = 1`),
+    )
+    .where("completed_progress.media_item_id", "is", null)
+    .where(accessibleLibrarySql(userId))
     .select([
       "episode.id",
       "episode.title",
@@ -110,69 +129,18 @@ function episodeBrowseSelect(filtered: ReturnType<typeof filteredEpisodeBrowse>)
       sql<string | null>`min(media_file.id)`.as("first_file_id"),
       sql<string | null>`max(media_file.created_at)`.as("latest_file_created_at"),
     ])
-    .groupBy("episode.id");
-}
-
-function completedEpisodeIdsQuery(db: Kysely<Database>, userId: string) {
-  return db
-    .selectFrom("watch_progress")
-    .select("watch_progress.media_item_id")
-    .where("watch_progress.user_id", "=", userId)
-    .where(sql<boolean>`watch_progress.completed = 1`)
-    .distinct()
-    .as("completed_episodes");
-}
-
-function latestContinueEpisodeProgressQuery(db: Kysely<Database>, userId: string, maxAgeDays: number) {
-  let query = db
-    .selectFrom("watch_progress")
-    .select([
-      "watch_progress.media_item_id",
-      sql<string | null>`max(watch_progress.updated_at)`.as("latest_continue_updated_at"),
-    ])
-    .where("watch_progress.user_id", "=", userId)
-    .where(sql<boolean>`watch_progress.completed = 0`)
-    .where("watch_progress.position_seconds", ">=", MIN_CONTINUE_POSITION_SECONDS)
-    .groupBy("watch_progress.media_item_id");
-
-  if (maxAgeDays > 0) {
-    query = query.where("watch_progress.updated_at", ">", continueMaxAgeCutoffSqlForDays(maxAgeDays));
-  }
-
-  return query.as("continue_progress");
-}
-
-function applyEpisodeContinueWatchingFilters(
-  query: ReturnType<typeof episodeBrowseSelect>,
-  db: Kysely<Database>,
-  userId: string,
-  maxAgeDays: number,
-) {
-  return query
-    .leftJoin(completedEpisodeIdsQuery(db, userId), (join) =>
-      join.onRef("completed_episodes.media_item_id", "=", "episode.id"),
-    )
-    .leftJoin(latestContinueEpisodeProgressQuery(db, userId, maxAgeDays), (join) =>
-      join.onRef("continue_progress.media_item_id", "=", "episode.id"),
-    )
-    .where("completed_episodes.media_item_id", "is", null)
-    .where("continue_progress.media_item_id", "is not", null);
-}
-
-function orderContinueEpisodes(query: ReturnType<typeof applyEpisodeContinueWatchingFilters>) {
-  return query
-    .orderBy(sql<string | null>`continue_progress.latest_continue_updated_at`, "desc")
+    .groupBy("episode.id")
+    .orderBy("continue_progress.latest_continue_updated_at", "desc")
     .orderBy("show.sort_title", "asc")
     .orderBy("episode.season_number", "asc")
     .orderBy("episode.episode_number", "asc")
-    .orderBy("episode.title", "asc");
+    .orderBy("episode.title", "asc")
+    .$castTo<EpisodeBrowseRow>();
 }
 
 async function paginatedContinueEpisodeRows(userId: string, page: number, limit: number, maxAgeDays: number) {
   const db = await getDb();
-  const ordered = orderContinueEpisodes(
-    applyEpisodeContinueWatchingFilters(episodeBrowseSelect(filteredEpisodeBrowse(db, userId)), db, userId, maxAgeDays),
-  );
+  const ordered = continueEpisodeQuery(db, userId, maxAgeDays);
   return paginatedGroupedRail(
     ordered,
     async () => {
