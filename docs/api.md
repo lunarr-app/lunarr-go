@@ -125,6 +125,8 @@ Supported playback and language values are normalized by the server. `continueMa
 
 ```http
 GET /api/continue
+GET /api/continue/movies
+GET /api/continue/episodes
 GET /api/movies
 GET /api/movies/discover
 GET /api/movies/:id
@@ -140,6 +142,10 @@ GET /api/shows/:id/seasons/:seasonId
 GET /api/shows/:id/similar
 GET /api/episodes/:id
 GET /api/people/:provider/:id
+GET /api/watchlist
+GET /api/watchlist/movies
+GET /api/watchlist/shows
+GET /api/watchlist/:mediaItemId
 ```
 
 Person query parameters:
@@ -185,6 +191,8 @@ limit=24
 
 `GET /api/continue` returns in-progress movies (`movies`), in-progress TV episodes (`episodes`), and per-show next unwatched episodes (`nextUp`). Each section includes matching page metadata (`moviesPage`, `episodesPage`, `nextUpPage`). The web Continue hub at `/continue` previews all three sections. Full paginated lists live at `/continue/movies`, `/continue/episodes`, and `/continue/next-up` (36 items per page).
 
+For clients that need a single section as a dedicated API response, use `GET /api/continue/movies` (in-progress movies) or `GET /api/continue/episodes` (in-progress episodes). Both accept the same pagination parameters and return the section list plus its `*Page` metadata. The dedicated endpoints use the full-library page size (36) by default.
+
 Continue query parameters:
 
 ```text
@@ -198,6 +206,51 @@ The same Continue filters also apply to `continueWatching` and `nextUp` on `GET 
 
 When a user sets `continueMaxAgeDays` on Profile (or via `PUT /api/profile`), stale progress is omitted from these rails but kept for resume on movie and episode detail pages. `continueWatching` filters per title, and `nextUp` drops a show when no episode has recent progress. Continue rails also ignore accidental starts shorter than 60 seconds. Browse `all` rails and detail pages are not filtered. See [Configuration](configuration.md#continue-watching).
 
+### Watchlist
+
+Lunarr tracks a per-user watchlist of movies and shows. Movie and show detail/overview responses include an `inWatchlist` boolean so clients do not need a second call to reflect watchlist state.
+
+List the watchlist:
+
+```http
+GET /api/watchlist
+GET /api/watchlist/movies
+GET /api/watchlist/shows
+```
+
+`GET /api/watchlist` returns both `movies` and `shows` plus `moviesPage` / `showsPage` metadata in one response. The single-type endpoints (`/movies`, `/shows`) return just that list and its `pageInfo`. All three accept pagination:
+
+```text
+page
+limit=36
+```
+
+`limit` defaults to the full-library page size (36) and is clamped to `200`.
+
+Toggle an item on or off the watchlist:
+
+```http
+POST /api/watchlist
+```
+
+Request body:
+
+```json
+{
+  "mediaItemId": "movie-or-show-id"
+}
+```
+
+The response returns `{ "ok": true, "inWatchlist": boolean }` reflecting the new state after the toggle.
+
+Check whether a single item is on the watchlist:
+
+```http
+GET /api/watchlist/:mediaItemId
+```
+
+Returns `{ "inWatchlist": boolean }` (`404` if the media item is not accessible). The web app uses this to keep the watchlist toggle in sync without loading the full list.
+
 ### TV show detail tiers
 
 Lunarr exposes three show-detail levels. Mobile and third-party clients should prefer the smaller endpoints and load episodes lazily per season.
@@ -208,6 +261,8 @@ Lunarr exposes three show-detail levels. Mobile and third-party clients should p
 | `GET /api/shows/:id/credits`           | Cast rail and show creators (`cast`, `creators`). Load separately when the UI needs people credits.              |
 | `GET /api/shows/:id/seasons/:seasonId` | Compact show header, one season with episodes and watch progress, plus a lightweight season tab list.            |
 | `GET /api/shows/:id`                   | Full tree with every season and episode. Use for bulk export or legacy clients.                                  |
+
+Movie and show `overview` and full-detail responses include an `inWatchlist` boolean so clients can reflect watchlist state without a separate call (see [Watchlist](#watchlist)).
 
 Recommended mobile flow:
 

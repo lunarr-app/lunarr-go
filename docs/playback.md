@@ -37,7 +37,7 @@ Admins can choose an HLS quality preset in Settings. `Auto` preserves the defaul
 
 Users can set a preferred audio language in Profile. Temporary HLS transcoding prefers a matching audio stream when probe metadata includes language tags. Copied remux generation prefers AAC-family audio compatibility first, then applies the user's language preference when multiple compatible streams are available. If copied remux generation fails while the session is still playable, Lunarr falls back to full transcode.
 
-Users can also set a preferred subtitle language in Profile. Lunarr still returns applicable external subtitle tracks for the selected file, but marks the matching language as the default track when available.
+Users can also set a preferred subtitle language in Profile. Lunarr still returns applicable external subtitle tracks for the selected file, but marks the matching language as the default track when available. Sidecar `.srt` subtitle files are converted to WebVTT on the fly for browser playback (`GET /media/subtitles/:subtitleId` and the HLS subtitle URLs).
 
 ## Intro and credits skip (TheIntroDB)
 
