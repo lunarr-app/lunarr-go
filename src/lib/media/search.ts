@@ -10,7 +10,12 @@ export type CatalogSearchInput = {
   sort?: string;
 };
 
-export function catalogSearchHref(pathname: string, searchParams: URLSearchParams, input: CatalogSearchInput) {
+export function catalogSearchHref(
+  pathname: string,
+  searchParams: URLSearchParams,
+  input: CatalogSearchInput,
+  defaultSort = "title",
+) {
   const params = new URLSearchParams(searchParams);
   if (input.query !== undefined) {
     const trimmed = input.query.trim();
@@ -22,7 +27,7 @@ export function catalogSearchHref(pathname: string, searchParams: URLSearchParam
     else params.set("status", input.status);
   }
   if (input.sort !== undefined) {
-    if (!input.sort || input.sort === "title") params.delete("sort");
+    if (!input.sort || input.sort === defaultSort) params.delete("sort");
     else params.set("sort", input.sort);
   }
   params.delete("page");
@@ -30,8 +35,13 @@ export function catalogSearchHref(pathname: string, searchParams: URLSearchParam
   return search ? `${pathname}?${search}` : pathname;
 }
 
-export function gotoCatalogSearch(pathname: string, searchParams: URLSearchParams, input: CatalogSearchInput) {
-  const href = catalogSearchHref(pathname, searchParams, input);
+export function gotoCatalogSearch(
+  pathname: string,
+  searchParams: URLSearchParams,
+  input: CatalogSearchInput,
+  defaultSort = "title",
+) {
+  const href = catalogSearchHref(pathname, searchParams, input, defaultSort);
   const current = `${pathname}${searchParams.toString() ? `?${searchParams}` : ""}`;
   if (href === current) return;
   void goto(href, { keepFocus: true, noScroll: true, invalidateAll: true });

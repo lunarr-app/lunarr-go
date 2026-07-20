@@ -4,6 +4,7 @@ import { CATALOG_SEARCH_DEBOUNCE_MS, gotoCatalogSearch, type CatalogSearchInput 
 export function createDebouncedCatalogSearch(
   getServerQuery: () => string,
   extraParams: () => Omit<CatalogSearchInput, "query"> = () => ({}),
+  defaultSort = "title",
 ) {
   let queryInput = $state("");
   let searchInput = $state<HTMLInputElement | null>(null);
@@ -32,7 +33,7 @@ export function createDebouncedCatalogSearch(
       query: queryInput,
       ...extraParams(),
       ...overrides,
-    });
+    }, defaultSort);
   }
 
   function submitSearchSoon() {

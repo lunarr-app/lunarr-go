@@ -23,7 +23,7 @@
     hrefForPage,
     query = "",
     status = "all",
-    sort = "title",
+    sort = "recent",
     showFilters = false,
     emptyTitle = "No matching movies",
     emptyDescription = "Adjust the filters or return to the movie dashboard.",
@@ -44,6 +44,7 @@
   const catalogSearch = createDebouncedCatalogSearch(
     () => query,
     () => ({ status, sort }),
+    "recent",
   );
 
   const range = $derived({

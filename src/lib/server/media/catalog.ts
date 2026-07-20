@@ -21,12 +21,12 @@ export function normalizeMovieStatusFilter(value: string | null | undefined): Mo
   return MOVIE_STATUS_FILTERS.includes(value as MovieStatusFilter) ? (value as MovieStatusFilter) : "all";
 }
 
-export function normalizeMovieSort(value: string | null | undefined): MovieSort {
-  return MOVIE_SORTS.includes(value as MovieSort) ? (value as MovieSort) : "title";
+export function normalizeMovieSort(value: string | null | undefined, defaultSort: MovieSort = "title"): MovieSort {
+  return MOVIE_SORTS.includes(value as MovieSort) ? (value as MovieSort) : defaultSort;
 }
 
-export function normalizeShowSort(value: string | null | undefined): ShowSort {
-  return SHOW_SORTS.includes(value as ShowSort) ? (value as ShowSort) : "title";
+export function normalizeShowSort(value: string | null | undefined, defaultSort: ShowSort = "title"): ShowSort {
+  return SHOW_SORTS.includes(value as ShowSort) ? (value as ShowSort) : defaultSort;
 }
 
 export function parseBrowseRails<T extends string>(

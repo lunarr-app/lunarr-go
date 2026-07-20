@@ -243,7 +243,7 @@ describe("movies page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("lists all movies by title with default filters", async () => {
+  test("lists all movies by recently added with default sort", async () => {
     const result = await loadMovies({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/movies"),
@@ -251,8 +251,8 @@ describe("movies page server", () => {
 
     expect(result.query).toBe("");
     expect(result.status).toBe("all");
-    expect(result.sort).toBe("title");
-    expect(result.movies.map((movie) => movie.id)).toEqual(["movie-alpha", "movie-bravo", "movie-charlie"]);
+    expect(result.sort).toBe("recent");
+    expect(result.movies.map((movie) => movie.id)).toEqual(["movie-charlie", "movie-bravo", "movie-alpha"]);
     expect(result.pageInfo).toMatchObject({ page: 1, total: 3, totalPages: 1 });
   });
 
@@ -263,7 +263,7 @@ describe("movies page server", () => {
     });
 
     expect(result.status).toBe("all");
-    expect(result.sort).toBe("title");
+    expect(result.sort).toBe("recent");
     expect(result.pageInfo.page).toBe(1);
     expect(result.movies).toHaveLength(3);
   });
@@ -289,7 +289,7 @@ describe("movies page server", () => {
 
     const unwatched = await loadMovies({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/movies?status=unwatched"),
+      url: new URL("http://localhost/movies?status=unwatched&sort=title"),
     });
     expect(unwatched.movies.map((movie) => movie.id)).toEqual(["movie-bravo", "movie-charlie"]);
   });

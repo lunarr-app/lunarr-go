@@ -29,6 +29,8 @@ describe("movie browse parameters", () => {
     expect(normalizeMovieSort("rating")).toBe("rating");
     expect(normalizeMovieSort("unknown")).toBe("title");
     expect(normalizeMovieSort(undefined)).toBe("title");
+    expect(normalizeMovieSort(undefined, "recent")).toBe("recent");
+    expect(normalizeMovieSort("unknown", "recent")).toBe("recent");
   });
 
   test("normalizes show sort options", () => {
@@ -37,6 +39,8 @@ describe("movie browse parameters", () => {
     expect(normalizeShowSort("latest")).toBe("latest");
     expect(normalizeShowSort("popular")).toBe("popular");
     expect(normalizeShowSort("unknown")).toBe("title");
+    expect(normalizeShowSort(undefined, "latest")).toBe("latest");
+    expect(normalizeShowSort("unknown", "latest")).toBe("latest");
   });
 
   test("parses browse rail query params", () => {

@@ -157,14 +157,14 @@ describe("shows page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("lists all shows by title with default sort", async () => {
+  test("lists all shows by recently aired with default sort", async () => {
     const result = await loadShows({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/shows"),
     });
 
     expect(result.query).toBe("");
-    expect(result.sort).toBe("title");
+    expect(result.sort).toBe("latest");
     expect(result.shows).toMatchObject([
       {
         id: "show-1",

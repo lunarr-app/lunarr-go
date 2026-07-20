@@ -22,7 +22,7 @@
     pageInfo,
     hrefForPage,
     query = "",
-    sort = "title",
+    sort = "latest",
     showFilters = false,
     emptyTitle = "No matching shows",
     emptyDescription = "Adjust the filters or return to the show dashboard.",
@@ -39,7 +39,7 @@
     emptyDescription?: string;
   } = $props();
 
-  const catalogSearch = createDebouncedCatalogSearch(() => query, () => ({ sort }));
+  const catalogSearch = createDebouncedCatalogSearch(() => query, () => ({ sort }), "latest");
 
   const range = $derived({
     first: pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1,

@@ -8,7 +8,7 @@
     const query = data.query.trim();
     if (query.length > 0) params.set("q", query);
     if (data.status !== "all") params.set("status", data.status);
-    if (data.sort !== "title") params.set("sort", data.sort);
+    if (data.sort !== "recent") params.set("sort", data.sort);
     if (page > 1) params.set("page", String(page));
     const search = params.toString();
     return search ? `/movies?${search}` : "/movies";

@@ -8,7 +8,7 @@ import { movieRows } from "$lib/server/media/movies/browse";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-  const sort = normalizeMovieSort(url.searchParams.get("sort"));
+  const sort = normalizeMovieSort(url.searchParams.get("sort"), "recent");
   const status = normalizeMovieStatusFilter(url.searchParams.get("status"));
   const page = normalizePage(url.searchParams.get("page"));
   const query = url.searchParams.get("q") ?? "";
