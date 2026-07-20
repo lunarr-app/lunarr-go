@@ -1,46 +1,43 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 - 2026-07-20
 
 ### Added
 
-- Added a top-level Discover hub (`/discover`) with movie and TV recommendation previews, each linking to a dedicated "View all" page. Added Discover to the primary navigation.
-- Added a dedicated Search page (`/search`) in the primary navigation, searching the movie and TV library with per-type result previews and "View all" links to the filtered browse.
-
-### Changed
-
-- Adopted spacing and radius design tokens (replacing ad-hoc values) and aligned the dark theme accent with the TV app.
-- Removed the per-page "Discover" buttons from the Movies and Shows pages (now reached via the Discover hub).
-- Set the Discover "View all" pages to 36 items per page to match the All movies/shows browse pages.
-- Removed the redundant page titles and subtitles from the Discover, Continue, Movies, and Shows pages for a flatter layout.
-- Removed the inline search box and watch-status filter from the Movies and Shows hub pages (search now lives on the dedicated Search page), and simplified their server loads.
-- Made Continue the primary landing page: the brand logo, root `/`, and post-login/setup/signup redirects now go to `/continue` (previously `/movies`), and Continue is listed first in the primary navigation.
-- Tightened the app layout padding: horizontal max reduced to `2rem` and main vertical padding made symmetric (`1.6rem` top/bottom, was `1.4rem`/`3rem`).
-- Removed the "All movies" and "All shows" rails from the Movies and Shows hub pages and scoped their server loads to only the rails actually rendered (Continue Watching, Recent, Latest, Popular for movies; plus Next Up for shows), dropping the unused `all` payload. The `/movies/all` and `/shows/all` browse pages remain available via Search and direct URL.
-- Changed the Continue hub sections (Movies, Episodes, Next up) to render as single-row horizontal carousels using the shared rail components instead of a wrapping grid, matching the Movies/Shows hubs. Each section loads the default 24-item rail limit.
-- Moved the shared `MovieRail`, `EpisodeRail`, and `ShowRail` components from route-local `_components` into `$lib/components` so every hub page (Continue, Discover, Search, Movies, Shows) uses one implementation.
-- Changed the Movies and Shows hub rails (and Discover/Search previews) to always render as single-row horizontal carousels, removing the previous two-row grid fallback for large rail sets. Deleted the now-unused `twoRowRailItems`/related helpers in `src/lib/media/rails.ts` and their tests.
-- Consolidated the three near-identical `MovieRail`, `ShowRail`, and `EpisodeRail` components into a single generic `Rail` component (`$lib/components/Rail.svelte`) that takes the items, a `poster`/`episode` width `variant`, and a card-rendering snippet.
-- Removed the Continue watching (and Next up) rails from the Movies and Shows hub pages so resume lives only on the dedicated Continue page. Those hubs are now pure category browsers (Recently added, Latest, Popular), and their server loads are scoped accordingly (dropping `continueWatching`/`nextUp`).
-- Merged the Discover hub into the Continue (landing) page: the landing page now also shows Recommended movies and Recommended shows rails (with "View all" links to the `/movies/discover` and `/shows/discover` browse pages). Removed the standalone `/discover` route and its primary-nav entry, matching the Plex/Jellyfin-style combined Home.
-
-### Added
-
+- Added a Discover page (`/discover`) in the primary navigation with because-you-watched movie and TV picks, ranked by shared genres, keywords, cast, and directors, each linking to a dedicated "View all" browse page (`/movies/discover`, `/shows/discover`).
+- Added a zoom control to the web player that cycles Fit, Fill, and Stretch via a top-bar button or the `Z` shortcut, with a transient mode badge, matching the TV app.
+- Added Movies, Shows, and Watchlist links to the account menu on small screens.
 - Added a watchlist feature for movies and shows, including a watchlist toggle on detail pages and a dedicated Watchlist page rendered with the shared rail carousel layout.
 - Added dedicated watchlist API endpoints (`GET /api/watchlist/movies`, `GET /api/watchlist/shows`, `GET /api/watchlist/{mediaItemId}` to check status) with a `limit` query parameter, SQL-level filtering, and pagination.
 - Added dedicated continue-watching API endpoints (`GET /api/continue/movies`, `GET /api/continue/episodes`) alongside the existing next-up endpoint.
 - Added `inWatchlist` to movie and show detail/overview API responses.
 - Added support for sidecar `.srt` subtitle files with on-the-fly WebVTT conversion for playback.
-- Added standardized detail pages to 36 items per page to match the All movies/shows browse pages.
+- Added `-v`/`--version` and `-h`/`--help` flags to the start script.
+- Added a persisted auth-secret fallback: when `AUTH_SECRET` is unset, a random secret is generated, saved to the data directory, and reused on later starts.
 
 ### Changed
 
+- Adopted spacing and radius design tokens (replacing ad-hoc values) and aligned the dark theme accent with the TV app.
+- Made Continue the primary landing page: the brand logo, root `/`, and post-login/setup/signup redirects now go to `/continue` (previously `/movies`), and Continue is listed first in the primary navigation.
+- Tightened the app layout padding: horizontal max reduced to `2rem` and main vertical padding made symmetric (`1.6rem` top/bottom, was `1.4rem`/`3rem`).
+- Turned the Movies and Shows pages into full paginated browse pages with inline search and sort controls (defaulting to recently added for movies and recently aired for shows), removing the previous carousel hub layout, the watch-status filter, and the `/movies/all`-style subroutes.
+- Removed the dedicated Search page and nav item, moving library search inline onto the Movies and Shows browse pages.
+- Removed the per-page "Discover" buttons from the Movies and Shows pages (now reached via the Discover page).
+- Removed continue-watching and next-up rails from the Movies and Shows pages so resume lives only on the dedicated Continue page.
+- Removed the redundant page titles and subtitles from the Continue, Discover, Movies, and Shows pages for a flatter layout.
+- Changed the Continue sections (Movies, Episodes, Next up) to render as single-row horizontal carousels using the shared rail components. Each section loads the default 24-item rail limit.
+- Consolidated the `MovieRail`, `ShowRail`, and `EpisodeRail` components into a single generic `Rail` component in `$lib/components` that takes the items, a `poster`/`episode` width `variant`, and a card-rendering snippet, so every page uses one implementation.
+- Changed rails to always render as single-row horizontal carousels, removing the previous two-row grid fallback. Deleted the now-unused `twoRowRailItems` helper in `src/lib/media/rails.ts` and its tests.
+- Redesigned the player control bar for small screens: subtitle and zoom controls moved to the top bar (AirPlay last), top-bar buttons no longer wrap and take priority over the now always-visible (truncated) Now playing title, and the volume slider is hidden on touch devices where mute alone is enough.
+- Showed the episode release date in the detail hero chip as a human-readable locale date (the metadata card keeps the raw date).
+- Standardized detail, similar, and Discover "View all" pages to 36 items per page.
+- Removed the redundant `admin-cancel` playback API route because the owner cancel endpoint already permits admins.
+- Removed duplicate TMDb credential flags from the settings response.
 - Return RFC 9457 problem-details (`application/problem+json`) for API errors, including 204 No Content from DELETE endpoints, 500 for unexpected read-API errors, and consistent JSON error handling across GET endpoints.
 - Aligned OpenAPI request schemas with runtime contracts and real enums.
-- Harmonized the Movies and Shows hub pages with the Continue landing page layout.
 - Redesigned the detail hero (unified watch-toggle icons, removed back-links, clickable show/season subtitle, global heading scale) and improved media hero chips and season rating/year data.
 - Stopped trimming passwords in auth forms.
-- Enabled VAAPI hardware decode with GPU scaling and fixed hardware transcode scaling for VideoToolbox, QSV, and NVENC; unified FFmpeg scale-filter construction across hardware modes.
+- Enabled VAAPI hardware decode with GPU scaling, fixed hardware transcode scaling for VideoToolbox, QSV, and NVENC, and unified FFmpeg scale-filter construction across hardware modes.
 - Standardized the app environment configuration (`LUNARR_APP_VERSION`, `FFMPEG_PATH`, `FFMPEG_VAAPI_DEVICE`) in `appEnv` and removed a redundant transcode-policy call from the heartbeat endpoint.
 - Bumped non-major dependencies (SvelteKit 2.70.1, Svelte 5.56.6, Vite 8.1.5, svelte-check 4.7.3, `@lucide/svelte` 1.25.0, `kysely` 0.29.4, `theintrodb` 3.1.2, `prettier` 3.9.5, `@ctrl/video-filename-parser` 5.11.4).
 
@@ -52,7 +49,7 @@
 ### Fixed
 
 - Fixed a movie-credits response that incorrectly named a field as a show.
-- Fixed an input-proxy drain-await hang on client disconnect and SFTP stream teardown race conditions; extracted a shared byte-range parser.
+- Fixed an input-proxy drain-await hang on client disconnect and SFTP stream teardown race conditions, and extracted a shared byte-range parser.
 - Fixed iOS Safari keeping its bottom browser toolbar visible by letting the document scroll instead of an inner container, and fixed the auth screen card centering/background under the collapsing toolbar using dynamic viewport units.
 
 ## 0.7.0 - 2026-07-12
