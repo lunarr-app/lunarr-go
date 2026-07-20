@@ -1137,21 +1137,6 @@ export const openApiDocument = {
         },
       },
     },
-    "/api/playback-sessions/{sessionId}/admin-cancel": {
-      post: {
-        tags: ["Admin"],
-        summary: "Cancel any active playback session as an admin.",
-        operationId: "adminCancelPlaybackSession",
-        parameters: [pathIdParameter("sessionId", "Playback session identifier.")],
-        responses: {
-          "200": okResponse,
-          "400": errorResponse,
-          "401": errorResponse,
-          "403": errorResponse,
-          "404": errorResponse,
-        },
-      },
-    },
     "/api/settings": {
       get: {
         tags: ["Admin"],
