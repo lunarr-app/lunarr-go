@@ -96,6 +96,7 @@ Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Side
 - [Playback And Maintenance](docs/playback.md): direct play, HLS, playback targets, transcode cache, cleanup, and job history retention.
 - [API](docs/api.md): authenticated JSON APIs and API-key usage.
 - [Transcoding Runtime](docs/transcoding-runtime.md): FFmpeg playback and NodeAV probing implementation notes.
+- [Troubleshooting](docs/troubleshooting.md): locked-out admin, password reset, and data reset.
 - [Contributing](CONTRIBUTING.md): local setup, checks, coding guidelines, and PR expectations.
 
 ## Verification
