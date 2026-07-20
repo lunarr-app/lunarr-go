@@ -1,6 +1,9 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
+
+export const AUTH_SECRET_FILE = "auth-secret";
 
 function parseDotenvLine(line: string) {
   const trimmed = line.trim();
@@ -38,7 +41,7 @@ function loadDotenv() {
 }
 
 const envSchema = z.object({
-  AUTH_SECRET: z.string().trim().min(32, "AUTH_SECRET must be at least 32 characters."),
+  AUTH_SECRET: z.string().trim().min(32, "AUTH_SECRET must be at least 32 characters.").optional(),
   ORIGIN: z.url().trim().default("http://127.0.0.1:5173"),
   LUNARR_DATA_DIR: z.string().trim().min(1).default(".lunarr"),
   LUNARR_WATCH_USE_POLLING: z
@@ -88,21 +91,54 @@ export function appEnvDefaultsForEnvironment(env: NodeJS.ProcessEnv) {
   }
 
   return {
-    AUTH_SECRET: "lunarr-local-development-secret-value",
     ORIGIN: "http://127.0.0.1:5173",
+  };
+}
+
+export function resolveAuthSecret(dataDir: string, provided: string | undefined): string {
+  if (provided) return provided;
+
+  const secretPath = path.join(dataDir, AUTH_SECRET_FILE);
+  try {
+    return readFileSync(secretPath, "utf8").trim();
+  } catch (error) {
+    // An existing file that we cannot read should never be overwritten; the persisted secret
+    // would be lost. Surface the read failure so the operator can fix permissions.
+    if (existsSync(secretPath)) {
+      throw new Error(
+        `Unable to read persisted auth secret at ${secretPath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    // First run: generate a secret, persist it, and reuse on every later start.
+    const secret = randomBytes(48).toString("hex");
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(secretPath, secret, { mode: 0o600 });
+    return secret;
+  }
+}
+
+function buildEnvInput(env: NodeJS.ProcessEnv) {
+  const dataDir = env.LUNARR_DATA_DIR?.trim() || ".lunarr";
+  return {
+    ...appEnvDefaultsForEnvironment(env),
+    AUTH_SECRET: resolveAuthSecret(dataDir, env.AUTH_SECRET),
+    ...env,
   };
 }
 
 function parseAppEnv() {
   loadDotenv();
-  const result = envSchema.safeParse({
-    ...appEnvDefaultsForEnvironment(process.env),
-    ...process.env,
-  });
-  if (result.success) return result.data;
+  const result = envSchema.safeParse(buildEnvInput(process.env));
+  if (!result.success) {
+    const message = result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ");
+    throw new Error(`Invalid Lunarr environment: ${message}`);
+  }
 
-  const message = result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ");
-  throw new Error(`Invalid Lunarr environment: ${message}`);
+  // AUTH_SECRET is always resolved (provided, persisted, or generated) to a string before parsing.
+  return result.data as Omit<typeof result.data, "AUTH_SECRET"> & {
+    AUTH_SECRET: string;
+  };
 }
 
 export const appEnv = parseAppEnv();

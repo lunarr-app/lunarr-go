@@ -6,16 +6,20 @@ Lunarr reads `.env` from the project directory and also accepts normal process e
 
 `AUTH_SECRET`
 
-A stable secret used by authentication and server-side encryption helpers. It must be at least 32 characters and must stay the same between restarts.
+A stable secret used by authentication and server-side encryption helpers. It must be at least 32 characters and must stay the same between restarts. If unset, Lunarr generates one on first run and persists it to `<LUNARR_DATA_DIR>/auth-secret` for reuse on later starts; set this explicitly to pin a stable value across environments or multiple instances sharing a data directory.
+
+`AUTH_SECRET` is used for more than login sessions. It derives the key that encrypts stored secrets (API keys, share and device-pairing tokens) and signs remote playback URLs (Cast, AirPlay, HLS, and subtitles). Changing it after startup invalidates every existing session, encrypted secret, and signed playback token, so keep it stable.
 
 `ORIGIN`
 
-The public URL where users access Lunarr. Examples:
+The public URL where users access Lunarr. It must match the URL users open in the browser. Examples:
 
 ```text
 http://127.0.0.1:5173
 https://lunarr.example.com
 ```
+
+If `ORIGIN` is missing or incorrect, login, sessions, and remote/signed playback URLs will fail because cookies and signed tokens are scoped to this URL.
 
 `LUNARR_DATA_DIR`
 
