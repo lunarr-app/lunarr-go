@@ -63,7 +63,7 @@ Show Name/Season 1/02 - Episode Title.mkv
 Show Name/Specials/S00E01.mkv
 ```
 
-Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Sidecar `.vtt` subtitles are detected during scans.
+Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Sidecar `.vtt` and `.srt` subtitles are detected during scans (`.srt` files are normalized to WebVTT for playback).
 
 ## Documentation
 

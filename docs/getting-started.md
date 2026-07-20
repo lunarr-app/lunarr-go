@@ -39,11 +39,14 @@ Supported video extensions:
 .mp4 .mkv .mov .avi .webm
 ```
 
-Supported sidecar subtitle extension:
+Supported sidecar subtitle extensions:
 
 ```text
 .vtt
+.srt
 ```
+
+`.srt` files are normalized to WebVTT for playback.
 
 ## Run The First Scan
 
