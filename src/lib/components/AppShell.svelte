@@ -42,6 +42,9 @@
       : [],
   );
   const desktopAdminNav = $derived(adminNav.filter((item) => item.href === "/libraries" || item.href === "/jobs"));
+  const mobileLibraryNav = $derived(
+    primaryNav.filter((item) => item.href === "/movies" || item.href === "/shows" || item.href === "/watchlist"),
+  );
   const playbackRequested = $derived(Boolean(page.url.searchParams.get("play")?.trim()));
 
   function closeAccountMenu() {
@@ -139,11 +142,19 @@
               <UserRound size={16} aria-hidden="true" />
               <span>Profile</span>
             </a>
+            {#each mobileLibraryNav as item}
+              {@const Icon = item.icon}
+              <a class="mobile-only" role="menuitem" href={item.href} onclick={closeAccountMenu}>
+                <Icon size={16} aria-hidden="true" />
+                <span>{item.label}</span>
+              </a>
+            {/each}
+            <div class="popover-divider mobile-only" aria-hidden="true"></div>
             {#if adminNav.length}
               {#each adminNav as item}
                 {@const Icon = item.icon}
                 <a
-                  class:mobile-only-admin={item.href === "/libraries" || item.href === "/jobs"}
+                  class:mobile-only={item.href === "/libraries" || item.href === "/jobs"}
                   role="menuitem"
                   href={item.href}
                   onclick={closeAccountMenu}
@@ -370,8 +381,13 @@
     text-align: left;
   }
 
-  .account-popover a.mobile-only-admin {
+  .account-popover .mobile-only {
     display: none;
+  }
+
+  .popover-divider {
+    border-top: 1px solid var(--color-border);
+    margin: 0.3rem 0.1rem;
   }
 
   main {
@@ -403,8 +419,12 @@
       display: none;
     }
 
-    .account-popover a.mobile-only-admin {
+    .account-popover a.mobile-only {
       display: flex;
+    }
+
+    .account-popover .popover-divider.mobile-only {
+      display: block;
     }
 
     .nav-list::-webkit-scrollbar {
