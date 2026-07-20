@@ -7,6 +7,7 @@ export const SHOW_SEARCH_PLACEHOLDER = "Search title, episode, keyword, genre, f
 export type CatalogSearchInput = {
   query?: string;
   status?: string;
+  sort?: string;
 };
 
 export function catalogSearchHref(pathname: string, searchParams: URLSearchParams, input: CatalogSearchInput) {
@@ -19,6 +20,10 @@ export function catalogSearchHref(pathname: string, searchParams: URLSearchParam
   if (input.status !== undefined) {
     if (input.status === "all") params.delete("status");
     else params.set("status", input.status);
+  }
+  if (input.sort !== undefined) {
+    if (!input.sort || input.sort === "title") params.delete("sort");
+    else params.set("sort", input.sort);
   }
   params.delete("page");
   const search = params.toString();

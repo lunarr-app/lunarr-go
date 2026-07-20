@@ -23,6 +23,7 @@
     hrefForPage,
     query = "",
     status = "all",
+    sort = "title",
     showFilters = false,
     emptyTitle = "No matching movies",
     emptyDescription = "Adjust the filters or return to the movie dashboard.",
@@ -34,6 +35,7 @@
     hrefForPage: (page: number) => string;
     query?: string;
     status?: string;
+    sort?: string;
     showFilters?: boolean;
     emptyTitle?: string;
     emptyDescription?: string;
@@ -41,7 +43,7 @@
 
   const catalogSearch = createDebouncedCatalogSearch(
     () => query,
-    () => ({ status }),
+    () => ({ status, sort }),
   );
 
   const range = $derived({
@@ -53,6 +55,11 @@
   function onStatusChange(event: Event) {
     const nextStatus = (event.currentTarget as HTMLSelectElement).value;
     catalogSearch.commitSearch({ status: nextStatus });
+  }
+
+  function onSortChange(event: Event) {
+    const nextSort = (event.currentTarget as HTMLSelectElement).value;
+    catalogSearch.commitSearch({ sort: nextSort });
   }
 </script>
 
@@ -77,6 +84,13 @@
         bind:inputRef={catalogSearch.searchInput}
         oninput={catalogSearch.submitSearchSoon}
       />
+      <select name="sort" aria-label="Sort movies" value={sort} onchange={onSortChange}>
+        <option value="title" selected={sort === "title"}>Title A–Z</option>
+        <option value="recent" selected={sort === "recent"}>Recently added</option>
+        <option value="year_desc" selected={sort === "year_desc"}>Year (newest)</option>
+        <option value="rating" selected={sort === "rating"}>Top rated</option>
+        <option value="release_date" selected={sort === "release_date"}>Release date</option>
+      </select>
       <select name="status" aria-label="Watch status" value={status} onchange={onStatusChange}>
         <option value="all" selected={status === "all"}>All</option>
         <option value="unwatched" selected={status === "unwatched"}>Unwatched</option>
@@ -128,7 +142,7 @@
 
   form {
     display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(8rem, auto);
+    grid-template-columns: minmax(11rem, 1fr) minmax(8.5rem, auto) minmax(7.5rem, auto);
     gap: var(--space-2);
     justify-self: end;
     width: 100%;

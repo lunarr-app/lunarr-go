@@ -22,6 +22,7 @@
     pageInfo,
     hrefForPage,
     query = "",
+    sort = "title",
     showFilters = false,
     emptyTitle = "No matching shows",
     emptyDescription = "Adjust the filters or return to the show dashboard.",
@@ -32,18 +33,24 @@
     pageInfo: PageInfo;
     hrefForPage: (page: number) => string;
     query?: string;
+    sort?: string;
     showFilters?: boolean;
     emptyTitle?: string;
     emptyDescription?: string;
   } = $props();
 
-  const catalogSearch = createDebouncedCatalogSearch(() => query);
+  const catalogSearch = createDebouncedCatalogSearch(() => query, () => ({ sort }));
 
   const range = $derived({
     first: pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1,
     last: Math.min(pageInfo.page * pageInfo.pageSize, pageInfo.total),
   });
   const summary = $derived(`Showing ${range.first}-${range.last} of ${pageInfo.total}`);
+
+  function onSortChange(event: Event) {
+    const nextSort = (event.currentTarget as HTMLSelectElement).value;
+    catalogSearch.commitSearch({ sort: nextSort });
+  }
 </script>
 
 <header class="page-header">
@@ -67,6 +74,12 @@
         bind:inputRef={catalogSearch.searchInput}
         oninput={catalogSearch.submitSearchSoon}
       />
+      <select name="sort" aria-label="Sort shows" value={sort} onchange={onSortChange}>
+        <option value="title" selected={sort === "title"}>Title A–Z</option>
+        <option value="recent" selected={sort === "recent"}>Recently added</option>
+        <option value="latest" selected={sort === "latest"}>Recently aired</option>
+        <option value="popular" selected={sort === "popular"}>Most popular</option>
+      </select>
     </form>
   {/if}
 </header>
@@ -113,7 +126,7 @@
 
   form {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(11rem, 1fr) minmax(8.5rem, auto);
     gap: var(--space-2);
   }
 

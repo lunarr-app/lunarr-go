@@ -12,6 +12,8 @@
   const catalogSearch = createDebouncedCatalogSearch(() => data.query);
 
   const isSearching = $derived(data.query.length > 0);
+  const resultTotal = $derived(data.pageInfo?.total ?? data.results.length);
+  const refineHref = $derived(`/shows/all?q=${encodeURIComponent(data.query)}`);
 
   const range = $derived.by(() => {
     const pageInfo = data.pageInfo;
@@ -86,6 +88,19 @@
 </header>
 
 {#if isSearching}
+  <div class="results-bar">
+    <p class="results-count">
+      <strong>{resultTotal}</strong>
+      <span>{resultTotal === 1 ? "result" : "results"}</span>
+      <span class="results-for">for</span>
+      <span class="results-query">“{data.query}”</span>
+    </p>
+    <a class="results-refine" href={refineHref}>
+      <span>Filter &amp; sort</span>
+      <ChevronRight size={15} aria-hidden="true" />
+    </a>
+  </div>
+
   {#if data.results.length}
     <section aria-label="Show search results">
       <div class="grid">
@@ -158,6 +173,51 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 1.1rem;
+  }
+
+  .results-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: 1rem;
+  }
+
+  .results-count {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+  }
+
+  .results-count strong {
+    color: var(--color-text);
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .results-query {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+
+  .results-refine {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .results-refine:hover {
+    color: var(--color-text);
   }
 
   .media-section + .media-section {
