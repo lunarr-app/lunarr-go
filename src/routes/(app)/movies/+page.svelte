@@ -1,34 +1,64 @@
 <script lang="ts">
   import MovieCard from "$lib/components/MovieCard.svelte";
+  import Pagination from "$lib/components/Pagination.svelte";
   import Rail from "$lib/components/Rail.svelte";
+  import SearchField from "$lib/components/SearchField.svelte";
+  import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
+  import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
   import { ChevronRight, Library } from "@lucide/svelte";
 
   let { data } = $props();
+
+  const catalogSearch = createDebouncedCatalogSearch(() => data.query);
+
+  const isSearching = $derived(data.query.length > 0);
+
+  const range = $derived.by(() => {
+    const pageInfo = data.pageInfo;
+    if (!pageInfo) return { first: 0, last: 0, total: 0 };
+    return {
+      first: pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1,
+      last: Math.min(pageInfo.page * pageInfo.pageSize, pageInfo.total),
+      total: pageInfo.total,
+    };
+  });
+  const summary = $derived(`Showing ${range.first}-${range.last} of ${range.total}`);
+
+  function hrefForPage(page: number) {
+    const params = new URLSearchParams();
+    if (data.query) params.set("q", data.query);
+    if (page > 1) params.set("page", String(page));
+    const search = params.toString();
+    return search ? `/movies?${search}` : "/movies";
+  }
 
   function countLabel(total: number, singular: string, plural: string) {
     return `${total} ${total === 1 ? singular : plural}`;
   }
 
-  const sections = $derived([
-    {
-      key: "recent",
-      title: "Recently added",
-      movies: data.rows.recent,
-      href: "/movies/recent",
-    },
-    {
-      key: "latest",
-      title: "Latest releases",
-      movies: data.rows.latest,
-      href: "/movies/latest",
-    },
-    {
-      key: "popular",
-      title: "Popular",
-      movies: data.rows.popular,
-      href: "/movies/popular",
-    },
-  ]);
+  const sections = $derived(
+    [
+      {
+        key: "recent",
+        title: "Recently added",
+        movies: data.rails?.recent ?? [],
+        href: "/movies/recent",
+      },
+      {
+        key: "latest",
+        title: "Latest releases",
+        movies: data.rails?.latest ?? [],
+        href: "/movies/latest",
+      },
+      {
+        key: "popular",
+        title: "Popular",
+        movies: data.rails?.popular ?? [],
+        href: "/movies/popular",
+      },
+    ].filter((section) => section.movies.length > 0),
+  );
+  const libraryEmpty = $derived(!isSearching && sections.length === 0);
 </script>
 
 <svelte:head>
@@ -36,7 +66,52 @@
   <meta name="description" content="Browse and resume movies in your Lunarr library." />
 </svelte:head>
 
-{#if sections.every((section) => section.movies.length === 0)}
+<header class="page-header">
+  <form
+    method="GET"
+    role="search"
+    onsubmit={(event) => {
+      event.preventDefault();
+      catalogSearch.commitSearch();
+    }}
+  >
+    <SearchField
+      ariaLabel="Search movies"
+      placeholder={MOVIE_SEARCH_PLACEHOLDER}
+      bind:value={catalogSearch.queryInput}
+      bind:inputRef={catalogSearch.searchInput}
+      oninput={catalogSearch.submitSearchSoon}
+    />
+  </form>
+</header>
+
+{#if isSearching}
+  {#if data.results.length}
+    <section aria-label="Movie search results">
+      <div class="grid">
+        {#each data.results as movie}
+          <MovieCard {movie} />
+        {/each}
+      </div>
+      {#if data.pageInfo && data.pageInfo.totalPages > 1}
+        <Pagination
+          page={data.pageInfo.page}
+          totalPages={data.pageInfo.totalPages}
+          hasPrevious={data.pageInfo.hasPrevious}
+          hasNext={data.pageInfo.hasNext}
+          {hrefForPage}
+          {summary}
+          ariaLabel="Movie search results pages"
+        />
+      {/if}
+    </section>
+  {:else}
+    <section class="empty">
+      <h2>No matching movies</h2>
+      <p class="muted">No results for “{data.query}”. Try a different title, keyword, genre, or filename.</p>
+    </section>
+  {/if}
+{:else if libraryEmpty}
   <section class="empty">
     <h2>No movies scanned yet</h2>
     <p class="muted">Add a movie library and run a scan to populate this page.</p>
@@ -47,31 +122,44 @@
   </section>
 {:else}
   {#each sections as section}
-    {#if section.movies.length}
-      <section class="movie-section" aria-labelledby={`${section.key}-heading`}>
-        <div class="section-heading">
-          <h2 id={`${section.key}-heading`}>{section.title}</h2>
-          <div class="section-meta">
-            <span>{countLabel(section.movies.length, "movie", "movies")}</span>
-            {#if section.href}
-              <a class="view-all" href={section.href}>
-                <span>View all</span>
-                <ChevronRight size={16} aria-hidden="true" />
-              </a>
-            {/if}
-          </div>
+    <section class="movie-section" aria-labelledby={`${section.key}-heading`}>
+      <div class="section-heading">
+        <h2 id={`${section.key}-heading`}>{section.title}</h2>
+        <div class="section-meta">
+          <span>{countLabel(section.movies.length, "movie", "movies")}</span>
+          {#if section.href}
+            <a class="view-all" href={section.href}>
+              <span>View all</span>
+              <ChevronRight size={16} aria-hidden="true" />
+            </a>
+          {/if}
         </div>
-        <Rail items={section.movies} variant="poster">
-          {#snippet children(movie)}
-            <MovieCard {movie} />
-          {/snippet}
-        </Rail>
-      </section>
-    {/if}
+      </div>
+      <Rail items={section.movies} variant="poster">
+        {#snippet children(movie)}
+          <MovieCard {movie} />
+        {/snippet}
+      </Rail>
+    </section>
   {/each}
 {/if}
 
 <style>
+  .page-header {
+    margin-bottom: 1.6rem;
+  }
+
+  form {
+    display: block;
+    max-width: 40rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 1.1rem;
+  }
+
   .movie-section + .movie-section {
     margin-top: var(--space-5);
   }

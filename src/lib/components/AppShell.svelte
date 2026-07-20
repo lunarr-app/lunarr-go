@@ -9,7 +9,6 @@
     Link2,
     List,
     LogOut,
-    Search,
     Settings,
     Tv,
     UserRound,
@@ -41,7 +40,6 @@
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
     { href: "/watchlist", label: "Watchlist", icon: List },
-    { href: "/search", label: "Search", icon: Search },
   ]);
   const adminNav = $derived(
     user?.role === "admin"

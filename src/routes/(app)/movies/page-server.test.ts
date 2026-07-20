@@ -21,11 +21,21 @@ type MovieRow = {
 };
 
 type MoviesLoadResult = {
-  rows: {
+  query: string;
+  rails: {
     recent: MovieRow[];
     latest: MovieRow[];
     popular: MovieRow[];
-  };
+  } | null;
+  results: MovieRow[];
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+  } | null;
 };
 
 type TestEvent = {
@@ -236,19 +246,20 @@ describe("movies page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("ignores browse query parameters and returns scoped rails", async () => {
+  test("returns scoped rails and ignores status and sort query parameters", async () => {
     const result = await loadMovies({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/movies?q=rav&status=unwatched&sort=rating"),
+      url: new URL("http://localhost/movies?status=unwatched&sort=rating"),
     });
 
-    expect(result).not.toHaveProperty("query");
     expect(result).not.toHaveProperty("status");
     expect(result).not.toHaveProperty("sort");
-    expect(result.rows).not.toHaveProperty("all");
-    expect(Array.isArray(result.rows.recent)).toBe(true);
-    expect(Array.isArray(result.rows.latest)).toBe(true);
-    expect(Array.isArray(result.rows.popular)).toBe(true);
+    expect(result.query).toBe("");
+    expect(result.results).toEqual([]);
+    expect(result.pageInfo).toBeNull();
+    expect(Array.isArray(result.rails?.recent)).toBe(true);
+    expect(Array.isArray(result.rails?.latest)).toBe(true);
+    expect(Array.isArray(result.rails?.popular)).toBe(true);
   });
 
   test("ignores invalid browse query parameters", async () => {
@@ -259,7 +270,20 @@ describe("movies page server", () => {
 
     expect(result).not.toHaveProperty("status");
     expect(result).not.toHaveProperty("sort");
-    expect(result.rows).not.toHaveProperty("all");
+    expect(result.rails).not.toBeNull();
+  });
+
+  test("returns search results instead of rails when a query is present", async () => {
+    const result = await loadMovies({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/movies?q=rav"),
+    });
+
+    expect(result.query).toBe("rav");
+    expect(result.rails).toBeNull();
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0]).toMatchObject({ id: "movie-bravo", title: "Bravo" });
+    expect(result.pageInfo).toMatchObject({ page: 1, total: 1, totalPages: 1 });
   });
 
   test("loads only resumable movies for continue watching", async () => {

@@ -11,7 +11,19 @@ import { actions as seasonActions, load as seasonLoad } from "./[id]/seasons/[se
 import { load as showsLoad } from "./+page.server";
 import type { ShowRowsResponse } from "$lib/server/api/types";
 
-type ShowsLoadResult = { rows: ShowRowsResponse };
+type ShowsLoadResult = {
+  query: string;
+  rails: ShowRowsResponse | null;
+  results: Array<{ id: string; title: string }>;
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+  } | null;
+};
 
 type TestEvent = {
   locals: { user: { id: string; role: string } };
@@ -146,31 +158,44 @@ describe("shows page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("loads TV rails and ignores query parameters", async () => {
+  test("loads TV rails and ignores sort query parameter", async () => {
     const result = await loadShows({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/shows?q=exp&sort=latest"),
+      url: new URL("http://localhost/shows?sort=latest"),
     });
 
-    expect(result).not.toHaveProperty("query");
     expect(result).not.toHaveProperty("sort");
-    expect(result).toMatchObject({
-      rows: {
-        latest: [
-          {
-            id: "show-1",
-            title: "The Expanse",
-          },
-        ],
-        popular: [
-          {
-            id: "show-1",
-            title: "The Expanse",
-          },
-        ],
-      },
+    expect(result.query).toBe("");
+    expect(result.results).toEqual([]);
+    expect(result.pageInfo).toBeNull();
+    expect(result.rails).toMatchObject({
+      latest: [
+        {
+          id: "show-1",
+          title: "The Expanse",
+        },
+      ],
+      popular: [
+        {
+          id: "show-1",
+          title: "The Expanse",
+        },
+      ],
     });
-    expect(result.rows).not.toHaveProperty("all");
+    expect(result.rails).not.toHaveProperty("all");
+  });
+
+  test("returns search results instead of rails when a query is present", async () => {
+    const result = await loadShows({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/shows?q=expanse"),
+    });
+
+    expect(result.query).toBe("expanse");
+    expect(result.rails).toBeNull();
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0]).toMatchObject({ id: "show-1", title: "The Expanse" });
+    expect(result.pageInfo).toMatchObject({ page: 1, total: 1, totalPages: 1 });
   });
 
   test("loads TV rails for the shows page", async () => {
@@ -192,25 +217,23 @@ describe("shows page server", () => {
       url: new URL("http://localhost/shows"),
     });
 
-    expect(result).toMatchObject({
-      rows: {
-        latest: [
-          {
-            id: "show-1",
-            title: "The Expanse",
-          },
-        ],
-        popular: [
-          {
-            id: "show-1",
-            title: "The Expanse",
-          },
-        ],
-      },
+    expect(result.rails).toMatchObject({
+      latest: [
+        {
+          id: "show-1",
+          title: "The Expanse",
+        },
+      ],
+      popular: [
+        {
+          id: "show-1",
+          title: "The Expanse",
+        },
+      ],
     });
-    expect(result.rows).not.toHaveProperty("all");
-    expect(result.rows).not.toHaveProperty("continueWatching");
-    expect(result.rows).not.toHaveProperty("nextUp");
+    expect(result.rails).not.toHaveProperty("all");
+    expect(result.rails).not.toHaveProperty("continueWatching");
+    expect(result.rails).not.toHaveProperty("nextUp");
   });
 
   test("loads show detail and marks episodes and seasons watched", async () => {
