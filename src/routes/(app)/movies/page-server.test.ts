@@ -21,13 +21,7 @@ type MovieRow = {
 };
 
 type MoviesLoadResult = {
-  query: string;
-  rails: {
-    recent: MovieRow[];
-    latest: MovieRow[];
-    popular: MovieRow[];
-  } | null;
-  results: MovieRow[];
+  movies: MovieRow[];
   pageInfo: {
     page: number;
     pageSize: number;
@@ -35,7 +29,10 @@ type MoviesLoadResult = {
     totalPages: number;
     hasPrevious: boolean;
     hasNext: boolean;
-  } | null;
+  };
+  query: string;
+  status: string;
+  sort: string;
 };
 
 type TestEvent = {
@@ -246,44 +243,65 @@ describe("movies page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("returns scoped rails and ignores status and sort query parameters", async () => {
+  test("lists all movies by title with default filters", async () => {
     const result = await loadMovies({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/movies?status=unwatched&sort=rating"),
+      url: new URL("http://localhost/movies"),
     });
 
-    expect(result).not.toHaveProperty("status");
-    expect(result).not.toHaveProperty("sort");
     expect(result.query).toBe("");
-    expect(result.results).toEqual([]);
-    expect(result.pageInfo).toBeNull();
-    expect(Array.isArray(result.rails?.recent)).toBe(true);
-    expect(Array.isArray(result.rails?.latest)).toBe(true);
-    expect(Array.isArray(result.rails?.popular)).toBe(true);
+    expect(result.status).toBe("all");
+    expect(result.sort).toBe("title");
+    expect(result.movies.map((movie) => movie.id)).toEqual(["movie-alpha", "movie-bravo", "movie-charlie"]);
+    expect(result.pageInfo).toMatchObject({ page: 1, total: 3, totalPages: 1 });
   });
 
-  test("ignores invalid browse query parameters", async () => {
+  test("falls back to defaults for invalid query parameters", async () => {
     const result = await loadMovies({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/movies?status=watchedish&sort=unknown"),
+      url: new URL("http://localhost/movies?status=watchedish&sort=unknown&page=-3"),
     });
 
-    expect(result).not.toHaveProperty("status");
-    expect(result).not.toHaveProperty("sort");
-    expect(result.rails).not.toBeNull();
+    expect(result.status).toBe("all");
+    expect(result.sort).toBe("title");
+    expect(result.pageInfo.page).toBe(1);
+    expect(result.movies).toHaveLength(3);
   });
 
-  test("returns search results instead of rails when a query is present", async () => {
+  test("filters movies by search query", async () => {
     const result = await loadMovies({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/movies?q=rav"),
     });
 
     expect(result.query).toBe("rav");
-    expect(result.rails).toBeNull();
-    expect(result.results).toHaveLength(1);
-    expect(result.results[0]).toMatchObject({ id: "movie-bravo", title: "Bravo" });
-    expect(result.pageInfo).toMatchObject({ page: 1, total: 1, totalPages: 1 });
+    expect(result.movies).toHaveLength(1);
+    expect(result.movies[0]).toMatchObject({ id: "movie-bravo", title: "Bravo" });
+    expect(result.pageInfo).toMatchObject({ total: 1 });
+  });
+
+  test("filters movies by watch status", async () => {
+    const watched = await loadMovies({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/movies?status=watched"),
+    });
+    expect(watched.movies.map((movie) => movie.id)).toEqual(["movie-alpha"]);
+
+    const unwatched = await loadMovies({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/movies?status=unwatched"),
+    });
+    expect(unwatched.movies.map((movie) => movie.id)).toEqual(["movie-bravo", "movie-charlie"]);
+  });
+
+  test("sorts movies by release year", async () => {
+    const result = await loadMovies({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/movies?sort=year_desc"),
+    });
+
+    expect(result.sort).toBe("year_desc");
+    expect(result.movies.map((movie) => movie.id)).toEqual(["movie-bravo", "movie-charlie", "movie-alpha"]);
   });
 
   test("loads only resumable movies for continue watching", async () => {

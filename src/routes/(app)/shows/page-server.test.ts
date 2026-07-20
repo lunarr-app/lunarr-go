@@ -9,12 +9,9 @@ import { setSetting } from "$lib/server/settings";
 import { actions as showActions, load as showLoad } from "./[id]/+page.server";
 import { actions as seasonActions, load as seasonLoad } from "./[id]/seasons/[seasonId]/+page.server";
 import { load as showsLoad } from "./+page.server";
-import type { ShowRowsResponse } from "$lib/server/api/types";
 
 type ShowsLoadResult = {
-  query: string;
-  rails: ShowRowsResponse | null;
-  results: Array<{ id: string; title: string }>;
+  shows: Array<{ id: string; title: string }>;
   pageInfo: {
     page: number;
     pageSize: number;
@@ -22,7 +19,9 @@ type ShowsLoadResult = {
     totalPages: number;
     hasPrevious: boolean;
     hasNext: boolean;
-  } | null;
+  };
+  query: string;
+  sort: string;
 };
 
 type TestEvent = {
@@ -158,82 +157,49 @@ describe("shows page server", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("loads TV rails and ignores sort query parameter", async () => {
+  test("lists all shows by title with default sort", async () => {
     const result = await loadShows({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/shows?sort=latest"),
+      url: new URL("http://localhost/shows"),
     });
 
-    expect(result).not.toHaveProperty("sort");
     expect(result.query).toBe("");
-    expect(result.results).toEqual([]);
-    expect(result.pageInfo).toBeNull();
-    expect(result.rails).toMatchObject({
-      latest: [
-        {
-          id: "show-1",
-          title: "The Expanse",
-        },
-      ],
-      popular: [
-        {
-          id: "show-1",
-          title: "The Expanse",
-        },
-      ],
-    });
-    expect(result.rails).not.toHaveProperty("all");
+    expect(result.sort).toBe("title");
+    expect(result.shows).toMatchObject([
+      {
+        id: "show-1",
+        title: "The Expanse",
+      },
+    ]);
+    expect(result.pageInfo).toMatchObject({ page: 1, total: 1, totalPages: 1 });
   });
 
-  test("returns search results instead of rails when a query is present", async () => {
+  test("filters shows by search query", async () => {
     const result = await loadShows({
       locals: { user: { id: "user-1", role: "user" } },
       url: new URL("http://localhost/shows?q=expanse"),
     });
 
     expect(result.query).toBe("expanse");
-    expect(result.rails).toBeNull();
-    expect(result.results).toHaveLength(1);
-    expect(result.results[0]).toMatchObject({ id: "show-1", title: "The Expanse" });
-    expect(result.pageInfo).toMatchObject({ page: 1, total: 1, totalPages: 1 });
+    expect(result.shows).toHaveLength(1);
+    expect(result.shows[0]).toMatchObject({ id: "show-1", title: "The Expanse" });
+
+    const none = await loadShows({
+      locals: { user: { id: "user-1", role: "user" } },
+      url: new URL("http://localhost/shows?q=zzz-does-not-exist"),
+    });
+    expect(none.shows).toEqual([]);
+    expect(none.pageInfo.total).toBe(0);
   });
 
-  test("loads TV rails for the shows page", async () => {
-    await db
-      .insertInto("watch_progress")
-      .values({
-        user_id: "user-1",
-        media_item_id: "episode-1",
-        media_file_id: "file-1",
-        position_seconds: 120,
-        duration_seconds: 2700,
-        completed: 0,
-        updated_at: new Date(Date.now() + 1000).toISOString(),
-      })
-      .execute();
-
+  test("applies the sort query parameter", async () => {
     const result = await loadShows({
       locals: { user: { id: "user-1", role: "user" } },
-      url: new URL("http://localhost/shows"),
+      url: new URL("http://localhost/shows?sort=popular"),
     });
 
-    expect(result.rails).toMatchObject({
-      latest: [
-        {
-          id: "show-1",
-          title: "The Expanse",
-        },
-      ],
-      popular: [
-        {
-          id: "show-1",
-          title: "The Expanse",
-        },
-      ],
-    });
-    expect(result.rails).not.toHaveProperty("all");
-    expect(result.rails).not.toHaveProperty("continueWatching");
-    expect(result.rails).not.toHaveProperty("nextUp");
+    expect(result.sort).toBe("popular");
+    expect(result.shows).toHaveLength(1);
   });
 
   test("loads show detail and marks episodes and seasons watched", async () => {
