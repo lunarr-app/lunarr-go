@@ -12,19 +12,38 @@ Open it with the `sqlite3` CLI:
 sqlite3 "$LUNARR_DATA_DIR/lunarr.db"
 ```
 
-## Locked out of the admin account
+## Resetting a password
 
-The first registered user becomes an admin, and admins can create or reset other accounts from **Users** in the admin console. If no admin can sign in, promote an existing account directly in the database:
+Lunarr stores credentials in the `account` table, managed by Better Auth, which hashes passwords with Node's `scrypt` (`N=16384`, `r=16`, `p=1`, `dkLen=64`) in the `salt:key` format (both halves hex, 16-byte salt). There is one `account` row per user with `provider_id = 'credential'`, linked by `user_id`.
+
+### If another user account exists
+
+If you are locked out of the only admin, or simply forgot a password, promote an existing account to admin and reset from the console:
 
 ```sql
 update user set role = 'admin' where email = 'you@example.com';
 ```
 
-Then restart Lunarr and sign in with that account. The server keeps at least one admin, so do not delete every admin row.
+Sign in with that account and use the admin **Users** page to set a new password for the locked-out user. The server keeps at least one admin, so do not delete every admin row.
 
-## Resetting a password
+### If no other user account exists
 
-Passwords are managed by Better Auth and stored hashed in the `account` table. Do not hand-edit the `password` column. To recover access, promote an account to admin (above) and use the **Users** page to reset that user's password, or register a fresh account and promote it.
+When there is no second account to promote, write a valid hash directly into the `account` table. Generate a hash for a new password (replace `ChangeMe!123`):
+
+```sh
+node -e "const {randomBytes,scrypt}=require('node:crypto');const pw='ChangeMe!123';const salt=randomBytes(16).toString('hex');scrypt(pw,salt,64,{N:16384,r:16,p:1,maxmem:128*16384*16*2},(e,k)=>{if(e)throw e;console.log(salt+':'+k.toString('hex'))})"
+```
+
+Stop the server and write the hash into the matching account row:
+
+```sql
+update account
+set password = '998e731fce266631b50c8725eaf8d95d:3d29872b00276b055c450e54f7dce3fb25b96c48b1aafbea4f1f6638b7b3608b163c0ffc1ae5057b6663aed4617d35f21a9e99504dc5cd31c858f7689707ace9'
+where provider_id = 'credential'
+  and user_id = (select id from user where email = 'you@example.com');
+```
+
+The example hash above is the value for `ChangeMe!123` and is safe to use for testing. Sign in with the new password, then change it from the profile page.
 
 ## Starting over
 
