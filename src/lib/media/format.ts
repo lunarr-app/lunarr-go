@@ -20,6 +20,14 @@ export function formatDateTime(
   }).format(date);
 }
 
+export function formatReleaseDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const date = new Date(dateOnly ? `${value}T00:00:00` : value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
+}
+
 export function formatRelativeTime(value: string | null | undefined, nowMs = Date.now()): string {
   if (!value) return dateTimeFallbackLabel["not-yet"];
   const seconds = Math.max(0, Math.floor((nowMs - new Date(value).getTime()) / 1000));

@@ -8,6 +8,7 @@ import {
   formatGibibytes,
   formatMediaDuration,
   formatRelativeTime,
+  formatReleaseDate,
   formatFileCountLabel,
   formatVoteAverageLabel,
   formatVoteCountLabel,
@@ -32,6 +33,20 @@ describe("formatRelativeTime", () => {
     const now = Date.parse("2026-06-15T12:00:00.000Z");
     expect(formatRelativeTime("2026-06-15T11:59:30.000Z", now)).toBe("just now");
     expect(formatRelativeTime("2026-06-15T11:30:00.000Z", now)).toBe("30m ago");
+  });
+});
+
+describe("formatReleaseDate", () => {
+  test("formats date-only values as locale dates without timezone shift", () => {
+    const label = formatReleaseDate("2011-04-17");
+    expect(label).toContain("2011");
+    expect(label).toContain("17");
+  });
+
+  test("returns null for missing or invalid values", () => {
+    expect(formatReleaseDate(null)).toBeNull();
+    expect(formatReleaseDate("")).toBeNull();
+    expect(formatReleaseDate("not-a-date")).toBeNull();
   });
 });
 

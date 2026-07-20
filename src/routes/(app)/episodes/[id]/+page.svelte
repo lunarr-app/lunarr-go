@@ -7,6 +7,7 @@
     formatEpisodeCode,
     formatFileCountLabel,
     formatMediaDuration,
+    formatReleaseDate,
     formatVoteAverageLabel,
     formatVoteCountLabel,
   } from "$lib/media/format";
@@ -24,7 +25,7 @@
   const runtimeLabel = $derived(data.episode.runtimeSeconds ? formatMediaDuration(data.episode.runtimeSeconds) : null);
   const ratingLabel = $derived(formatVoteAverageLabel(data.episode.voteAverage));
   const voteCountLabel = $derived(formatVoteCountLabel(data.episode.voteCount));
-  const releaseLabel = $derived(data.episode.releaseDate);
+  const releaseLabel = $derived(formatReleaseDate(data.episode.releaseDate));
   const playback = $derived(deriveDetailPlaybackState(data.files, data.progress));
   const primaryHref = $derived(
     playback.primaryFile
@@ -78,7 +79,7 @@
   {#snippet aside()}
     <EpisodeMetadataSidebar
       {episodeCode}
-      {releaseLabel}
+      releaseLabel={data.episode.releaseDate}
       {runtimeLabel}
       {ratingLabel}
       {voteCountLabel}
