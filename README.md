@@ -63,6 +63,26 @@ Show Name/Season 1/02 - Episode Title.mkv
 Show Name/Specials/S00E01.mkv
 ```
 
+Common movie layouts (title with optional release year in parentheses or brackets):
+
+```text
+Movie Name (2024).mkv
+Movie.Name.2024.1080p.mkv
+The Movie (2024)/The Movie (2024).mkv
+Movies/Movie Name (2024)/Movie Name.mkv
+```
+
+Common sidecar subtitle layouts (same base name as the video, with an optional language or label suffix):
+
+```text
+Movie Name (2024).en.vtt
+Movie Name (2024).srt
+Movie Name (2024).english.srt
+Show Name - S01E02 - Episode Title.es.vtt
+```
+
+Subtitles are matched to their video by base name and an optional `.language` or `.label` suffix (for example `.en`, `.spanish`). The first track, or a track with no suffix, is treated as the default.
+
 Supported video extensions are `.mp4`, `.mkv`, `.mov`, `.avi`, and `.webm`. Sidecar `.vtt` and `.srt` subtitles are detected during scans (`.srt` files are normalized to WebVTT for playback).
 
 ## Documentation
