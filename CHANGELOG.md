@@ -24,6 +24,37 @@
 - Removed the Continue watching (and Next up) rails from the Movies and Shows hub pages so resume lives only on the dedicated Continue page. Those hubs are now pure category browsers (Recently added, Latest, Popular), and their server loads are scoped accordingly (dropping `continueWatching`/`nextUp`).
 - Merged the Discover hub into the Continue (landing) page: the landing page now also shows Recommended movies and Recommended shows rails (with "View all" links to the `/movies/discover` and `/shows/discover` browse pages). Removed the standalone `/discover` route and its primary-nav entry, matching the Plex/Jellyfin-style combined Home.
 
+### Added
+
+- Added a watchlist feature for movies and shows, including a watchlist toggle on detail pages and a dedicated Watchlist page rendered with the shared rail carousel layout.
+- Added dedicated watchlist API endpoints (`GET /api/watchlist/movies`, `GET /api/watchlist/shows`, `GET /api/watchlist/{mediaItemId}` to check status) with a `limit` query parameter, SQL-level filtering, and pagination.
+- Added dedicated continue-watching API endpoints (`GET /api/continue/movies`, `GET /api/continue/episodes`) alongside the existing next-up endpoint.
+- Added `inWatchlist` to movie and show detail/overview API responses.
+- Added support for sidecar `.srt` subtitle files with on-the-fly WebVTT conversion for playback.
+- Added standardized detail pages to 36 items per page to match the All movies/shows browse pages.
+
+### Changed
+
+- Return RFC 9457 problem-details (`application/problem+json`) for API errors, including 204 No Content from DELETE endpoints, 500 for unexpected read-API errors, and consistent JSON error handling across GET endpoints.
+- Aligned OpenAPI request schemas with runtime contracts and real enums.
+- Harmonized the Movies and Shows hub pages with the Continue landing page layout.
+- Redesigned the detail hero (unified watch-toggle icons, removed back-links, clickable show/season subtitle, global heading scale) and improved media hero chips and season rating/year data.
+- Stopped trimming passwords in auth forms.
+- Enabled VAAPI hardware decode with GPU scaling and fixed hardware transcode scaling for VideoToolbox, QSV, and NVENC; unified FFmpeg scale-filter construction across hardware modes.
+- Standardized the app environment configuration (`LUNARR_APP_VERSION`, `FFMPEG_PATH`, `FFMPEG_VAAPI_DEVICE`) in `appEnv` and removed a redundant transcode-policy call from the heartbeat endpoint.
+- Bumped non-major dependencies (SvelteKit 2.70.1, Svelte 5.56.6, Vite 8.1.5, svelte-check 4.7.3, `@lucide/svelte` 1.25.0, `kysely` 0.29.4, `theintrodb` 3.1.2, `prettier` 3.9.5, `@ctrl/video-filename-parser` 5.11.4).
+
+### Performance
+
+- Rewrote the continue-watching and next-up episode rails using Kysely CTEs and optimized person filmography stats with aggregate queries.
+- Added database indexes and optimized browse, auth, and session queries.
+
+### Fixed
+
+- Fixed a movie-credits response that incorrectly named a field as a show.
+- Fixed an input-proxy drain-await hang on client disconnect and SFTP stream teardown race conditions; extracted a shared byte-range parser.
+- Fixed iOS Safari keeping its bottom browser toolbar visible by letting the document scroll instead of an inner container, and fixed the auth screen card centering/background under the collapsing toolbar using dynamic viewport units.
+
 ## 0.7.0 - 2026-07-12
 
 ### Added
