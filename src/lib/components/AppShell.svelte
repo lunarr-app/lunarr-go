@@ -189,17 +189,15 @@
 
 <style>
   .shell {
-    height: 100vh;
-    height: 100dvh;
-    max-height: 100vh;
-    max-height: 100dvh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .app-header {
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 10;
     display: flex;
     flex-shrink: 0;
@@ -393,7 +391,6 @@
     min-height: 0;
     min-width: 0;
     flex: 1;
-    overflow: auto;
     padding: 1.6rem clamp(1rem, 3vw, 2rem) 1.6rem;
   }
 
