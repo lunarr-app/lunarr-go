@@ -97,13 +97,6 @@
 </div>
 
 <style>
-  .video-shell {
-    position: relative;
-    overflow: hidden;
-    border-radius: 8px;
-    background: #000;
-  }
-
   .placeholder-shell {
     min-height: min(56.25vw, 32rem);
     aspect-ratio: 16 / 9;

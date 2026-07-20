@@ -30,11 +30,14 @@
     airPlayTargetPickerAction,
     castControlLabel,
     clampPlaybackSeconds,
+    contentFitLabel,
+    type ContentFit,
     defaultSubtitleTrackId,
     formatPlaybackTime,
     fullscreenAction,
     hasAirPlayPicker,
     mediaTimelineSeconds,
+    nextContentFit,
     nextControlsActivityTick,
     nextSubtitleMenuOptionIndex,
     playerKeyboardShortcuts,
@@ -86,13 +89,6 @@
 
   type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
 
-  type ContentFit = "contain" | "cover" | "fill";
-  const CONTENT_FIT_CYCLE: ContentFit[] = ["contain", "cover", "fill"];
-  const CONTENT_FIT_LABELS: Record<ContentFit, string> = {
-    contain: "Fit",
-    cover: "Fill",
-    fill: "Stretch",
-  };
   const ZOOM_LABEL_VISIBLE_MS = 2000;
 
   let {
@@ -437,9 +433,8 @@
   }
 
   function cycleContentFit() {
-    const index = CONTENT_FIT_CYCLE.indexOf(contentFit);
-    contentFit = CONTENT_FIT_CYCLE[(index + 1) % CONTENT_FIT_CYCLE.length] ?? "contain";
-    zoomLabel = CONTENT_FIT_LABELS[contentFit];
+    contentFit = nextContentFit(contentFit);
+    zoomLabel = contentFitLabel(contentFit);
     if (zoomLabelTimeout !== null) {
       window.clearTimeout(zoomLabelTimeout);
     }
@@ -1290,6 +1285,65 @@
               <Cast size={20} aria-hidden="true" />
             </button>
           {/if}
+          {#if data.playback.tracks.length > 0}
+            <div class="subtitle-control">
+              <button
+                bind:this={subtitleToggleButton}
+                class:active={selectedSubtitleId !== "off"}
+                class="control-button"
+                type="button"
+                aria-label="Subtitles"
+                aria-expanded={subtitleMenuOpen}
+                aria-haspopup="menu"
+                aria-controls="player-subtitle-menu"
+                onclick={toggleSubtitleMenu}
+              >
+                <Captions size={20} aria-hidden="true" />
+              </button>
+              {#if subtitleMenuOpen}
+                <div
+                  class="subtitle-menu"
+                  bind:this={subtitleMenuElement}
+                  id="player-subtitle-menu"
+                  role="menu"
+                  aria-label="Subtitle tracks"
+                  tabindex="-1"
+                  onkeydown={handleSubtitleMenuKeydown}
+                >
+                  <button
+                    class:active={selectedSubtitleId === "off"}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={selectedSubtitleId === "off"}
+                    onclick={() => void applySubtitleTrack("off", true)}
+                  >
+                    Off
+                  </button>
+                  {#each data.playback.tracks as track (track.id)}
+                    <button
+                      class:active={selectedSubtitleId === track.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={selectedSubtitleId === track.id}
+                      onclick={() => void applySubtitleTrack(track.id, true)}
+                    >
+                      {track.label}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
+          <button
+            class:active={contentFit !== "contain"}
+            class="control-button"
+            type="button"
+            aria-label={`Zoom: ${contentFitLabel(contentFit)}`}
+            title={`Zoom: ${contentFitLabel(contentFit)} (Z)`}
+            onclick={cycleContentFit}
+          >
+            <Ratio size={20} aria-hidden="true" />
+          </button>
           {#if airPlayButton.visible}
             <button
               class:active={airPlayButton.active}
@@ -1410,65 +1464,6 @@
                 aria-valuetext={volumeAria.valueText}
                 oninput={(event) => setVolume(Number(event.currentTarget.value))}
               />
-              {#if data.playback.tracks.length > 0}
-                <div class="subtitle-control">
-                  <button
-                    bind:this={subtitleToggleButton}
-                    class:active={selectedSubtitleId !== "off"}
-                    class="control-button"
-                    type="button"
-                    aria-label="Subtitles"
-                    aria-expanded={subtitleMenuOpen}
-                    aria-haspopup="menu"
-                    aria-controls="player-subtitle-menu"
-                    onclick={toggleSubtitleMenu}
-                  >
-                    <Captions size={20} aria-hidden="true" />
-                  </button>
-                  {#if subtitleMenuOpen}
-                    <div
-                      class="subtitle-menu"
-                      bind:this={subtitleMenuElement}
-                      id="player-subtitle-menu"
-                      role="menu"
-                      aria-label="Subtitle tracks"
-                      tabindex="-1"
-                      onkeydown={handleSubtitleMenuKeydown}
-                    >
-                      <button
-                        class:active={selectedSubtitleId === "off"}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={selectedSubtitleId === "off"}
-                        onclick={() => void applySubtitleTrack("off", true)}
-                      >
-                        Off
-                      </button>
-                      {#each data.playback.tracks as track (track.id)}
-                        <button
-                          class:active={selectedSubtitleId === track.id}
-                          type="button"
-                          role="menuitemradio"
-                          aria-checked={selectedSubtitleId === track.id}
-                          onclick={() => void applySubtitleTrack(track.id, true)}
-                        >
-                          {track.label}
-                        </button>
-                      {/each}
-                    </div>
-                  {/if}
-                </div>
-              {/if}
-              <button
-                class:active={contentFit !== "contain"}
-                class="control-button"
-                type="button"
-                aria-label={`Zoom: ${CONTENT_FIT_LABELS[contentFit]}`}
-                title={`Zoom: ${CONTENT_FIT_LABELS[contentFit]} (Z)`}
-                onclick={cycleContentFit}
-              >
-                <Ratio size={20} aria-hidden="true" />
-              </button>
               <button
                 class="control-button"
                 type="button"
@@ -1513,18 +1508,13 @@
 
 <style>
   .video-shell {
-    position: relative;
     aspect-ratio: 16 / 9;
     max-height: min(72vh, calc(100dvh - 9rem));
-    overflow: hidden;
-    border-radius: 8px;
-    background: #000;
   }
 
   video {
     width: 100%;
     height: 100%;
-    object-fit: contain;
     background: #000;
     display: block;
   }
@@ -1758,12 +1748,14 @@
 
   .subtitle-control {
     position: relative;
+    flex-shrink: 0;
   }
 
   .subtitle-menu {
     position: absolute;
+    top: calc(100% + 0.55rem);
     right: 0;
-    bottom: calc(100% + 0.55rem);
+    z-index: 6;
     min-width: 11rem;
     max-width: min(18rem, calc(100vw - 2rem));
     display: grid;

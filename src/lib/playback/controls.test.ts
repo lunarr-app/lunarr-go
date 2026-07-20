@@ -12,6 +12,7 @@ import {
   castReceiverTimelineSeconds,
   castUiStateAfterCommand,
   clampPlaybackSeconds,
+  contentFitLabel,
   defaultSubtitleTrackId,
   elementTimelineSeconds,
   formatPlaybackTime,
@@ -20,6 +21,7 @@ import {
   isCastOwnedPlaybackSession,
   markCastOwnedPlaybackSession,
   mediaTimelineSeconds,
+  nextContentFit,
   nextControlsActivityTick,
   nextSubtitleMenuOptionIndex,
   playerKeyboardShortcuts,
@@ -175,6 +177,18 @@ describe("custom player controls", () => {
   test("exposes player keyboard shortcuts based on available controls", () => {
     expect(playerKeyboardShortcuts({ hasSubtitleTracks: false })).toBe("Space K ArrowLeft ArrowRight F M Z");
     expect(playerKeyboardShortcuts({ hasSubtitleTracks: true })).toBe("Space K ArrowLeft ArrowRight F M Z C");
+  });
+
+  test("cycles content fit through fit, fill, and stretch", () => {
+    expect(nextContentFit("contain")).toBe("cover");
+    expect(nextContentFit("cover")).toBe("fill");
+    expect(nextContentFit("fill")).toBe("contain");
+  });
+
+  test("labels content fit modes", () => {
+    expect(contentFitLabel("contain")).toBe("Fit");
+    expect(contentFitLabel("cover")).toBe("Fill");
+    expect(contentFitLabel("fill")).toBe("Stretch");
   });
 
   test("repositions HLS only when seeking before the current stream start", () => {

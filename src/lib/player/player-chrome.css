@@ -1,3 +1,10 @@
+.video-shell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #000;
+}
+
 .custom-player {
   --color-text: #f8fafc;
   --color-text-soft: rgba(248, 250, 252, 0.82);
@@ -43,14 +50,14 @@
 .top-controls {
   grid-row: 1;
   min-height: 4.25rem;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem;
 }
 
 .player-title {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -60,10 +67,13 @@
 }
 
 .player-title p {
+  overflow: hidden;
   color: rgba(248, 250, 252, 0.7);
   font-size: 0.72rem;
   font-weight: 750;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .player-title h2 {
@@ -132,6 +142,7 @@
 .control-button {
   display: inline-grid;
   place-items: center;
+  flex-shrink: 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -311,10 +322,6 @@
     padding: 0.55rem;
   }
 
-  .player-title p {
-    display: none;
-  }
-
   .player-title h2 {
     font-size: 0.95rem;
   }
@@ -332,7 +339,7 @@
 
   .control-row {
     min-height: auto;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.45rem;
   }
@@ -347,21 +354,19 @@
     gap: 0.25rem;
   }
 
-  .volume-slider {
-    display: none;
-  }
-
   .time-readout {
     min-width: 6.6rem;
     font-size: 0.76rem;
   }
 }
 
-@media (max-width: 420px) {
-  .player-title {
+@media (max-width: 640px), (hover: none) and (pointer: coarse) {
+  .volume-slider {
     display: none;
   }
+}
 
+@media (max-width: 420px) {
   .primary-play,
   .skip-button {
     width: 2.6rem;

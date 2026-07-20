@@ -101,6 +101,24 @@ export function playerKeyboardShortcuts(input: { hasSubtitleTracks: boolean }) {
   return shortcuts.join(" ");
 }
 
+export type ContentFit = "contain" | "cover" | "fill";
+
+const CONTENT_FIT_CYCLE: ContentFit[] = ["contain", "cover", "fill"];
+const CONTENT_FIT_LABELS: Record<ContentFit, string> = {
+  contain: "Fit",
+  cover: "Fill",
+  fill: "Stretch",
+};
+
+export function nextContentFit(current: ContentFit): ContentFit {
+  const index = CONTENT_FIT_CYCLE.indexOf(current);
+  return CONTENT_FIT_CYCLE[(index + 1) % CONTENT_FIT_CYCLE.length] ?? "contain";
+}
+
+export function contentFitLabel(fit: ContentFit): string {
+  return CONTENT_FIT_LABELS[fit];
+}
+
 export function mediaTimelineSeconds(input: { relativeSeconds: number; streamStartSeconds?: number | null }) {
   return absolutePlaybackSeconds({
     relativeSeconds: input.relativeSeconds,
