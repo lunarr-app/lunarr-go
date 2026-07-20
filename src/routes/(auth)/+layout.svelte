@@ -20,12 +20,21 @@
 <style>
   .auth-shell {
     min-height: 100vh;
+    min-height: 100dvh;
     display: grid;
     place-items: center;
     padding: var(--space-3);
-    background:
-      linear-gradient(rgba(2, 8, 12, 0.54), rgba(2, 8, 12, 0.78)),
-      url("/images/lunarr-auth-background.png") center / cover;
+  }
+
+  /* Background image is desktop-only. On mobile, iOS Safari's collapsing
+     toolbar makes a dvh-sized background image leave a blank strip, so we
+     rely on the body gradient there instead. */
+  @media (min-width: 821px) {
+    .auth-shell {
+      background:
+        linear-gradient(rgba(2, 8, 12, 0.54), rgba(2, 8, 12, 0.78)),
+        url("/images/lunarr-auth-background.png") center / cover;
+    }
   }
 
   .auth-card {
