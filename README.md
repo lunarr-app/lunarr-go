@@ -10,7 +10,9 @@ Lunarr is a self-hosted media server for movie and TV libraries on local disks, 
 - Direct play or on-the-fly HLS transcoding, Chromecast and AirPlay, with optional hardware acceleration (including VAAPI)
 - Sidecar subtitles (`.vtt` and `.srt`, normalized to WebVTT), FFmpeg transcoding, and intro/recap/credits skip markers via TheIntroDB
 - Scheduled TMDb metadata refresh, continue-watching staleness filtering, person filmography pages, and light/dark profile themes
-- TV and mobile device pairing at `/link-device`, guest share links, API keys, and OpenAPI at `/api/openapi.json`
+- Search, Continue/Discover/Browse hubs, and scheduled library rescans with live filesystem watching
+- Admin console for user and role management, library management and sharing, a jobs monitor, and configurable registration and transcoding settings
+- Device pairing, guest shares, API keys, OpenAPI docs, and a health endpoint for monitoring
 
 ## Quick Start With Docker
 
