@@ -173,8 +173,8 @@ describe("custom player controls", () => {
   });
 
   test("exposes player keyboard shortcuts based on available controls", () => {
-    expect(playerKeyboardShortcuts({ hasSubtitleTracks: false })).toBe("Space K ArrowLeft ArrowRight F M");
-    expect(playerKeyboardShortcuts({ hasSubtitleTracks: true })).toBe("Space K ArrowLeft ArrowRight F M C");
+    expect(playerKeyboardShortcuts({ hasSubtitleTracks: false })).toBe("Space K ArrowLeft ArrowRight F M Z");
+    expect(playerKeyboardShortcuts({ hasSubtitleTracks: true })).toBe("Space K ArrowLeft ArrowRight F M Z C");
   });
 
   test("repositions HLS only when seeking before the current stream start", () => {

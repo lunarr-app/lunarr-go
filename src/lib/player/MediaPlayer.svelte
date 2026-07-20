@@ -12,6 +12,7 @@
     Minimize,
     Pause,
     Play,
+    Ratio,
     Rewind,
     SkipForward,
     Volume2,
@@ -85,6 +86,15 @@
 
   type SurfaceFeedback = "seek-backward" | "play" | "pause" | "seek-forward";
 
+  type ContentFit = "contain" | "cover" | "fill";
+  const CONTENT_FIT_CYCLE: ContentFit[] = ["contain", "cover", "fill"];
+  const CONTENT_FIT_LABELS: Record<ContentFit, string> = {
+    contain: "Fit",
+    cover: "Fill",
+    fill: "Stretch",
+  };
+  const ZOOM_LABEL_VISIBLE_MS = 2000;
+
   let {
     data,
     onClose,
@@ -139,6 +149,9 @@
   let subtitleToggleButton: HTMLButtonElement | undefined = $state();
   let subtitleMenuElement: HTMLDivElement | undefined = $state();
   let isFullscreen = $state(false);
+  let contentFit = $state<ContentFit>("contain");
+  let zoomLabel = $state<string | null>(null);
+  let zoomLabelTimeout: number | null = null;
   let airPlayAvailable = $state(false);
   let airPlayActive = $state(false);
   let signedPlaybackNotice = $state<string | null>(null);
@@ -421,6 +434,20 @@
       surfaceFeedback = null;
       surfaceFeedbackTimeout = null;
     }, 620);
+  }
+
+  function cycleContentFit() {
+    const index = CONTENT_FIT_CYCLE.indexOf(contentFit);
+    contentFit = CONTENT_FIT_CYCLE[(index + 1) % CONTENT_FIT_CYCLE.length] ?? "contain";
+    zoomLabel = CONTENT_FIT_LABELS[contentFit];
+    if (zoomLabelTimeout !== null) {
+      window.clearTimeout(zoomLabelTimeout);
+    }
+    zoomLabelTimeout = window.setTimeout(() => {
+      zoomLabel = null;
+      zoomLabelTimeout = null;
+    }, ZOOM_LABEL_VISIBLE_MS);
+    showControls();
   }
 
   function applySurfaceControl(event: MouseEvent) {
@@ -905,6 +932,9 @@
     } else if (key === "c" && data.playback.tracks.length > 0) {
       event.preventDefault();
       toggleSubtitleMenu();
+    } else if (key === "z") {
+      event.preventDefault();
+      cycleContentFit();
     }
   }
 
@@ -1073,6 +1103,10 @@
       window.clearTimeout(surfaceFeedbackTimeout);
       surfaceFeedbackTimeout = null;
     }
+    if (zoomLabelTimeout !== null) {
+      window.clearTimeout(zoomLabelTimeout);
+      zoomLabelTimeout = null;
+    }
     clearSignedPlaybackNotice();
     segments.destroy();
     releaseScreenWakeLock();
@@ -1100,6 +1134,7 @@
     <video
       bind:this={video}
       playsinline
+      style:object-fit={contentFit}
       preload={data.playback.mode === "direct" ? "metadata" : "auto"}
       onplay={() => (hasPlaybackActivity = true)}
       onpause={() => session.save(false)}
@@ -1148,6 +1183,13 @@
         {:else}
           <Play size={38} fill="currentColor" aria-hidden="true" />
         {/if}
+      </div>
+    {/if}
+
+    {#if zoomLabel}
+      <div class="zoom-badge" aria-hidden="true">
+        <Ratio size={22} aria-hidden="true" />
+        <span>{zoomLabel}</span>
       </div>
     {/if}
 
@@ -1418,6 +1460,16 @@
                 </div>
               {/if}
               <button
+                class:active={contentFit !== "contain"}
+                class="control-button"
+                type="button"
+                aria-label={`Zoom: ${CONTENT_FIT_LABELS[contentFit]}`}
+                title={`Zoom: ${CONTENT_FIT_LABELS[contentFit]} (Z)`}
+                onclick={cycleContentFit}
+              >
+                <Ratio size={20} aria-hidden="true" />
+              </button>
+              <button
                 class="control-button"
                 type="button"
                 aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
@@ -1519,6 +1571,26 @@
     font-size: 0.68rem;
     font-weight: 850;
     line-height: 1;
+  }
+
+  .zoom-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.72);
+    padding: 0.55rem 1.3rem;
+    color: var(--color-text);
+    pointer-events: none;
+    font-size: 0.95rem;
+    font-weight: 750;
+    box-shadow: 0 0.5rem 1.8rem rgba(0, 0, 0, 0.28);
+    animation: zoom-badge 0.22s ease-out both;
   }
 
   .player-status-overlay {
@@ -1751,8 +1823,20 @@
     }
   }
 
+  @keyframes zoom-badge {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .surface-feedback {
+    .surface-feedback,
+    .zoom-badge {
       animation: none;
     }
   }

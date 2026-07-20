@@ -96,7 +96,7 @@ export function volumeSliderAriaValue(current: PlaybackVolumeState) {
 }
 
 export function playerKeyboardShortcuts(input: { hasSubtitleTracks: boolean }) {
-  const shortcuts = ["Space", "K", "ArrowLeft", "ArrowRight", "F", "M"];
+  const shortcuts = ["Space", "K", "ArrowLeft", "ArrowRight", "F", "M", "Z"];
   if (input.hasSubtitleTracks) shortcuts.push("C");
   return shortcuts.join(" ");
 }
