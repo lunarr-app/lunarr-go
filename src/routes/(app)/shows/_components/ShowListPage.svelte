@@ -39,7 +39,11 @@
     emptyDescription?: string;
   } = $props();
 
-  const catalogSearch = createDebouncedCatalogSearch(() => query, () => ({ sort }), "latest");
+  const catalogSearch = createDebouncedCatalogSearch(
+    () => query,
+    () => ({ sort }),
+    "latest",
+  );
 
   const range = $derived({
     first: pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1,

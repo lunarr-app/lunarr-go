@@ -29,11 +29,16 @@ export function createDebouncedCatalogSearch(
       clearTimeout(searchSubmitTimer);
       searchSubmitTimer = undefined;
     }
-    gotoCatalogSearch(page.url.pathname, page.url.searchParams, {
-      query: queryInput,
-      ...extraParams(),
-      ...overrides,
-    }, defaultSort);
+    gotoCatalogSearch(
+      page.url.pathname,
+      page.url.searchParams,
+      {
+        query: queryInput,
+        ...extraParams(),
+        ...overrides,
+      },
+      defaultSort,
+    );
   }
 
   function submitSearchSoon() {
