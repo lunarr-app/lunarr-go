@@ -18,9 +18,7 @@ import { actions, load } from "./+page.server";
 type SettingsLoadResult = {
   signupOpen: boolean;
   tmdbConfigured: boolean;
-  tmdbAccessTokenConfigured: boolean;
   tmdbAccessTokenSaved: boolean;
-  tmdbApiKeyConfigured: boolean;
   tmdbApiKeySaved: boolean;
   movieMetadataRefreshIntervalHours: number | null;
   tvMetadataRefreshIntervalHours: number | null;
@@ -241,9 +239,7 @@ describe("settings page server", () => {
     expect(data).toMatchObject({
       signupOpen: true,
       tmdbConfigured: true,
-      tmdbAccessTokenConfigured: true,
       tmdbAccessTokenSaved: true,
-      tmdbApiKeyConfigured: true,
       tmdbApiKeySaved: true,
       movieMetadataRefreshIntervalHours: 24,
       tvMetadataRefreshIntervalHours: 168,
@@ -300,8 +296,8 @@ describe("settings page server", () => {
 
     expect(data).toMatchObject({
       tmdbConfigured: true,
-      tmdbAccessTokenConfigured: false,
-      tmdbApiKeyConfigured: false,
+      tmdbAccessTokenSaved: false,
+      tmdbApiKeySaved: false,
       movieMetadataRefreshIntervalHours: null,
       tvMetadataRefreshIntervalHours: null,
       movieMetadataStalenessDays: 30,

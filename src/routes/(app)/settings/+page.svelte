@@ -37,8 +37,6 @@
       playbackCleanupMessage={form?.playbackCleanupMessage}
     />
     <SettingsMetadataPanel
-      tmdbAccessTokenConfigured={data.tmdbAccessTokenConfigured}
-      tmdbApiKeyConfigured={data.tmdbApiKeyConfigured}
       tmdbAccessTokenSaved={data.tmdbAccessTokenSaved}
       tmdbApiKeySaved={data.tmdbApiKeySaved}
       movieMetadataRefreshIntervalHours={data.movieMetadataRefreshIntervalHours}

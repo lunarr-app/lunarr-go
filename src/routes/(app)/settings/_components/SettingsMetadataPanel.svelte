@@ -7,8 +7,6 @@
   import { DEFAULT_MOVIE_METADATA_STALENESS_DAYS, DEFAULT_TV_METADATA_STALENESS_DAYS } from "$lib/metadata/settings";
 
   let {
-    tmdbAccessTokenConfigured,
-    tmdbApiKeyConfigured,
     tmdbAccessTokenSaved,
     tmdbApiKeySaved,
     metadataError,
@@ -17,8 +15,6 @@
     movieMetadataStalenessDays,
     tvMetadataStalenessDays,
   }: {
-    tmdbAccessTokenConfigured: boolean;
-    tmdbApiKeyConfigured: boolean;
     tmdbAccessTokenSaved: boolean;
     tmdbApiKeySaved: boolean;
     metadataError?: string;
@@ -84,7 +80,7 @@
         autocomplete="off"
         autocapitalize="off"
         spellcheck="false"
-        placeholder={tmdbAccessTokenConfigured ? "Configured" : "Read access token"}
+        placeholder={tmdbAccessTokenSaved ? "Configured" : "Read access token"}
       />
     </label>
 
@@ -104,7 +100,7 @@
         autocomplete="off"
         autocapitalize="off"
         spellcheck="false"
-        placeholder={tmdbApiKeyConfigured ? "Configured" : "API key"}
+        placeholder={tmdbApiKeySaved ? "Configured" : "API key"}
       />
     </label>
 

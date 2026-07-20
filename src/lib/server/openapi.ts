@@ -3622,9 +3622,7 @@ export const openApiDocument = {
         properties: {
           signupOpen: { type: "boolean" },
           tmdbConfigured: { type: "boolean" },
-          tmdbAccessTokenConfigured: { type: "boolean" },
           tmdbAccessTokenSaved: { type: "boolean" },
-          tmdbApiKeyConfigured: { type: "boolean" },
           tmdbApiKeySaved: { type: "boolean" },
           movieMetadataRefreshIntervalHours: nullableIntegerSchema,
           tvMetadataRefreshIntervalHours: nullableIntegerSchema,

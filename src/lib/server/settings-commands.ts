@@ -67,9 +67,7 @@ export async function getAdminSettingsResponse(userId: string) {
   return {
     signupOpen: await getBooleanSetting("signup_open", false),
     tmdbConfigured: Boolean(savedAccessToken || savedApiKey || fallbackConfigured),
-    tmdbAccessTokenConfigured: Boolean(savedAccessToken),
     tmdbAccessTokenSaved: Boolean(savedAccessToken),
-    tmdbApiKeyConfigured: Boolean(savedApiKey),
     tmdbApiKeySaved: Boolean(savedApiKey),
     movieMetadataRefreshIntervalHours: await getMetadataRefreshIntervalHours("movie"),
     tvMetadataRefreshIntervalHours: await getMetadataRefreshIntervalHours("tv"),
