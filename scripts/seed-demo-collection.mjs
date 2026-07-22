@@ -178,17 +178,18 @@ export async function seedDemoCollection({
     await mkdir(directory, { recursive: true });
 
     const start = Date.now();
-    let lastProgress = "";
+    let lastPct = -1;
 
     await downloadFile(movie.url, filePath, {
       fetcher,
       onProgress: (received, total) => {
         if (total) {
-          const pct = ((received / total) * 100).toFixed(0);
-          const line = `  ${movie.title} (${movie.year}) - ${formatBytes(received)} / ${formatBytes(total)} (${pct}%)`;
-          if (line !== lastProgress) {
-            process.stderr.write(`\r${line}`);
-            lastProgress = line;
+          const pct = Math.floor((received / total) * 100);
+          if (pct !== lastPct) {
+            process.stderr.write(
+              `\r  ${movie.title} (${movie.year}) - ${formatBytes(received)} / ${formatBytes(total)} (${pct}%)`,
+            );
+            lastPct = pct;
           }
         }
       },
