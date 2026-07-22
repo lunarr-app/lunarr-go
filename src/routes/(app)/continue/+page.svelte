@@ -10,9 +10,7 @@
     return `${total} ${total === 1 ? singular : plural}`;
   }
 
-  const hasContent = $derived(
-    data.moviesPage.total > 0 || data.episodesPage.total > 0 || data.nextUpPage.total > 0,
-  );
+  const hasContent = $derived(data.moviesPage.total > 0 || data.episodesPage.total > 0 || data.nextUpPage.total > 0);
   const movieCountLabel = $derived(countLabel(data.moviesPage.total, "movie", "movies"));
   const episodeCountLabel = $derived(countLabel(data.episodesPage.total, "episode", "episodes"));
   const nextUpCountLabel = $derived(countLabel(data.nextUpPage.total, "episode", "episodes"));

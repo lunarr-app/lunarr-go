@@ -25,7 +25,9 @@
         <div class="section-heading">
           <div class="section-heading-text">
             <h2 id="movies-for-you" class="section-title">Movies for you</h2>
-            <p class="section-sub">Picks similar to your recent watches, ranked by shared genres, keywords, cast, and directors.</p>
+            <p class="section-sub">
+              Picks similar to your recent watches, ranked by shared genres, keywords, cast, and directors.
+            </p>
           </div>
           <div class="section-meta">
             <span>{countLabel(data.moviesPage.total)}</span>
@@ -48,7 +50,9 @@
         <div class="section-heading">
           <div class="section-heading-text">
             <h2 id="shows-for-you" class="section-title">Shows for you</h2>
-            <p class="section-sub">Picks similar to your recent episode watches, ranked by shared genres, keywords, cast, and creators.</p>
+            <p class="section-sub">
+              Picks similar to your recent episode watches, ranked by shared genres, keywords, cast, and creators.
+            </p>
           </div>
           <div class="section-meta">
             <span>{countLabel(data.showsPage.total)}</span>

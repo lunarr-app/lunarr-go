@@ -9,7 +9,12 @@ type SimilarPageLoadEvent = {
   url: URL;
 };
 
-export async function loadSimilarMovies(movieId: string, userId: string, pageInput = 1, pageSize = FULL_LIBRARY_PAGE_SIZE) {
+export async function loadSimilarMovies(
+  movieId: string,
+  userId: string,
+  pageInput = 1,
+  pageSize = FULL_LIBRARY_PAGE_SIZE,
+) {
   const movie = await getAccessibleMovieHeader(movieId, userId);
   if (!movie) return null;
 
@@ -17,7 +22,12 @@ export async function loadSimilarMovies(movieId: string, userId: string, pageInp
   return { movie, movies, page };
 }
 
-export async function loadSimilarShows(showId: string, userId: string, pageInput = 1, pageSize = FULL_LIBRARY_PAGE_SIZE) {
+export async function loadSimilarShows(
+  showId: string,
+  userId: string,
+  pageInput = 1,
+  pageSize = FULL_LIBRARY_PAGE_SIZE,
+) {
   const show = await getAccessibleShowHeader(showId, userId);
   if (!show) return null;
 
