@@ -105,7 +105,7 @@ async function existingFileSize(filePath) {
   }
 }
 
-async function downloadFile(url, targetPath, fetcher = fetch) {
+async function downloadFile(url, targetPath, { fetcher = fetch, onProgress } = {}) {
   if ((await existingFileSize(targetPath)) > 0) {
     return;
   }
@@ -115,12 +115,35 @@ async function downloadFile(url, targetPath, fetcher = fetch) {
     throw new Error(`Failed to download: HTTP ${response.status}`);
   }
 
-  const body = Buffer.from(await response.arrayBuffer());
+  const totalBytes = Number(response.headers.get("content-length")) || null;
+  const reader = response.body?.getReader();
+
+  if (!reader) {
+    const body = Buffer.from(await response.arrayBuffer());
+    if (body.length === 0) throw new Error("Downloaded empty file");
+    await writeFile(targetPath, body);
+    onProgress?.(body.length, body.length);
+    return;
+  }
+
+  const chunks = [];
+  let receivedBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    receivedBytes += value.length;
+    onProgress?.(receivedBytes, totalBytes);
+  }
+
+  const body = Buffer.concat(chunks);
   if (body.length === 0) {
     throw new Error("Downloaded empty file");
   }
 
   await writeFile(targetPath, body);
+  onProgress?.(body.length, totalBytes ?? body.length);
 }
 
 function formatBytes(bytes) {
@@ -155,12 +178,27 @@ export async function seedDemoCollection({
     await mkdir(directory, { recursive: true });
 
     const start = Date.now();
-    await downloadFile(movie.url, filePath, fetcher);
-    const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+    let lastProgress = "";
 
+    await downloadFile(movie.url, filePath, {
+      fetcher,
+      onProgress: (received, total) => {
+        if (total) {
+          const pct = ((received / total) * 100).toFixed(0);
+          const line = `  ${movie.title} (${movie.year}) - ${formatBytes(received)} / ${formatBytes(total)} (${pct}%)`;
+          if (line !== lastProgress) {
+            process.stderr.write(`\r${line}`);
+            lastProgress = line;
+          }
+        }
+      },
+    });
+
+    const elapsed = ((Date.now() - start) / 1000).toFixed(1);
     const info = await stat(filePath);
     results.push({ ...movie, size: info.size, elapsed });
 
+    process.stderr.write("\r" + " ".repeat(80) + "\r");
     console.log(`  ${movie.title} (${movie.year}) - ${formatBytes(info.size)} in ${elapsed}s`);
   }
 
