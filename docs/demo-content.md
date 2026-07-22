@@ -4,14 +4,14 @@ Royalty-free demo content from the Blender Foundation (CC-BY licensed). No copyr
 
 ## Included Films
 
-| Film | Year | License |
-|------|------|---------|
-| Big Buck Bunny | 2008 | CC-BY |
-| Elephants Dream | 2006 | CC-BY 3.0 |
-| Sintel | 2010 | CC-BY 3.0 |
-| Tears of Steel | 2012 | CC-BY 3.0 |
+| Film              | Year | License   |
+| ----------------- | ---- | --------- |
+| Big Buck Bunny    | 2008 | CC-BY     |
+| Elephants Dream   | 2006 | CC-BY 3.0 |
+| Sintel            | 2010 | CC-BY 3.0 |
+| Tears of Steel    | 2012 | CC-BY 3.0 |
 | Cosmos Laundromat | 2015 | CC-BY 3.0 |
-| Sprite Fright | 2021 | CC-BY 4.0 |
+| Sprite Fright     | 2021 | CC-BY 4.0 |
 
 ## Quick Start
 
