@@ -35,6 +35,15 @@ Open `http://127.0.0.1:3000`, create the first admin account, add a movie or TV 
 
 Docker Compose users can start from [docker-compose.yml](docker-compose.yml).
 
+## Install With AUR
+
+```sh
+yay -S lunarr
+sudo systemctl enable --now lunarr
+```
+
+Open `http://127.0.0.1:3000` and create the first admin account.
+
 ## Install With Homebrew
 
 ```sh
