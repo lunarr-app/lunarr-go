@@ -1,17 +1,58 @@
+# Lunarr + Traefik reverse proxy with automatic HTTPS (Let's Encrypt)
+#
+# HTTPS is recommended if you access Lunarr remotely over the internet.
+# For local-only access, you can remove the Traefik service entirely and
+# use "ports: - 3000:3000" on the lunarr service instead.
+#
+# Before you start, replace these values:
+#   1. lunarr.example.com  -> your actual domain
+#   2. you@example.com     -> your email for Let's Encrypt
+#   3. /mnt/media          -> path to your media library
+#
+# Then create a .env file with:
+#   AUTH_SECRET=<random-secret-at-least-32-chars>
+#   ORIGIN=https://your-domain.com
+
 services:
   lunarr:
     image: sayem314/lunarr:latest
     container_name: lunarr
     restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      AUTH_SECRET: "replace-with-a-random-secret-at-least-32-chars"
-      ORIGIN: "http://127.0.0.1:3000"
+    expose:
+      - "3000"
+    env_file:
+      - .env
     volumes:
       - lunarr-data:/data
-      # Mount local media read-only, then add /media/movies or /media/tv in Lunarr.
-      - /mnt/media:/media:ro
+      - /mnt/media:/media:ro  # REPLACE: your media path
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.lunarr.rule=Host(`lunarr.example.com`)  # REPLACE: your domain
+      - traefik.http.routers.lunarr.entrypoints=websecure
+      - traefik.http.routers.lunarr.tls.certresolver=letsencrypt
+      - traefik.http.services.lunarr.loadbalancer.server.port=3000
+
+  traefik:
+    image: traefik:v3
+    container_name: lunarr-traefik
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=you@example.com  # REPLACE: your email
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
 
 volumes:
   lunarr-data:
+  traefik-certs:
