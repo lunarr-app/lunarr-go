@@ -246,9 +246,7 @@ export async function pruneMissingLibraryFiles(
   const affectedMediaItemIds = [...new Set(missingFiles.map((file) => file.media_item_id))];
 
   if (missingFileIds.length > 0) {
-    await chunkedDelete(missingFileIds, (chunk) =>
-      db.deleteFrom("media_file").where("id", "in", chunk).execute(),
-    );
+    await chunkedDelete(missingFileIds, (chunk) => db.deleteFrom("media_file").where("id", "in", chunk).execute());
     await chunkedDelete(affectedMediaItemIds, (chunk) =>
       db
         .deleteFrom("media_item")

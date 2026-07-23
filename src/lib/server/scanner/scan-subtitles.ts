@@ -119,8 +119,6 @@ export async function syncSidecarSubtitleTracks(
     .filter((track) => track.path && sidecarSubtitleMatch(filePath, track.path) && !seenPaths.has(track.path))
     .map((track) => track.id);
   if (staleIds.length > 0) {
-    await chunkedDelete(staleIds, (chunk) =>
-      db.deleteFrom("subtitle_track").where("id", "in", chunk).execute(),
-    );
+    await chunkedDelete(staleIds, (chunk) => db.deleteFrom("subtitle_track").where("id", "in", chunk).execute());
   }
 }
