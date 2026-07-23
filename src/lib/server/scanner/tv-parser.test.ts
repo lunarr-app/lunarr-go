@@ -39,7 +39,7 @@ describe("parseTvEpisodePath", () => {
       showTitle: "The Expanse",
       seasonNumber: 0,
       episodeNumber: 1,
-      episodeTitle: null,
+      episodeTitle: "Special",
     });
   });
 

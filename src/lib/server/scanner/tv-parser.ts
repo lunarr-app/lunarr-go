@@ -9,6 +9,7 @@ export type ParsedTvEpisode = {
 };
 
 const DIRECTORY_SEASON_TITLE_PATTERN = /^(?:specials|season[\s._-]*\d{1,3})$/i;
+const ALTERNATIVE_TITLE_NOISE = new Set(["tv", "hdtv", "hd tv", "television"]);
 
 function toNumber(value: number | number[] | undefined | null): number | null {
   if (value === undefined || value === null) return null;
@@ -16,7 +17,7 @@ function toNumber(value: number | number[] | undefined | null): number | null {
   return Number.isInteger(num) && num >= 0 ? num : null;
 }
 
-function toString(value: unknown): string | null {
+function toString(value: string | string[] | undefined | null): string | null {
   if (typeof value === "string") return value;
   if (Array.isArray(value) && value.length > 0 && value.every((v) => typeof v === "string")) return value.join(" ");
   return null;
@@ -30,6 +31,36 @@ function cleanTitle(value: string) {
     .replace(/\s*-\s*/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isNoiseTitle(value: string, showTitle: string): boolean {
+  const lower = value.toLowerCase();
+  return lower === showTitle.toLowerCase() || ALTERNATIVE_TITLE_NOISE.has(lower);
+}
+
+function extractEpisodeTitle(
+  episodeDetails: string | string[] | undefined | null,
+  alternativeTitle: string | string[] | undefined | null,
+  showTitle: string,
+): string | null {
+  if (typeof episodeDetails === "string" && episodeDetails.length > 0) {
+    return episodeDetails;
+  }
+  if (Array.isArray(episodeDetails) && episodeDetails.length > 0) {
+    return episodeDetails[0];
+  }
+  if (typeof alternativeTitle === "string" && !isNoiseTitle(alternativeTitle, showTitle)) {
+    return alternativeTitle;
+  }
+  if (Array.isArray(alternativeTitle) && alternativeTitle.length > 0) {
+    const candidates = alternativeTitle.filter(
+      (t): t is string => typeof t === "string" && !isNoiseTitle(t, showTitle),
+    );
+    if (candidates.length > 0) {
+      return candidates[candidates.length - 1];
+    }
+  }
+  return null;
 }
 
 function showTitleFromPath(filePath: string): string | null {
@@ -59,21 +90,7 @@ export function parseTvEpisodePath(filePath: string, _root?: string): ParsedTvEp
     if (titleFromPath) showTitle = titleFromPath;
   }
 
-  let episodeTitle: string | null = null;
-  if (typeof result.episode_title === "string") {
-    episodeTitle = result.episode_title;
-  } else if (typeof result.alternative_title === "string") {
-    if (result.alternative_title.toLowerCase() !== showTitle.toLowerCase()) {
-      episodeTitle = result.alternative_title;
-    }
-  } else if (Array.isArray(result.alternative_title) && result.alternative_title.length > 0) {
-    const candidates = result.alternative_title.filter(
-      (t) => typeof t === "string" && t.toLowerCase() !== showTitle.toLowerCase(),
-    );
-    if (candidates.length > 0) {
-      episodeTitle = candidates[candidates.length - 1];
-    }
-  }
+  const episodeTitle = extractEpisodeTitle(result.episode_details, result.alternative_title, showTitle);
 
   return {
     showTitle,
