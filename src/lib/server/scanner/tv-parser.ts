@@ -16,6 +16,12 @@ function toNumber(value: number | number[] | undefined | null): number | null {
   return Number.isInteger(num) && num >= 0 ? num : null;
 }
 
+function toString(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.length > 0 && value.every((v) => typeof v === "string")) return value.join(" ");
+  return null;
+}
+
 function cleanTitle(value: string) {
   return value
     .replace(/\[[^\]]*]/g, " ")
@@ -45,7 +51,7 @@ export function parseTvEpisodePath(filePath: string, _root?: string): ParsedTvEp
   const episodeNumber = toNumber(result.episode);
   if (seasonNumber === null || episodeNumber === null) return null;
 
-  let showTitle = result.title;
+  let showTitle = toString(result.title);
   if (!showTitle) return null;
 
   if (DIRECTORY_SEASON_TITLE_PATTERN.test(showTitle)) {
