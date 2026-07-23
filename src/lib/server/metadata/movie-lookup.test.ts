@@ -51,10 +51,7 @@ describe("movieLookupCandidates", () => {
   test("keeps folder first when the filename only adds release-group noise", () => {
     expect(
       movieLookupCandidates("radarr/movies/Pathaan (2023)/TheMoviesBoss - Pathaan.(2023).720p.AMZN.WebRip.mkv"),
-    ).toEqual([
-      { title: "Pathaan", year: 2023 },
-      { title: "TheMoviesBoss - Pathaan", year: 2023 },
-    ]);
+    ).toEqual([{ title: "Pathaan", year: 2023 }]);
   });
 
   test("prefers filename title over a mismatched parent folder", () => {
@@ -68,7 +65,7 @@ describe("movieLookupCandidates", () => {
   });
 
   test("normalizes smart quotes in folder titles", () => {
-    expect(movieLookupFromPath("radarr/movies/“Wuthering Heights” (2026)/Wuthering Heights (2026).mp4")).toEqual({
+    expect(movieLookupFromPath("radarr/movies/\u201CWuthering Heights\u201D (2026)/Wuthering Heights (2026).mp4")).toEqual({
       title: "Wuthering Heights",
       year: 2026,
     });

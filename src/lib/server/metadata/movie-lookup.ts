@@ -1,4 +1,4 @@
-import { filenameParse, removeFileExtension } from "@ctrl/video-filename-parser";
+import { guessit } from "guessit-js";
 import path from "node:path";
 
 export type ParsedMovieLookup = {
@@ -10,10 +10,10 @@ export type MovieLookupOptions = {
   libraryRoot?: string | null;
 };
 
-function numericYear(value: string | null | undefined) {
-  if (!value) return null;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 1800 && parsed <= 3000 ? parsed : null;
+function numericYear(value: number | string | null | undefined) {
+  if (value === undefined || value === null) return null;
+  const num = typeof value === "string" ? Number(value) : value;
+  return Number.isInteger(num) && num >= 1800 && num <= 3000 ? num : null;
 }
 
 function sanitizeLookupTitle(value: string) {
@@ -44,11 +44,20 @@ function parseTitleYearName(value: string): ParsedMovieLookup | null {
 }
 
 function parseMovieFilename(basename: string): ParsedMovieLookup {
-  const stem = removeFileExtension(path.basename(basename));
-  const parsed = filenameParse(stem);
-  const parsedTitle = sanitizeLookupTitle(parsed.title);
-  const parsedYear = numericYear(parsed.year);
+  const stem = path.basename(basename, path.extname(basename));
+  const result = guessit(stem, { type: "movie" });
+  const parsedYear = numericYear(result.year);
   const simple = parseTitleYearName(stem);
+
+  let parsedTitle = sanitizeLookupTitle(result.title ?? "");
+  if (typeof result.alternative_title === "string") {
+    parsedTitle = sanitizeLookupTitle(result.alternative_title);
+  } else if (Array.isArray(result.alternative_title) && result.alternative_title.length > 0) {
+    const lastAlt = result.alternative_title[result.alternative_title.length - 1];
+    if (typeof lastAlt === "string") {
+      parsedTitle = sanitizeLookupTitle(lastAlt);
+    }
+  }
 
   if (simple && !parsedTitle) {
     return simple;
