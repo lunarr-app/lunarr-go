@@ -7,102 +7,73 @@ export type ParsedTvEpisode = {
   episodeTitle: string | null;
 };
 
-const DIRECTORY_SEASON_TITLE_PATTERN = /^(?:specials|season[\s._-]*\d{1,3})$/i;
-const ALTERNATIVE_TITLE_NOISE = new Set(["tv", "hdtv", "hd tv", "television"]);
+const SEASON_DIR = /^(?:specials|season[\s._-]*\d{1,3})$/i;
+const NOISE = new Set(["tv", "hdtv", "hd tv", "television"]);
 
-function toNumber(value: number | number[] | undefined | null): number | null {
-  if (value === undefined || value === null) return null;
-  const num = Array.isArray(value) ? value[0] : value;
-  return Number.isInteger(num) && num >= 0 ? num : null;
+function num(value: number | number[] | null | undefined): number | null {
+  const n = Array.isArray(value) ? value[0] : value;
+  return typeof n === "number" && Number.isInteger(n) && n >= 0 ? n : null;
 }
 
-function toString(value: string | string[] | undefined | null): string | null {
+function str(value: string | string[] | null | undefined): string | null {
   if (typeof value === "string") return value;
-  if (Array.isArray(value) && value.length > 0 && value.every((v) => typeof v === "string")) return value.join(" ");
-  return null;
+  return Array.isArray(value) && value.length > 0 ? value.join(" ") : null;
 }
 
-function cleanTitle(value: string) {
+function clean(value: string): string {
   return value
     .replace(/\[[^\]]*]/g, " ")
     .replace(/\([^)]*\)/g, " ")
     .replace(/[._]+/g, " ")
     .replace(/\s*-\s*/g, " ")
     .replace(/\s+/g, " ")
+    .replace(/ (?:19|20)\d{2}\s*$/, "")
     .trim();
 }
 
-function isNoiseTitle(value: string, showTitle: string): boolean {
+function isNoise(value: string, showTitle: string): boolean {
   const lower = value.toLowerCase();
-  return lower === showTitle.toLowerCase() || ALTERNATIVE_TITLE_NOISE.has(lower);
+  return NOISE.has(lower) || clean(value).toLowerCase() === showTitle.toLowerCase();
 }
 
-function extractEpisodeTitle(
-  episodeDetails: string | string[] | undefined | null,
-  alternativeTitle: string | string[] | undefined | null,
+function episodeTitle(
+  details: string | string[] | null | undefined,
+  alternativeTitle: string | string[] | null | undefined,
   showTitle: string,
 ): string | null {
-  if (typeof episodeDetails === "string" && episodeDetails.length > 0) {
-    return episodeDetails;
-  }
-  if (Array.isArray(episodeDetails) && episodeDetails.length > 0) {
-    return episodeDetails[0];
-  }
-  if (typeof alternativeTitle === "string" && !isNoiseTitle(alternativeTitle, showTitle)) {
-    return alternativeTitle;
-  }
-  if (Array.isArray(alternativeTitle) && alternativeTitle.length > 0) {
-    const candidates = alternativeTitle.filter(
-      (t): t is string => typeof t === "string" && !isNoiseTitle(t, showTitle),
-    );
-    if (candidates.length > 0) {
-      return candidates[candidates.length - 1];
-    }
-  }
-  return null;
+  if (typeof details === "string" && details) return details;
+  if (Array.isArray(details) && details.length > 0) return details[0];
+  const candidates = [alternativeTitle]
+    .flat()
+    .filter((t): t is string => typeof t === "string" && !isNoise(t, showTitle));
+  return candidates[candidates.length - 1] ?? null;
 }
 
 function pathParts(filePath: string, root?: string): string[] {
-  const normalizedPath = filePath.replaceAll("\\", "/");
-  const normalizedRoot = root?.replaceAll("\\", "/").replace(/\/+$/, "");
-  const relative =
-    normalizedRoot && (normalizedPath === normalizedRoot || normalizedPath.startsWith(`${normalizedRoot}/`))
-      ? normalizedPath.slice(normalizedRoot.length).replace(/^\/+/, "")
-      : normalizedPath.replace(/^\/+/, "");
-  return relative.split("/").filter(Boolean);
-}
-
-function titleFromContext(parts: string[], seasonDirectoryIndex: number | null): string {
-  if (seasonDirectoryIndex !== null && seasonDirectoryIndex > 0) {
-    return cleanTitle(parts[seasonDirectoryIndex - 1]);
-  }
-  if (parts.length > 1) return cleanTitle(parts[parts.length - 2]);
-  return "";
+  const p = filePath.replaceAll("\\", "/");
+  const r = root?.replaceAll("\\", "/").replace(/\/+$/, "");
+  const rel = r && (p === r || p.startsWith(`${r}/`)) ? p.slice(r.length) : p;
+  return rel.replace(/^\/+/, "").split("/").filter(Boolean);
 }
 
 export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpisode | null {
   const parts = pathParts(filePath, root);
   if (parts.length === 0) return null;
-
   const result = guessit(parts.join("/"), { type: "episode" });
 
-  const seasonNumber = toNumber(result.season);
-  const episodeNumber = toNumber(result.episode);
+  const seasonNumber = num(result.season);
+  const episodeNumber = num(result.episode);
   if (seasonNumber === null || episodeNumber === null) return null;
 
-  const directoryParts = parts.slice(0, -1);
-  const seasonDirectoryIndex = directoryParts.findLastIndex((part) => DIRECTORY_SEASON_TITLE_PATTERN.test(part));
-  const contextTitle = titleFromContext(parts, seasonDirectoryIndex === -1 ? null : seasonDirectoryIndex);
-  const guessitTitle = toString(result.title);
-  const showTitle = seasonDirectoryIndex === -1 ? guessitTitle || contextTitle : contextTitle || guessitTitle;
+  const dirs = parts.slice(0, -1);
+  const seasonIdx = dirs.findLastIndex((dir) => SEASON_DIR.test(dir));
+  const showTitle = clean(seasonIdx > 0 ? dirs[seasonIdx - 1] : str(result.title) || dirs[dirs.length - 1] || "");
   if (!showTitle) return null;
-
-  const episodeTitle = extractEpisodeTitle(result.episode_details, result.alternative_title, showTitle);
 
   return {
     showTitle,
     seasonNumber,
     episodeNumber,
-    episodeTitle,
+    episodeTitle: episodeTitle(result.episode_details, result.alternative_title, showTitle),
   };
 }

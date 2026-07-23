@@ -154,6 +154,44 @@ describe("parseTvEpisodePath", () => {
     });
   });
 
+  test("uses filename title for flat layouts without a season directory", () => {
+    expect(parseTvEpisodePath("/media/shows/The X-Files/The.X-Files.S09E19.mkv", "/media/shows")).toEqual({
+      showTitle: "The X Files",
+      seasonNumber: 9,
+      episodeNumber: 19,
+      episodeTitle: null,
+    });
+  });
+
+  test("strips a trailing year from directory-derived show titles", () => {
+    expect(
+      parseTvEpisodePath("/media/shows/Some.Show.2020/Season 1/Some.Show.2020.S01E01.mkv", "/media/shows"),
+    ).toEqual({
+      showTitle: "Some Show",
+      seasonNumber: 1,
+      episodeNumber: 1,
+      episodeTitle: null,
+    });
+  });
+
+  test("keeps episode titles like Pilot", () => {
+    expect(parseTvEpisodePath("/media/shows/Lost/Season 1/Lost.S01E01.Pilot.mkv", "/media/shows")).toEqual({
+      showTitle: "Lost",
+      seasonNumber: 1,
+      episodeNumber: 1,
+      episodeTitle: "Pilot",
+    });
+  });
+
+  test("falls back to filename title when the season directory sits at the library root", () => {
+    expect(parseTvEpisodePath("/show/Season 1/The.Expanse.S02E03.mkv", "/show")).toEqual({
+      showTitle: "The Expanse",
+      seasonNumber: 2,
+      episodeNumber: 3,
+      episodeTitle: null,
+    });
+  });
+
   test("returns null when no episode number can be found", () => {
     expect(parseTvEpisodePath("/media/shows/The Expanse/behind-the-scenes.mkv", "/media/shows")).toBeNull();
   });
