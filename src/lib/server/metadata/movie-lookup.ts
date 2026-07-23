@@ -26,6 +26,16 @@ function sanitizeLookupTitle(value: string) {
     .trim();
 }
 
+const TITLE_NOISE = new Set(["tv", "hdtv", "television"]);
+
+function normalizeTitle(value: string | string[] | null | undefined): string {
+  if (typeof value === "string") return value;
+  if (!Array.isArray(value)) return "";
+  return value
+    .filter((part): part is string => typeof part === "string" && !TITLE_NOISE.has(part.toLowerCase()))
+    .join(" ");
+}
+
 function comparableTitle(value: string) {
   return sanitizeLookupTitle(value).toLowerCase();
 }
@@ -49,13 +59,14 @@ function parseMovieFilename(basename: string): ParsedMovieLookup {
   const parsedYear = numericYear(result.year);
   const simple = parseTitleYearName(stem);
 
+  const rawTitle = normalizeTitle(result.title);
   const alternativeTitle = Array.isArray(result.alternative_title)
     ? result.alternative_title[result.alternative_title.length - 1]
     : result.alternative_title;
   const parsedTitle =
     typeof alternativeTitle === "string" && alternativeTitle
-      ? sanitizeLookupTitle(`${result.title ?? ""} ${alternativeTitle}`)
-      : sanitizeLookupTitle(result.title ?? "");
+      ? sanitizeLookupTitle(`${rawTitle} ${alternativeTitle}`)
+      : sanitizeLookupTitle(rawTitle);
 
   if (simple && !parsedTitle) {
     return simple;

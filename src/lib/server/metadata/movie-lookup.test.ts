@@ -34,6 +34,13 @@ describe("movieLookupFromPath", () => {
       year: 2011,
     });
   });
+
+  test("normalizes array titles and drops noise tokens instead of crashing", () => {
+    expect(movieLookupFromPath("movies/The.Movie.2020.TV.HDTV.mkv")).toEqual({
+      title: "The Movie",
+      year: 2020,
+    });
+  });
 });
 
 describe("movieLookupCandidates", () => {
