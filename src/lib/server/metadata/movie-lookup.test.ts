@@ -65,7 +65,9 @@ describe("movieLookupCandidates", () => {
   });
 
   test("normalizes smart quotes in folder titles", () => {
-    expect(movieLookupFromPath("radarr/movies/\u201CWuthering Heights\u201D (2026)/Wuthering Heights (2026).mp4")).toEqual({
+    expect(
+      movieLookupFromPath("radarr/movies/\u201CWuthering Heights\u201D (2026)/Wuthering Heights (2026).mp4"),
+    ).toEqual({
       title: "Wuthering Heights",
       year: 2026,
     });

@@ -24,10 +24,10 @@ services:
       - .env
     volumes:
       - lunarr-data:/data
-      - /mnt/media:/media:ro  # REPLACE: your media path
+      - /mnt/media:/media:ro # REPLACE: your media path
     labels:
       - traefik.enable=true
-      - traefik.http.routers.lunarr.rule=Host(`lunarr.example.com`)  # REPLACE: your domain
+      - traefik.http.routers.lunarr.rule=Host(`lunarr.example.com`) # REPLACE: your domain
       - traefik.http.routers.lunarr.entrypoints=websecure
       - traefik.http.routers.lunarr.tls.certresolver=letsencrypt
       - traefik.http.services.lunarr.loadbalancer.server.port=3000
@@ -42,7 +42,7 @@ services:
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.letsencrypt.acme.email=you@example.com  # REPLACE: your email
+      - --certificatesresolvers.letsencrypt.acme.email=you@example.com # REPLACE: your email
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
