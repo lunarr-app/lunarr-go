@@ -9,6 +9,7 @@ import { mediaFileValuesFromProbe } from "../transcoding/probe";
 import { createSeekableInputSourceFromStorage } from "../transcoding/seekable-input";
 import { isVideoFilePath } from "./media-files";
 import type { ExistingMediaFile, ProbedFileMetadata, ScanContext, ScannableLibrary } from "./scan-types";
+import { chunkedDelete } from "./chunked-delete";
 
 export async function probeScannedFile(
   mediaFileId: string,
@@ -245,23 +246,27 @@ export async function pruneMissingLibraryFiles(
   const affectedMediaItemIds = [...new Set(missingFiles.map((file) => file.media_item_id))];
 
   if (missingFileIds.length > 0) {
-    await db.deleteFrom("media_file").where("id", "in", missingFileIds).execute();
-    await db
-      .deleteFrom("media_item")
-      .where("id", "in", affectedMediaItemIds)
-      .where("kind", "=", mediaKind)
-      .$if(mediaKind === "episode", (qb) => qb.where("provider", "is", null))
-      .where((eb) =>
-        eb.not(
-          eb.exists(
-            eb
-              .selectFrom("media_file")
-              .select("media_file.id")
-              .whereRef("media_file.media_item_id", "=", "media_item.id"),
+    await chunkedDelete(missingFileIds, (chunk) =>
+      db.deleteFrom("media_file").where("id", "in", chunk).execute(),
+    );
+    await chunkedDelete(affectedMediaItemIds, (chunk) =>
+      db
+        .deleteFrom("media_item")
+        .where("id", "in", chunk)
+        .where("kind", "=", mediaKind)
+        .$if(mediaKind === "episode", (qb) => qb.where("provider", "is", null))
+        .where((eb) =>
+          eb.not(
+            eb.exists(
+              eb
+                .selectFrom("media_file")
+                .select("media_file.id")
+                .whereRef("media_file.media_item_id", "=", "media_item.id"),
+            ),
           ),
-        ),
-      )
-      .execute();
+        )
+        .execute(),
+    );
 
     if (mediaKind === "episode") {
       await deleteOrphanTvContainers();

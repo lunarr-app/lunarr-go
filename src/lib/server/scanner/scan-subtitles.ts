@@ -4,6 +4,7 @@ import { createId } from "../id";
 import { isSidecarSubtitlePath, sidecarSubtitleMimeType } from "./media-files";
 import { readCachedDirectoryEntries } from "./scan-context";
 import type { ScanContext } from "./scan-types";
+import { chunkedDelete } from "./chunked-delete";
 
 function sidecarSubtitleMatch(videoPath: string, subtitlePath: string) {
   const video = path.parse(videoPath);
@@ -118,6 +119,8 @@ export async function syncSidecarSubtitleTracks(
     .filter((track) => track.path && sidecarSubtitleMatch(filePath, track.path) && !seenPaths.has(track.path))
     .map((track) => track.id);
   if (staleIds.length > 0) {
-    await db.deleteFrom("subtitle_track").where("id", "in", staleIds).execute();
+    await chunkedDelete(staleIds, (chunk) =>
+      db.deleteFrom("subtitle_track").where("id", "in", chunk).execute(),
+    );
   }
 }
