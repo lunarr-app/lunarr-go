@@ -130,6 +130,30 @@ describe("parseTvEpisodePath", () => {
     });
   });
 
+  test("handles titles returned as arrays from full paths", () => {
+    expect(
+      parseTvEpisodePath(
+        "/sonarr/tv/Avatar - The Last Airbender (2024)/Season 2/Avatar The Last Airbender 2024 S02E07 480p x264-mSD.mkv",
+      ),
+    ).toEqual({
+      showTitle: "Avatar The Last Airbender",
+      seasonNumber: 2,
+      episodeNumber: 7,
+      episodeTitle: null,
+    });
+
+    expect(
+      parseTvEpisodePath(
+        "/sonarr/tv/Avatar - The Last Airbender (2024)/Season 1/Avatar.The.Last.Airbender.2024.S01E08.WEB.x264-TORRENTGALAXY[TGx].mkv",
+      ),
+    ).toEqual({
+      showTitle: "Avatar The Last Airbender",
+      seasonNumber: 1,
+      episodeNumber: 8,
+      episodeTitle: null,
+    });
+  });
+
   test("returns null when no episode number can be found", () => {
     expect(parseTvEpisodePath("/media/shows/The Expanse/behind-the-scenes.mkv", "/media/shows")).toBeNull();
   });
