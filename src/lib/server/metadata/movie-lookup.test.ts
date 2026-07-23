@@ -27,6 +27,13 @@ describe("movieLookupFromPath", () => {
       }),
     ).toEqual({ title: "The Matrix", year: 1999 });
   });
+
+  test("keeps the full title for 'Title - Subtitle' folders instead of just the subtitle", () => {
+    expect(movieLookupFromPath("movies/X-Men - First Class (2011)/X-Men - First Class (2011).mkv")).toEqual({
+      title: "X-Men First Class",
+      year: 2011,
+    });
+  });
 });
 
 describe("movieLookupCandidates", () => {

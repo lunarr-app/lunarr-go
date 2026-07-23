@@ -49,15 +49,13 @@ function parseMovieFilename(basename: string): ParsedMovieLookup {
   const parsedYear = numericYear(result.year);
   const simple = parseTitleYearName(stem);
 
-  let parsedTitle = sanitizeLookupTitle(result.title ?? "");
-  if (typeof result.alternative_title === "string") {
-    parsedTitle = sanitizeLookupTitle(result.alternative_title);
-  } else if (Array.isArray(result.alternative_title) && result.alternative_title.length > 0) {
-    const lastAlt = result.alternative_title[result.alternative_title.length - 1];
-    if (typeof lastAlt === "string") {
-      parsedTitle = sanitizeLookupTitle(lastAlt);
-    }
-  }
+  const alternativeTitle = Array.isArray(result.alternative_title)
+    ? result.alternative_title[result.alternative_title.length - 1]
+    : result.alternative_title;
+  const parsedTitle =
+    typeof alternativeTitle === "string" && alternativeTitle
+      ? sanitizeLookupTitle(`${result.title ?? ""} ${alternativeTitle}`)
+      : sanitizeLookupTitle(result.title ?? "");
 
   if (simple && !parsedTitle) {
     return simple;
@@ -108,7 +106,8 @@ export function movieLookupCandidates(
     };
     const titlesDiffer =
       Boolean(fileCandidate.title) && comparableTitle(fileCandidate.title) !== comparableTitle(folder.title);
-    const preferFileFirst = titlesDiffer && !folderTitleAppearsInFileTitle(folder.title, fileCandidate.title);
+    const folderInFileTitle = folderTitleAppearsInFileTitle(folder.title, fileCandidate.title);
+    const preferFileFirst = titlesDiffer && !folderInFileTitle;
 
     if (preferFileFirst) {
       pushCandidate(candidates, seen, fileCandidate);
@@ -123,7 +122,7 @@ export function movieLookupCandidates(
     if (file.year !== null && file.year !== folder.year) {
       pushCandidate(candidates, seen, { title: folder.title, year: file.year });
     }
-    if (titlesDiffer) {
+    if (titlesDiffer && !folderInFileTitle) {
       pushCandidate(candidates, seen, fileCandidate);
     }
     return candidates;
