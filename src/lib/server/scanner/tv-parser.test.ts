@@ -54,6 +54,56 @@ describe("parseTvEpisodePath", () => {
     });
   });
 
+  test("parses multi-episode filenames (S01E01E02) to first episode", () => {
+    expect(
+      parseTvEpisodePath(
+        "/media/shows/How I Met Your Mother/Season 7/How.I.Met.Your.Mother.S07E23E24.720p.HDTV.X264-DIMENSION.mkv",
+        "/media/shows",
+      ),
+    ).toEqual({
+      showTitle: "How I Met Your Mother",
+      seasonNumber: 7,
+      episodeNumber: 23,
+      episodeTitle: "720p HDTV X264 DIMENSION",
+    });
+
+    expect(
+      parseTvEpisodePath(
+        "/media/shows/The X-Files/Season 9/The.X-Files.S09E19E20.The.Truth.1080p.BluRay.x265.DD5.1-Pahe.in.mkv",
+        "/media/shows",
+      ),
+    ).toEqual({
+      showTitle: "The X Files",
+      seasonNumber: 9,
+      episodeNumber: 19,
+      episodeTitle: "The Truth 1080p BluRay x265 DD5 1 Pahe in",
+    });
+
+    expect(
+      parseTvEpisodePath(
+        "/media/shows/Teen Titans Go/Season 3/Teen.Titans.Go.S03E35E36.Operation.Dude.Rescue.720p.HDTV.x264-W4F-Obfuscated.mkv",
+        "/media/shows",
+      ),
+    ).toEqual({
+      showTitle: "Teen Titans Go",
+      seasonNumber: 3,
+      episodeNumber: 35,
+      episodeTitle: "Operation Dude Rescue 720p HDTV x264 W4F Obfuscated",
+    });
+
+    expect(
+      parseTvEpisodePath(
+        "/media/shows/The Garfield Show/Season 4/The.Garfield.Show.S04E53E54.1080p.NF.WEB-DL.DDP2.0.x264.1-AJP69-Obfuscated.mkv",
+        "/media/shows",
+      ),
+    ).toEqual({
+      showTitle: "The Garfield Show",
+      seasonNumber: 4,
+      episodeNumber: 53,
+      episodeTitle: "1080p NF WEB DL DDP2 0 x264 1 AJP69 Obfuscated",
+    });
+  });
+
   test("returns null when no episode number can be found", () => {
     expect(parseTvEpisodePath("/media/shows/The Expanse/behind-the-scenes.mkv", "/media/shows")).toBeNull();
   });

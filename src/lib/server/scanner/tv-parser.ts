@@ -8,7 +8,7 @@ export type ParsedTvEpisode = {
   episodeTitle: string | null;
 };
 
-const SEASON_EPISODE_PATTERN = /(?:^|[\s._-])s(?<season>\d{1,3})[\s._-]*e(?<episode>\d{1,4})(?:\b|[\s._-])/i;
+const SEASON_EPISODE_PATTERN = /(?:^|[\s._-])s(?<season>\d{1,3})[\s._-]*e(?<episode>\d{1,4})(?:[\s._-]*e\d{1,4})*(?:\b|[\s._-])/i;
 const SEASON_X_EPISODE_PATTERN = /(?:^|[\s._-])(?<season>\d{1,3})x(?<episode>\d{1,4})(?:\b|[\s._-])/i;
 const LEADING_EPISODE_PATTERN = /^(?<episode>\d{1,4})(?:\s*[-._]\s*|\s+)(?<title>.+)?$/;
 const SEASON_DIRECTORY_PATTERN = /^season[\s._-]*(?<season>\d{1,3})$/i;
