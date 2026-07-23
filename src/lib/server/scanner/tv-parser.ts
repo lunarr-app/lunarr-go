@@ -1,5 +1,4 @@
 import { guessit } from "guessit-js";
-import path from "node:path";
 
 export type ParsedTvEpisode = {
   showTitle: string;
@@ -63,32 +62,40 @@ function extractEpisodeTitle(
   return null;
 }
 
-function showTitleFromPath(filePath: string): string | null {
-  const dir = path.dirname(filePath);
-  const parts = dir.split("/").filter(Boolean);
-  for (let i = parts.length - 1; i >= 0; i--) {
-    const part = parts[i];
-    if (!DIRECTORY_SEASON_TITLE_PATTERN.test(part)) {
-      return cleanTitle(part);
-    }
-  }
-  return null;
+function pathParts(filePath: string, root?: string): string[] {
+  const normalizedPath = filePath.replaceAll("\\", "/");
+  const normalizedRoot = root?.replaceAll("\\", "/").replace(/\/+$/, "");
+  const relative =
+    normalizedRoot && (normalizedPath === normalizedRoot || normalizedPath.startsWith(`${normalizedRoot}/`))
+      ? normalizedPath.slice(normalizedRoot.length).replace(/^\/+/, "")
+      : normalizedPath.replace(/^\/+/, "");
+  return relative.split("/").filter(Boolean);
 }
 
-export function parseTvEpisodePath(filePath: string, _root?: string): ParsedTvEpisode | null {
-  const result = guessit(filePath, { type: "episode" });
+function titleFromContext(parts: string[], seasonDirectoryIndex: number | null): string {
+  if (seasonDirectoryIndex !== null && seasonDirectoryIndex > 0) {
+    return cleanTitle(parts[seasonDirectoryIndex - 1]);
+  }
+  if (parts.length > 1) return cleanTitle(parts[parts.length - 2]);
+  return "";
+}
+
+export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpisode | null {
+  const parts = pathParts(filePath, root);
+  if (parts.length === 0) return null;
+
+  const result = guessit(parts.join("/"), { type: "episode" });
 
   const seasonNumber = toNumber(result.season);
   const episodeNumber = toNumber(result.episode);
   if (seasonNumber === null || episodeNumber === null) return null;
 
-  let showTitle = toString(result.title);
+  const directoryParts = parts.slice(0, -1);
+  const seasonDirectoryIndex = directoryParts.findLastIndex((part) => DIRECTORY_SEASON_TITLE_PATTERN.test(part));
+  const contextTitle = titleFromContext(parts, seasonDirectoryIndex === -1 ? null : seasonDirectoryIndex);
+  const guessitTitle = toString(result.title);
+  const showTitle = seasonDirectoryIndex === -1 ? guessitTitle || contextTitle : contextTitle || guessitTitle;
   if (!showTitle) return null;
-
-  if (DIRECTORY_SEASON_TITLE_PATTERN.test(showTitle)) {
-    const titleFromPath = showTitleFromPath(filePath);
-    if (titleFromPath) showTitle = titleFromPath;
-  }
 
   const episodeTitle = extractEpisodeTitle(result.episode_details, result.alternative_title, showTitle);
 

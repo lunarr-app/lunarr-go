@@ -73,7 +73,7 @@ describe("parseTvEpisodePath", () => {
         "/media/shows",
       ),
     ).toEqual({
-      showTitle: "The X",
+      showTitle: "The X Files",
       seasonNumber: 9,
       episodeNumber: 19,
       episodeTitle: "The Truth",
