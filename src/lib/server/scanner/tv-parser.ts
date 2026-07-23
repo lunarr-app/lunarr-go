@@ -41,12 +41,14 @@ function episodeTitle(
   alternativeTitle: string | string[] | null | undefined,
   showTitle: string,
 ): string | null {
-  if (typeof details === "string" && details) return details;
-  if (Array.isArray(details) && details.length > 0) return details[0];
   const candidates = [alternativeTitle]
     .flat()
     .filter((t): t is string => typeof t === "string" && !isNoise(t, showTitle));
-  return candidates[candidates.length - 1] ?? null;
+  const fromAlt = candidates[candidates.length - 1];
+  if (fromAlt) return fromAlt;
+  if (typeof details === "string" && details) return details;
+  if (Array.isArray(details) && details.length > 0) return details[0];
+  return null;
 }
 
 function pathParts(filePath: string, root?: string): string[] {

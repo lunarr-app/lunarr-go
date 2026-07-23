@@ -183,6 +183,26 @@ describe("parseTvEpisodePath", () => {
     });
   });
 
+  test("prefers the fuller alternative title over a generic episode detail", () => {
+    expect(
+      parseTvEpisodePath("/media/shows/The Expanse/Specials/The.Expanse.S00E01.Christmas.Special.mkv", "/media/shows"),
+    ).toEqual({
+      showTitle: "The Expanse",
+      seasonNumber: 0,
+      episodeNumber: 1,
+      episodeTitle: "Christmas Special",
+    });
+
+    expect(
+      parseTvEpisodePath("/media/shows/The Expanse/Specials/The.Expanse.S00E01.Special.Homecoming.mkv", "/media/shows"),
+    ).toEqual({
+      showTitle: "The Expanse",
+      seasonNumber: 0,
+      episodeNumber: 1,
+      episodeTitle: "Special Homecoming",
+    });
+  });
+
   test("falls back to filename title when the season directory sits at the library root", () => {
     expect(parseTvEpisodePath("/show/Season 1/The.Expanse.S02E03.mkv", "/show")).toEqual({
       showTitle: "The Expanse",
