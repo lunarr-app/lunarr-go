@@ -1,4 +1,4 @@
-import { removeFileExtension } from "@ctrl/video-filename-parser";
+import { guessit } from "guessit-js";
 import path from "node:path";
 
 export type ParsedTvEpisode = {
@@ -8,11 +8,13 @@ export type ParsedTvEpisode = {
   episodeTitle: string | null;
 };
 
-const SEASON_EPISODE_PATTERN = /(?:^|[\s._-])s(?<season>\d{1,3})[\s._-]*e(?<episode>\d{1,4})(?:[\s._-]*e\d{1,4})*(?:\b|[\s._-])/i;
-const SEASON_X_EPISODE_PATTERN = /(?:^|[\s._-])(?<season>\d{1,3})x(?<episode>\d{1,4})(?:\b|[\s._-])/i;
-const LEADING_EPISODE_PATTERN = /^(?<episode>\d{1,4})(?:\s*[-._]\s*|\s+)(?<title>.+)?$/;
-const SEASON_DIRECTORY_PATTERN = /^season[\s._-]*(?<season>\d{1,3})$/i;
-const SPECIALS_DIRECTORY_PATTERN = /^(specials|season[\s._-]*0+)$/i;
+const DIRECTORY_SEASON_TITLE_PATTERN = /^(?:specials|season[\s._-]*\d{1,3})$/i;
+
+function toNumber(value: number | number[] | undefined | null): number | null {
+  if (value === undefined || value === null) return null;
+  const num = Array.isArray(value) ? value[0] : value;
+  return Number.isInteger(num) && num >= 0 ? num : null;
+}
 
 function cleanTitle(value: string) {
   return value
@@ -24,88 +26,53 @@ function cleanTitle(value: string) {
     .trim();
 }
 
-function stripEpisodeTail(value: string) {
-  return cleanTitle(value.replace(/^[\s._-]+/, "").replace(/[\s._-]+$/, ""));
-}
-
-function positiveInt(value: string | undefined) {
-  if (!value) return null;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
-}
-
-function pathParts(filePath: string, root?: string) {
-  const normalizedPath = filePath.replaceAll("\\", "/");
-  const normalizedRoot = root?.replaceAll("\\", "/").replace(/\/+$/, "");
-  const relative =
-    normalizedRoot && (normalizedPath === normalizedRoot || normalizedPath.startsWith(`${normalizedRoot}/`))
-      ? normalizedPath.slice(normalizedRoot.length).replace(/^\/+/, "")
-      : normalizedPath.replace(/^\/+/, "");
-  return relative.split("/").filter(Boolean);
-}
-
-function seasonFromDirectory(directoryName: string) {
-  if (SPECIALS_DIRECTORY_PATTERN.test(directoryName)) return 0;
-  const match = directoryName.match(SEASON_DIRECTORY_PATTERN);
-  return positiveInt(match?.groups?.season);
-}
-
-function titleFromContext(parts: string[], seasonDirectoryIndex: number | null) {
-  if (seasonDirectoryIndex !== null && seasonDirectoryIndex > 0) {
-    return cleanTitle(parts[seasonDirectoryIndex - 1]);
+function showTitleFromPath(filePath: string): string | null {
+  const dir = path.dirname(filePath);
+  const parts = dir.split("/").filter(Boolean);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const part = parts[i];
+    if (!DIRECTORY_SEASON_TITLE_PATTERN.test(part)) {
+      return cleanTitle(part);
+    }
   }
-  if (parts.length > 1) return cleanTitle(parts[parts.length - 2]);
-  return "";
+  return null;
 }
 
-function parseByPattern(fileStem: string, parts: string[], pattern: RegExp): ParsedTvEpisode | null {
-  const match = fileStem.match(pattern);
-  const seasonNumber = positiveInt(match?.groups?.season);
-  const episodeNumber = positiveInt(match?.groups?.episode);
-  if (!match || seasonNumber === null || episodeNumber === null) return null;
+export function parseTvEpisodePath(filePath: string, _root?: string): ParsedTvEpisode | null {
+  const result = guessit(filePath, { type: "episode" });
 
-  const prefix = fileStem.slice(0, match.index).trim();
-  const suffix = fileStem.slice((match.index ?? 0) + match[0].length);
-  const directoryParts = parts.slice(0, -1);
-  const seasonDirectoryIndex = directoryParts.findLastIndex((part) => seasonFromDirectory(part) !== null);
-  const contextTitle = titleFromContext(parts, seasonDirectoryIndex === -1 ? null : seasonDirectoryIndex);
-  const showTitle =
-    seasonDirectoryIndex === -1 ? cleanTitle(prefix) || contextTitle : contextTitle || cleanTitle(prefix);
+  const seasonNumber = toNumber(result.season);
+  const episodeNumber = toNumber(result.episode);
+  if (seasonNumber === null || episodeNumber === null) return null;
+
+  let showTitle = result.title;
   if (!showTitle) return null;
 
-  return {
-    showTitle,
-    seasonNumber,
-    episodeNumber,
-    episodeTitle: stripEpisodeTail(suffix) || null,
-  };
-}
+  if (DIRECTORY_SEASON_TITLE_PATTERN.test(showTitle)) {
+    const titleFromPath = showTitleFromPath(filePath);
+    if (titleFromPath) showTitle = titleFromPath;
+  }
 
-export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpisode | null {
-  const parts = pathParts(filePath, root);
-  const basename = parts.at(-1);
-  if (!basename) return null;
-
-  const fileStem = removeFileExtension(path.posix.basename(basename));
-  const patternMatch =
-    parseByPattern(fileStem, parts, SEASON_EPISODE_PATTERN) ??
-    parseByPattern(fileStem, parts, SEASON_X_EPISODE_PATTERN);
-  if (patternMatch) return patternMatch;
-
-  const directoryParts = parts.slice(0, -1);
-  const seasonDirectoryIndex = directoryParts.findLastIndex((part) => seasonFromDirectory(part) !== null);
-  if (seasonDirectoryIndex === -1) return null;
-
-  const seasonNumber = seasonFromDirectory(directoryParts[seasonDirectoryIndex]);
-  const leadingEpisode = fileStem.match(LEADING_EPISODE_PATTERN);
-  const episodeNumber = positiveInt(leadingEpisode?.groups?.episode);
-  const showTitle = titleFromContext(parts, seasonDirectoryIndex);
-  if (seasonNumber === null || episodeNumber === null || !showTitle) return null;
+  let episodeTitle: string | null = null;
+  if (typeof result.episode_title === "string") {
+    episodeTitle = result.episode_title;
+  } else if (typeof result.alternative_title === "string") {
+    if (result.alternative_title.toLowerCase() !== showTitle.toLowerCase()) {
+      episodeTitle = result.alternative_title;
+    }
+  } else if (Array.isArray(result.alternative_title) && result.alternative_title.length > 0) {
+    const candidates = result.alternative_title.filter(
+      (t) => typeof t === "string" && t.toLowerCase() !== showTitle.toLowerCase(),
+    );
+    if (candidates.length > 0) {
+      episodeTitle = candidates[candidates.length - 1];
+    }
+  }
 
   return {
     showTitle,
     seasonNumber,
     episodeNumber,
-    episodeTitle: stripEpisodeTail(leadingEpisode?.groups?.title ?? "") || null,
+    episodeTitle,
   };
 }

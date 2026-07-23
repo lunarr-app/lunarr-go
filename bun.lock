@@ -10,6 +10,7 @@
         "@lucide/svelte": "1.25.0",
         "better-auth": "1.6.23",
         "chokidar": "5.0.0",
+        "guessit-js": "4.0.0",
         "hls.js": "1.6.16",
         "kysely": "0.29.4",
         "libsql": "0.5.29",
@@ -400,6 +401,8 @@
 
     "graceful-fs": ["graceful-fs@4.2.11", "", {}, "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="],
 
+    "guessit-js": ["guessit-js@4.0.0", "", { "dependencies": { "rebulk-js": "^3.3.1" } }, "sha512-B4XE1MgxzFbxsFM95AE1oOE33hAUIq1AjEFL87V3QvHkAA8ohSfa425wIFdFqhtIC0avHpY4PjthTwMP8bAlYg=="],
+
     "hasown": ["hasown@2.0.3", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg=="],
 
     "hls.js": ["hls.js@1.6.16", "", {}, "sha512-VSIRpLfRwlAAdGL4wiTucx2ScRipo0ed1FBatWkyt832jC4CReKstga6yIhYVwGu9LOBjuX9wzmRMeQdBJtzEA=="],
@@ -535,6 +538,8 @@
     "readable-stream": ["readable-stream@2.3.8", "", { "dependencies": { "core-util-is": "~1.0.0", "inherits": "~2.0.3", "isarray": "~1.0.0", "process-nextick-args": "~2.0.0", "safe-buffer": "~5.1.1", "string_decoder": "~1.1.1", "util-deprecate": "~1.0.1" } }, "sha512-8p0AUk4XODgIewSi0l8Epjs+EVnWiK7NoDIEGU0HhE7+ZyY8D1IMY7odu5lRrFXGg71L15KG8QrPmum45RTtdA=="],
 
     "readdirp": ["readdirp@5.0.0", "", {}, "sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ=="],
+
+    "rebulk-js": ["rebulk-js@3.3.1", "", {}, "sha512-xohP5vyrQoFFCyhNdK7CNtXRf87SkyB/1kfJHOUw8XiSGxFgFRI8QAMt8RGboCQQR+1mnbLJy28oJJrYrXXW+w=="],
 
     "reflect-metadata": ["reflect-metadata@0.2.2", "", {}, "sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q=="],
 

@@ -31,6 +31,7 @@
     "@lucide/svelte": "1.25.0",
     "better-auth": "1.6.23",
     "chokidar": "5.0.0",
+    "guessit-js": "4.0.0",
     "hls.js": "1.6.16",
     "kysely": "0.29.4",
     "libsql": "0.5.29",

@@ -50,7 +50,7 @@ describe("parseTvEpisodePath", () => {
       showTitle: "What If…!",
       seasonNumber: 2,
       episodeNumber: 1,
-      episodeTitle: "720p WEB h264 EDITH",
+      episodeTitle: "What If",
     });
   });
 
@@ -64,7 +64,7 @@ describe("parseTvEpisodePath", () => {
       showTitle: "How I Met Your Mother",
       seasonNumber: 7,
       episodeNumber: 23,
-      episodeTitle: "720p HDTV X264 DIMENSION",
+      episodeTitle: null,
     });
 
     expect(
@@ -73,10 +73,10 @@ describe("parseTvEpisodePath", () => {
         "/media/shows",
       ),
     ).toEqual({
-      showTitle: "The X Files",
+      showTitle: "The X",
       seasonNumber: 9,
       episodeNumber: 19,
-      episodeTitle: "The Truth 1080p BluRay x265 DD5 1 Pahe in",
+      episodeTitle: "The Truth",
     });
 
     expect(
@@ -88,7 +88,7 @@ describe("parseTvEpisodePath", () => {
       showTitle: "Teen Titans Go",
       seasonNumber: 3,
       episodeNumber: 35,
-      episodeTitle: "Operation Dude Rescue 720p HDTV x264 W4F Obfuscated",
+      episodeTitle: "Operation Dude Rescue",
     });
 
     expect(
@@ -100,7 +100,33 @@ describe("parseTvEpisodePath", () => {
       showTitle: "The Garfield Show",
       seasonNumber: 4,
       episodeNumber: 53,
-      episodeTitle: "1080p NF WEB DL DDP2 0 x264 1 AJP69 Obfuscated",
+      episodeTitle: null,
+    });
+  });
+
+  test("parses anime absolute episode filenames", () => {
+    expect(
+      parseTvEpisodePath(
+        "/media/anime/Pokemon/Season 1/[Ioroid] Uma Musume Pretty Derby - Road to the Top - 04 [AMZN WEB-DL 1080p AVC E-AC3].mkv",
+        "/media/anime",
+      ),
+    ).toEqual({
+      showTitle: "Pokemon",
+      seasonNumber: 1,
+      episodeNumber: 4,
+      episodeTitle: "Road to the Top",
+    });
+
+    expect(
+      parseTvEpisodePath(
+        "/media/anime/Naruto/Season 3/[Erai-raws] Busamen Gachi Fighter-12 [1080p CR WEB-DL AVC AAC][MultiSub][7470E7AC].mkv",
+        "/media/anime",
+      ),
+    ).toEqual({
+      showTitle: "Naruto",
+      seasonNumber: 3,
+      episodeNumber: 12,
+      episodeTitle: "Busamen Gachi Fighter",
     });
   });
 
