@@ -28,8 +28,19 @@ WORKDIR /app
 
 COPY --chown=node:node scripts/verify-ffmpeg.mjs scripts/smoke-ffmpeg-transcode.mjs scripts/smoke-ffmpeg-hardware.mjs scripts/verify-nodeav-probe.mjs scripts/verify-runtime.mjs ./scripts/
 
+# ffmpeg plus hardware acceleration drivers: Mesa VA-API drivers (AMD/others)
+# on all architectures; Intel VAAPI (iHD) and the Intel VPL GPU runtime (QSV)
+# on amd64, the only architecture Debian ships them for. Without these the
+# advertised vaapi/qsv hardware modes fail at runtime inside the container.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends \
+       ffmpeg \
+       mesa-va-drivers \
+    && if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+         apt-get install -y --no-install-recommends \
+           intel-media-va-driver \
+           libmfx-gen1.2; \
+       fi \
     && rm -rf /var/lib/apt/lists/* \
     && node scripts/verify-ffmpeg.mjs
 

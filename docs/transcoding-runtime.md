@@ -14,7 +14,7 @@ Direct play stays the preferred path when the selected file is already compatibl
 - Keep temporary playback artifact storage on fast local disk. Per-session virtual playlists live under `playback-sessions/<sessionId>/`, and shared encoded segments live under `playback-cache/<cacheKey>/` in the configured Lunarr data directory.
 - Keep remote libraries (SFTP and WebDAV) seekable by preserving remote file size and duration metadata. Non-direct remote playback streams through Lunarr's private localhost range proxy into FFmpeg, not by exposing remote credentials to FFmpeg.
 
-The Docker runtime image installs system FFmpeg and runs the baseline FFmpeg playback verifier plus the NodeAV probe verifier during image build.
+The Docker runtime image installs system FFmpeg and runs the baseline FFmpeg playback verifier plus the NodeAV probe verifier during image build. The image also bundles the Mesa VA-API drivers (`mesa-va-drivers`, used by AMD) on all architectures, and on amd64 the Intel VAAPI driver (`intel-media-va-driver`) plus the Intel VPL GPU runtime for QSV (`libmfx-gen1.2`), so `vaapi` and `qsv` hardware modes work once the host device is mounted into the container.
 
 ## Playback Behavior
 
