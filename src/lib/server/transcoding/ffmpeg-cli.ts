@@ -209,7 +209,7 @@ function hardwareInputArgs(mode: FfmpegHardwareMode) {
     case "nvenc":
       return ["-hwaccel", "cuda", "-hwaccel_output_format", "cuda"];
     case "amf":
-      return ["-hwaccel", "amf", "-hwaccel_output_format", "amf"];
+      return ["-hwaccel", "amf"];
   }
 }
 

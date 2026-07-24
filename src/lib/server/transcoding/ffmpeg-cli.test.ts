@@ -505,6 +505,41 @@ describe("FFmpeg HLS playback backend", () => {
     expect(args).not.toContain("hwupload");
   });
 
+  test("uses software scale and no amf hardware output frames for AMF height-limited presets", () => {
+    const args = ffmpegHlsArgs(
+      input({
+        hardwareAcceleration: "amf",
+        hardwareAccelerationRequired: true,
+        transcodeQuality: {
+          preset: "720p",
+          maxHeight: 720,
+          softwareCrf: 24,
+          hardwareBitrate: "3M",
+        },
+      }),
+    );
+
+    expect(args).toContain("-hwaccel");
+    expect(args).toContain("amf");
+    expect(args).not.toContain("-hwaccel_output_format");
+    expect(args).toContain("scale=-2:trunc(min(ih\\,720)/2)*2");
+    expect(args).toContain("h264_amf");
+  });
+
+  test("keeps AMF decode without hardware output frames when unscaled", () => {
+    const args = ffmpegHlsArgs(
+      input({
+        hardwareAcceleration: "amf",
+        hardwareAccelerationRequired: true,
+      }),
+    );
+
+    expect(args).toContain("-hwaccel");
+    expect(args).toContain("amf");
+    expect(args).not.toContain("-hwaccel_output_format");
+    expect(args).toContain("h264_amf");
+  });
+
   test("keeps automatic hardware acceleration on software unless required", () => {
     expect(
       ffmpegHlsArgs(
