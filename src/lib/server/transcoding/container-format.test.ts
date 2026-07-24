@@ -33,6 +33,19 @@ describe("detectContainerFromMagic", () => {
     const head = Buffer.alloc(189, 0x47);
     expect(detectContainerFromMagic(head)).toBe("mpegts");
   });
+
+  test("detects mpegts from a two-packet head with sync bytes at packet boundaries", () => {
+    const head = Buffer.alloc(376, 0xff);
+    head[0] = 0x47;
+    head[188] = 0x47;
+    expect(detectContainerFromMagic(head)).toBe("mpegts");
+  });
+
+  test("does not detect mpegts without a verifiable second sync byte", () => {
+    const head = Buffer.alloc(64, 0xff);
+    head[0] = 0x47;
+    expect(detectContainerFromMagic(head)).toBeNull();
+  });
 });
 
 describe("resolveNodeAvInputFormat", () => {

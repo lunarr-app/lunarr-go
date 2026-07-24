@@ -8,7 +8,7 @@ import type { Readable } from "node:stream";
 export const REMOTE_READ_CANCELLED_MESSAGE = "Remote media read was cancelled.";
 const SEEKABLE_READ_AHEAD_BYTES = 512 * 1024;
 const SEEKABLE_MAX_BUFFER_BYTES = 1024 * 1024;
-const MAGIC_SNIFF_BYTES = 64;
+const MAGIC_SNIFF_BYTES = 376;
 
 export type SeekableStorageFile = {
   path: string;

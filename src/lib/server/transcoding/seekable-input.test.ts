@@ -46,6 +46,23 @@ describe("createSeekableInputSourceFromStorage", () => {
     expect(inputSource.format).toBe("mp4");
     await inputSource.close();
   });
+
+  test("sniffs mpegts for a file with no usable extension or container metadata", async () => {
+    const head = Buffer.alloc(752, 0xff);
+    for (let offset = 0; offset < head.length; offset += 188) head[offset] = 0x47;
+    const inputSource = await createSeekableInputSourceFromStorage({
+      file: {
+        path: "streams/broadcast",
+        extension: null,
+        container: null,
+        sizeBytes: head.length,
+      },
+      storage: storageFromHead(head),
+    });
+
+    expect(inputSource.format).toBe("mpegts");
+    await inputSource.close();
+  });
 });
 
 describe("sniffContainerFromStorage", () => {

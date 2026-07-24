@@ -19,7 +19,7 @@ export function detectContainerFromMagic(head: Buffer): string | null {
     return "avi";
   }
 
-  if (head.length >= 188 && head[0] === 0x47 && head[188] === 0x47) {
+  if (head.length > 188 && head[0] === 0x47 && head[188] === 0x47) {
     return "mpegts";
   }
 
