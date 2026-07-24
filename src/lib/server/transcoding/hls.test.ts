@@ -250,6 +250,27 @@ describe("HLS helpers", () => {
       await rm(tempDir, { recursive: true, force: true });
     }
   });
+
+  test("sets content-length to the served segment body length", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-hls-segment-length-"));
+    try {
+      const playlistDir = path.join(tempDir, "session");
+      const playlistPath = path.join(playlistDir, "master.m3u8");
+      await mkdir(playlistDir, { recursive: true });
+      await writeFile(playlistPath, "#EXTM3U\n");
+      const segmentBody = "segment-bytes-0123456789";
+      await writeFile(path.join(playlistDir, "segment-00001.ts"), segmentBody);
+
+      const response = await hlsSegmentResponse(playlistPath, "segment-00001.ts");
+
+      expect(response.status).toBe(200);
+      const body = await response.arrayBuffer();
+      expect(response.headers.get("content-length")).toBe(String(body.byteLength));
+      expect(body.byteLength).toBe(segmentBody.length);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("resolveEncodeAheadSegmentCount", () => {

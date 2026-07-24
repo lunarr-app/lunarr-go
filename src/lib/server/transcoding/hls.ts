@@ -129,13 +129,11 @@ async function loadHlsSegmentPayload(
 ): Promise<HlsSegmentPayload> {
   const segmentPaths = resolveSegmentPath(playlistPath, segment, encodeDirectory);
   let segmentPath: string | null = null;
-  let segmentSize = 0;
   for (const candidate of segmentPaths) {
     try {
       const details = await stat(candidate);
       if (details.isFile()) {
         segmentPath = candidate;
-        segmentSize = details.size;
         break;
       }
     } catch {
@@ -157,7 +155,7 @@ async function loadHlsSegmentPayload(
   return {
     body,
     mimeType: hlsSegmentMimeType(segment),
-    size: segmentSize,
+    size: body.length,
   };
 }
 
