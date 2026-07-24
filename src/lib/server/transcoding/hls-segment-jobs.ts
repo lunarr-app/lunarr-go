@@ -557,11 +557,9 @@ export async function ensureHlsLookaheadForSegment(
   const session = await currentSession();
   if (!session?.playlistPath || session.durationSeconds === null) return false;
   const playlistPath = session.playlistPath;
-  const encodeDirectory = (await getPlaybackCacheBindingForSession(input.sessionId)).encodeArtifactDirectory;
-  const cacheKey = encodeLockKey(
-    (await getPlaybackCacheBindingForSession(input.sessionId)).cacheId,
-    encodeDirectory ?? path.dirname(playlistPath),
-  );
+  const cacheBinding = await getPlaybackCacheBindingForSession(input.sessionId);
+  const encodeDirectory = cacheBinding.encodeArtifactDirectory;
+  const cacheKey = encodeLockKey(cacheBinding.cacheId, encodeDirectory ?? path.dirname(playlistPath));
   const coordinator = getEncodeCoordinator(cacheKey);
   const lastSegmentIndex = Math.ceil(session.durationSeconds / DEFAULT_HLS_SEGMENT_SECONDS) - 1;
 
