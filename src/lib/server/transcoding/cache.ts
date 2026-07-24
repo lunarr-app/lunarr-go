@@ -138,55 +138,67 @@ export async function acquirePlaybackCache(input: {
   const artifactDir = playbackCacheArtifactDirectory(cacheId);
   const db = await getDb();
   const now = nowIso();
-  const existing = await db.selectFrom("playback_hls_cache").selectAll().where("id", "=", cacheId).executeTakeFirst();
 
-  if (
-    existing &&
-    existing.ref_count === 0 &&
-    (existing.file_size_bytes !== input.fileSizeBytes || existing.file_mtime_ms !== input.fileMtimeMs)
-  ) {
-    await removePlaybackCacheEntry(cacheId);
-  }
-
-  const current = await db.selectFrom("playback_hls_cache").selectAll().where("id", "=", cacheId).executeTakeFirst();
-
-  if (!current) {
-    await mkdir(artifactDir, { recursive: true });
-    await db
-      .insertInto("playback_hls_cache")
-      .values({
-        id: cacheId,
-        media_file_id: input.mediaFileId,
-        mode: input.mode,
-        policy_hash: policyHash,
-        file_size_bytes: input.fileSizeBytes,
-        file_mtime_ms: input.fileMtimeMs,
-        artifact_dir: artifactDir,
-        furthest_segment_index: null,
-        bytes: 0,
-        ref_count: 1,
-        last_access_at: now,
-        created_at: now,
-        updated_at: now,
-      })
-      .execute();
-  } else {
-    await db
-      .updateTable("playback_hls_cache")
-      .set({
-        ref_count: current.ref_count + 1,
-        last_access_at: now,
-        updated_at: now,
-      })
+  await db.transaction().execute(async (tx) => {
+    const existing = await tx
+      .selectFrom("playback_hls_cache")
+      .selectAll()
       .where("id", "=", cacheId)
-      .execute();
-  }
+      .executeTakeFirst();
 
-  await db
-    .updateTable("playback_session")
-    .set({ cache_id: cacheId, updated_at: now })
-    .where("id", "=", input.sessionId)
-    .execute();
+    if (
+      existing &&
+      existing.ref_count === 0 &&
+      (existing.file_size_bytes !== input.fileSizeBytes || existing.file_mtime_ms !== input.fileMtimeMs)
+    ) {
+      await tx.deleteFrom("playback_hls_cache").where("id", "=", cacheId).execute();
+      await rm(artifactDir, { recursive: true, force: true }).catch(() => undefined);
+    }
+
+    const current = await tx
+      .selectFrom("playback_hls_cache")
+      .selectAll()
+      .where("id", "=", cacheId)
+      .executeTakeFirst();
+
+    if (!current) {
+      await mkdir(artifactDir, { recursive: true });
+      await tx
+        .insertInto("playback_hls_cache")
+        .values({
+          id: cacheId,
+          media_file_id: input.mediaFileId,
+          mode: input.mode,
+          policy_hash: policyHash,
+          file_size_bytes: input.fileSizeBytes,
+          file_mtime_ms: input.fileMtimeMs,
+          artifact_dir: artifactDir,
+          furthest_segment_index: null,
+          bytes: 0,
+          ref_count: 1,
+          last_access_at: now,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
+    } else {
+      await tx
+        .updateTable("playback_hls_cache")
+        .set({
+          ref_count: current.ref_count + 1,
+          last_access_at: now,
+          updated_at: now,
+        })
+        .where("id", "=", cacheId)
+        .execute();
+    }
+
+    await tx
+      .updateTable("playback_session")
+      .set({ cache_id: cacheId, updated_at: now })
+      .where("id", "=", input.sessionId)
+      .execute();
+  });
 
   return { cacheId, encodeArtifactDirectory: artifactDir };
 }
