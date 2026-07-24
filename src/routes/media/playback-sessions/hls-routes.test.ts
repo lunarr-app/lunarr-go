@@ -41,7 +41,7 @@ import {
 } from "$lib/server/transcoding/sessions";
 import { setTranscodingEnabled, setUserPreferredAudioLanguage } from "$lib/server/transcoding/policy";
 import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "$lib/server/transcoding/backend";
-import { resolvedFfmpegPath } from "$lib/server/transcoding/ffmpeg-cli";
+import { resolveFfmpegPath } from "$lib/server/transcoding/ffmpeg-cli";
 import type { LibraryStorage } from "$lib/server/storage";
 import { GET as getPlaylist, HEAD as headPlaylist } from "./[sessionId]/master.m3u8/+server";
 import { GET as getSegment, HEAD as headSegment } from "./[sessionId]/segments/[segment]/+server";
@@ -63,7 +63,7 @@ function completedWindowGeneration(): HlsSegmentWindowGeneration {
 }
 
 function canRunFfmpeg() {
-  const result = spawnSync(resolvedFfmpegPath(), ["-version"], {
+  const result = spawnSync(resolveFfmpegPath(), ["-version"], {
     stdio: "ignore",
   });
   return !result.error && result.status === 0;
@@ -78,7 +78,7 @@ function generateRouteSmokeInput(
   } = {},
 ) {
   const result = spawnSync(
-    resolvedFfmpegPath(),
+    resolveFfmpegPath(),
     [
       "-hide_banner",
       "-y",

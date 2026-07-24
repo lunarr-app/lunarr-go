@@ -1,11 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-  ffmpegCliBackend,
-  ffmpegHlsArgs,
-  resolveFfmpegPath,
-  resolvedFfmpegPath,
-  scheduleForceKill,
-} from "./ffmpeg-cli";
+import { ffmpegCliBackend, ffmpegHlsArgs, resolveFfmpegPath, scheduleForceKill } from "./ffmpeg-cli";
 import type { HlsSegmentWindowTranscodeInput, HlsTranscodeInput, SeekableTranscodeInputSource } from "./backend";
 import { open, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -23,7 +17,7 @@ afterEach(async () => {
 });
 
 function canRunFfmpeg() {
-  const result = spawnSync(resolvedFfmpegPath(), ["-version"], {
+  const result = spawnSync(resolveFfmpegPath(), ["-version"], {
     stdio: "ignore",
   });
   return !result.error && result.status === 0;
@@ -35,7 +29,7 @@ async function makeTempDir() {
 }
 
 function runFfmpegFixture(args: string[]) {
-  const result = spawnSync(resolvedFfmpegPath(), args, {
+  const result = spawnSync(resolveFfmpegPath(), args, {
     encoding: "utf8",
   });
   if (result.status !== 0) {
@@ -741,14 +735,10 @@ describe("FFmpeg HLS playback backend", () => {
     );
     await generation?.completion;
 
-    expect(
-      (await expectGeneratedSegment(artifactDirectory, "init.mp4")).length,
-    ).toBeGreaterThan(0);
+    expect((await expectGeneratedSegment(artifactDirectory, "init.mp4")).length).toBeGreaterThan(0);
     expect((await expectGeneratedSegment(artifactDirectory, "segment-00000.m4s")).length).toBeGreaterThan(0);
     const eventPlaylistPath = encodeEventPlaylistPath(artifactDirectory, "fmp4-smoke", 0);
-    expect(await readFile(eventPlaylistPath, "utf8")).toContain(
-      `#EXT-X-MAP:URI="init.mp4"`,
-    );
+    expect(await readFile(eventPlaylistPath, "utf8")).toContain(`#EXT-X-MAP:URI="init.mp4"`);
   });
 
   smokeTest(

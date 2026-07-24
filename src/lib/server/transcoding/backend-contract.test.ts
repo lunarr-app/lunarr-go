@@ -13,9 +13,11 @@ const allowedFfmpegFiles = new Set([
   "scripts/verify-nodeav-probe.mjs",
   "scripts/verify-runtime.mjs",
   "src/lib/server/transcoding/ffmpeg-cli.ts",
-  "src/lib/server/transcoding/playback-backend.ts",
   "src/lib/server/transcoding/input-proxy.ts",
   "src/lib/server/transcoding/manager.ts",
+  "src/lib/server/transcoding/playback-lifecycle.ts",
+  "src/lib/server/transcoding/playback-resolve.ts",
+  "src/lib/server/transcoding/segment-request-gateway.ts",
   "src/routes/(app)/settings/_components/SettingsTranscodingPanel.svelte",
 ]);
 const allowedProcessFiles = new Set([

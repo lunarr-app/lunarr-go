@@ -624,9 +624,7 @@ export async function pruneHlsSegmentsBehind(
   const pruneBefore = currentIndex - Math.max(0, keepBehind);
   if (pruneBefore <= 0) return 0;
 
-  const directories = encodeDirectory
-    ? [encodeDirectory, path.dirname(playlistPath)]
-    : [path.dirname(playlistPath)];
+  const directories = encodeDirectory ? [encodeDirectory, path.dirname(playlistPath)] : [path.dirname(playlistPath)];
   let removed = 0;
 
   await Promise.all(

@@ -13,7 +13,7 @@ import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
 import { type HlsSegmentFormat, hlsSegmentName, pruneHlsSegmentsBehind } from "./hls";
 import { TRANSCODING_DISABLED_MESSAGE } from "./hls-segment-jobs";
 import { onEncodeSessionEnded } from "./encode-coordinator";
-import { getTranscodeBackend } from "./playback-backend";
+import { transcodeBackend } from "./ffmpeg-cli";
 import { currentDatabasePaths } from "../db";
 import { rm } from "node:fs/promises";
 import path from "node:path";
@@ -68,9 +68,7 @@ export async function removeTranscodeSessionArtifacts(sessionId: string) {
 }
 
 export async function cleanupTranscodeStartupFailure(sessionId: string) {
-  await getTranscodeBackend()
-    .cancel(sessionId)
-    .catch(() => undefined);
+  await transcodeBackend.cancel(sessionId).catch(() => undefined);
   await removeTranscodeSessionArtifacts(sessionId);
 }
 
@@ -82,9 +80,7 @@ async function clearRequestDrivenSessionWork(sessionId: string) {
 
 export async function stopRequestDrivenSegmentWork(sessionId: string) {
   await clearRequestDrivenSessionWork(sessionId);
-  await getTranscodeBackend()
-    .cancel(sessionId)
-    .catch(() => undefined);
+  await transcodeBackend.cancel(sessionId).catch(() => undefined);
 }
 
 export async function cancelPlaybackSession(

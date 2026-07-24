@@ -117,12 +117,8 @@ export function resolveFfmpegPath(
   return systemPath;
 }
 
-export function resolvedFfmpegPath() {
-  return resolveFfmpegPath();
-}
-
 function isFfmpegCliAvailable() {
-  return canExecuteFfmpeg(resolvedFfmpegPath());
+  return canExecuteFfmpeg(resolveFfmpegPath());
 }
 
 function inputPathForFfmpeg(input: Pick<HlsTranscodeInput, "inputPath" | "inputSource">, options?: FfmpegHlsOptions) {
@@ -464,7 +460,7 @@ async function runFfmpeg(input: HlsTranscodeInput, options?: FfmpegHlsOptions): 
     ...options,
     inputUrl: inputProxy?.url ?? options?.inputUrl,
   });
-  const child = spawn(resolvedFfmpegPath(), args, {
+  const child = spawn(resolveFfmpegPath(), args, {
     stdio: ["ignore", "ignore", "pipe"],
   });
   let stderr = "";
@@ -655,3 +651,13 @@ export const ffmpegCliBackend: TranscodeBackend = {
     await Promise.all(entries.map((entry) => terminateActiveFfmpeg(entry)));
   },
 };
+
+export let transcodeBackend: TranscodeBackend = ffmpegCliBackend;
+
+export function setTranscodeBackendInternal(backend: TranscodeBackend) {
+  transcodeBackend = backend;
+}
+
+export function resetTranscodeBackendInternal() {
+  transcodeBackend = ffmpegCliBackend;
+}

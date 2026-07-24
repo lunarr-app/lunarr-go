@@ -39,7 +39,7 @@ import {
   cleanupTranscodeStartupFailure,
   requestDrivenHlsSegmentFormat,
 } from "./playback-lifecycle";
-import { getTranscodeBackend } from "./playback-backend";
+import { transcodeBackend } from "./ffmpeg-cli";
 import { ensureHlsSegmentForRequest } from "./segment-request-gateway";
 import { withTimeout } from "../timeout";
 
@@ -541,7 +541,6 @@ export async function resolveHlsPlayback(input: {
     };
   }
 
-  const transcodeBackend = getTranscodeBackend();
   const validateHlsSegmentGenerationPolicy = transcodeBackend.validateHlsSegmentGenerationPolicy;
   const generateHlsSegmentWindow = transcodeBackend.generateHlsSegmentWindow;
   if (requestDrivenEligible && !generateHlsSegmentWindow) {

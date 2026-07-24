@@ -37,10 +37,6 @@ export function encodeEventPlaylistPath(artifactDirectory: string, sessionId: st
   return path.join(artifactDirectory, `encode-${encodeJobId(sessionId, startSegmentIndex).replace(/\0/g, "-")}.m3u8`);
 }
 
-export function encodeFmp4InitFileName(sessionId: string, startSegmentIndex: number) {
-  return `encode-${encodeJobId(sessionId, startSegmentIndex).replace(/\0/g, "-")}-init.mp4`;
-}
-
 export function jobCovers(job: Pick<ActiveEncodeJob, "firstSegmentIndex" | "lastSegmentIndex">, segmentIndex: number) {
   return segmentIndex >= job.firstSegmentIndex && segmentIndex <= job.lastSegmentIndex;
 }

@@ -140,11 +140,7 @@ export async function acquirePlaybackCache(input: {
   const now = nowIso();
 
   await db.transaction().execute(async (tx) => {
-    const existing = await tx
-      .selectFrom("playback_hls_cache")
-      .selectAll()
-      .where("id", "=", cacheId)
-      .executeTakeFirst();
+    const existing = await tx.selectFrom("playback_hls_cache").selectAll().where("id", "=", cacheId).executeTakeFirst();
 
     if (
       existing &&
@@ -155,11 +151,7 @@ export async function acquirePlaybackCache(input: {
       await rm(artifactDir, { recursive: true, force: true }).catch(() => undefined);
     }
 
-    const current = await tx
-      .selectFrom("playback_hls_cache")
-      .selectAll()
-      .where("id", "=", cacheId)
-      .executeTakeFirst();
+    const current = await tx.selectFrom("playback_hls_cache").selectAll().where("id", "=", cacheId).executeTakeFirst();
 
     if (!current) {
       await mkdir(artifactDir, { recursive: true });

@@ -6,7 +6,7 @@ import {
 import { encodeLockKey, getEncodeCoordinator, onEncodeSessionEnded } from "./encode-coordinator";
 import { getTranscodeSession } from "./sessions";
 import path from "node:path";
-import { getTranscodeBackend } from "./playback-backend";
+import { transcodeBackend } from "./ffmpeg-cli";
 import { removeTranscodeSessionArtifacts, requestDrivenHlsSegmentFormat } from "./playback-lifecycle";
 import { createSeekableStorageInputSource, isReadableFile, selectPlaybackAudioStreamIndex } from "./playback-resolve";
 
@@ -95,7 +95,7 @@ async function encodeCoordinatorCacheKeyForSession(sessionId: string) {
 
 function segmentJobDeps() {
   return {
-    transcodeBackend: getTranscodeBackend(),
+    transcodeBackend,
     requestDrivenHlsSegmentFormat,
     selectPlaybackAudioStreamIndex,
     createSeekableStorageInputSource,

@@ -3,7 +3,7 @@ import { cleanupJobHistory } from "../jobs";
 import { TRANSCODING_DISABLED_MESSAGE } from "./hls-segment-jobs";
 import { resetEncodeCoordinatorsForTests } from "./encode-coordinator";
 import { createLibraryStorage } from "../storage";
-import { resetTranscodeBackendInternal, setTranscodeBackendInternal } from "./playback-backend";
+import { resetTranscodeBackendInternal, setTranscodeBackendInternal } from "./ffmpeg-cli";
 import {
   resetStorageFactoryInternal,
   setSftpSeekableOperationTimeoutInternal,

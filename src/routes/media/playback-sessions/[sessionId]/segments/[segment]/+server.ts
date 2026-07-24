@@ -159,7 +159,11 @@ export const GET: RequestHandler = async ({ params, locals, request, url }) => {
             segment: params.segment,
           }).catch(() => undefined);
         }, 0);
-        void pruneHlsSegmentsBehind(artifact.playlistPath, params.segment, artifact.encodeArtifactDirectory ?? undefined).catch(() => undefined);
+        void pruneHlsSegmentsBehind(
+          artifact.playlistPath,
+          params.segment,
+          artifact.encodeArtifactDirectory ?? undefined,
+        ).catch(() => undefined);
       }
     }
     return withSignedPlaybackHeaders(response, auth.signed);
