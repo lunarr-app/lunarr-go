@@ -8,7 +8,7 @@ import {
   updateActiveTranscodeSessionStatus,
   updateTranscodeSessionStatus,
 } from "./sessions";
-import { releasePlaybackCacheForSession } from "./cache";
+import { getPlaybackCacheBindingForSession, releasePlaybackCacheForSession } from "./cache";
 import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
 import { type HlsSegmentFormat, hlsSegmentName, pruneHlsSegmentsBehind } from "./hls";
 import { TRANSCODING_DISABLED_MESSAGE } from "./hls-segment-jobs";
@@ -158,6 +158,7 @@ export async function pruneActiveHlsSegmentArtifacts(keepBehind?: number): Promi
 
   for (const session of sessions) {
     if (session.lastSegmentIndex === null) continue;
+    const binding = await getPlaybackCacheBindingForSession(session.sessionId);
     pruned += await pruneHlsSegmentsBehind(
       session.playlistPath,
       hlsSegmentName(
@@ -166,6 +167,7 @@ export async function pruneActiveHlsSegmentArtifacts(keepBehind?: number): Promi
           ? hlsSegmentFormatFromSegmentName(session.lastSegmentName)
           : requestDrivenHlsSegmentFormat(),
       ),
+      binding.encodeArtifactDirectory ?? undefined,
       keepBehind,
     ).catch(() => 0);
   }

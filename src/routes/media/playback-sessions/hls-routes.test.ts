@@ -1148,7 +1148,7 @@ describe.serial("playback-session HLS routes", () => {
     await writeFile(path.join(artifactDir, "segment-0005.ts"), "current");
     await writeFile(path.join(artifactDir, "init.mp4"), "init");
 
-    expect(await pruneHlsSegmentsBehind(playlistPath, "segment-0005.ts", 2)).toBe(2);
+    expect(await pruneHlsSegmentsBehind(playlistPath, "segment-0005.ts", undefined, 2)).toBe(2);
     expect(await exists(path.join(artifactDir, "segment-0001.ts"))).toBe(false);
     expect(await exists(path.join(artifactDir, "segment-0002.ts"))).toBe(false);
     expect(await exists(path.join(artifactDir, "segment-00003.ts"))).toBe(true);

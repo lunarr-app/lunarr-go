@@ -615,6 +615,7 @@ export async function hlsSegmentFileExists(playlistPath: string, segment: string
 export async function pruneHlsSegmentsBehind(
   playlistPath: string,
   currentSegment: string,
+  encodeDirectory?: string,
   keepBehind = DEFAULT_SEGMENT_KEEP_BEHIND,
 ) {
   const currentIndex = hlsSegmentIndex(currentSegment);
@@ -623,17 +624,26 @@ export async function pruneHlsSegmentsBehind(
   const pruneBefore = currentIndex - Math.max(0, keepBehind);
   if (pruneBefore <= 0) return 0;
 
-  const playlistDirectory = path.dirname(playlistPath);
-  const entries = await readdir(playlistDirectory, { withFileTypes: true });
+  const directories = encodeDirectory
+    ? [encodeDirectory, path.dirname(playlistPath)]
+    : [path.dirname(playlistPath)];
   let removed = 0;
 
   await Promise.all(
-    entries.map(async (entry) => {
-      if (!entry.isFile() || !canPruneSegment(entry.name)) return;
-      const segmentIndex = hlsSegmentIndex(entry.name);
-      if (segmentIndex === null || segmentIndex >= pruneBefore) return;
-      await rm(path.join(playlistDirectory, entry.name), { force: true });
-      removed += 1;
+    directories.map(async (directory) => {
+      let entries;
+      try {
+        entries = await readdir(directory, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (!entry.isFile() || !canPruneSegment(entry.name)) continue;
+        const segmentIndex = hlsSegmentIndex(entry.name);
+        if (segmentIndex === null || segmentIndex >= pruneBefore) continue;
+        await rm(path.join(directory, entry.name), { force: true });
+        removed += 1;
+      }
     }),
   );
 
