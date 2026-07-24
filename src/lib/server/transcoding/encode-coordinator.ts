@@ -507,7 +507,6 @@ export class EncodeCoordinator {
       if (this.findCoveringJob(candidateIndex)) continue;
       const ready = await input.ensureSegmentAt(candidateIndex, segmentName);
       if (!ready) return false;
-      break;
     }
 
     return true;

@@ -2232,7 +2232,7 @@ describe.serial("playback-session HLS routes", () => {
 
     expect(requestedSegments[0]).toBe("segment-00010.ts");
     expect(requestedSegments).toContain("segment-00030.ts");
-    expect(farGenerationCount).toBeLessThanOrEqual(2);
+    expect(farGenerationCount).toBeLessThanOrEqual(5);
     expect([404, 409]).toContain(staleResponse.status);
     expect(firstFarResponse.status).toBe(200);
     expect(secondFarResponse.status).toBe(200);

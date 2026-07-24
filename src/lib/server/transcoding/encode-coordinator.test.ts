@@ -421,7 +421,7 @@ describe("encode-coordinator", () => {
     });
 
     expect(ready).toBe(true);
-    expect(ensured).toEqual([2]);
+    expect(ensured).toEqual([2, 3, 4]);
   });
 
   test("onNoActiveViewers aborts all jobs and clears pending ensures", async () => {
