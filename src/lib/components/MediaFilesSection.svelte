@@ -2,7 +2,7 @@
   import { page } from "$app/state";
   import { formatClockDuration, formatFileSize, formatMediaDuration } from "$lib/media/format";
   import { playbackModalHref } from "$lib/playback/links";
-  import { Eye, EyeOff, HardDrive, Play, Tags } from "@lucide/svelte";
+  import { Eye, EyeOff, Play } from "@lucide/svelte";
 
   type MediaFile = {
     id: string;
@@ -13,6 +13,11 @@
     duration_seconds: number | null;
     video_codec: string | null;
     audio_codec: string | null;
+    video_frame_rate: number | null;
+    audio_channels: number | null;
+    audio_sample_rate: number | null;
+    audio_language: string | null;
+    audio_bit_rate: number | null;
   };
 
   type FileProgress = {
@@ -63,15 +68,34 @@
     return Math.min(99, Math.max(1, Math.round((position / duration) * 100)));
   }
 
-  function fileDetails(file: MediaFile) {
-    const parts = [
-      file.container?.toUpperCase() ?? file.extension.replace(/^\./, "").toUpperCase(),
-      file.duration_seconds ? formatMediaDuration(file.duration_seconds) : null,
-      file.video_codec ? `Video ${file.video_codec}` : null,
-      file.audio_codec ? `Audio ${file.audio_codec}` : null,
-    ].filter(Boolean);
+  function formatFrameRate(fps: number | null) {
+    if (fps === null || fps <= 0) return null;
+    const rounded = Math.abs(fps - Math.round(fps)) < 0.01 ? Math.round(fps) : fps.toFixed(2);
+    return `${rounded} fps`;
+  }
 
-    return parts.join(" - ");
+  function audioLabel(file: MediaFile) {
+    const parts = [];
+    if (file.audio_codec) parts.push(file.audio_codec);
+    if (file.audio_channels === 1) parts.push("mono");
+    else if (file.audio_channels === 2) parts.push("stereo");
+    else if (file.audio_channels && file.audio_channels >= 6) parts.push(`${file.audio_channels}ch`);
+    if (file.audio_sample_rate) parts.push(`${file.audio_sample_rate / 1000}khz`);
+    if (file.audio_language && file.audio_language !== "und") parts.push(file.audio_language);
+    return parts.length > 0 ? parts.join(" ") : null;
+  }
+
+  function fileDetails(file: MediaFile) {
+    const parts: string[] = [];
+    parts.push(file.container ?? file.extension.replace(/^\./, ""));
+    if (file.duration_seconds) parts.push(formatMediaDuration(file.duration_seconds));
+    if (file.video_codec) {
+      const v = [file.video_codec, formatFrameRate(file.video_frame_rate)].filter(Boolean).join(" ");
+      parts.push(v);
+    }
+    const audio = audioLabel(file);
+    if (audio) parts.push(audio);
+    return parts;
   }
 </script>
 
@@ -96,10 +120,10 @@
             {/if}
           </div>
           <div class="file-meta">
-            <span><HardDrive size={14} aria-hidden="true" />{formatFileSize(file.size_bytes)}</span>
-            {#if fileDetails(file)}
-              <span><Tags size={14} aria-hidden="true" />{fileDetails(file)}</span>
-            {/if}
+            <span>{formatFileSize(file.size_bytes)}</span>
+            {#each fileDetails(file) as detail}
+              <span>{detail}</span>
+            {/each}
           </div>
         </div>
         <span class="status" class:watched={Boolean(fileProgressRow?.completed)}>{progressLabel(fileProgressRow)}</span>

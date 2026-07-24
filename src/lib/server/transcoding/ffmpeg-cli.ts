@@ -136,8 +136,9 @@ function audioMapArg(input: HlsTranscodeInput) {
   return "0:a:0?";
 }
 
-function roundedSegmentFrames(segmentSeconds: number) {
-  return Math.max(1, Math.round(segmentSeconds * 30));
+function roundedSegmentFrames(segmentSeconds: number, videoFrameRate?: number | null) {
+  const fps = videoFrameRate ?? 30;
+  return Math.max(1, Math.round(segmentSeconds * fps));
 }
 
 function maxHeightScaleExpression(maxHeight: number | null | undefined): string | null {
@@ -291,7 +292,7 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
   if (input.mode === "remux") {
     args.push("-c:v", "copy", "-c:a", "copy");
   } else {
-    const gopSize = roundedSegmentFrames(segmentSeconds);
+    const gopSize = roundedSegmentFrames(segmentSeconds, input.videoFrameRate);
     const quality = input.transcodeQuality;
     args.push(
       ...(hardwareMode

@@ -11,6 +11,11 @@ export type ProbedMediaFileValues = {
   video_codec: string | null;
   audio_codec: string | null;
   container: string | null;
+  video_frame_rate: number | null;
+  audio_channels: number | null;
+  audio_sample_rate: number | null;
+  audio_language: string | null;
+  audio_bit_rate: number | null;
 };
 
 function normalizeContainer(value: string | null, extension: string) {
@@ -44,14 +49,27 @@ export function mediaFileValuesFromProbe(input: FileMetadataInput, probe: MediaP
       video_codec: null,
       audio_codec: null,
       container: normalizeContainer(null, input.extension),
+      video_frame_rate: null,
+      audio_channels: null,
+      audio_sample_rate: null,
+      audio_language: null,
+      audio_bit_rate: null,
     };
   }
+
+  const videoStream = probe.streams.find((stream) => stream.type === "video");
+  const audioStream = probe.streams.find((stream) => stream.type === "audio");
 
   return {
     duration_seconds: positiveNumber(probe.durationSeconds),
     video_codec: primaryCodec(probe, "video"),
     audio_codec: primaryCodec(probe, "audio"),
     container: normalizeContainer(probe.container, input.extension),
+    video_frame_rate: videoStream?.frameRate ?? videoStream?.rFrameRate ?? null,
+    audio_channels: audioStream?.channels ?? null,
+    audio_sample_rate: audioStream?.sampleRate ?? null,
+    audio_language: audioStream?.language ?? null,
+    audio_bit_rate: audioStream?.bitRate ?? null,
   };
 }
 
@@ -79,6 +97,9 @@ export async function replaceMediaStreamInfo(mediaFileId: string, probe: MediaPr
         sample_rate: stream.sampleRate,
         duration_seconds: stream.durationSeconds,
         bit_rate: stream.bitRate,
+        frame_rate: stream.frameRate,
+        r_frame_rate: stream.rFrameRate,
+        nb_frames: stream.nbFrames,
         raw_json: JSON.stringify(stream.raw ?? null),
         created_at: now,
         updated_at: now,

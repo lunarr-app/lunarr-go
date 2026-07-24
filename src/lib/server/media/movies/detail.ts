@@ -72,6 +72,11 @@ async function fetchMovieFiles(id: string, userId: string) {
       "video_codec",
       "audio_codec",
       "container",
+      "video_frame_rate",
+      "audio_channels",
+      "audio_sample_rate",
+      "audio_language",
+      "audio_bit_rate",
     ])
     .where("media_item_id", "=", id)
     .where(accessibleLibrarySql(userId))

@@ -16,6 +16,9 @@ type NodeAvStream = {
   duration: bigint;
   timeBase: { num: number; den: number };
   metadata: { getAll(): Record<string, string> } | null;
+  avgFrameRate: { num: number; den: number };
+  rFrameRate: { num: number; den: number };
+  nbFrames: bigint;
   codecpar: {
     bitRate: bigint;
     channels: number;
@@ -172,6 +175,11 @@ function finiteNumber(value: number) {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
+function rationalToNumber(r: { num: number; den: number }): number | null {
+  if (r.num > 0 && r.den > 0) return r.num / r.den;
+  return null;
+}
+
 function finiteBigInt(value: bigint) {
   if (value <= 0n) return null;
   const asNumber = Number(value);
@@ -216,6 +224,9 @@ function mapStream(stream: NodeAvStream, modules: NodeAvModules): MediaProbeStre
     sampleRate: type === "audio" ? finiteNumber(stream.codecpar.sampleRate) : null,
     durationSeconds: streamDurationSeconds(stream),
     bitRate: finiteBigInt(stream.codecpar.bitRate),
+    frameRate: type === "video" ? rationalToNumber(stream.avgFrameRate) : null,
+    rFrameRate: type === "video" ? rationalToNumber(stream.rFrameRate) : null,
+    nbFrames: type === "video" ? finiteBigInt(stream.nbFrames) : null,
     raw: {
       codecId: Number(stream.codecpar.codecId),
       codecString: stream.codecpar.getCodecString(),

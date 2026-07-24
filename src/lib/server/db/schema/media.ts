@@ -120,6 +120,11 @@ export type MediaFileTable = {
   video_codec: string | null;
   audio_codec: string | null;
   container: string | null;
+  video_frame_rate: number | null;
+  audio_channels: number | null;
+  audio_sample_rate: number | null;
+  audio_language: string | null;
+  audio_bit_rate: number | null;
   created_at: TimestampText;
   updated_at: TimestampText;
 };

@@ -163,6 +163,11 @@ async function loadProbeRepairFiles() {
         eb("media_file.duration_seconds", "is", null),
         eb("media_file.video_codec", "is", null),
         eb("media_file.audio_codec", "is", null),
+        eb("media_file.video_frame_rate", "is", null),
+        eb("media_file.audio_channels", "is", null),
+        eb("media_file.audio_sample_rate", "is", null),
+        eb("media_file.audio_language", "is", null),
+        eb("media_file.audio_bit_rate", "is", null),
       ]),
     )
     .orderBy("media_file.library_id", "asc")

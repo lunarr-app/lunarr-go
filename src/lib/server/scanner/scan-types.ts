@@ -5,6 +5,7 @@ import { runMovieMetadataRefreshJob } from "../metadata/movies";
 import { runTvMetadataRefreshJob } from "../metadata/tv";
 import type { LibraryStorage, StorageFileInfo, StorageWalkEntry } from "../storage";
 import type { MediaProbe, ProbeBackend } from "../transcoding/backend";
+import type { ProbedMediaFileValues } from "../transcoding/probe";
 import { runMediaProbeRefreshJob } from "../transcoding/probe-jobs";
 
 export type WalkEntry = StorageWalkEntry;
@@ -43,6 +44,11 @@ export type ExistingMediaFile = {
   video_codec: string | null;
   audio_codec: string | null;
   container: string | null;
+  video_frame_rate: number | null;
+  audio_channels: number | null;
+  audio_sample_rate: number | null;
+  audio_language: string | null;
+  audio_bit_rate: number | null;
   existing_provider: string | null;
 };
 
@@ -56,12 +62,7 @@ export type ScanFileResult = "added" | "updated" | "unchanged";
 
 export type ProbedFileMetadata = {
   probe: MediaProbe | null;
-  values: {
-    duration_seconds: number | null;
-    video_codec: string | null;
-    audio_codec: string | null;
-    container: string | null;
-  };
+  values: ProbedMediaFileValues;
 };
 
 export type ScanContext = {

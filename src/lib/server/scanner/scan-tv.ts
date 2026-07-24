@@ -347,7 +347,8 @@ export async function scanTvFile(
   const skipProbe =
     existing &&
     basicFileMetadataUnchanged(existing, library, info) &&
-    (isRemoteLibrarySource(context.storage.source) || existingMediaProbeMetadataPresent(existing));
+    (isRemoteLibrarySource(context.storage.source) ||
+      (existingMediaProbeMetadataPresent(existing) && existing.video_frame_rate !== null));
   const probed = skipProbe
     ? { probe: null, values: fileValuesFromExisting(existing) }
     : await probeScannedFile(mediaFileId, info, context);
@@ -368,7 +369,12 @@ export async function scanTvFile(
       existing.duration_seconds === fileValues.duration_seconds &&
       existing.video_codec === fileValues.video_codec &&
       existing.audio_codec === fileValues.audio_codec &&
-      existing.container === fileValues.container;
+      existing.container === fileValues.container &&
+      existing.video_frame_rate === fileValues.video_frame_rate &&
+      existing.audio_channels === fileValues.audio_channels &&
+      existing.audio_sample_rate === fileValues.audio_sample_rate &&
+      existing.audio_language === fileValues.audio_language &&
+      existing.audio_bit_rate === fileValues.audio_bit_rate;
 
     const mediaItemId = await findOrCreateEpisodeItem(
       filePath,

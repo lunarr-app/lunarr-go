@@ -71,6 +71,9 @@ export type MediaStreamInfoTable = {
   sample_rate: number | null;
   duration_seconds: number | null;
   bit_rate: number | null;
+  frame_rate: number | null;
+  r_frame_rate: number | null;
+  nb_frames: number | null;
   raw_json: JsonText;
   created_at: TimestampText;
   updated_at: TimestampText;

@@ -13,6 +13,7 @@ import migration0005 from "./migrations/0005_media_share.sql?raw";
 import migration0006 from "./migrations/0006_device_pairing.sql?raw";
 import migration0007 from "./migrations/0007_watchlist.sql?raw";
 import migration0008 from "./migrations/0008_indexes.sql?raw";
+import migration0009 from "./migrations/0009_media_file_probe_details.sql?raw";
 
 const DATA_DIR = path.resolve(appEnv.LUNARR_DATA_DIR);
 const DB_FILE = path.join(DATA_DIR, "lunarr.db");
@@ -26,6 +27,7 @@ const MIGRATION_SOURCES = {
   "0006_device_pairing": migration0006,
   "0007_watchlist": migration0007,
   "0008_indexes": migration0008,
+  "0009_media_file_probe_details": migration0009,
 } satisfies Record<string, string>;
 
 let sqlite: LibsqlDatabase.Database | undefined;

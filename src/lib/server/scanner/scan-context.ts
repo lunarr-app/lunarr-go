@@ -63,6 +63,11 @@ export function fileValuesFromExisting(existing: ExistingMediaFile) {
     video_codec: existing.video_codec,
     audio_codec: existing.audio_codec,
     container: existing.container,
+    video_frame_rate: existing.video_frame_rate,
+    audio_channels: existing.audio_channels,
+    audio_sample_rate: existing.audio_sample_rate,
+    audio_language: existing.audio_language,
+    audio_bit_rate: existing.audio_bit_rate,
   };
 }
 
@@ -102,6 +107,11 @@ export async function loadExistingLibraryFiles(libraryId: string) {
       "media_file.video_codec",
       "media_file.audio_codec",
       "media_file.container",
+      "media_file.video_frame_rate",
+      "media_file.audio_channels",
+      "media_file.audio_sample_rate",
+      "media_file.audio_language",
+      "media_file.audio_bit_rate",
       "media_item.provider as existing_provider",
     ])
     .where("media_file.library_id", "=", libraryId)

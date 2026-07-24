@@ -22,6 +22,9 @@ export type MediaProbeStream = {
   sampleRate: number | null;
   durationSeconds: number | null;
   bitRate: number | null;
+  frameRate: number | null;
+  rFrameRate: number | null;
+  nbFrames: number | null;
   raw: unknown;
 };
 
@@ -51,6 +54,7 @@ export type HlsTranscodeInput = {
   hlsSegmentFormat?: HlsSegmentFormat;
   mode?: TranscodeMode;
   audioStreamIndex?: number | null;
+  videoFrameRate?: number | null;
   transcodeQuality?: TranscodeQualityTarget;
   startTimeSeconds?: number;
   outputTimelineStartSeconds?: number;

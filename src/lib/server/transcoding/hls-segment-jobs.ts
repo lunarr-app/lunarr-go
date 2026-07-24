@@ -1,5 +1,6 @@
 import { rm } from "node:fs/promises";
 import path from "node:path";
+import { getDb } from "../db";
 import { getMediaFile } from "../media/files";
 import { isRemoteLibrarySource } from "../libraries/source";
 import {
@@ -153,6 +154,17 @@ async function startHlsEncodeJob(
   if (!file) return false;
   if (!isRemoteLibrarySource(file.source) && !(await deps.isReadableFile(file.path))) return false;
 
+  const db = await getDb();
+  const videoStreamInfo = await db
+    .selectFrom("media_stream_info")
+    .select(["frame_rate", "r_frame_rate"])
+    .where("media_file_id", "=", session.mediaFileId)
+    .where("stream_type", "=", "video")
+    .orderBy("stream_index", "asc")
+    .limit(1)
+    .executeTakeFirst();
+  const videoFrameRate = videoStreamInfo?.frame_rate ?? videoStreamInfo?.r_frame_rate ?? null;
+
   const encodeAheadSegmentCount = await getEncodeAheadSegmentCount();
   const segmentWindow = requestDrivenSegmentWindow({
     durationSeconds: session.durationSeconds,
@@ -214,6 +226,7 @@ async function startHlsEncodeJob(
       segments: segmentWindow,
       expectAudio: Boolean(file.audio_codec),
       audioStreamIndex,
+      videoFrameRate,
       segmentSeconds: DEFAULT_HLS_SEGMENT_SECONDS,
       hlsSegmentFormat: input.segmentFormat,
       encodeAheadSegmentCount,
