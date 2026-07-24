@@ -17,7 +17,9 @@ afterEach(async () => {
 });
 
 function canRunFfmpeg() {
-  const result = spawnSync(resolveFfmpegPath(), ["-version"], {
+  const binaryPath = resolveFfmpegPath();
+  if (!binaryPath) return false;
+  const result = spawnSync(binaryPath, ["-version"], {
     stdio: "ignore",
   });
   return !result.error && result.status === 0;
@@ -29,7 +31,9 @@ async function makeTempDir() {
 }
 
 function runFfmpegFixture(args: string[]) {
-  const result = spawnSync(resolveFfmpegPath(), args, {
+  const binaryPath = resolveFfmpegPath();
+  if (!binaryPath) throw new Error("FFmpeg is not available for fixture generation.");
+  const result = spawnSync(binaryPath, args, {
     encoding: "utf8",
   });
   if (result.status !== 0) {
@@ -162,13 +166,14 @@ describe("FFmpeg HLS playback backend", () => {
     ).toBe("/opt/node-av/ffmpeg");
   });
 
-  test("falls back to the system command name when no candidate is executable", () => {
+  test("returns null when no FFmpeg candidate is executable", () => {
     expect(
       resolveFfmpegPath({
+        configuredPath: null,
         bundledPath: "/opt/node-av/ffmpeg",
         canExecute: () => false,
       }),
-    ).toBe("ffmpeg");
+    ).toBeNull();
   });
 
   test("escalates cancelled FFmpeg processes from SIGTERM to SIGKILL", async () => {

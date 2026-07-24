@@ -63,7 +63,9 @@ function completedWindowGeneration(): HlsSegmentWindowGeneration {
 }
 
 function canRunFfmpeg() {
-  const result = spawnSync(resolveFfmpegPath(), ["-version"], {
+  const binaryPath = resolveFfmpegPath();
+  if (!binaryPath) return false;
+  const result = spawnSync(binaryPath, ["-version"], {
     stdio: "ignore",
   });
   return !result.error && result.status === 0;
@@ -77,8 +79,10 @@ function generateRouteSmokeInput(
     rate?: number;
   } = {},
 ) {
+  const binaryPath = resolveFfmpegPath();
+  if (!binaryPath) throw new Error("FFmpeg is not available for fixture generation.");
   const result = spawnSync(
-    resolveFfmpegPath(),
+    binaryPath,
     [
       "-hide_banner",
       "-y",

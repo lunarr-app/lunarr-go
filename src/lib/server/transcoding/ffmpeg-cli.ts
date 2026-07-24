@@ -103,7 +103,7 @@ export function resolveFfmpegPath(
     systemPath?: string;
     canExecute?: (binaryPath: string) => boolean;
   } = {},
-) {
+): string | null {
   const configuredPath = input.configuredPath === undefined ? appEnv.FFMPEG_PATH : input.configuredPath?.trim();
   if (configuredPath) return configuredPath;
 
@@ -114,11 +114,12 @@ export function resolveFfmpegPath(
   const bundledPath = input.bundledPath === undefined ? ffmpegPath() : input.bundledPath;
   if (bundledPath && canExecute(bundledPath)) return bundledPath;
 
-  return systemPath;
+  return null;
 }
 
 function isFfmpegCliAvailable() {
-  return canExecuteFfmpeg(resolveFfmpegPath());
+  const binaryPath = resolveFfmpegPath();
+  return binaryPath !== null && canExecuteFfmpeg(binaryPath);
 }
 
 function inputPathForFfmpeg(input: Pick<HlsTranscodeInput, "inputPath" | "inputSource">, options?: FfmpegHlsOptions) {
@@ -455,7 +456,8 @@ async function waitForEventPlaylistSegment(input: {
 
 async function runFfmpeg(input: HlsTranscodeInput, options?: FfmpegHlsOptions): Promise<ActiveFfmpeg> {
   throwIfCancelled(input.signal);
-  if (!isFfmpegCliAvailable()) {
+  const binaryPath = resolveFfmpegPath();
+  if (!binaryPath || !canExecuteFfmpeg(binaryPath)) {
     throw new FfmpegBackendError(ffmpegUnavailableMessage());
   }
 
@@ -470,7 +472,7 @@ async function runFfmpeg(input: HlsTranscodeInput, options?: FfmpegHlsOptions): 
     ...options,
     inputUrl: inputProxy?.url ?? options?.inputUrl,
   });
-  const child = spawn(resolveFfmpegPath(), args, {
+  const child = spawn(binaryPath, args, {
     stdio: ["ignore", "ignore", "pipe"],
   });
   let stderr = "";
