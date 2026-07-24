@@ -75,35 +75,37 @@ export function mediaFileValuesFromProbe(input: FileMetadataInput, probe: MediaP
 
 export async function replaceMediaStreamInfo(mediaFileId: string, probe: MediaProbe, now: string) {
   const db = await getDb();
-  await db.deleteFrom("media_stream_info").where("media_file_id", "=", mediaFileId).execute();
+  await db.transaction().execute(async (tx) => {
+    await tx.deleteFrom("media_stream_info").where("media_file_id", "=", mediaFileId).execute();
 
-  if (probe.streams.length === 0) return;
+    if (probe.streams.length === 0) return;
 
-  await db
-    .insertInto("media_stream_info")
-    .values(
-      probe.streams.map((stream) => ({
-        id: createId(),
-        media_file_id: mediaFileId,
-        stream_index: stream.index,
-        stream_type: stream.type,
-        codec_name: stream.codecName,
-        codec_long_name: stream.codecLongName,
-        language: stream.language,
-        title: stream.title,
-        width: stream.width,
-        height: stream.height,
-        channels: stream.channels,
-        sample_rate: stream.sampleRate,
-        duration_seconds: stream.durationSeconds,
-        bit_rate: stream.bitRate,
-        frame_rate: stream.frameRate,
-        r_frame_rate: stream.rFrameRate,
-        nb_frames: stream.nbFrames,
-        raw_json: JSON.stringify(stream.raw ?? null),
-        created_at: now,
-        updated_at: now,
-      })),
-    )
-    .execute();
+    await tx
+      .insertInto("media_stream_info")
+      .values(
+        probe.streams.map((stream) => ({
+          id: createId(),
+          media_file_id: mediaFileId,
+          stream_index: stream.index,
+          stream_type: stream.type,
+          codec_name: stream.codecName,
+          codec_long_name: stream.codecLongName,
+          language: stream.language,
+          title: stream.title,
+          width: stream.width,
+          height: stream.height,
+          channels: stream.channels,
+          sample_rate: stream.sampleRate,
+          duration_seconds: stream.durationSeconds,
+          bit_rate: stream.bitRate,
+          frame_rate: stream.frameRate,
+          r_frame_rate: stream.rFrameRate,
+          nb_frames: stream.nbFrames,
+          raw_json: JSON.stringify(stream.raw ?? null),
+          created_at: now,
+          updated_at: now,
+        })),
+      )
+      .execute();
+  });
 }
