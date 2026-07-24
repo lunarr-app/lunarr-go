@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { hlsPlaylistSegmentEntries } from "./hls";
-import { encodeEventPlaylistPath, encodeFmp4InitFileName } from "./encode-coordinator";
+import { encodeEventPlaylistPath } from "./encode-coordinator";
 
 let tempDir = "";
 
@@ -274,11 +274,11 @@ describe("FFmpeg HLS playback backend", () => {
     expect(args.at(-1)).toBe(path.join(artifactDirectory, "encode-session-1-5.m3u8"));
   });
 
-  test("uses a per-job fMP4 init file when startSegmentNumber is set", () => {
+  test("uses a fixed init.mp4 fMP4 filename regardless of startSegmentNumber", () => {
     const args = ffmpegHlsArgs(input({ hlsSegmentFormat: "fmp4" }), { startSegmentNumber: 5 });
     expect(args.slice(args.indexOf("-hls_fmp4_init_filename"), args.indexOf("-hls_fmp4_init_filename") + 2)).toEqual([
       "-hls_fmp4_init_filename",
-      "encode-session-1-5-init.mp4",
+      "init.mp4",
     ]);
   });
 
@@ -742,12 +742,12 @@ describe("FFmpeg HLS playback backend", () => {
     await generation?.completion;
 
     expect(
-      (await expectGeneratedSegment(artifactDirectory, encodeFmp4InitFileName("fmp4-smoke", 0))).length,
+      (await expectGeneratedSegment(artifactDirectory, "init.mp4")).length,
     ).toBeGreaterThan(0);
     expect((await expectGeneratedSegment(artifactDirectory, "segment-00000.m4s")).length).toBeGreaterThan(0);
     const eventPlaylistPath = encodeEventPlaylistPath(artifactDirectory, "fmp4-smoke", 0);
     expect(await readFile(eventPlaylistPath, "utf8")).toContain(
-      `#EXT-X-MAP:URI="${encodeFmp4InitFileName("fmp4-smoke", 0)}"`,
+      `#EXT-X-MAP:URI="init.mp4"`,
     );
   });
 
