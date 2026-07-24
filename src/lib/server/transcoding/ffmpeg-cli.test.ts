@@ -580,6 +580,59 @@ describe("FFmpeg HLS playback backend", () => {
     ).toContain("http://127.0.0.1:12345/input/session-1?token=secret");
   });
 
+  test("passes the seekable input format as an FFmpeg input format hint", () => {
+    const args = ffmpegHlsArgs(
+      input({
+        inputSource: {
+          kind: "seekable",
+          label: "sftp input",
+          sizeBytes: 1024,
+          format: "mpegts",
+          async read() {
+            return Buffer.alloc(0);
+          },
+          async close() {
+            return;
+          },
+        },
+      }),
+      { inputUrl: "http://127.0.0.1:12345/input/session-1?token=secret" },
+    );
+
+    const formatIndex = args.indexOf("-f");
+    expect(formatIndex).toBeGreaterThanOrEqual(0);
+    expect(formatIndex).toBeLessThan(args.indexOf("-i"));
+    expect(args[formatIndex + 1]).toBe("mpegts");
+  });
+
+  test("does not force an input format for local files", () => {
+    const args = ffmpegHlsArgs(input());
+    expect(args.indexOf("-f")).toBeGreaterThan(args.indexOf("-i"));
+  });
+
+  test("ignores an unrecognized seekable input format instead of forcing it", () => {
+    const args = ffmpegHlsArgs(
+      input({
+        inputSource: {
+          kind: "seekable",
+          label: "sftp input",
+          sizeBytes: 1024,
+          format: "not-a-real-format",
+          async read() {
+            return Buffer.alloc(0);
+          },
+          async close() {
+            return;
+          },
+        },
+      }),
+      { inputUrl: "http://127.0.0.1:12345/input/session-1?token=secret" },
+    );
+
+    expect(args).not.toContain("not-a-real-format");
+    expect(args.indexOf("-f")).toBeGreaterThan(args.indexOf("-i"));
+  });
+
   test("can start HLS output numbering at the requested segment", () => {
     expect(ffmpegHlsArgs(input(), { startSegmentNumber: 42 })).toContain("42");
     expect(ffmpegHlsArgs(input(), { startSegmentNumber: 42 })).toContain("-start_number");

@@ -129,6 +129,13 @@ function inputPathForFfmpeg(input: Pick<HlsTranscodeInput, "inputPath" | "inputS
   return input.inputPath;
 }
 
+const FFMPEG_INPUT_FORMAT_NAMES = new Set(["matroska", "mp4", "webm", "avi", "mpegts"]);
+
+function ffmpegInputFormatName(format: string | null | undefined): string | null {
+  if (format && FFMPEG_INPUT_FORMAT_NAMES.has(format)) return format;
+  return null;
+}
+
 function audioMapArg(input: HlsTranscodeInput) {
   if (Number.isSafeInteger(input.audioStreamIndex) && Number(input.audioStreamIndex) >= 0) {
     return `0:${input.audioStreamIndex}?`;
@@ -283,6 +290,8 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
     args.push("-ss", String(startTimeSeconds));
   }
 
+  const inputFormat = ffmpegInputFormatName(input.inputSource?.format);
+  if (inputFormat) args.push("-f", inputFormat);
   args.push("-i", inputPathForFfmpeg(input, options));
   if (options?.maxOutputSeconds && options.maxOutputSeconds > 0) {
     args.push("-t", String(options.maxOutputSeconds));
