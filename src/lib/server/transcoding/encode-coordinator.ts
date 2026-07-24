@@ -1,5 +1,5 @@
 import path from "node:path";
-import { resolveEncodeAheadSegmentCount } from "./hls";
+import { hlsSegmentName, resolveEncodeAheadSegmentCount } from "./hls";
 
 const SEGMENT_POLL_MS = 25;
 
@@ -495,10 +495,7 @@ export class EncodeCoordinator {
 
     for (let candidateIndex = input.servedSegmentIndex + 1; candidateIndex <= targetIndex; candidateIndex += 1) {
       if (input.signal?.aborted) return false;
-      const segmentName =
-        input.segmentFormat === "fmp4"
-          ? `segment-${String(candidateIndex).padStart(5, "0")}.m4s`
-          : `segment-${String(candidateIndex).padStart(5, "0")}.ts`;
+      const segmentName = hlsSegmentName(candidateIndex, input.segmentFormat);
       if (await input.segmentExists(candidateIndex, segmentName)) continue;
       if (this.findCoveringJob(candidateIndex)) continue;
       const ready = await input.ensureSegmentAt(candidateIndex, segmentName);
