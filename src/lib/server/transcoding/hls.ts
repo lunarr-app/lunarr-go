@@ -16,13 +16,13 @@ export function resolveEncodeAheadSegmentCount(value: number | null | undefined)
 }
 
 export function framesPerSegment(segmentSeconds: number, videoFrameRate?: number | null) {
-  const fps = videoFrameRate ?? 30;
+  const fps = videoFrameRate ?? 23.976;
   return Math.max(1, Math.round(segmentSeconds * fps));
 }
 
 export function effectiveSegmentSeconds(segmentSeconds: number, videoFrameRate?: number | null) {
   const frames = framesPerSegment(segmentSeconds, videoFrameRate);
-  const fps = videoFrameRate ?? 30;
+  const fps = videoFrameRate ?? 23.976;
   return frames / fps;
 }
 

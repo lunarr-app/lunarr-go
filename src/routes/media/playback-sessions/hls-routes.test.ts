@@ -205,6 +205,31 @@ describe.serial("playback-session HLS routes", () => {
         updated_at: now,
       })
       .execute();
+    await db
+      .insertInto("media_stream_info")
+      .values({
+        id: "stream-1",
+        media_file_id: "file-1",
+        stream_index: 0,
+        stream_type: "video",
+        codec_name: "hevc",
+        codec_long_name: null,
+        language: null,
+        title: null,
+        width: 1920,
+        height: 1080,
+        channels: null,
+        sample_rate: null,
+        duration_seconds: null,
+        bit_rate: null,
+        frame_rate: 30,
+        r_frame_rate: 30,
+        nb_frames: null,
+        raw_json: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
     await writeFile(path.join(tempDir, "Movie.2026.mkv"), "source-media");
 
     sessionId = await createTranscodeSession({
@@ -407,6 +432,7 @@ describe.serial("playback-session HLS routes", () => {
         durationSeconds: 13,
         startTimeSeconds: 5,
         segmentSeconds: 4,
+        videoFrameRate: 30,
       }),
     ).toBe(
       "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-START:TIME-OFFSET=5.000\n#EXTINF:4.000,\nsegments/segment-00000.ts\n#EXTINF:4.000,\nsegments/segment-00001.ts\n#EXTINF:4.000,\nsegments/segment-00002.ts\n#EXTINF:1.000,\nsegments/segment-00003.ts\n#EXT-X-ENDLIST\n",
@@ -2347,6 +2373,7 @@ describe.serial("playback-session HLS routes", () => {
       virtualHlsPlaylist({
         durationSeconds: 64,
         segmentSeconds: 16,
+        videoFrameRate: 30,
         segmentFormat: "fmp4",
       }),
     );
@@ -2860,6 +2887,7 @@ describe.serial("playback-session HLS routes", () => {
       virtualHlsPlaylist({
         durationSeconds: 512,
         segmentSeconds: 16,
+        videoFrameRate: 30,
       }),
     );
     await registerTranscodeHlsArtifact({

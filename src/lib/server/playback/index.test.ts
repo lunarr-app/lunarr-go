@@ -401,6 +401,55 @@ describe("getPlaybackDecision", () => {
         },
       ])
       .execute();
+    await db
+      .insertInto("media_stream_info")
+      .values([
+        {
+          id: "stream-file-b",
+          media_file_id: "file-b",
+          stream_index: 0,
+          stream_type: "video",
+          codec_name: "h264",
+          codec_long_name: null,
+          language: null,
+          title: null,
+          width: 1920,
+          height: 1080,
+          channels: null,
+          sample_rate: null,
+          duration_seconds: null,
+          bit_rate: null,
+          frame_rate: 30,
+          r_frame_rate: 30,
+          nb_frames: null,
+          raw_json: null,
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "stream-av1",
+          media_file_id: "av1-mp4-file",
+          stream_index: 0,
+          stream_type: "video",
+          codec_name: "av1",
+          codec_long_name: null,
+          language: null,
+          title: null,
+          width: 1920,
+          height: 1080,
+          channels: null,
+          sample_rate: null,
+          duration_seconds: null,
+          bit_rate: null,
+          frame_rate: 30,
+          r_frame_rate: 30,
+          nb_frames: null,
+          raw_json: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .execute();
     await Promise.all([
       writeFile(path.join(tempDir, "Movie.1080p.mp4"), "fixture"),
       writeFile(path.join(tempDir, "Movie.4k.mp4"), "fixture"),

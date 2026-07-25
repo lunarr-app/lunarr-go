@@ -133,6 +133,7 @@ function input(overrides: Partial<HlsTranscodeInput> = {}): HlsTranscodeInput {
     inputPath: "/media/Movie.mkv",
     artifactDirectory: "/tmp/lunarr-hls",
     segmentSeconds: 16,
+    videoFrameRate: 30,
     mode: "transcode",
     hardwareAcceleration: "off",
     hardwareAccelerationRequired: false,

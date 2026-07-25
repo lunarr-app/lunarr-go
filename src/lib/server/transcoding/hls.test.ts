@@ -21,6 +21,7 @@ describe("HLS helpers", () => {
       virtualHlsPlaylist({
         durationSeconds: 20,
         segmentSeconds: 16,
+        videoFrameRate: 30,
       }),
     ).toBe(
       [
@@ -45,6 +46,7 @@ describe("HLS helpers", () => {
       virtualHlsPlaylist({
         durationSeconds: 20,
         segmentSeconds: 16,
+        videoFrameRate: 30,
         segmentFormat: "fmp4",
       }),
     ).toBe(
@@ -121,6 +123,7 @@ describe("HLS helpers", () => {
     const playlist = virtualHlsPlaylist({
       durationSeconds: 32,
       segmentSeconds: 16,
+      videoFrameRate: 30,
     });
 
     expect(

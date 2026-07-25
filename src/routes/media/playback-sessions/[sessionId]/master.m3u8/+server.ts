@@ -13,6 +13,7 @@ import {
   virtualHlsPlaylistHeadResponse,
   virtualHlsPlaylistResponse,
 } from "$lib/server/transcoding/hls";
+import { lookupVideoFrameRate } from "$lib/server/transcoding/probe";
 import { touchTranscodeSessionHeartbeat } from "$lib/server/transcoding/sessions";
 import { apiError } from "$lib/server/api/json";
 import {
@@ -90,10 +91,12 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
     }
     if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
 
+    const videoFrameRate = await lookupVideoFrameRate(artifact.mediaFileId);
     return withSignedPlaybackHeaders(
       virtualHlsPlaylistResponse({
         durationSeconds: artifact.durationSeconds,
         startTimeSeconds: artifact.startTimeSeconds,
+        videoFrameRate,
         segmentFormat,
         segmentQuery: signedPlaybackSegmentQuery(token),
       }),
