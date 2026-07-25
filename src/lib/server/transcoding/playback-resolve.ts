@@ -9,12 +9,16 @@ import {
   listMismatchedActiveHlsArtifacts,
   registerTranscodeHlsArtifact,
   updateActiveTranscodeSessionStatus,
+  updateTranscodeSessionMode,
   updateTranscodeSessionPipeline,
   updateTranscodeSessionStatus,
 } from "./sessions";
-import { acquirePlaybackCache } from "./cache";
+import { acquirePlaybackCache, switchPlaybackCacheForSession } from "./cache";
 import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
-import { DEFAULT_HLS_SEGMENT_SECONDS, type HlsSegmentFormat, hlsSegmentName, virtualHlsPlaylist } from "./hls";
+import { DEFAULT_HLS_SEGMENT_SECONDS, type HlsSegmentFormat, hlsSegmentName, materializedHlsPlaylist } from "./hls";
+import { type KeyframeTimes, extractKeyframeTimes, readKeyframeCache, writeKeyframeCache } from "./keyframes";
+import { probeKeyframes } from "./keyframe-probe";
+import type { ProbeKeyframesFn } from "./keyframe-probe";
 import { TRANSCODING_DISABLED_MESSAGE } from "./hls-segment-jobs";
 import type { TranscodeMode } from "../db/schema/streaming";
 import { currentDatabasePaths, getDb } from "../db";
@@ -118,7 +122,7 @@ function playbackSessionArtifactDirectory(sessionId: string) {
   return path.join(currentDatabasePaths().dataDir, "playback-sessions", sessionId);
 }
 
-function virtualHlsPlaylistPath(sessionId: string) {
+function sessionHlsPlaylistPath(sessionId: string) {
   return path.join(playbackSessionArtifactDirectory(sessionId), "master.m3u8");
 }
 
@@ -326,16 +330,18 @@ async function startRequestDrivenHlsSession(input: {
   durationSeconds: number;
   startTimeSeconds: number;
   segmentFormat: HlsSegmentFormat;
+  keyframeTimes: KeyframeTimes | null;
 }) {
   if (!(await updateTranscodeSessionPipeline(input.sessionId, "request_driven"))) {
     throw new TranscodeStartupAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
 
-  const playlistPath = virtualHlsPlaylistPath(input.sessionId);
+  const playlistPath = sessionHlsPlaylistPath(input.sessionId);
   await mkdir(path.dirname(playlistPath), { recursive: true });
   await writeFile(
     playlistPath,
-    virtualHlsPlaylist({
+    materializedHlsPlaylist({
+      keyframeTimes: input.keyframeTimes,
       durationSeconds: input.durationSeconds,
       startTimeSeconds: input.startTimeSeconds,
       segmentSeconds: DEFAULT_HLS_SEGMENT_SECONDS,
@@ -412,6 +418,8 @@ export async function resolveHlsPlayback(input: {
   startTimeSeconds?: number | null;
   forceStartTime?: boolean;
   clientCapabilities?: Partial<ClientPlaybackCapabilities> | null;
+  signal?: AbortSignal;
+  probeKeyframes?: ProbeKeyframesFn;
 }): Promise<HlsPlaybackResult> {
   const startTimeSeconds = normalizedStartTimeSeconds(input.startTimeSeconds);
   const mode = input.mode ?? "transcode";
@@ -577,7 +585,7 @@ export async function resolveHlsPlayback(input: {
         mode,
         preferredAudioLanguage: policy.preferredAudioLanguage,
       });
-      await acquirePlaybackCache({
+      let cacheBinding = await acquirePlaybackCache({
         sessionId,
         mediaFileId: input.mediaFileId,
         fileSizeBytes: file.size_bytes,
@@ -587,22 +595,65 @@ export async function resolveHlsPlayback(input: {
         segmentFormat,
         audioStreamIndex,
       });
+
+      // Resolve keyframe times for accurate per-segment EXTINFs. Remux mode
+      // needs them — without cheap keyframe access ffmpeg produces non-uniform
+      // segments that no longer match the fixed 16s grid the served playlist
+      // describes, causing seek-bar jitter. For containers that lack cheap
+      // keyframe iteration we fall back to transcode, where ffmpeg's forced
+      // keyframes realign output onto the 16s grid. Extraction is cached at
+      // <cacheDir>/keyframes.json so the cost is paid once per file+policy+mode.
+      const videoStreamIndex = await resolveVideoStreamIndex(input.mediaFileId);
+      let keyframeTimes: KeyframeTimes | null = null;
+      if (mode === "remux") {
+        keyframeTimes = await resolveKeyframeTimesForRemux({
+          mediaFile: file,
+          mediaFileId: input.mediaFileId,
+          videoStreamIndex,
+          cacheDir: cacheBinding.encodeArtifactDirectory,
+          signal: input.signal,
+          probeKeyframes: input.probeKeyframes,
+        });
+        if (keyframeTimes === null && videoStreamIndex !== null) {
+          // Fall back to transcode so the served 16s playlist stays accurate.
+          const transcodeAudioStreamIndex = await selectPlaybackAudioStreamIndex({
+            mediaFileId: input.mediaFileId,
+            mode: "transcode",
+            preferredAudioLanguage: policy.preferredAudioLanguage,
+          });
+          cacheBinding = await switchPlaybackCacheForSession({
+            sessionId,
+            mediaFileId: input.mediaFileId,
+            fileSizeBytes: file.size_bytes,
+            fileMtimeMs: file.mtime_ms,
+            mode: "transcode",
+            policy,
+            segmentFormat,
+            audioStreamIndex: transcodeAudioStreamIndex,
+          });
+          await updateTranscodeSessionMode(sessionId, "transcode");
+        }
+      }
+      // For transcode mode ffmpeg forces keyframes onto the 16s grid; the
+      // fixed-grid playlist is accurate as-is (keyframeTimes stays null).
+
       await startRequestDrivenHlsSession({
         sessionId,
         mediaFileId: input.mediaFileId,
         durationSeconds,
         startTimeSeconds,
         segmentFormat,
+        keyframeTimes,
       });
-      const effectiveMode = await warmInitialRequestDrivenHlsSegment({
+      const warmedMode = await warmInitialRequestDrivenHlsSegment({
         sessionId,
         userId: input.userId,
         segmentFormat,
       });
-      await cancelSupersededHlsPlaybackSessions(input.mediaFileId, input.userId, mode, sessionId);
+      await cancelSupersededHlsPlaybackSessions(input.mediaFileId, input.userId, warmedMode, sessionId);
       return {
         status: "ready",
-        mode: effectiveMode,
+        mode: warmedMode,
         sessionId,
         streamUrl: playbackSessionStreamUrl(sessionId),
         streamStartSeconds: 0,
@@ -658,4 +709,69 @@ export async function resolveHlsPlayback(input: {
     streamStartSeconds: startTimeSeconds,
     message: REQUEST_DRIVEN_HLS_REQUIRES_DURATION_MESSAGE,
   };
+}
+
+async function resolveVideoStreamIndex(mediaFileId: string): Promise<number | null> {
+  const db = await getDb();
+  const row = await db
+    .selectFrom("media_stream_info")
+    .select(["stream_index"])
+    .where("media_file_id", "=", mediaFileId)
+    .where("stream_type", "=", "video")
+    .orderBy("stream_index", "asc")
+    .limit(1)
+    .executeTakeFirst();
+  if (row?.stream_index === null || row?.stream_index === undefined) return null;
+  if (!Number.isSafeInteger(row.stream_index) || row.stream_index < 0) return null;
+  return row.stream_index;
+}
+
+async function resolveKeyframeTimesForRemux(input: {
+  mediaFile: NonNullable<Awaited<ReturnType<typeof getMediaFile>>>;
+  mediaFileId: string;
+  videoStreamIndex: number | null;
+  cacheDir: string;
+  signal?: AbortSignal;
+  probeKeyframes?: ProbeKeyframesFn;
+}): Promise<KeyframeTimes | null> {
+  if (input.videoStreamIndex === null) {
+    console.warn(`Keyframe extraction skipped (no video stream) for ${input.mediaFile.path}`);
+    return null;
+  }
+  const cached = await readKeyframeCache(input.cacheDir);
+  if (cached !== null) return cached;
+
+  const isRemote = isRemoteLibrarySource(input.mediaFile.source);
+  const format = nodeAvInputFormat(input.mediaFile);
+  const effectiveProbe = input.probeKeyframes ?? probeKeyframes;
+
+  let inputSource: Awaited<ReturnType<typeof createSeekableStorageInputSource>> | undefined;
+  try {
+    if (isRemote) {
+      try {
+        inputSource = await createSeekableStorageInputSource(input.mediaFile);
+      } catch {
+        return null;
+      }
+    }
+    const keyframeTimes = await extractKeyframeTimes(
+      { probeKeyframes: effectiveProbe },
+      {
+        mediaFileId: input.mediaFileId,
+        filePath: input.mediaFile.path,
+        inputSource,
+        format,
+        signal: input.signal,
+        timeoutMs: 8_000,
+      },
+    );
+    if (keyframeTimes && keyframeTimes.length > 0) {
+      await writeKeyframeCache(input.cacheDir, keyframeTimes);
+    }
+    return keyframeTimes;
+  } finally {
+    if (inputSource) {
+      await inputSource.close().catch(() => undefined);
+    }
+  }
 }

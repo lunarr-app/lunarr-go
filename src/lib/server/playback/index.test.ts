@@ -1056,6 +1056,74 @@ describe("getPlaybackDecision", () => {
     });
   });
 
+  test("falls back to transcode when keyframe extraction for remux yields no keyframes", async () => {
+    await db.updateTable("media_file").set({ duration_seconds: 240 }).where("id", "=", "remux-file").execute();
+    const now = new Date().toISOString();
+    await db
+      .insertInto("media_stream_info")
+      .values({
+        id: "remux-video-stream",
+        media_file_id: "remux-file",
+        stream_index: 0,
+        stream_type: "video",
+        codec_name: "h264",
+        codec_long_name: null,
+        language: null,
+        title: null,
+        width: 1920,
+        height: 1080,
+        channels: null,
+        sample_rate: null,
+        duration_seconds: 240,
+        bit_rate: null,
+        raw_json: "{}",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    const requestedModes: string[] = [];
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input) {
+        requestedModes.push(input.mode ?? "transcode");
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+
+    const decision = await getPlaybackDecision("movie-1", "remux-file", "user-1", 20, {
+      probeKeyframes: async () => null,
+    });
+
+    expect(decision).toMatchObject({
+      mode: "transcode",
+      status: "ready",
+      streamStartSeconds: 0,
+      message: null,
+    });
+    expect(requestedModes).toEqual(["transcode"]);
+
+    const sessionId = decision?.playbackSessionId;
+    if (!sessionId) throw new Error("Expected request-driven playback session id.");
+    const job = await db
+      .selectFrom("playback_session")
+      .select(["status", "mode", "error_message"])
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(job).toEqual({
+      status: "running",
+      mode: "transcode",
+      error_message: null,
+    });
+
+    const playlistPath = path.join(tempDir, "data", "playback-sessions", sessionId, "master.m3u8");
+    const playlist = await readFile(playlistPath, "utf8");
+    expect(playlist).toContain("#EXTINF:16");
+    expect(playlist).not.toContain("#EXT-X-KEYFRAME");
+  });
+
   test("reuses encoded HLS cache across playback decisions", async () => {
     await db.updateTable("media_file").set({ duration_seconds: 120 }).where("id", "=", "file-b").execute();
     await setUserPlaybackPreference("user-1", "prefer_transcode");

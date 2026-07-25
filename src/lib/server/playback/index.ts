@@ -14,6 +14,7 @@ import { decidePlaybackMode, type PlaybackModeDecision } from "../transcoding/ca
 import {
   requestDrivenHlsSegmentFormat,
   resolveHlsPlayback,
+  type ProbeKeyframesFn,
   TRANSCODING_DISABLED_MESSAGE,
 } from "../transcoding/manager";
 import { normalizePlaybackSessionMessage } from "../transcoding/messages";
@@ -171,6 +172,8 @@ export async function getPlaybackDecision(
     forceTranscode?: boolean;
     clientCapabilities?: Partial<ClientPlaybackCapabilities> | null;
     playbackTarget?: PlaybackTarget;
+    signal?: AbortSignal;
+    probeKeyframes?: ProbeKeyframesFn;
   } = {},
 ): Promise<PlaybackDecision | null> {
   const db = await getDb();
@@ -264,6 +267,8 @@ export async function getPlaybackDecision(
       startTimeSeconds,
       forceStartTime: options.forceStartTime,
       clientCapabilities: options.clientCapabilities,
+      signal: options.signal,
+      probeKeyframes: options.probeKeyframes,
     });
     return {
       mode: transcode.status === "unavailable" ? "unavailable" : transcode.mode,
@@ -314,6 +319,7 @@ export async function getPlaybackData(input: {
   url: URL;
   skipProgress?: boolean;
   backHref?: string;
+  signal?: AbortSignal;
 }): Promise<PlaybackData | null> {
   const detail = await getWatchItemDetail(input.mediaItemId, input.userId);
   if (!detail) return null;
@@ -337,6 +343,7 @@ export async function getPlaybackData(input: {
       forceTranscode: parseForceTranscode(input.url),
       clientCapabilities: parseClientPlaybackCapabilities(input.url),
       playbackTarget: normalizePlaybackTarget(input.url.searchParams.get("target")),
+      signal: input.signal,
     }),
     getSegmentSkipPreferences(input.userId),
   ]);

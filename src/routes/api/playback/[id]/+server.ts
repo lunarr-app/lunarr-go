@@ -5,7 +5,7 @@ import { getPlaybackData, parsePlaybackProgressBody, saveProgress } from "$lib/s
 import { PlaybackSourceRequestError, withSignedPlaybackSource } from "$lib/server/playback/signed-source";
 import type { RequestHandler } from "./$types";
 
-export const GET: RequestHandler = async ({ params, url, locals }) => {
+export const GET: RequestHandler = async ({ params, url, locals, request }) => {
   const user = requireJsonUser(locals);
   if (user instanceof Response) return user;
 
@@ -14,6 +14,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
       mediaItemId: params.id,
       userId: user.id,
       url,
+      signal: request?.signal,
     });
 
     if (!playback) {
