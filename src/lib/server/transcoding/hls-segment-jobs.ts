@@ -56,19 +56,23 @@ export function requestDrivenSegmentWindow(input: {
   durationSeconds: number;
   segmentIndex: number;
   segmentSeconds: number;
+  videoFrameRate?: number | null;
   segmentFormat?: HlsSegmentFormat;
   maxSegmentCount: number;
 }): HlsSegmentWindowEntry[] {
   const maxSegmentCount = Math.max(1, Math.floor(input.maxSegmentCount));
+  const fps = input.videoFrameRate ?? 30;
+  const frames = Math.max(1, Math.round(input.segmentSeconds * fps));
+  const effectiveSegmentSeconds = frames / fps;
   const segments: HlsSegmentWindowEntry[] = [];
 
   for (let offset = 0; offset < maxSegmentCount; offset += 1) {
     const segmentIndex = input.segmentIndex + offset;
-    const segmentStartSeconds = segmentIndex * input.segmentSeconds;
+    const segmentStartSeconds = segmentIndex * effectiveSegmentSeconds;
     if (segmentStartSeconds >= input.durationSeconds) break;
 
     const remainingSeconds = input.durationSeconds - segmentStartSeconds;
-    const segmentSeconds = Math.min(input.segmentSeconds, remainingSeconds);
+    const segmentSeconds = Math.min(effectiveSegmentSeconds, remainingSeconds);
     if (segmentSeconds <= 0) break;
 
     segments.push({
@@ -170,6 +174,7 @@ async function startHlsEncodeJob(
     durationSeconds: session.durationSeconds,
     segmentIndex: input.segmentIndex,
     segmentSeconds: DEFAULT_HLS_SEGMENT_SECONDS,
+    videoFrameRate,
     segmentFormat: input.segmentFormat,
     maxSegmentCount: encodeAheadSegmentCount,
   });
@@ -561,7 +566,21 @@ export async function ensureHlsLookaheadForSegment(
   const encodeDirectory = cacheBinding.encodeArtifactDirectory;
   const cacheKey = encodeLockKey(cacheBinding.cacheId, encodeDirectory ?? path.dirname(playlistPath));
   const coordinator = getEncodeCoordinator(cacheKey);
-  const lastSegmentIndex = Math.ceil(session.durationSeconds / DEFAULT_HLS_SEGMENT_SECONDS) - 1;
+
+  const db = await getDb();
+  const videoStreamInfo = await db
+    .selectFrom("media_stream_info")
+    .select(["frame_rate", "r_frame_rate"])
+    .where("media_file_id", "=", session.mediaFileId)
+    .where("stream_type", "=", "video")
+    .orderBy("stream_index", "asc")
+    .limit(1)
+    .executeTakeFirst();
+  const videoFrameRate = videoStreamInfo?.frame_rate ?? videoStreamInfo?.r_frame_rate ?? null;
+  const fps = videoFrameRate ?? 30;
+  const frames = Math.max(1, Math.round(DEFAULT_HLS_SEGMENT_SECONDS * fps));
+  const effectiveSegmentSeconds = frames / fps;
+  const lastSegmentIndex = Math.ceil(session.durationSeconds / effectiveSegmentSeconds) - 1;
 
   return coordinator.prefetchAhead({
     sessionId: input.sessionId,

@@ -325,6 +325,7 @@ async function startRequestDrivenHlsSession(input: {
   mediaFileId: string;
   durationSeconds: number;
   startTimeSeconds: number;
+  videoFrameRate: number | null;
   segmentFormat: HlsSegmentFormat;
 }) {
   if (!(await updateTranscodeSessionPipeline(input.sessionId, "request_driven"))) {
@@ -339,6 +340,7 @@ async function startRequestDrivenHlsSession(input: {
       durationSeconds: input.durationSeconds,
       startTimeSeconds: input.startTimeSeconds,
       segmentSeconds: DEFAULT_HLS_SEGMENT_SECONDS,
+      videoFrameRate: input.videoFrameRate,
       segmentFormat: input.segmentFormat,
     }),
   );
@@ -363,7 +365,20 @@ async function warmInitialRequestDrivenHlsSegment(input: {
   if (!initialSession || isTerminalTranscodeSessionStatus(initialSession.status)) {
     throw new TranscodeStartupAbortedError(initialSession?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
-  const segmentIndex = Math.max(0, Math.floor(initialSession.startTimeSeconds / DEFAULT_HLS_SEGMENT_SECONDS));
+  const db = await getDb();
+  const videoStreamInfo = await db
+    .selectFrom("media_stream_info")
+    .select(["frame_rate", "r_frame_rate"])
+    .where("media_file_id", "=", initialSession.mediaFileId)
+    .where("stream_type", "=", "video")
+    .orderBy("stream_index", "asc")
+    .limit(1)
+    .executeTakeFirst();
+  const videoFrameRate = videoStreamInfo?.frame_rate ?? videoStreamInfo?.r_frame_rate ?? null;
+  const fps = videoFrameRate ?? 30;
+  const frames = Math.max(1, Math.round(DEFAULT_HLS_SEGMENT_SECONDS * fps));
+  const effectiveSegmentSeconds = frames / fps;
+  const segmentIndex = Math.max(0, Math.floor(initialSession.startTimeSeconds / effectiveSegmentSeconds));
   let ready = false;
   try {
     ready = await ensureHlsSegmentForRequest({
@@ -592,6 +607,7 @@ export async function resolveHlsPlayback(input: {
         mediaFileId: input.mediaFileId,
         durationSeconds,
         startTimeSeconds,
+        videoFrameRate: file.video_frame_rate,
         segmentFormat,
       });
       const effectiveMode = await warmInitialRequestDrivenHlsSegment({

@@ -144,9 +144,15 @@ function audioMapArg(input: HlsTranscodeInput) {
   return "0:a:0?";
 }
 
-function roundedSegmentFrames(segmentSeconds: number, videoFrameRate?: number | null) {
+export function framesPerSegment(segmentSeconds: number, videoFrameRate?: number | null) {
   const fps = videoFrameRate ?? 30;
   return Math.max(1, Math.round(segmentSeconds * fps));
+}
+
+export function effectiveSegmentSeconds(segmentSeconds: number, videoFrameRate?: number | null) {
+  const frames = framesPerSegment(segmentSeconds, videoFrameRate);
+  const fps = videoFrameRate ?? 30;
+  return frames / fps;
 }
 
 function maxHeightScaleExpression(maxHeight: number | null | undefined): string | null {
@@ -224,7 +230,7 @@ function hardwareInputArgs(mode: FfmpegHardwareMode) {
 function hardwareVideoArgs(input: {
   mode: FfmpegHardwareMode;
   gopSize: number;
-  segmentSeconds: number;
+  effectiveSegmentSeconds: number;
   bitrate: string;
   maxHeight?: number | null;
 }) {
@@ -236,7 +242,7 @@ function hardwareVideoArgs(input: {
     "-keyint_min",
     String(input.gopSize),
     "-force_key_frames",
-    `expr:gte(t,n_forced*${input.segmentSeconds})`,
+    `expr:gte(t,n_forced*${input.effectiveSegmentSeconds})`,
   ];
 
   switch (input.mode) {
@@ -253,7 +259,7 @@ function hardwareVideoArgs(input: {
   }
 }
 
-function softwareVideoArgs(input: { gopSize: number; segmentSeconds: number; crf: number; maxHeight?: number | null }) {
+function softwareVideoArgs(input: { gopSize: number; effectiveSegmentSeconds: number; crf: number; maxHeight?: number | null }) {
   return [
     ...scaleFilterArg("scale", input.maxHeight),
     "-c:v",
@@ -271,7 +277,7 @@ function softwareVideoArgs(input: { gopSize: number; segmentSeconds: number; crf
     "-sc_threshold",
     "0",
     "-force_key_frames",
-    `expr:gte(t,n_forced*${input.segmentSeconds})`,
+    `expr:gte(t,n_forced*${input.effectiveSegmentSeconds})`,
   ];
 }
 
@@ -299,23 +305,25 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
   }
   args.push("-map", "0:v:0", "-map", audioMapArg(input), "-sn", "-dn");
 
+  const gopSize = framesPerSegment(segmentSeconds, input.videoFrameRate);
+  const effectiveSeconds = effectiveSegmentSeconds(segmentSeconds, input.videoFrameRate);
+
   if (input.mode === "remux") {
     args.push("-c:v", "copy", "-c:a", "copy");
   } else {
-    const gopSize = roundedSegmentFrames(segmentSeconds, input.videoFrameRate);
     const quality = input.transcodeQuality;
     args.push(
       ...(hardwareMode
         ? hardwareVideoArgs({
             mode: hardwareMode,
             gopSize,
-            segmentSeconds,
+            effectiveSegmentSeconds: effectiveSeconds,
             bitrate: quality?.hardwareBitrate ?? DEFAULT_HARDWARE_BITRATE,
             maxHeight: quality?.maxHeight,
           })
         : softwareVideoArgs({
             gopSize,
-            segmentSeconds,
+            effectiveSegmentSeconds: effectiveSeconds,
             crf: quality?.softwareCrf ?? DEFAULT_SOFTWARE_CRF,
             maxHeight: quality?.maxHeight,
           })),
@@ -334,7 +342,7 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
     "-f",
     "hls",
     "-hls_time",
-    String(segmentSeconds),
+    String(effectiveSeconds),
     "-hls_list_size",
     "0",
     "-hls_playlist_type",
@@ -561,6 +569,7 @@ async function startHlsStream(
 ) {
   await mkdir(input.artifactDirectory, { recursive: true });
   const ahead = resolveEncodeAheadSegmentCount(input.encodeAheadSegmentCount);
+  const effectiveSeconds = effectiveSegmentSeconds(input.segmentSeconds, input.videoFrameRate);
   const active = await runFfmpeg(
     {
       ...input,
@@ -568,7 +577,7 @@ async function startHlsStream(
     },
     {
       startSegmentNumber: firstSegment.segmentIndex,
-      maxOutputSeconds: input.segmentSeconds * ahead,
+      maxOutputSeconds: effectiveSeconds * ahead,
     },
   );
   const stream: ActiveHlsStream = {

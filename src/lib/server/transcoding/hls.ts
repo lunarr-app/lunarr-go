@@ -491,6 +491,7 @@ export function virtualHlsPlaylist(input: {
   durationSeconds: number;
   startTimeSeconds?: number | null;
   segmentSeconds?: number | null;
+  videoFrameRate?: number | null;
   segmentFormat?: HlsSegmentFormat;
   segmentQuery?: string | null;
 }) {
@@ -498,16 +499,19 @@ export function virtualHlsPlaylist(input: {
     Number.isFinite(input.segmentSeconds) && Number(input.segmentSeconds) > 0
       ? Number(input.segmentSeconds)
       : DEFAULT_HLS_SEGMENT_SECONDS;
+  const fps = input.videoFrameRate ?? 30;
+  const frames = Math.max(1, Math.round(segmentSeconds * fps));
+  const effectiveSegmentSeconds = frames / fps;
   const durationSeconds = Math.max(0, Number(input.durationSeconds));
   const startTimeSeconds =
     Number.isFinite(input.startTimeSeconds) && Number(input.startTimeSeconds) > 0 ? Number(input.startTimeSeconds) : 0;
-  const segmentCount = Math.ceil(durationSeconds / segmentSeconds);
+  const segmentCount = Math.ceil(durationSeconds / effectiveSegmentSeconds);
   const segmentFormat = input.segmentFormat ?? "mpegts";
   const segmentQuery = input.segmentQuery ?? "";
   const lines = [
     "#EXTM3U",
     `#EXT-X-VERSION:${segmentFormat === "fmp4" ? "7" : "3"}`,
-    `#EXT-X-TARGETDURATION:${Math.ceil(segmentSeconds)}`,
+    `#EXT-X-TARGETDURATION:${Math.ceil(effectiveSegmentSeconds)}`,
     "#EXT-X-PLAYLIST-TYPE:VOD",
     "#EXT-X-MEDIA-SEQUENCE:0",
   ];
@@ -519,7 +523,8 @@ export function virtualHlsPlaylist(input: {
   }
 
   for (let index = 0; index < segmentCount; index += 1) {
-    const segmentDuration = index === segmentCount - 1 ? durationSeconds - segmentSeconds * index : segmentSeconds;
+    const segmentDuration =
+      index === segmentCount - 1 ? durationSeconds - effectiveSegmentSeconds * index : effectiveSegmentSeconds;
     lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
     lines.push(`${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}${segmentQuery}`);
   }
@@ -532,6 +537,7 @@ export function virtualHlsPlaylistResponse(input: {
   durationSeconds: number;
   startTimeSeconds?: number | null;
   segmentSeconds?: number | null;
+  videoFrameRate?: number | null;
   segmentFormat?: HlsSegmentFormat;
   segmentQuery?: string | null;
 }) {

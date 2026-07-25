@@ -99,6 +99,7 @@ export async function getMediaFile(id: string, userId: string) {
       "media_file.video_codec",
       "media_file.audio_codec",
       "media_file.container",
+      "media_file.video_frame_rate",
       "library.source",
       "library.config_json",
       "media_item.title",
