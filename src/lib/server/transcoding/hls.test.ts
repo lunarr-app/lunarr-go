@@ -9,17 +9,16 @@ import {
   hlsPlaylistSegmentEntries,
   hlsSegmentName,
   hlsSegmentResponse,
-  materializedHlsPlaylist,
   resolveEncodeAheadSegmentCount,
   rewriteHlsPlaylistUris,
+  virtualHlsPlaylist,
 } from "./hls";
 
 describe("HLS helpers", () => {
   test("uses MPEG-TS segment names and playlist version by default", () => {
     expect(hlsSegmentName(3)).toBe("segment-00003.ts");
     expect(
-      materializedHlsPlaylist({
-        keyframeTimes: null,
+      virtualHlsPlaylist({
         durationSeconds: 20,
         segmentSeconds: 16,
       }),
@@ -43,8 +42,7 @@ describe("HLS helpers", () => {
   test("can build fMP4/CMAF-style virtual playlists", () => {
     expect(hlsSegmentName(3, "fmp4")).toBe("segment-00003.m4s");
     expect(
-      materializedHlsPlaylist({
-        keyframeTimes: null,
+      virtualHlsPlaylist({
         durationSeconds: 20,
         segmentSeconds: 16,
         segmentFormat: "fmp4",
@@ -120,8 +118,7 @@ describe("HLS helpers", () => {
   });
 
   test("does not treat virtual VOD playlists as FFmpeg event readiness", () => {
-    const playlist = materializedHlsPlaylist({
-      keyframeTimes: null,
+    const playlist = virtualHlsPlaylist({
       durationSeconds: 32,
       segmentSeconds: 16,
     });
@@ -133,122 +130,6 @@ describe("HLS helpers", () => {
         segment: "segment-00000.ts",
       }),
     ).toBe(false);
-  });
-
-  test("materializedHlsPlaylist falls back to the fixed grid when keyframeTimes is null", () => {
-    expect(
-      materializedHlsPlaylist({
-        keyframeTimes: null,
-        durationSeconds: 20,
-        segmentSeconds: 16,
-      }),
-    ).toBe(
-      [
-        "#EXTM3U",
-        "#EXT-X-VERSION:3",
-        "#EXT-X-TARGETDURATION:16",
-        "#EXT-X-PLAYLIST-TYPE:VOD",
-        "#EXT-X-MEDIA-SEQUENCE:0",
-        "#EXTINF:16.000,",
-        "segments/segment-00000.ts",
-        "#EXTINF:4.000,",
-        "segments/segment-00001.ts",
-        "#EXT-X-ENDLIST",
-        "",
-      ].join("\n"),
-    );
-  });
-
-  test("materializedHlsPlaylist uses real per-segment durations when keyframeTimes is supplied", () => {
-    // Keyframes at 0, 17.84, 35.52, 52.8, 64.0 — ffmpeg's remux would cut
-    // segments near these times. With hls_time=16, ffmpeg cuts at the first
-    // KF whose accumulated elapsed since the last cut is >= 16s:
-    //   0 -> 17.84 (elapsed 17.84 >= 16: new boundary)
-    //   17.84 -> 35.52 (elapsed 17.68: new boundary)
-    //   35.52 -> 52.8  (elapsed 17.28: new boundary)
-    //   52.8 -> 64.0   (elapsed 11.2 < 16: merge into previous)
-    // Final segments: [17.84, 17.68, 17.28, 11.2]
-    const playlist = materializedHlsPlaylist({
-      keyframeTimes: [0, 17.84, 35.52, 52.8, 64.0],
-      durationSeconds: 64,
-      segmentSeconds: 16,
-    });
-    const lines = playlist.split("\n");
-    expect(lines[0]).toBe("#EXTM3U");
-    expect(lines).toContain("#EXT-X-PLAYLIST-TYPE:VOD");
-    expect(lines).toContain("#EXT-X-TARGETDURATION:18");
-    const inf = lines.filter((line) => line.startsWith("#EXTINF:"));
-    // Sum should equal durationSeconds.
-    const sum = inf.reduce((acc, line) => acc + Number(line.slice("#EXTINF:".length, -1)), 0);
-    expect(sum).toBeCloseTo(64, 6);
-    expect(inf).toEqual(["#EXTINF:17.840,", "#EXTINF:17.680,", "#EXTINF:17.280,", "#EXTINF:11.200,"]);
-    expect(lines.at(-2)).toBe("#EXT-X-ENDLIST");
-  });
-
-  test("materializedHlsPlaylist pads the head with a 0 keyframe when the container omits it", () => {
-    // The container reports the first KF at 0.08s. ffmpeg re-anchors the
-    // timeline at t=0 (via `-avoid_negative_ts make_zero` + `-ss`), so we
-    // synthesize a virtual 0 boundary. The 0.08s KF falls inside segment 0
-    // and is not promoted to a boundary (elapsed time < <segmentSeconds>),
-    // so we still get 2 segments with the first starting at 0.
-    const playlist = materializedHlsPlaylist({
-      keyframeTimes: [0.08, 16.5, 33.1],
-      durationSeconds: 33.1,
-      segmentSeconds: 16,
-    });
-    const inf = playlist
-      .split("\n")
-      .filter((line) => line.startsWith("#EXTINF:"))
-      .map((line) => Number(line.slice("#EXTINF:".length, -1)));
-    expect(inf.length).toBe(2);
-    expect(inf[0]).toBeCloseTo(16.5, 6);
-    expect(inf[1]).toBeCloseTo(16.6, 6);
-  });
-
-  test("materializedHlsPlaylist supports fMP4 segment format with init.mp4 map", () => {
-    expect(
-      materializedHlsPlaylist({
-        keyframeTimes: null,
-        durationSeconds: 20,
-        segmentSeconds: 16,
-        segmentFormat: "fmp4",
-      }),
-    ).toBe(
-      [
-        "#EXTM3U",
-        "#EXT-X-VERSION:7",
-        "#EXT-X-TARGETDURATION:16",
-        "#EXT-X-PLAYLIST-TYPE:VOD",
-        "#EXT-X-MEDIA-SEQUENCE:0",
-        '#EXT-X-MAP:URI="segments/init.mp4"',
-        "#EXTINF:16.000,",
-        "segments/segment-00000.m4s",
-        "#EXTINF:4.000,",
-        "segments/segment-00001.m4s",
-        "#EXT-X-ENDLIST",
-        "",
-      ].join("\n"),
-    );
-  });
-
-  test("materializedHlsPlaylist includes EXT-X-START when startTimeSeconds is positive", () => {
-    const playlist = materializedHlsPlaylist({
-      keyframeTimes: null,
-      durationSeconds: 13,
-      startTimeSeconds: 5,
-      segmentSeconds: 16,
-    });
-    expect(playlist).toContain("#EXT-X-START:TIME-OFFSET=5.000");
-    expect(playlist).toContain("#EXTINF:13.000,");
-  });
-
-  test("materializedHlsPlaylist uses ceil(max duration) as target duration when keyframe segments exceed 16s", () => {
-    const playlist = materializedHlsPlaylist({
-      keyframeTimes: [0, 19.2, 38.4],
-      durationSeconds: 38.4,
-      segmentSeconds: 16,
-    });
-    expect(playlist).toContain("#EXT-X-TARGETDURATION:20");
   });
 
   test("rewrites FFmpeg-authored fMP4 init maps through the segment route", () => {

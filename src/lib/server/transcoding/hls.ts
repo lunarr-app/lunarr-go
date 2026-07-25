@@ -487,21 +487,7 @@ export async function hlsPlaylistSegmentFormat(
   }
 }
 
-/**
- * Walks the supplied keyframe times and emits per-segment durations that match
- * the backend's `-hls_time <segmentSeconds>` cutting rule (cut at the first
- * keyframe whose elapsed time since the last segment boundary is >=
- * `segmentSeconds`). This produces an HLS timeline that lines up with the
- * actual `.m4s`/`.ts` segment durations the backend will emit for remux
- * sessions, eliminating the seek-bar jitter caused by the previous fixed-16s
- * fiction.
- *
- * When `keyframeTimes` is null/empty, the fixed 16s grid is used (matching
- * the forced-keyframe transcode path, where output is already on a 16s grid
- * thanks to `-force_key_frames expr:gte(t,n_forced*16)`).
- */
-export function materializedHlsPlaylist(input: {
-  keyframeTimes?: number[] | null;
+export function virtualHlsPlaylist(input: {
   durationSeconds: number;
   startTimeSeconds?: number | null;
   segmentSeconds?: number | null;
@@ -515,21 +501,13 @@ export function materializedHlsPlaylist(input: {
   const durationSeconds = Math.max(0, Number(input.durationSeconds));
   const startTimeSeconds =
     Number.isFinite(input.startTimeSeconds) && Number(input.startTimeSeconds) > 0 ? Number(input.startTimeSeconds) : 0;
+  const segmentCount = Math.ceil(durationSeconds / segmentSeconds);
   const segmentFormat = input.segmentFormat ?? "mpegts";
   const segmentQuery = input.segmentQuery ?? "";
-  const sortedKeyframes = sanitizeKeyframeTimes(input.keyframeTimes, durationSeconds);
-
-  const segmentDurations = sortedKeyframes
-    ? segmentDurationsFromKeyframes(sortedKeyframes, durationSeconds, segmentSeconds)
-    : segmentDurationsFromFixedGrid(durationSeconds, segmentSeconds);
-
-  const targetDuration = segmentDurations.length
-    ? Math.max(1, Math.ceil(Math.max(...segmentDurations, segmentSeconds)))
-    : Math.max(1, Math.ceil(segmentSeconds));
   const lines = [
     "#EXTM3U",
     `#EXT-X-VERSION:${segmentFormat === "fmp4" ? "7" : "3"}`,
-    `#EXT-X-TARGETDURATION:${targetDuration}`,
+    `#EXT-X-TARGETDURATION:${Math.ceil(segmentSeconds)}`,
     "#EXT-X-PLAYLIST-TYPE:VOD",
     "#EXT-X-MEDIA-SEQUENCE:0",
   ];
@@ -540,8 +518,9 @@ export function materializedHlsPlaylist(input: {
     lines.push(`#EXT-X-MAP:URI="${SEGMENT_ROUTE_PREFIX}init.mp4${segmentQuery}"`);
   }
 
-  for (let index = 0; index < segmentDurations.length; index += 1) {
-    lines.push(`#EXTINF:${segmentDurations[index].toFixed(3)},`);
+  for (let index = 0; index < segmentCount; index += 1) {
+    const segmentDuration = index === segmentCount - 1 ? durationSeconds - segmentSeconds * index : segmentSeconds;
+    lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
     lines.push(`${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}${segmentQuery}`);
   }
 
@@ -549,69 +528,28 @@ export function materializedHlsPlaylist(input: {
   return `${lines.join("\n")}\n`;
 }
 
-function sanitizeKeyframeTimes(keyframeTimes: number[] | null | undefined, durationSeconds: number): number[] | null {
-  if (!Array.isArray(keyframeTimes) || keyframeTimes.length === 0) return null;
-  const cleaned: number[] = [];
-  let previous = -Infinity;
-  for (const raw of keyframeTimes) {
-    if (typeof raw !== "number" || !Number.isFinite(raw) || raw < 0) continue;
-    const value = durationSeconds > 0 ? Math.min(raw, durationSeconds) : raw;
-    if (value < previous) continue;
-    if (value === previous) continue;
-    cleaned.push(value);
-    previous = value;
-  }
-  if (cleaned.length === 0) return null;
-  if (cleaned[0] > 0) {
-    // Some containers report the first keyframe at a small positive offset.
-    // Anchor the timeline at 0 so segment indices line up with the
-    // backend's `-start_number 0` output.
-    cleaned.unshift(0);
-  }
-  return cleaned;
+export function virtualHlsPlaylistResponse(input: {
+  durationSeconds: number;
+  startTimeSeconds?: number | null;
+  segmentSeconds?: number | null;
+  segmentFormat?: HlsSegmentFormat;
+  segmentQuery?: string | null;
+}) {
+  return new Response(virtualHlsPlaylist(input), {
+    headers: {
+      "content-type": `${PLAYLIST_MIME_TYPE}; charset=utf-8`,
+      "cache-control": "no-store",
+    },
+  });
 }
 
-function segmentDurationsFromFixedGrid(durationSeconds: number, segmentSeconds: number): number[] {
-  if (durationSeconds <= 0) return [];
-  const segmentCount = Math.ceil(durationSeconds / segmentSeconds);
-  const durations: number[] = [];
-  for (let index = 0; index < segmentCount; index += 1) {
-    durations.push(index === segmentCount - 1 ? durationSeconds - segmentSeconds * index : segmentSeconds);
-  }
-  return durations;
-}
-
-function segmentDurationsFromKeyframes(
-  keyframeTimes: number[],
-  durationSeconds: number,
-  segmentSeconds: number,
-): number[] {
-  if (keyframeTimes.length === 0) return [];
-  const end = durationSeconds > 0 ? durationSeconds : keyframeTimes[keyframeTimes.length - 1];
-  // Pick segment boundaries: advance a boundary whenever the elapsed time
-  // since the previous boundary crosses `segmentSeconds`. This mirrors the
-  // `-hls_time` cutting rule for remux (cut at the next KF after the target
-  // time has elapsed). Keyframes coincident with the media end would yield
-  // a zero-duration trailer segment, so they are skipped.
-  const boundaries: number[] = [keyframeTimes[0]];
-  let lastBoundary = keyframeTimes[0];
-  for (let index = 1; index < keyframeTimes.length; index += 1) {
-    const time = keyframeTimes[index];
-    if (time >= end) break;
-    if (time - lastBoundary >= segmentSeconds) {
-      boundaries.push(time);
-      lastBoundary = time;
-    }
-  }
-  const durations: number[] = [];
-  for (let index = 0; index < boundaries.length; index += 1) {
-    const start = boundaries[index];
-    const stop = index + 1 < boundaries.length ? boundaries[index + 1] : end;
-    const duration = stop - start;
-    if (duration <= 0) continue;
-    durations.push(duration);
-  }
-  return durations;
+export function virtualHlsPlaylistHeadResponse() {
+  return new Response(null, {
+    headers: {
+      "content-type": `${PLAYLIST_MIME_TYPE}; charset=utf-8`,
+      "cache-control": "no-store",
+    },
+  });
 }
 
 export async function hlsSegmentResponse(playlistPath: string, segment: string, options: HlsReadOptions = {}) {

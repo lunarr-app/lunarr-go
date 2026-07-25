@@ -13,7 +13,7 @@ import {
   hlsSegmentReadCountForTests,
   hlsSegmentResponse,
   hlsSegmentMimeType,
-  materializedHlsPlaylist,
+  virtualHlsPlaylist,
   rewriteHlsPlaylistUris,
   pruneHlsSegmentsBehind,
   resetHlsSegmentLoadStateForTests,
@@ -403,8 +403,7 @@ describe.serial("playback-session HLS routes", () => {
 
   test("builds a virtual VOD playlist from duration and start time", () => {
     expect(
-      materializedHlsPlaylist({
-        keyframeTimes: null,
+      virtualHlsPlaylist({
         durationSeconds: 13,
         startTimeSeconds: 5,
         segmentSeconds: 4,
@@ -414,14 +413,8 @@ describe.serial("playback-session HLS routes", () => {
     );
   });
 
-  test("serves the on-disk playlist when duration is known", async () => {
+  test("serves an explicit virtual playlist when duration is known", async () => {
     await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
-    const onDiskPlaylist = materializedHlsPlaylist({
-      keyframeTimes: null,
-      durationSeconds: 13,
-      startTimeSeconds: 5,
-    });
-    await writeFile(playlistPath, onDiskPlaylist);
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -435,21 +428,23 @@ describe.serial("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe(onDiskPlaylist);
+    expect(await response.text()).toBe(
+      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:16\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-START:TIME-OFFSET=5.000\n#EXTINF:13.000,\nsegments/segment-00000.ts\n#EXT-X-ENDLIST\n",
+    );
   });
 
-  test("serves the on-disk fMP4 playlist when the session uses fMP4", async () => {
+  test("serves an explicit virtual fMP4 playlist when the session uses fMP4", async () => {
     await db.updateTable("media_file").set({ duration_seconds: 34 }).where("id", "=", "file-1").execute();
-    const onDiskPlaylist = materializedHlsPlaylist({
-      keyframeTimes: null,
-      durationSeconds: 34,
-      segmentFormat: "fmp4",
-    });
-    await writeFile(playlistPath, onDiskPlaylist);
+    await writeFile(
+      playlistPath,
+      ["#EXTM3U", "#EXT-X-VERSION:7", '#EXT-X-MAP:URI="init.mp4"', "#EXTINF:16.000,", "segment-00000.m4s", ""].join(
+        "\n",
+      ),
+    );
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -461,24 +456,43 @@ describe.serial("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe(onDiskPlaylist);
+    expect(await response.text()).toBe(
+      [
+        "#EXTM3U",
+        "#EXT-X-VERSION:7",
+        "#EXT-X-TARGETDURATION:16",
+        "#EXT-X-PLAYLIST-TYPE:VOD",
+        "#EXT-X-MEDIA-SEQUENCE:0",
+        '#EXT-X-MAP:URI="segments/init.mp4"',
+        "#EXTINF:16.000,",
+        "segments/segment-00000.m4s",
+        "#EXTINF:16.000,",
+        "segments/segment-00001.m4s",
+        "#EXTINF:2.000,",
+        "segments/segment-00002.m4s",
+        "#EXT-X-ENDLIST",
+        "",
+      ].join("\n"),
+    );
   });
 
-  test("serves the on-disk master.m3u8 through the default playlist route for running request-driven sessions", async () => {
-    // The default route reads the on-disk master.m3u8 that
-    // startRequestDrivenHlsSession writes (the materialized playlist with
-    // accurate per-segment EXTINFs).
-    const onDiskPlaylist = materializedHlsPlaylist({
-      keyframeTimes: null,
-      durationSeconds: 13,
-      startTimeSeconds: 5,
-    });
+  test("serves virtual VOD through the default playlist route for running request-driven sessions", async () => {
+    const eventPlaylist = [
+      "#EXTM3U",
+      "#EXT-X-VERSION:3",
+      "#EXT-X-TARGETDURATION:16",
+      "#EXT-X-PLAYLIST-TYPE:EVENT",
+      "#EXT-X-MEDIA-SEQUENCE:0",
+      "#EXTINF:16.000,",
+      "segment-00000.ts",
+      "",
+    ].join("\n");
     await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
-    await writeFile(playlistPath, onDiskPlaylist);
+    await writeFile(playlistPath, eventPlaylist);
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -497,10 +511,17 @@ describe.serial("playback-session HLS routes", () => {
       locals: { user: { id: "user-1" } },
       url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
+    const explicitResponse = await getPlaylist({
+      params: { sessionId },
+      locals: { user: { id: "user-1" } },
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
+    } as never);
 
     expect(defaultResponse.status).toBe(200);
+    expect(explicitResponse.status).toBe(200);
     const defaultBody = await defaultResponse.text();
-    expect(defaultBody).toBe(onDiskPlaylist);
+    const explicitBody = await explicitResponse.text();
+    expect(defaultBody).toBe(explicitBody);
     expect(defaultBody).toContain("#EXT-X-PLAYLIST-TYPE:VOD");
     expect(defaultBody).toContain("#EXT-X-ENDLIST");
     expect(defaultBody).not.toContain("#EXT-X-PLAYLIST-TYPE:EVENT");
@@ -1005,7 +1026,7 @@ describe.serial("playback-session HLS routes", () => {
     expect(job.last_heartbeat_at).toBe(oldHeartbeat);
   });
 
-  test("does not refresh playlist heartbeat when artifacts are missing", async () => {
+  test("does not refresh virtual playlist heartbeat when temporary artifacts are missing", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
     const missingPlaylistPath = path.join(tempDir, "missing-virtual", "master.m3u8");
     await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
@@ -1025,12 +1046,12 @@ describe.serial("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
     const head = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -1046,7 +1067,7 @@ describe.serial("playback-session HLS routes", () => {
     expect(job.last_heartbeat_at).toBe(oldHeartbeat);
   });
 
-  test("does not refresh playlist heartbeat after the request is cancelled during heartbeat refresh", async () => {
+  test("does not refresh virtual playlist heartbeat after the request is cancelled during heartbeat refresh", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
     const requestController = new AbortController();
     await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
@@ -1070,7 +1091,7 @@ describe.serial("playback-session HLS routes", () => {
       params: { sessionId },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -1088,11 +1109,9 @@ describe.serial("playback-session HLS routes", () => {
     });
   });
 
-  test("serves playlist HEAD metadata without refreshing playback heartbeat", async () => {
+  test("serves virtual playlist HEAD metadata without refreshing playback heartbeat", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
     await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
-    const onDiskPlaylist = materializedHlsPlaylist({ keyframeTimes: null, durationSeconds: 13 });
-    await writeFile(playlistPath, onDiskPlaylist);
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1109,12 +1128,12 @@ describe.serial("playback-session HLS routes", () => {
     const response = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/vnd.apple.mpegurl");
-    expect(response.headers.get("content-length")).toBe(String(Buffer.byteLength(onDiskPlaylist)));
+    expect(response.headers.has("content-length")).toBe(false);
     expect(await response.text()).toBe("");
 
     const job = await db
@@ -2325,8 +2344,7 @@ describe.serial("playback-session HLS routes", () => {
     await db.updateTable("media_file").set({ duration_seconds: 64 }).where("id", "=", "file-1").execute();
     await writeFile(
       playlistPath,
-      materializedHlsPlaylist({
-        keyframeTimes: null,
+      virtualHlsPlaylist({
         durationSeconds: 64,
         segmentSeconds: 16,
         segmentFormat: "fmp4",
@@ -2839,8 +2857,7 @@ describe.serial("playback-session HLS routes", () => {
     await db.updateTable("media_file").set({ duration_seconds: 512 }).where("id", "=", "file-1").execute();
     await writeFile(
       playlistPath,
-      materializedHlsPlaylist({
-        keyframeTimes: null,
+      virtualHlsPlaylist({
         durationSeconds: 512,
         segmentSeconds: 16,
       }),
@@ -5048,13 +5065,8 @@ describe.serial("playback-session HLS routes", () => {
     });
   });
 
-  test("serves the on-disk playlist for completed sessions", async () => {
-    // Completed sessions no longer synthesize a virtual playlist — they serve
-    // whatever master.m3u8 was written at session start, which carries the
-    // accurate per-segment durations.
+  test("does not synthesize virtual playlists for completed temporary artifacts", async () => {
     await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
-    const onDiskPlaylist = materializedHlsPlaylist({ keyframeTimes: null, durationSeconds: 13 });
-    await writeFile(playlistPath, onDiskPlaylist);
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -5066,17 +5078,19 @@ describe.serial("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
     const head = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
     } as never);
 
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe(onDiskPlaylist);
-    expect(head.status).toBe(200);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      detail: "Virtual HLS playlist is not available for this session.",
+    });
+    expect(head.status).toBe(409);
   });
 
   test("hides sessions owned by another user", async () => {

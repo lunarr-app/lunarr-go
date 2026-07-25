@@ -28,7 +28,6 @@ export const GET: RequestHandler = async (event) => {
     url,
     skipProgress: true,
     backHref: `/share/${share.token}`,
-    signal: event.request?.signal,
   });
 
   if (!playback) {

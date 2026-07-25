@@ -29,7 +29,6 @@ export {
 } from "./playback-lifecycle";
 
 export { resolveHlsPlayback } from "./playback-resolve";
-export type { ProbeKeyframesFn } from "./keyframe-probe";
 
 export {
   ensureHlsLookaheadForSegment,
