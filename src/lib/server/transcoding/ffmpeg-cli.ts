@@ -60,14 +60,7 @@ class FfmpegBackendError extends Error {}
 
 type KillableProcess = Pick<ChildProcess, "exitCode" | "signalCode" | "kill">;
 
-function hlsPlaylistPath(artifactDirectory: string) {
-  return path.join(artifactDirectory, "master.m3u8");
-}
 
-function hlsSegmentPattern(artifactDirectory: string, segmentFormat: HlsSegmentFormat) {
-  const extension = segmentFormat === "fmp4" ? "m4s" : "ts";
-  return path.join(artifactDirectory, `segment-%05d.${extension}`);
-}
 
 function canExecuteFfmpeg(binaryPath: string) {
   const result = spawnSync(binaryPath, ["-version"], { stdio: "ignore" });
@@ -283,7 +276,7 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
   const playlistPath =
     startSegmentNumber !== undefined && Number.isSafeInteger(startSegmentNumber) && input.sessionId
       ? encodeEventPlaylistPath(input.artifactDirectory, input.sessionId, startSegmentNumber)
-      : hlsPlaylistPath(input.artifactDirectory);
+      : path.join(input.artifactDirectory, "master.m3u8");
   const args = ["-hide_banner", "-y"];
   const hardwareMode = effectiveHardwareMode(input);
   if (hardwareMode) args.push(...hardwareInputArgs(hardwareMode));
@@ -351,7 +344,8 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
   if (Number.isSafeInteger(startSegmentNumber)) {
     args.push("-start_number", String(startSegmentNumber));
   }
-  args.push("-hls_segment_filename", hlsSegmentPattern(input.artifactDirectory, segmentFormat), playlistPath);
+  const segmentExtension = segmentFormat === "fmp4" ? "m4s" : "ts";
+  args.push("-hls_segment_filename", path.join(input.artifactDirectory, `segment-%05d.${segmentExtension}`), playlistPath);
 
   return args;
 }

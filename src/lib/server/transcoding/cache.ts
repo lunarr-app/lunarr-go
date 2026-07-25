@@ -17,12 +17,8 @@ const PLAYBACK_CACHE_TTL_MS_KEY = "playback_cache_ttl_ms";
 const ENCODE_AHEAD_SEGMENT_COUNT_KEY = "encode_ahead_segment_count";
 const DEFAULT_PLAYBACK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-function playbackCacheRoot() {
-  return path.join(currentDatabasePaths().dataDir, PLAYBACK_CACHE_ROOT_NAME);
-}
-
 export function playbackCacheArtifactDirectory(cacheId: string) {
-  return path.join(playbackCacheRoot(), cacheId);
+  return path.join(currentDatabasePaths().dataDir, PLAYBACK_CACHE_ROOT_NAME, cacheId);
 }
 
 export function computePlaybackPolicyHash(input: {

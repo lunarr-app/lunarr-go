@@ -5,6 +5,7 @@ import { nowIso } from "../time";
 import { randomUUID } from "node:crypto";
 import { accessibleLibrarySql } from "../media/catalog";
 import { releasePlaybackCacheForSession } from "./cache";
+import { normalizedStartTimeSeconds } from "./normalization";
 import {
   clearPlaybackSessionArtifacts,
   endedPlaybackArtifactActivityAt,
@@ -99,11 +100,6 @@ type TranscodeTouchOptions = {
 
 export function setTranscodeTouchDelayForTests(delay: (() => Promise<void> | void) | null) {
   transcodeTouchDelayForTests = delay;
-}
-
-function normalizedStartTimeSeconds(value: number | null | undefined) {
-  if (value === null || value === undefined) return 0;
-  return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 type ActiveHlsArtifactRow = Awaited<ReturnType<ReturnType<typeof activeHlsArtifactBaseQuery>["execute"]>>[number];

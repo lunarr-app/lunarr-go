@@ -36,10 +36,6 @@ function playbackSessionArtifactRoot() {
   return path.join(currentDatabasePaths().dataDir, "playback-sessions");
 }
 
-function defaultPlaybackSessionArtifactDirectory(sessionId: string) {
-  return path.join(playbackSessionArtifactRoot(), sessionId);
-}
-
 function isPathInside(parent: string, candidate: string) {
   const relative = path.relative(path.resolve(parent), path.resolve(candidate));
   return relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative);
@@ -52,7 +48,7 @@ function isPathSameOrInside(parent: string, candidate: string) {
 
 function safePlaybackSessionArtifactDirectories(input: { sessionId: string; playlistPath: string | null }) {
   const root = playbackSessionArtifactRoot();
-  const directories = new Set([defaultPlaybackSessionArtifactDirectory(input.sessionId)]);
+  const directories = new Set([path.join(root, input.sessionId)]);
   if (input.playlistPath) directories.add(path.dirname(input.playlistPath));
 
   const safeDirectories = [...directories].filter((directory) => isPathInside(root, directory));

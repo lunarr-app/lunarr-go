@@ -13,6 +13,7 @@ import {
   updateTranscodeSessionStatus,
 } from "./sessions";
 import { acquirePlaybackCache } from "./cache";
+import { normalizedStartTimeSeconds } from "./normalization";
 import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
 import {
   DEFAULT_HLS_SEGMENT_SECONDS,
@@ -121,17 +122,8 @@ function playbackSessionStreamUrl(sessionId: string) {
   return `/media/playback-sessions/${sessionId}/master.m3u8`;
 }
 
-function playbackSessionArtifactDirectory(sessionId: string) {
-  return path.join(currentDatabasePaths().dataDir, "playback-sessions", sessionId);
-}
-
 function virtualHlsPlaylistPath(sessionId: string) {
-  return path.join(playbackSessionArtifactDirectory(sessionId), "master.m3u8");
-}
-
-function normalizedStartTimeSeconds(value: number | null | undefined) {
-  if (value === null || value === undefined) return 0;
-  return Number.isFinite(value) && value > 0 ? value : 0;
+  return path.join(currentDatabasePaths().dataDir, "playback-sessions", sessionId, "master.m3u8");
 }
 
 function canUseRequestDrivenHls(file: NonNullable<Awaited<ReturnType<typeof getMediaFile>>>, startTimeSeconds: number) {

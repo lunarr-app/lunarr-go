@@ -25,12 +25,6 @@ const TRANSCODE_HEARTBEAT_TIMEOUT_MS = 120_000;
 const TRANSCODE_SEGMENT_IDLE_TIMEOUT_MS = 300_000;
 const ACTIVE_TRANSCODE_CANCEL_BATCH_SIZE = 100;
 
-function configuredRequestDrivenHlsSegmentFormat() {
-  const value = process.env.LUNARR_HLS_SEGMENT_FORMAT?.trim().toLowerCase();
-  if (value === "fmp4" || value === "mpegts" || value === "auto") return value;
-  return "mpegts";
-}
-
 function hlsSegmentFormatFromSegmentName(segment: string): HlsSegmentFormat {
   return path.extname(segment).toLowerCase() === ".m4s" ? "fmp4" : "mpegts";
 }
@@ -42,7 +36,8 @@ export function requestDrivenHlsSegmentFormat(
   } = {},
 ): HlsSegmentFormat {
   if (input.segment) return hlsSegmentFormatFromSegmentName(input.segment);
-  const configured = configuredRequestDrivenHlsSegmentFormat();
+  const value = process.env.LUNARR_HLS_SEGMENT_FORMAT?.trim().toLowerCase();
+  const configured = value === "fmp4" || value === "mpegts" || value === "auto" ? value : "mpegts";
   if (configured === "fmp4") return "fmp4";
   if (configured === "auto" && input.clientCapabilities?.hlsFmp4 === true) {
     return "fmp4";
@@ -52,15 +47,11 @@ export function requestDrivenHlsSegmentFormat(
 
 export type CancelPlaybackSessionResult = "cancelled" | "inactive" | "missing";
 
-function playbackSessionArtifactDirectory(sessionId: string) {
-  return path.join(currentDatabasePaths().dataDir, "playback-sessions", sessionId);
-}
-
 export async function removeTranscodeSessionArtifacts(sessionId: string) {
   await releasePlaybackCacheForSession(sessionId).catch(() => undefined);
   await Promise.all([
     deleteTranscodeHlsArtifacts(sessionId).catch(() => undefined),
-    rm(playbackSessionArtifactDirectory(sessionId), {
+    rm(path.join(currentDatabasePaths().dataDir, "playback-sessions", sessionId), {
       recursive: true,
       force: true,
     }).catch(() => undefined),
