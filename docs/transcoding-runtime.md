@@ -26,7 +26,7 @@ When only the container is unsuitable for the browser, Lunarr can identify compa
 
 Unsupported codecs use FFmpeg-generated HLS transcode. The default software target is H.264 video with AAC audio. Admin quality presets can cap transcode height and adjust software CRF or hardware bitrate targets.
 
-Request-driven HLS defaults to `auto` mode: fMP4/CMAF segments when the client proves native HLS or MediaSource support, falling back to MPEG-TS for clients that do not. `LUNARR_HLS_SEGMENT_FORMAT=fmp4` forces fMP4 for all clients. `LUNARR_HLS_SEGMENT_FORMAT=mpegts` forces MPEG-TS for all clients.
+Request-driven HLS defaults to MPEG-TS segments for broad compatibility. `LUNARR_HLS_SEGMENT_FORMAT=fmp4` forces fMP4/CMAF output. `LUNARR_HLS_SEGMENT_FORMAT=auto` selects fMP4 only when the client proves native HLS or MediaSource fMP4 support, other clients keep MPEG-TS.
 
 ## Request-Driven HLS
 

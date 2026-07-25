@@ -28,7 +28,7 @@ const ACTIVE_TRANSCODE_CANCEL_BATCH_SIZE = 100;
 function configuredRequestDrivenHlsSegmentFormat() {
   const value = process.env.LUNARR_HLS_SEGMENT_FORMAT?.trim().toLowerCase();
   if (value === "fmp4" || value === "mpegts" || value === "auto") return value;
-  return "auto";
+  return "mpegts";
 }
 
 function hlsSegmentFormatFromSegmentName(segment: string): HlsSegmentFormat {
