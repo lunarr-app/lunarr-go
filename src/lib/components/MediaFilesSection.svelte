@@ -70,7 +70,7 @@
 
   function formatFrameRate(fps: number | null) {
     if (fps === null || fps <= 0) return null;
-    const rounded = Math.abs(fps - Math.round(fps)) < 0.01 ? Math.round(fps) : fps.toFixed(2);
+    const rounded = Math.abs(fps - Math.round(fps)) < 0.01 ? Math.round(fps) : parseFloat(fps.toPrecision(5));
     return `${rounded} fps`;
   }
 
