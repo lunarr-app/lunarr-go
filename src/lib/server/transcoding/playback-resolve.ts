@@ -14,11 +14,18 @@ import {
 } from "./sessions";
 import { acquirePlaybackCache } from "./cache";
 import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
-import { DEFAULT_HLS_SEGMENT_SECONDS, type HlsSegmentFormat, hlsSegmentName, virtualHlsPlaylist } from "./hls";
+import {
+  DEFAULT_HLS_SEGMENT_SECONDS,
+  type HlsSegmentFormat,
+  effectiveSegmentSeconds,
+  hlsSegmentName,
+  virtualHlsPlaylist,
+} from "./hls";
 import { TRANSCODING_DISABLED_MESSAGE } from "./hls-segment-jobs";
 import type { TranscodeMode } from "../db/schema/streaming";
 import { currentDatabasePaths, getDb } from "../db";
 import { getMediaFile } from "../media/files";
+import { lookupVideoFrameRate } from "./probe";
 import {
   createDefaultLibraryStorageForTests,
   createLibraryStorage,
@@ -365,20 +372,11 @@ async function warmInitialRequestDrivenHlsSegment(input: {
   if (!initialSession || isTerminalTranscodeSessionStatus(initialSession.status)) {
     throw new TranscodeStartupAbortedError(initialSession?.errorMessage ?? PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
-  const db = await getDb();
-  const videoStreamInfo = await db
-    .selectFrom("media_stream_info")
-    .select(["frame_rate", "r_frame_rate"])
-    .where("media_file_id", "=", initialSession.mediaFileId)
-    .where("stream_type", "=", "video")
-    .orderBy("stream_index", "asc")
-    .limit(1)
-    .executeTakeFirst();
-  const videoFrameRate = videoStreamInfo?.frame_rate ?? videoStreamInfo?.r_frame_rate ?? null;
-  const fps = videoFrameRate ?? 30;
-  const frames = Math.max(1, Math.round(DEFAULT_HLS_SEGMENT_SECONDS * fps));
-  const effectiveSegmentSeconds = frames / fps;
-  const segmentIndex = Math.max(0, Math.floor(initialSession.startTimeSeconds / effectiveSegmentSeconds));
+  const videoFrameRate = await lookupVideoFrameRate(initialSession.mediaFileId);
+  const segmentIndex = Math.max(
+    0,
+    Math.floor(initialSession.startTimeSeconds / effectiveSegmentSeconds(DEFAULT_HLS_SEGMENT_SECONDS, videoFrameRate)),
+  );
   let ready = false;
   try {
     ready = await ensureHlsSegmentForRequest({

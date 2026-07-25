@@ -109,3 +109,16 @@ export async function replaceMediaStreamInfo(mediaFileId: string, probe: MediaPr
       .execute();
   });
 }
+
+export async function lookupVideoFrameRate(mediaFileId: string): Promise<number | null> {
+  const db = await getDb();
+  const info = await db
+    .selectFrom("media_stream_info")
+    .select(["frame_rate", "r_frame_rate"])
+    .where("media_file_id", "=", mediaFileId)
+    .where("stream_type", "=", "video")
+    .orderBy("stream_index", "asc")
+    .limit(1)
+    .executeTakeFirst();
+  return info?.frame_rate ?? info?.r_frame_rate ?? null;
+}

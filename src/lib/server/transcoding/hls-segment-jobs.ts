@@ -1,6 +1,5 @@
 import { rm } from "node:fs/promises";
 import path from "node:path";
-import { getDb } from "../db";
 import { getMediaFile } from "../media/files";
 import { isRemoteLibrarySource } from "../libraries/source";
 import {
@@ -17,11 +16,13 @@ import {
   DEFAULT_HLS_SEGMENT_SECONDS,
   PREFETCH_SEEK_DISTANCE_SEGMENTS,
   type HlsSegmentFormat,
+  effectiveSegmentSeconds,
   hlsSegmentFileExists,
   hlsSegmentIndex,
   hlsSegmentName,
 } from "./hls";
 import { getTranscodePolicy } from "./policy";
+import { lookupVideoFrameRate } from "./probe";
 import { getTranscodeSession, updateActiveTranscodeSessionStatus, updateTranscodeSessionMode } from "./sessions";
 import type { TranscodeBackend } from "./backend";
 export const REQUEST_DRIVEN_SEGMENT_TIMEOUT_MS = 120_000;
@@ -61,18 +62,16 @@ export function requestDrivenSegmentWindow(input: {
   maxSegmentCount: number;
 }): HlsSegmentWindowEntry[] {
   const maxSegmentCount = Math.max(1, Math.floor(input.maxSegmentCount));
-  const fps = input.videoFrameRate ?? 30;
-  const frames = Math.max(1, Math.round(input.segmentSeconds * fps));
-  const effectiveSegmentSeconds = frames / fps;
+  const effectiveSeconds = effectiveSegmentSeconds(input.segmentSeconds, input.videoFrameRate);
   const segments: HlsSegmentWindowEntry[] = [];
 
   for (let offset = 0; offset < maxSegmentCount; offset += 1) {
     const segmentIndex = input.segmentIndex + offset;
-    const segmentStartSeconds = segmentIndex * effectiveSegmentSeconds;
+    const segmentStartSeconds = segmentIndex * effectiveSeconds;
     if (segmentStartSeconds >= input.durationSeconds) break;
 
     const remainingSeconds = input.durationSeconds - segmentStartSeconds;
-    const segmentSeconds = Math.min(effectiveSegmentSeconds, remainingSeconds);
+    const segmentSeconds = Math.min(effectiveSeconds, remainingSeconds);
     if (segmentSeconds <= 0) break;
 
     segments.push({
@@ -158,16 +157,7 @@ async function startHlsEncodeJob(
   if (!file) return false;
   if (!isRemoteLibrarySource(file.source) && !(await deps.isReadableFile(file.path))) return false;
 
-  const db = await getDb();
-  const videoStreamInfo = await db
-    .selectFrom("media_stream_info")
-    .select(["frame_rate", "r_frame_rate"])
-    .where("media_file_id", "=", session.mediaFileId)
-    .where("stream_type", "=", "video")
-    .orderBy("stream_index", "asc")
-    .limit(1)
-    .executeTakeFirst();
-  const videoFrameRate = videoStreamInfo?.frame_rate ?? videoStreamInfo?.r_frame_rate ?? null;
+  const videoFrameRate = await lookupVideoFrameRate(session.mediaFileId);
 
   const encodeAheadSegmentCount = await getEncodeAheadSegmentCount();
   const segmentWindow = requestDrivenSegmentWindow({
@@ -567,20 +557,8 @@ export async function ensureHlsLookaheadForSegment(
   const cacheKey = encodeLockKey(cacheBinding.cacheId, encodeDirectory ?? path.dirname(playlistPath));
   const coordinator = getEncodeCoordinator(cacheKey);
 
-  const db = await getDb();
-  const videoStreamInfo = await db
-    .selectFrom("media_stream_info")
-    .select(["frame_rate", "r_frame_rate"])
-    .where("media_file_id", "=", session.mediaFileId)
-    .where("stream_type", "=", "video")
-    .orderBy("stream_index", "asc")
-    .limit(1)
-    .executeTakeFirst();
-  const videoFrameRate = videoStreamInfo?.frame_rate ?? videoStreamInfo?.r_frame_rate ?? null;
-  const fps = videoFrameRate ?? 30;
-  const frames = Math.max(1, Math.round(DEFAULT_HLS_SEGMENT_SECONDS * fps));
-  const effectiveSegmentSeconds = frames / fps;
-  const lastSegmentIndex = Math.ceil(session.durationSeconds / effectiveSegmentSeconds) - 1;
+  const videoFrameRate = await lookupVideoFrameRate(session.mediaFileId);
+  const lastSegmentIndex = Math.ceil(session.durationSeconds / effectiveSegmentSeconds(DEFAULT_HLS_SEGMENT_SECONDS, videoFrameRate)) - 1;
 
   return coordinator.prefetchAhead({
     sessionId: input.sessionId,

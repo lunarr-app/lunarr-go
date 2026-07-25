@@ -15,6 +15,17 @@ export function resolveEncodeAheadSegmentCount(value: number | null | undefined)
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : ENCODE_AHEAD_SEGMENT_COUNT;
 }
 
+export function framesPerSegment(segmentSeconds: number, videoFrameRate?: number | null) {
+  const fps = videoFrameRate ?? 30;
+  return Math.max(1, Math.round(segmentSeconds * fps));
+}
+
+export function effectiveSegmentSeconds(segmentSeconds: number, videoFrameRate?: number | null) {
+  const frames = framesPerSegment(segmentSeconds, videoFrameRate);
+  const fps = videoFrameRate ?? 30;
+  return frames / fps;
+}
+
 type HlsSegmentPayload = {
   body: Uint8Array;
   mimeType: string;
@@ -499,19 +510,17 @@ export function virtualHlsPlaylist(input: {
     Number.isFinite(input.segmentSeconds) && Number(input.segmentSeconds) > 0
       ? Number(input.segmentSeconds)
       : DEFAULT_HLS_SEGMENT_SECONDS;
-  const fps = input.videoFrameRate ?? 30;
-  const frames = Math.max(1, Math.round(segmentSeconds * fps));
-  const effectiveSegmentSeconds = frames / fps;
+  const effectiveSeconds = effectiveSegmentSeconds(segmentSeconds, input.videoFrameRate);
   const durationSeconds = Math.max(0, Number(input.durationSeconds));
   const startTimeSeconds =
     Number.isFinite(input.startTimeSeconds) && Number(input.startTimeSeconds) > 0 ? Number(input.startTimeSeconds) : 0;
-  const segmentCount = Math.ceil(durationSeconds / effectiveSegmentSeconds);
+  const segmentCount = Math.ceil(durationSeconds / effectiveSeconds);
   const segmentFormat = input.segmentFormat ?? "mpegts";
   const segmentQuery = input.segmentQuery ?? "";
   const lines = [
     "#EXTM3U",
     `#EXT-X-VERSION:${segmentFormat === "fmp4" ? "7" : "3"}`,
-    `#EXT-X-TARGETDURATION:${Math.ceil(effectiveSegmentSeconds)}`,
+    `#EXT-X-TARGETDURATION:${Math.ceil(effectiveSeconds)}`,
     "#EXT-X-PLAYLIST-TYPE:VOD",
     "#EXT-X-MEDIA-SEQUENCE:0",
   ];
@@ -524,7 +533,7 @@ export function virtualHlsPlaylist(input: {
 
   for (let index = 0; index < segmentCount; index += 1) {
     const segmentDuration =
-      index === segmentCount - 1 ? durationSeconds - effectiveSegmentSeconds * index : effectiveSegmentSeconds;
+      index === segmentCount - 1 ? durationSeconds - effectiveSeconds * index : effectiveSeconds;
     lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
     lines.push(`${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}${segmentQuery}`);
   }

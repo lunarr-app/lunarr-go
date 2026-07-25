@@ -10,8 +10,14 @@ import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { appEnv } from "../config/env";
 import { ffmpegPath } from "node-av/ffmpeg";
+import {
+  effectiveSegmentSeconds,
+  framesPerSegment,
+  hlsEventPlaylistHasSegment,
+  resolveEncodeAheadSegmentCount,
+  type HlsSegmentFormat,
+} from "./hls";
 import { encodeEventPlaylistPath, encodeJobId } from "./encode-coordinator";
-import { hlsEventPlaylistHasSegment, resolveEncodeAheadSegmentCount, type HlsSegmentFormat } from "./hls";
 
 const STDERR_MAX_BYTES = 32 * 1024;
 const SEGMENT_POLL_MS = 50;
@@ -142,17 +148,6 @@ function audioMapArg(input: HlsTranscodeInput) {
     return `0:${input.audioStreamIndex}?`;
   }
   return "0:a:0?";
-}
-
-export function framesPerSegment(segmentSeconds: number, videoFrameRate?: number | null) {
-  const fps = videoFrameRate ?? 30;
-  return Math.max(1, Math.round(segmentSeconds * fps));
-}
-
-export function effectiveSegmentSeconds(segmentSeconds: number, videoFrameRate?: number | null) {
-  const frames = framesPerSegment(segmentSeconds, videoFrameRate);
-  const fps = videoFrameRate ?? 30;
-  return frames / fps;
 }
 
 function maxHeightScaleExpression(maxHeight: number | null | undefined): string | null {
