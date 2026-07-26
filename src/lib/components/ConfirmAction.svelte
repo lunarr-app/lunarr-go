@@ -68,10 +68,4 @@
     color: var(--color-subtle);
     line-height: 1.45;
   }
-
-  @media (max-width: 480px) {
-    .form-actions {
-      flex-direction: column-reverse;
-    }
-  }
 </style>
