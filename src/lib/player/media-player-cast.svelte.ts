@@ -9,6 +9,7 @@ import {
   isCastOwnedPlaybackSession,
   markCastOwnedPlaybackSession,
   releaseCastOwnedPlaybackSession,
+  type PlayerControlUiState,
 } from "$lib/playback/controls";
 import { playbackContentTypeForMode } from "$lib/playback/content-type";
 import { connectedCastSession } from "$lib/playback/cast";
@@ -25,8 +26,6 @@ import { playbackTargetHref, streamRelativePlaybackSeconds } from "$lib/playback
 import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
 import { activePlaybackSessionId } from "$lib/playback/session";
 
-type PlayerUiState = "starting" | "playing" | "paused" | "buffering" | "seeking" | "autoplayBlocked" | "error";
-
 type ProgressPayload = {
   mediaFileId: string;
   positionSeconds: number;
@@ -37,8 +36,8 @@ type ProgressPayload = {
 export type MediaPlayerCastDeps = {
   getData: () => PlaybackData;
   getVideo: () => HTMLVideoElement | undefined;
-  getPlayerUiState: () => PlayerUiState;
-  setPlayerUiState: (state: PlayerUiState) => void;
+  getPlayerUiState: () => PlayerControlUiState;
+  setPlayerUiState: (state: PlayerControlUiState) => void;
   getCurrentPlaybackSeconds: () => number;
   setCurrentPlaybackSeconds: (seconds: number) => void;
   getDurationSeconds: () => number | null;

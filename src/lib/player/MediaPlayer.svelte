@@ -63,10 +63,9 @@
     volumeStateForMuteToggle,
     volumeStateForSliderValue,
     type SeekSliderHoverPreview,
+    type PlayerControlUiState,
   } from "$lib/playback/controls";
   import type { PlaybackData } from "$lib/server/playback";
-
-  type PlayerUiState = "starting" | "playing" | "paused" | "buffering" | "seeking" | "autoplayBlocked" | "error";
 
   type SafariVideoElement = HTMLVideoElement & {
     webkitDisplayingFullscreen?: boolean;
@@ -123,7 +122,7 @@
 
   let playerShell: HTMLDivElement | undefined = $state();
   let video: HTMLVideoElement | undefined = $state();
-  let playerUiState = $state<PlayerUiState>("starting");
+  let playerUiState = $state<PlayerControlUiState>("starting");
   let hasStartedPlayback = $state(false);
   let playerControlsVisible = $state(true);
   let playerControlsFocused = $state(false);

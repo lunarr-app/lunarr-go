@@ -4,6 +4,7 @@ import {
   defaultSubtitleTrackId,
   shouldApplyLocalWaitingState,
   shouldAttemptLocalAutoplay,
+  type PlayerControlUiState,
 } from "$lib/playback/controls";
 import { formatHlsError, formatMediaElementError, type HlsPlaybackErrorData } from "$lib/playback/errors";
 import {
@@ -16,13 +17,11 @@ import {
 } from "$lib/playback/seek";
 import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
 
-type PlayerUiState = "starting" | "playing" | "paused" | "buffering" | "seeking" | "autoplayBlocked" | "error";
-
 export type MediaPlayerHlsDeps = {
   getData: () => PlaybackData;
   getVideo: () => HTMLVideoElement | undefined;
-  getPlayerUiState: () => PlayerUiState;
-  setPlayerUiState: (state: PlayerUiState) => void;
+  getPlayerUiState: () => PlayerControlUiState;
+  setPlayerUiState: (state: PlayerControlUiState) => void;
   getCurrentPlaybackSeconds: () => number;
   setCurrentPlaybackSeconds: (seconds: number) => void;
   getDurationSeconds: () => number | null;
@@ -132,7 +131,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
           });
         let repositioning = false;
         let bufferingTimer: number | undefined;
-        const bufferingTimerDebounceMs = 500;
+        const bufferingTimerDebounceMs = 1000;
         const cancelBufferingTimer = () => {
           if (bufferingTimer !== undefined) {
             window.clearTimeout(bufferingTimer);
@@ -358,7 +357,6 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
           deps.setHasPlaybackActivity(true);
           deps.setHasStartedPlayback(true);
           deps.setPlayerUiState("playing");
-          deps.showControls();
         };
         const onPause = () => {
           if (
