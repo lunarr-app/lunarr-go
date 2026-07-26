@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.9.0 - 2026-07-26
+
+### Upgrade Note
+
+- This release adds frame rate columns (`video_frame_rate`, `frame_rate`, `r_frame_rate`) to the database for improved HLS segmentation. For the best experience, go to **Settings > Media probe > Repair** after updating to re-probe your library with the new frame rate data.
+
+### Added
+
+- Frame-based HLS segmentation for exact GOP-to-segment alignment.
+- Replaced movie-lookup parser with guessit-js for more accurate title resolution.
+- Replaced custom tv-parser with guessit-js, including multi-episode filename support (S01E01E02).
+- Added test coverage for guessit array title handling from full paths.
+
+### Changed
+
+- Default unknown video frame rate to 23.976 instead of 30.
+- Pass container format hint to FFmpeg for remote playback.
+- Pass hwaccel args for AMF to enable zero-copy decode pipeline.
+- Regenerate missing HLS playlists from session metadata, passing segmentFormat from env var.
+- Removed virtual playlist support, always read from disk.
+- Updated dependencies.
+
+### Fixed
+
+- Fixed forced column layout on confirm modal buttons at 480px.
+- Fixed player controls staying visible over the buffering overlay during transient states (buffering, starting, seeking), hiding controls by default behind the overlay instead.
+- Fixed buffering overlay flashing on brief buffering events by debouncing the overlay with a 500ms threshold.
+- Fixed HLS segment content-length from the served body.
+- Fixed duplicate cache-binding query in HLS lookahead.
+- Fixed media stream info replace to use a transaction.
+- Fixed resolveFfmpegPath to return null when no FFmpeg is executable.
+- Fixed enough bytes sniffed to detect MPEG-TS for remote files.
+- Fixed fMP4 HLS segment default and init.mp4 naming mismatch.
+- Fixed HLS segment pruning from both cache and session directories.
+- Fixed prefetchAhead to generate all ahead segments instead of stopping after the first.
+- Fixed acquirePlaybackCache stale-check and upsert race with a transaction.
+- Fixed prefer fuller alternative title over generic episode_details for episode names.
+- Fixed normalize array movie titles and drop noise tokens to avoid crash.
+- Fixed combine title and alternative_title in movie lookup to preserve 'Title - Subtitle' names.
+- Fixed prefer directory context for TV show title and pass root-relative path to guessit.
+- Fixed filter guessit noise from alternative_title and use episode_details.
+- Fixed handle guessit returning title as array for full paths.
+- Fixed bundle VAAPI/QSV driver packages in the Docker image ([#162](https://github.com/lunarr-app/lunarr-go/pull/162)).
+- Fixed reduce download progress verbosity to update only on percentage change.
+- Fixed update Tears of Steel download URL to working Blender Foundation server.
+- Fixed chunk unbounded IN() deletes to avoid SQLite variable limit.
+
+### Refactored
+
+- Inlined thin wrappers and deduplicated normalizedStartTimeSeconds.
+- Deduplicated effectiveSegmentSeconds and video frame rate lookup.
+- Reused hlsSegmentName in prefetchAhead.
+- Simplified tv-parser and strip trailing year from directory titles.
+
 ## 0.8.0 - 2026-07-20
 
 ### Added
