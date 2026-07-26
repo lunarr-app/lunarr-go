@@ -12,6 +12,7 @@ import {
 } from "$lib/server/transcoding/hls";
 import { lookupVideoFrameRate } from "$lib/server/transcoding/probe";
 import { touchTranscodeSessionHeartbeat } from "$lib/server/transcoding/sessions";
+import { requestDrivenHlsSegmentFormat } from "$lib/server/transcoding/playback-lifecycle";
 import { apiError } from "$lib/server/api/json";
 import {
   currentPlayableHlsArtifact,
@@ -34,11 +35,13 @@ async function regeneratePlaylistFromMetadata(
 ): Promise<boolean> {
   if (!artifact.durationSeconds || artifact.durationSeconds <= 0) return false;
   const videoFrameRate = await lookupVideoFrameRate(artifact.mediaFileId);
+  const segmentFormat = requestDrivenHlsSegmentFormat();
   await ensureHlsPlaylistOnDisk({
     playlistPath: artifact.playlistPath,
     durationSeconds: artifact.durationSeconds,
     startTimeSeconds: artifact.startTimeSeconds,
     videoFrameRate,
+    segmentFormat,
     signal,
   });
   return true;
