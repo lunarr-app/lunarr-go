@@ -131,6 +131,14 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
             streamStartSeconds: playback.streamStartSeconds,
           });
         let repositioning = false;
+        let bufferingTimer: ReturnType<typeof setTimeout> | undefined;
+        const bufferingTimerDebounceMs = 500;
+        const cancelBufferingTimer = () => {
+          if (bufferingTimer !== undefined) {
+            window.clearTimeout(bufferingTimer);
+            bufferingTimer = undefined;
+          }
+        };
         const streamUrl = playback.streamUrl;
         const currentPageHref = () => `${window.location.pathname}${window.location.search}${window.location.hash}`;
         const stopHlsTransport = () => {
@@ -334,6 +342,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
         };
         const onCanPlay = () => {
           if (deps.castControlsPlayback()) return;
+          cancelBufferingTimer();
           clearTransientOverlayIfPlaying();
           if (!deps.getHasStartedPlayback() && player.paused && deps.getPlayerUiState() !== "autoplayBlocked") {
             void attemptAutoplay({ retryAfterReady: true });
@@ -345,6 +354,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
         };
         const onPlaying = () => {
           if (deps.castControlsPlayback()) return;
+          cancelBufferingTimer();
           deps.setHasPlaybackActivity(true);
           deps.setHasStartedPlayback(true);
           deps.setPlayerUiState("playing");
@@ -371,7 +381,15 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
             })
           )
             return;
-          deps.setPlayerUiState(player.seeking ? "seeking" : "buffering");
+          if (player.seeking) {
+            deps.setPlayerUiState("seeking");
+            return;
+          }
+          cancelBufferingTimer();
+          bufferingTimer = window.setTimeout(() => {
+            bufferingTimer = undefined;
+            deps.setPlayerUiState("buffering");
+          }, bufferingTimerDebounceMs);
         };
         const onSeeking = () => {
           if (deps.castControlsPlayback()) return;
@@ -433,6 +451,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
         document.addEventListener("visibilitychange", onVisibilityChange);
 
         cleanup = () => {
+          cancelBufferingTimer();
           player.removeEventListener("loadedmetadata", prepareInitialPlayback);
           player.removeEventListener("loadstart", onLoadStart);
           player.removeEventListener("canplay", onCanPlay);
