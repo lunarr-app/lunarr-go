@@ -1,4 +1,4 @@
-import { readdir, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const PLAYLIST_MIME_TYPE = "application/vnd.apple.mpegurl";
@@ -363,23 +363,8 @@ async function hlsPlaylistBody(playlistPath: string, options: HlsReadOptions = {
 }
 
 export async function hlsPlaylistHeadResponse(playlistPath: string, options: HlsReadOptions = {}) {
-  let details;
-  try {
-    details = await stat(playlistPath);
-  } catch {
-    return new Response(null, { status: 404 });
-  }
-  if (!details.isFile() || details.size <= 0) {
-    return new Response(null, { status: 404 });
-  }
-
-  let body;
-  try {
-    body = await hlsPlaylistBody(playlistPath, options);
-  } catch {
-    return new Response(null, { status: 404 });
-  }
-  if (body.length === 0) return new Response(null, { status: 404 });
+  const body = await hlsPlaylistBody(playlistPath, options);
+  if (body.length === 0) throw new Error("Empty playlist");
 
   await waitForMaybeDelayedRead(headResponseDelayForTests, options.signal);
   return new Response(null, {
@@ -398,6 +383,27 @@ export async function hlsPlaylistFileExists(playlistPath: string) {
   } catch {
     return false;
   }
+}
+
+export async function ensureHlsPlaylistOnDisk(input: {
+  playlistPath: string;
+  durationSeconds: number;
+  startTimeSeconds?: number | null;
+  videoFrameRate?: number | null;
+  segmentFormat?: HlsSegmentFormat;
+  signal?: AbortSignal;
+}): Promise<void> {
+  if (await hlsPlaylistFileExists(input.playlistPath)) return;
+
+  const content = hlsPlaylist({
+    durationSeconds: input.durationSeconds,
+    startTimeSeconds: input.startTimeSeconds,
+    videoFrameRate: input.videoFrameRate,
+    segmentFormat: input.segmentFormat,
+  });
+
+  await mkdir(path.dirname(input.playlistPath), { recursive: true });
+  await writeFile(input.playlistPath, content, "utf8");
 }
 
 export function hlsPlaylistType(playlist: string) {

@@ -976,10 +976,95 @@ describe.serial("playback-session HLS routes", () => {
     expect(job.last_heartbeat_at).toBe(oldHeartbeat);
   });
 
-  test("does not refresh virtual playlist heartbeat when temporary artifacts are missing", async () => {
+  test("regenerates a missing playlist from session metadata for GET requests", async () => {
+    const missingPlaylistPath = path.join(tempDir, "missing-playlist", "master.m3u8");
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: missingPlaylistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+    await db
+      .updateTable("playback_session")
+      .set({ start_time_seconds: 5, pipeline: "request_driven" })
+      .where("id", "=", sessionId)
+      .execute();
+
+    expect(await exists(missingPlaylistPath)).toBe(false);
+
+    const response = await getPlaylist({
+      params: { sessionId },
+      locals: { user: { id: "user-1" } },
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+    } as never);
+
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("#EXT-X-PLAYLIST-TYPE:VOD");
+    expect(body).toContain("#EXT-X-START:TIME-OFFSET=5.000");
+    expect(body).toContain("#EXTINF:");
+    expect(body).toContain("segments/segment-00000.ts");
+    expect(body).toContain("#EXT-X-ENDLIST");
+    expect(await exists(missingPlaylistPath)).toBe(true);
+    const onDisk = (await Bun.file(missingPlaylistPath).text()).trim();
+    expect(onDisk).toBe(body.trim());
+  });
+
+  test("regenerates a missing playlist from session metadata for HEAD requests", async () => {
+    const missingPlaylistPath = path.join(tempDir, "missing-playlist-head", "master.m3u8");
+    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: missingPlaylistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+    await db
+      .updateTable("playback_session")
+      .set({ start_time_seconds: 5, pipeline: "request_driven" })
+      .where("id", "=", sessionId)
+      .execute();
+
+    const head = await headPlaylist({
+      params: { sessionId },
+      locals: { user: { id: "user-1" } },
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+    } as never);
+
+    expect(head.status).toBe(200);
+    expect(head.headers.get("content-type")).toContain("application/vnd.apple.mpegurl");
+    expect(await exists(missingPlaylistPath)).toBe(true);
+  });
+
+  test("returns 404 when playlist is missing and duration is unknown", async () => {
+    const missingPlaylistPath = path.join(tempDir, "missing-no-duration", "master.m3u8");
+    await registerTranscodeHlsArtifact({
+      sessionId,
+      mediaFileId: "file-1",
+      path: missingPlaylistPath,
+      mimeType: "application/vnd.apple.mpegurl",
+    });
+    await updateTranscodeSessionStatus(sessionId, "running");
+
+    const response = await getPlaylist({
+      params: { sessionId },
+      locals: { user: { id: "user-1" } },
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
+    } as never);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({
+      detail: "Playback playlist was not found.",
+    });
+    expect(await exists(missingPlaylistPath)).toBe(false);
+  });
+
+  test("does not refresh virtual playlist heartbeat when temporary artifacts are missing and duration is unknown", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
     const missingPlaylistPath = path.join(tempDir, "missing-virtual", "master.m3u8");
-    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -996,12 +1081,12 @@ describe.serial("playback-session HLS routes", () => {
     const response = await getPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
     const head = await headPlaylist({
       params: { sessionId },
       locals: { user: { id: "user-1" } },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(404);
@@ -1020,7 +1105,6 @@ describe.serial("playback-session HLS routes", () => {
   test("does not refresh virtual playlist heartbeat after the request is cancelled during heartbeat refresh", async () => {
     const oldHeartbeat = "2000-01-01T00:00:00.000Z";
     const requestController = new AbortController();
-    await db.updateTable("media_file").set({ duration_seconds: 13 }).where("id", "=", "file-1").execute();
     await registerTranscodeHlsArtifact({
       sessionId,
       mediaFileId: "file-1",
@@ -1041,7 +1125,7 @@ describe.serial("playback-session HLS routes", () => {
       params: { sessionId },
       locals: { user: { id: "user-1" } },
       request: { signal: requestController.signal },
-      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8?playlist=virtual`),
+      url: new URL(`http://localhost/media/playback-sessions/${sessionId}/master.m3u8`),
     } as never);
 
     expect(response.status).toBe(404);

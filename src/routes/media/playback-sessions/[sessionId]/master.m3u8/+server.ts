@@ -6,9 +6,11 @@ import {
   withSignedPlaybackHeaders,
 } from "$lib/server/playback/signed-token";
 import {
+  ensureHlsPlaylistOnDisk,
   hlsPlaylistHeadResponse,
   hlsPlaylistResponse,
 } from "$lib/server/transcoding/hls";
+import { lookupVideoFrameRate } from "$lib/server/transcoding/probe";
 import { touchTranscodeSessionHeartbeat } from "$lib/server/transcoding/sessions";
 import { apiError } from "$lib/server/api/json";
 import {
@@ -24,6 +26,22 @@ function cancelledPlaylistResponse() {
 
 function cancelledPlaylistHeadResponse() {
   return new Response(null, { status: 404 });
+}
+
+async function regeneratePlaylistFromMetadata(
+  artifact: { playlistPath: string; durationSeconds: number | null; startTimeSeconds: number; mediaFileId: string },
+  signal?: AbortSignal,
+): Promise<boolean> {
+  if (!artifact.durationSeconds || artifact.durationSeconds <= 0) return false;
+  const videoFrameRate = await lookupVideoFrameRate(artifact.mediaFileId);
+  await ensureHlsPlaylistOnDisk({
+    playlistPath: artifact.playlistPath,
+    durationSeconds: artifact.durationSeconds,
+    startTimeSeconds: artifact.startTimeSeconds,
+    videoFrameRate,
+    signal,
+  });
+  return true;
 }
 
 export const GET: RequestHandler = async ({ params, locals, url, request }) => {
@@ -70,6 +88,20 @@ export const GET: RequestHandler = async ({ params, locals, url, request }) => {
     return withSignedPlaybackHeaders(response, auth.signed);
   } catch {
     if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
+
+    try {
+      if (await regeneratePlaylistFromMetadata(artifact, request?.signal)) {
+        if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
+        const response = await hlsPlaylistResponse(artifact.playlistPath, {
+          signal: request?.signal,
+          segmentQuery: signedPlaybackSegmentQuery(token),
+        });
+        return withSignedPlaybackHeaders(response, auth.signed);
+      }
+    } catch {
+      if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistResponse(), auth.signed);
+    }
+
     return withSignedPlaybackHeaders(apiError("Playback playlist was not found.", 404), auth.signed);
   }
 };
@@ -85,27 +117,39 @@ export const HEAD: RequestHandler = async ({ params, locals, url, request }) => 
   const artifact = await currentPlayableHlsArtifact(params.sessionId, auth.userId);
   if (artifact instanceof Response) return withSignedPlaybackHeaders(artifact, auth.signed);
 
-  let response: Response;
   try {
-    response = await hlsPlaylistHeadResponse(artifact.playlistPath, {
+    let response = await hlsPlaylistHeadResponse(artifact.playlistPath, {
       signal: request?.signal,
     });
+    if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistHeadResponse(), auth.signed);
+    if (response.ok) {
+      const current = await currentUnchangedPlayableHlsArtifact({
+        sessionId: params.sessionId,
+        userId: auth.userId,
+        playlistPath: artifact.playlistPath,
+        artifact: "playlist",
+      });
+      if (current instanceof Response) return withSignedPlaybackHeaders(current, auth.signed);
+      if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistHeadResponse(), auth.signed);
+    }
+    return withSignedPlaybackHeaders(response, auth.signed);
   } catch {
     if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistHeadResponse(), auth.signed);
+
+    try {
+      if (await regeneratePlaylistFromMetadata(artifact, request?.signal)) {
+        if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistHeadResponse(), auth.signed);
+        const response = await hlsPlaylistHeadResponse(artifact.playlistPath, {
+          signal: request?.signal,
+        });
+        return withSignedPlaybackHeaders(response, auth.signed);
+      }
+    } catch {
+      if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistHeadResponse(), auth.signed);
+    }
+
     return withSignedPlaybackHeaders(new Response(null, { status: 404 }), auth.signed);
   }
-  if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistHeadResponse(), auth.signed);
-  if (response.ok) {
-    const current = await currentUnchangedPlayableHlsArtifact({
-      sessionId: params.sessionId,
-      userId: auth.userId,
-      playlistPath: artifact.playlistPath,
-      artifact: "playlist",
-    });
-    if (current instanceof Response) return withSignedPlaybackHeaders(current, auth.signed);
-    if (request?.signal?.aborted) return withSignedPlaybackHeaders(cancelledPlaylistHeadResponse(), auth.signed);
-  }
-  return withSignedPlaybackHeaders(response, auth.signed);
 };
 
 export const OPTIONS: RequestHandler = async () => signedPlaybackOptionsResponse();
