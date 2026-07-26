@@ -498,7 +498,7 @@ export async function hlsPlaylistSegmentFormat(
   }
 }
 
-export function virtualHlsPlaylist(input: {
+export function hlsPlaylist(input: {
   durationSeconds: number;
   startTimeSeconds?: number | null;
   segmentSeconds?: number | null;
@@ -540,31 +540,6 @@ export function virtualHlsPlaylist(input: {
 
   lines.push("#EXT-X-ENDLIST");
   return `${lines.join("\n")}\n`;
-}
-
-export function virtualHlsPlaylistResponse(input: {
-  durationSeconds: number;
-  startTimeSeconds?: number | null;
-  segmentSeconds?: number | null;
-  videoFrameRate?: number | null;
-  segmentFormat?: HlsSegmentFormat;
-  segmentQuery?: string | null;
-}) {
-  return new Response(virtualHlsPlaylist(input), {
-    headers: {
-      "content-type": `${PLAYLIST_MIME_TYPE}; charset=utf-8`,
-      "cache-control": "no-store",
-    },
-  });
-}
-
-export function virtualHlsPlaylistHeadResponse() {
-  return new Response(null, {
-    headers: {
-      "content-type": `${PLAYLIST_MIME_TYPE}; charset=utf-8`,
-      "cache-control": "no-store",
-    },
-  });
 }
 
 export async function hlsSegmentResponse(playlistPath: string, segment: string, options: HlsReadOptions = {}) {

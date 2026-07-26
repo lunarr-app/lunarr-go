@@ -11,14 +11,14 @@ import {
   hlsSegmentResponse,
   resolveEncodeAheadSegmentCount,
   rewriteHlsPlaylistUris,
-  virtualHlsPlaylist,
+  hlsPlaylist,
 } from "./hls";
 
 describe("HLS helpers", () => {
   test("uses MPEG-TS segment names and playlist version by default", () => {
     expect(hlsSegmentName(3)).toBe("segment-00003.ts");
     expect(
-      virtualHlsPlaylist({
+      hlsPlaylist({
         durationSeconds: 20,
         segmentSeconds: 16,
         videoFrameRate: 30,
@@ -43,7 +43,7 @@ describe("HLS helpers", () => {
   test("can build fMP4/CMAF-style virtual playlists", () => {
     expect(hlsSegmentName(3, "fmp4")).toBe("segment-00003.m4s");
     expect(
-      virtualHlsPlaylist({
+      hlsPlaylist({
         durationSeconds: 20,
         segmentSeconds: 16,
         videoFrameRate: 30,
@@ -120,7 +120,7 @@ describe("HLS helpers", () => {
   });
 
   test("does not treat virtual VOD playlists as FFmpeg event readiness", () => {
-    const playlist = virtualHlsPlaylist({
+    const playlist = hlsPlaylist({
       durationSeconds: 32,
       segmentSeconds: 16,
       videoFrameRate: 30,

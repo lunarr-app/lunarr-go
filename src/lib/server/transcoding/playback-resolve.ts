@@ -20,7 +20,7 @@ import {
   type HlsSegmentFormat,
   effectiveSegmentSeconds,
   hlsSegmentName,
-  virtualHlsPlaylist,
+  hlsPlaylist,
 } from "./hls";
 import { TRANSCODING_DISABLED_MESSAGE } from "./hls-segment-jobs";
 import type { TranscodeMode } from "../db/schema/streaming";
@@ -122,7 +122,7 @@ function playbackSessionStreamUrl(sessionId: string) {
   return `/media/playback-sessions/${sessionId}/master.m3u8`;
 }
 
-function virtualHlsPlaylistPath(sessionId: string) {
+function hlsPlaylistPath(sessionId: string) {
   return path.join(currentDatabasePaths().dataDir, "playback-sessions", sessionId, "master.m3u8");
 }
 
@@ -331,11 +331,11 @@ async function startRequestDrivenHlsSession(input: {
     throw new TranscodeStartupAbortedError(PLAYBACK_SESSION_INACTIVE_MESSAGE);
   }
 
-  const playlistPath = virtualHlsPlaylistPath(input.sessionId);
+  const playlistPath = hlsPlaylistPath(input.sessionId);
   await mkdir(path.dirname(playlistPath), { recursive: true });
   await writeFile(
     playlistPath,
-    virtualHlsPlaylist({
+    hlsPlaylist({
       durationSeconds: input.durationSeconds,
       startTimeSeconds: input.startTimeSeconds,
       segmentSeconds: DEFAULT_HLS_SEGMENT_SECONDS,
