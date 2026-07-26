@@ -60,8 +60,6 @@ class FfmpegBackendError extends Error {}
 
 type KillableProcess = Pick<ChildProcess, "exitCode" | "signalCode" | "kill">;
 
-
-
 function canExecuteFfmpeg(binaryPath: string) {
   const result = spawnSync(binaryPath, ["-version"], { stdio: "ignore" });
   return !result.error && result.status === 0;
@@ -247,7 +245,12 @@ function hardwareVideoArgs(input: {
   }
 }
 
-function softwareVideoArgs(input: { gopSize: number; effectiveSegmentSeconds: number; crf: number; maxHeight?: number | null }) {
+function softwareVideoArgs(input: {
+  gopSize: number;
+  effectiveSegmentSeconds: number;
+  crf: number;
+  maxHeight?: number | null;
+}) {
   return [
     ...scaleFilterArg("scale", input.maxHeight),
     "-c:v",
@@ -345,7 +348,11 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
     args.push("-start_number", String(startSegmentNumber));
   }
   const segmentExtension = segmentFormat === "fmp4" ? "m4s" : "ts";
-  args.push("-hls_segment_filename", path.join(input.artifactDirectory, `segment-%05d.${segmentExtension}`), playlistPath);
+  args.push(
+    "-hls_segment_filename",
+    path.join(input.artifactDirectory, `segment-%05d.${segmentExtension}`),
+    playlistPath,
+  );
 
   return args;
 }

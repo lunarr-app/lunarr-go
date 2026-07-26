@@ -561,7 +561,10 @@ export function shouldAutoHideControls(input: {
   controlsHovered: boolean;
 }) {
   return (
-    (input.uiState === "playing" || input.uiState === "buffering" || input.uiState === "starting" || input.uiState === "seeking") &&
+    (input.uiState === "playing" ||
+      input.uiState === "buffering" ||
+      input.uiState === "starting" ||
+      input.uiState === "seeking") &&
     input.controlsVisible &&
     !input.casting &&
     !input.subtitleMenuOpen &&

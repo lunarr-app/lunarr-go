@@ -538,8 +538,7 @@ export function hlsPlaylist(input: {
   }
 
   for (let index = 0; index < segmentCount; index += 1) {
-    const segmentDuration =
-      index === segmentCount - 1 ? durationSeconds - effectiveSeconds * index : effectiveSeconds;
+    const segmentDuration = index === segmentCount - 1 ? durationSeconds - effectiveSeconds * index : effectiveSeconds;
     lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
     lines.push(`${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}${segmentQuery}`);
   }

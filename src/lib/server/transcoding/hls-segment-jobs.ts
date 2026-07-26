@@ -558,7 +558,8 @@ export async function ensureHlsLookaheadForSegment(
   const coordinator = getEncodeCoordinator(cacheKey);
 
   const videoFrameRate = await lookupVideoFrameRate(session.mediaFileId);
-  const lastSegmentIndex = Math.ceil(session.durationSeconds / effectiveSegmentSeconds(DEFAULT_HLS_SEGMENT_SECONDS, videoFrameRate)) - 1;
+  const lastSegmentIndex =
+    Math.ceil(session.durationSeconds / effectiveSegmentSeconds(DEFAULT_HLS_SEGMENT_SECONDS, videoFrameRate)) - 1;
 
   return coordinator.prefetchAhead({
     sessionId: input.sessionId,
