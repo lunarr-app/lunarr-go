@@ -386,6 +386,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
           cancelBufferingTimer();
           bufferingTimer = window.setTimeout(() => {
             bufferingTimer = undefined;
+            if (player.paused || player.ended || player.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return;
             deps.setPlayerUiState("buffering");
           }, bufferingTimerDebounceMs);
         };
