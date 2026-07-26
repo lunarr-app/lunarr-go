@@ -482,7 +482,7 @@ export function shouldShowCustomControls(input: {
 }) {
   if (input.controlsFocused || input.controlsHovered) return true;
   if (input.casting || input.subtitleMenuOpen) return true;
-  if (input.uiState !== "playing") return true;
+  if (input.uiState === "paused" || input.uiState === "error" || input.uiState === "autoplayBlocked") return true;
   return input.controlsVisible;
 }
 
@@ -561,7 +561,7 @@ export function shouldAutoHideControls(input: {
   controlsHovered: boolean;
 }) {
   return (
-    input.uiState === "playing" &&
+    (input.uiState === "playing" || input.uiState === "buffering" || input.uiState === "starting" || input.uiState === "seeking") &&
     input.controlsVisible &&
     !input.casting &&
     !input.subtitleMenuOpen &&

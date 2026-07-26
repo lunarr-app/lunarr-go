@@ -844,7 +844,7 @@ describe("custom player controls", () => {
     ).toBe("unavailable");
   });
 
-  test("keeps controls visible for non-playing states and casting", () => {
+  test("keeps controls visible for interaction-needed states and hides during transient states", () => {
     expect(
       shouldShowCustomControls({
         controlsVisible: false,
@@ -905,6 +905,36 @@ describe("custom player controls", () => {
         controlsHovered: true,
       }),
     ).toBe(true);
+    expect(
+      shouldShowCustomControls({
+        controlsVisible: false,
+        uiState: "buffering",
+        casting: false,
+        subtitleMenuOpen: false,
+        controlsFocused: false,
+        controlsHovered: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldShowCustomControls({
+        controlsVisible: false,
+        uiState: "starting",
+        casting: false,
+        subtitleMenuOpen: false,
+        controlsFocused: false,
+        controlsHovered: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldShowCustomControls({
+        controlsVisible: false,
+        uiState: "seeking",
+        casting: false,
+        subtitleMenuOpen: false,
+        controlsFocused: false,
+        controlsHovered: false,
+      }),
+    ).toBe(false);
   });
 
   test("throttles visible timeline ui syncs to one hertz", () => {
@@ -1017,10 +1047,40 @@ describe("custom player controls", () => {
     ).toBe(true);
   });
 
-  test("auto-hides only during ordinary unfocused local playback", () => {
+  test("auto-hides during playing and transient states, but not during interaction-needed states", () => {
     expect(
       shouldAutoHideControls({
         uiState: "playing",
+        controlsVisible: true,
+        casting: false,
+        subtitleMenuOpen: false,
+        controlsFocused: false,
+        controlsHovered: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldAutoHideControls({
+        uiState: "buffering",
+        controlsVisible: true,
+        casting: false,
+        subtitleMenuOpen: false,
+        controlsFocused: false,
+        controlsHovered: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldAutoHideControls({
+        uiState: "starting",
+        controlsVisible: true,
+        casting: false,
+        subtitleMenuOpen: false,
+        controlsFocused: false,
+        controlsHovered: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldAutoHideControls({
+        uiState: "seeking",
         controlsVisible: true,
         casting: false,
         subtitleMenuOpen: false,
