@@ -131,7 +131,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
             streamStartSeconds: playback.streamStartSeconds,
           });
         let repositioning = false;
-        let bufferingTimer: ReturnType<typeof setTimeout> | undefined;
+        let bufferingTimer: number | undefined;
         const bufferingTimerDebounceMs = 500;
         const cancelBufferingTimer = () => {
           if (bufferingTimer !== undefined) {
