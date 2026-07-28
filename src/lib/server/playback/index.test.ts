@@ -19,6 +19,7 @@ import {
 import {
   setTranscodingEnabled,
   setUserPlaybackPreference,
+  setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
 } from "../transcoding/policy";
 import {
@@ -571,6 +572,156 @@ describe("getPlaybackDecision", () => {
       playbackSessionId: null,
       streamUrl: "/media/files/remux-file/stream",
     });
+  });
+
+  async function insertDualAudioFile(id: string) {
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+    await db
+      .insertInto("media_file")
+      .values({
+        id,
+        library_id: "library-1",
+        media_item_id: "movie-1",
+        path: path.join(tempDir, `${id}.mkv`),
+        basename: `${id}.mkv`,
+        extension: ".mkv",
+        size_bytes: 60,
+        mtime_ms: nowMs,
+        duration_seconds: 300,
+        video_codec: "h264",
+        audio_codec: "dts",
+        container: "matroska",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    await db
+      .insertInto("media_stream_info")
+      .values([
+        {
+          id: `${id}-video`,
+          media_file_id: id,
+          stream_index: 0,
+          stream_type: "video",
+          codec_name: "h264",
+          codec_long_name: null,
+          language: null,
+          title: null,
+          width: 1920,
+          height: 1080,
+          channels: null,
+          sample_rate: null,
+          duration_seconds: null,
+          bit_rate: null,
+          frame_rate: 30,
+          r_frame_rate: 30,
+          nb_frames: null,
+          raw_json: null,
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: `${id}-audio-jpn`,
+          media_file_id: id,
+          stream_index: 1,
+          stream_type: "audio",
+          codec_name: "dts",
+          codec_long_name: null,
+          language: "jpn",
+          title: null,
+          width: null,
+          height: null,
+          channels: 6,
+          sample_rate: 48000,
+          duration_seconds: null,
+          bit_rate: 1536000,
+          frame_rate: null,
+          r_frame_rate: null,
+          nb_frames: null,
+          raw_json: null,
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: `${id}-audio-eng`,
+          media_file_id: id,
+          stream_index: 2,
+          stream_type: "audio",
+          codec_name: "aac",
+          codec_long_name: null,
+          language: "eng",
+          title: null,
+          width: null,
+          height: null,
+          channels: 2,
+          sample_rate: 48000,
+          duration_seconds: null,
+          bit_rate: 192000,
+          frame_rate: null,
+          r_frame_rate: null,
+          nb_frames: null,
+          raw_json: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .execute();
+    await writeFile(path.join(tempDir, `${id}.mkv`), "fixture");
+  }
+
+  function setSegmentGeneratingBackendForTests() {
+    setTranscodeBackendForTests({
+      async generateHlsSegmentWindow(input) {
+        return completedWindowGeneration(input);
+      },
+      async cancel() {
+        return;
+      },
+    });
+  }
+
+  test("decides remux for a dual-audio file when the preferred language track is copy-compatible", async () => {
+    await insertDualAudioFile("dual-audio-file");
+    setSegmentGeneratingBackendForTests();
+    await setUserPreferredAudioLanguage("user-1", "eng");
+
+    const decision = await getPlaybackDecision("movie-1", "dual-audio-file", "user-1");
+
+    expect(decision?.mode).toBe("remux");
+    expect(decision?.modeDecision).toEqual({ mode: "remux", reason: "container_unsupported" });
+  });
+
+  test("decides transcode for a dual-audio file when the preferred language track needs re-encoding", async () => {
+    await insertDualAudioFile("dual-audio-file");
+    setSegmentGeneratingBackendForTests();
+    await setUserPreferredAudioLanguage("user-1", "jpn");
+
+    const decision = await getPlaybackDecision("movie-1", "dual-audio-file", "user-1");
+
+    expect(decision?.mode).toBe("transcode");
+    expect(decision?.modeDecision).toEqual({ mode: "transcode", reason: "direct_unsupported" });
+  });
+
+  test("decides based on the first audio track when no preferred language is set", async () => {
+    await insertDualAudioFile("dual-audio-file");
+    setSegmentGeneratingBackendForTests();
+
+    const decision = await getPlaybackDecision("movie-1", "dual-audio-file", "user-1");
+
+    expect(decision?.mode).toBe("transcode");
+    expect(decision?.modeDecision).toEqual({ mode: "transcode", reason: "direct_unsupported" });
+  });
+
+  test("falls back to the first audio track when the preferred language has no matching stream", async () => {
+    await insertDualAudioFile("dual-audio-file");
+    setSegmentGeneratingBackendForTests();
+    await setUserPreferredAudioLanguage("user-1", "fra");
+
+    const decision = await getPlaybackDecision("movie-1", "dual-audio-file", "user-1");
+
+    expect(decision?.mode).toBe("transcode");
+    expect(decision?.modeDecision).toEqual({ mode: "transcode", reason: "direct_unsupported" });
   });
 
   test("forces HLS for native playback when transcode is requested", async () => {

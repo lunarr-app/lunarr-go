@@ -246,7 +246,7 @@ export function isRemuxCompatible(
   return isHlsRemuxCompatible(input, clientCapabilities, hlsSegmentFormat, target);
 }
 
-export function isHlsRemuxCompatible(
+function isHlsRemuxCompatible(
   input: MediaCapabilityInput,
   clientCapabilities?: Partial<ClientPlaybackCapabilities> | null,
   hlsSegmentFormat: HlsSegmentFormat = "mpegts",

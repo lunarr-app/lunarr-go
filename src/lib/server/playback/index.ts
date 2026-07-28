@@ -161,6 +161,26 @@ export function isRewatchFromStart(positionSeconds: number, durationSeconds: num
   return positionSeconds <= REWATCH_MAX_START_SECONDS;
 }
 
+async function resolveDecisionAudioCodec(
+  mediaFileId: string,
+  fallbackAudioCodec: string | null,
+  preferredAudioLanguage: string | null,
+): Promise<string | null> {
+  if (!preferredAudioLanguage) return fallbackAudioCodec;
+  const db = await getDb();
+  const audioStreams = await db
+    .selectFrom("media_stream_info")
+    .select(["codec_name", "language"])
+    .where("media_file_id", "=", mediaFileId)
+    .where("stream_type", "=", "audio")
+    .orderBy("stream_index", "asc")
+    .execute();
+  const preferredStream = audioStreams.find(
+    (stream) => normalizePreferredLanguage(stream.language) === preferredAudioLanguage,
+  );
+  return preferredStream?.codec_name ?? fallbackAudioCodec;
+}
+
 export async function getPlaybackDecision(
   mediaItemId: string,
   mediaFileId?: string | null,
@@ -180,11 +200,16 @@ export async function getPlaybackDecision(
     : await getFirstPlayableFile(mediaItemId, effectiveUserId);
   const policy = await getTranscodePolicy(userId);
   if (!file) return null;
+  const decisionAudioCodec = await resolveDecisionAudioCodec(
+    file.id,
+    file.audio_codec,
+    normalizePreferredLanguage(policy.preferredAudioLanguage),
+  );
   const mediaCapabilities = {
     extension: file.extension,
     container: file.container,
     videoCodec: file.video_codec,
-    audioCodec: file.audio_codec,
+    audioCodec: decisionAudioCodec,
   };
   const hlsSegmentFormat = requestDrivenHlsSegmentFormat({
     clientCapabilities: options.clientCapabilities,
