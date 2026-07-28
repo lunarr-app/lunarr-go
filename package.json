@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@better-auth/api-key": "1.6.25",
-    "@lucide/svelte": "1.26.0",
+    "@lucide/svelte": "1.27.0",
     "better-auth": "1.6.25",
     "chokidar": "5.0.0",
     "guessit-js": "4.0.0",
