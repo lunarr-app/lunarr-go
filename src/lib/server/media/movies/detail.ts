@@ -1,6 +1,7 @@
 import { tmdbImageUrl } from "$lib/media/images";
 import { getDb } from "../../db";
 import { accessibleLibrarySql } from "../catalog";
+import { fetchAudioTracksByFileId } from "../files";
 import { isInWatchlist } from "../watchlist";
 
 const MOVIE_DETAIL_SELECT = [
@@ -102,13 +103,17 @@ async function fetchAccessibleMovieDetail(id: string, userId: string) {
   if (files.length === 0) return null;
 
   const { poster_path: posterPath, backdrop_path: backdropPath, ...movie } = movieRow;
-  const [progress, inWatchlist] = await Promise.all([fetchMovieProgress(id, userId), isInWatchlist(userId, id)]);
+  const [progress, inWatchlist, audioTracksByFile] = await Promise.all([
+    fetchMovieProgress(id, userId),
+    isInWatchlist(userId, id),
+    fetchAudioTracksByFileId(files.map((file) => file.id)),
+  ]);
 
   return {
     movie,
     posterPath,
     backdropPath,
-    files,
+    files: files.map((file) => ({ ...file, audio_tracks: audioTracksByFile[file.id] ?? [] })),
     progress,
     inWatchlist,
   };

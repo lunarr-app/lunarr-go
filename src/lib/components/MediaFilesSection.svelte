@@ -18,6 +18,11 @@
     audio_sample_rate: number | null;
     audio_language: string | null;
     audio_bit_rate: number | null;
+    audio_tracks?: Array<{
+      language: string | null;
+      codec_name: string | null;
+      channels: number | null;
+    }>;
   };
 
   type FileProgress = {
@@ -74,15 +79,47 @@
     return `${rounded} fps`;
   }
 
+  function channelLabel(channels: number | null) {
+    if (channels === 1) return "mono";
+    if (channels === 2) return "stereo";
+    if (channels && channels >= 6) return `${channels}ch`;
+    return null;
+  }
+
   function audioLabel(file: MediaFile) {
     const parts = [];
     if (file.audio_codec) parts.push(file.audio_codec);
-    if (file.audio_channels === 1) parts.push("mono");
-    else if (file.audio_channels === 2) parts.push("stereo");
-    else if (file.audio_channels && file.audio_channels >= 6) parts.push(`${file.audio_channels}ch`);
+    const channels = channelLabel(file.audio_channels);
+    if (channels) parts.push(channels);
     if (file.audio_sample_rate) parts.push(`${file.audio_sample_rate / 1000}khz`);
     if (file.audio_language && file.audio_language !== "und") parts.push(file.audio_language);
     return parts.length > 0 ? parts.join(" ") : null;
+  }
+
+  function audioTrackLabel(track: NonNullable<MediaFile["audio_tracks"]>[number]) {
+    const parts = [];
+    if (track.language && track.language !== "und") parts.push(track.language);
+    if (track.codec_name) parts.push(track.codec_name);
+    const channels = channelLabel(track.channels);
+    if (channels) parts.push(channels);
+    return parts.length > 0 ? parts.join(" ") : null;
+  }
+
+  function audioDetailLabels(file: MediaFile) {
+    const tracks = file.audio_tracks ?? [];
+    if (tracks.length > 1) {
+      return tracks.map(audioTrackLabel).filter((label): label is string => label !== null);
+    }
+    const single = audioLabel(file);
+    return single ? [single] : [];
+  }
+
+  function audioTrackCount(file: MediaFile) {
+    return file.audio_tracks?.length ?? 0;
+  }
+
+  function audioTrackCountLabel(count: number) {
+    return count === 2 ? "Dual audio" : `${count} audio`;
   }
 
   function fileDetails(file: MediaFile) {
@@ -93,8 +130,7 @@
       const v = [file.video_codec, formatFrameRate(file.video_frame_rate)].filter(Boolean).join(" ");
       parts.push(v);
     }
-    const audio = audioLabel(file);
-    if (audio) parts.push(audio);
+    parts.push(...audioDetailLabels(file));
     return parts;
   }
 </script>
@@ -117,6 +153,9 @@
             <strong>{file.basename}</strong>
             {#if files.length > 1 && primaryFileId === file.id}
               <span>Primary</span>
+            {/if}
+            {#if audioTrackCount(file) > 1}
+              <span class="audio-badge">{audioTrackCountLabel(audioTrackCount(file))}</span>
             {/if}
           </div>
           <div class="file-meta">
@@ -215,6 +254,15 @@
     color: var(--color-accent);
     font-size: 0.76rem;
     font-weight: 800;
+  }
+
+  .file-title .audio-badge {
+    color: var(--color-text-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.06rem 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
   }
 
   .file-meta {

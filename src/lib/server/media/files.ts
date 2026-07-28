@@ -159,3 +159,31 @@ export async function getPlayableFile(mediaItemId: string, mediaFileId: string, 
     .where(accessibleLibrarySql(userId))
     .executeTakeFirst();
 }
+
+export type AudioTrackInfo = {
+  language: string | null;
+  codec_name: string | null;
+  channels: number | null;
+};
+
+export async function fetchAudioTracksByFileId(fileIds: string[]): Promise<Record<string, AudioTrackInfo[]>> {
+  const tracksByFile: Record<string, AudioTrackInfo[]> = {};
+  if (fileIds.length === 0) return tracksByFile;
+  const db = await getDb();
+  const rows = await db
+    .selectFrom("media_stream_info")
+    .select(["media_file_id", "language", "codec_name", "channels"])
+    .where("media_file_id", "in", fileIds)
+    .where("stream_type", "=", "audio")
+    .orderBy("media_file_id", "asc")
+    .orderBy("stream_index", "asc")
+    .execute();
+  for (const row of rows) {
+    (tracksByFile[row.media_file_id] ??= []).push({
+      language: row.language,
+      codec_name: row.codec_name,
+      channels: row.channels,
+    });
+  }
+  return tracksByFile;
+}

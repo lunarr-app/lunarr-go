@@ -496,6 +496,68 @@ describe("movieRows", () => {
     expect(await getMovieDetail("show-a", "user-1")).toBeNull();
   });
 
+  test("attaches probed audio tracks to movie files", async () => {
+    const now = new Date().toISOString();
+    await db
+      .insertInto("media_stream_info")
+      .values([
+        {
+          id: "file-a-audio-jpn",
+          media_file_id: "file-a",
+          stream_index: 1,
+          stream_type: "audio",
+          codec_name: "dts",
+          codec_long_name: null,
+          language: "jpn",
+          title: null,
+          width: null,
+          height: null,
+          channels: 6,
+          sample_rate: 48000,
+          duration_seconds: null,
+          bit_rate: 1536000,
+          frame_rate: null,
+          r_frame_rate: null,
+          nb_frames: null,
+          raw_json: null,
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: "file-a-audio-eng",
+          media_file_id: "file-a",
+          stream_index: 2,
+          stream_type: "audio",
+          codec_name: "aac",
+          codec_long_name: null,
+          language: "eng",
+          title: null,
+          width: null,
+          height: null,
+          channels: 2,
+          sample_rate: 48000,
+          duration_seconds: null,
+          bit_rate: 192000,
+          frame_rate: null,
+          r_frame_rate: null,
+          nb_frames: null,
+          raw_json: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .execute();
+
+    const detail = await getMovieDetail("movie-a", "user-1");
+    const fileA = detail?.files.find((file) => file.id === "file-a");
+    expect(fileA?.audio_tracks).toEqual([
+      { language: "jpn", codec_name: "dts", channels: 6 },
+      { language: "eng", codec_name: "aac", channels: 2 },
+    ]);
+    const fileAlt = detail?.files.find((file) => file.id === "file-a-alt");
+    expect(fileAlt?.audio_tracks).toEqual([]);
+  });
+
   test("loads movie overview with files and progress but no cast", async () => {
     const overview = await getMovieOverview("movie-a", "user-1");
     expect(overview).toMatchObject({

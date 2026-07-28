@@ -4,6 +4,7 @@ import { tmdbImageUrl } from "$lib/media/images";
 import { getDb } from "../../db";
 import { TV_SHOW_CREATOR_JOBS } from "../../metadata/tv";
 import { accessibleLibrarySql } from "../catalog";
+import { fetchAudioTracksByFileId } from "../files";
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";
 import { isInWatchlist } from "../watchlist";
 import { tvEpisodeProgress } from "./episodes";
@@ -522,6 +523,9 @@ export async function getEpisodeDetail(id: string, userId: string) {
     .execute();
   if (files.length === 0) return null;
 
+  const audioTracksByFile = await fetchAudioTracksByFileId(files.map((file) => file.id));
+  const filesWithAudio = files.map((file) => ({ ...file, audio_tracks: audioTracksByFile[file.id] ?? [] }));
+
   const progress = await db
     .selectFrom("watch_progress")
     .innerJoin("media_file", "media_file.id", "watch_progress.media_file_id")
@@ -561,7 +565,7 @@ export async function getEpisodeDetail(id: string, userId: string) {
       voteAverage: row.episode_vote_average,
       voteCount: row.episode_vote_count,
     },
-    files,
+    files: filesWithAudio,
     progress,
   };
 }

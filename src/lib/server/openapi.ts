@@ -2067,6 +2067,18 @@ export const openApiDocument = {
           audio_sample_rate: nullableIntegerSchema,
           audio_language: nullableStringSchema,
           audio_bit_rate: nullableIntegerSchema,
+          audio_tracks: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["language", "codec_name", "channels"],
+              properties: {
+                language: nullableStringSchema,
+                codec_name: nullableStringSchema,
+                channels: nullableIntegerSchema,
+              },
+            },
+          },
         },
       },
       MovieProgressRecord: {
@@ -2518,6 +2530,18 @@ export const openApiDocument = {
                 audio_sample_rate: nullableIntegerSchema,
                 audio_language: nullableStringSchema,
                 audio_bit_rate: nullableIntegerSchema,
+                audio_tracks: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["language", "codec_name", "channels"],
+                    properties: {
+                      language: nullableStringSchema,
+                      codec_name: nullableStringSchema,
+                      channels: nullableIntegerSchema,
+                    },
+                  },
+                },
               },
             },
           },
