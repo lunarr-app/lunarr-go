@@ -9,6 +9,7 @@ import type { Database } from "../db/schema";
 import { expectRejectsToThrow } from "$lib/test/async-expect";
 import { parseClientPlaybackCapabilities } from "$lib/playback/capabilities";
 import {
+  completionThresholdSeconds,
   getPlaybackDecision,
   isRewatchFromStart,
   markWatched,
@@ -144,6 +145,30 @@ describe("isRewatchFromStart", () => {
   });
 });
 
+describe("completionThresholdSeconds", () => {
+  test("subtracts estimated credits per kind", () => {
+    expect(completionThresholdSeconds(1320, "episode")).toBe(1200);
+    expect(completionThresholdSeconds(3300, "episode")).toBe(3180);
+    expect(completionThresholdSeconds(7200, "movie")).toBe(6750);
+    expect(completionThresholdSeconds(10800, "movie")).toBe(10350);
+  });
+
+  test("defaults to movie credits when kind is unknown", () => {
+    expect(completionThresholdSeconds(7200)).toBe(6750);
+  });
+
+  test("never marks completion below the minimum fraction for short items", () => {
+    expect(completionThresholdSeconds(100, "episode")).toBe(80);
+    expect(completionThresholdSeconds(120, "movie")).toBe(96);
+  });
+
+  test("returns null for non-positive or non-finite durations", () => {
+    expect(completionThresholdSeconds(0)).toBeNull();
+    expect(completionThresholdSeconds(-5)).toBeNull();
+    expect(completionThresholdSeconds(Number.NaN)).toBeNull();
+  });
+});
+
 describe("normalizePlaybackProgress", () => {
   test("clamps position and duration to playable bounds", () => {
     expect(
@@ -187,6 +212,44 @@ describe("normalizePlaybackProgress", () => {
         completed: true,
       }).completed,
     ).toBe(true);
+  });
+
+  test("infers completion from kind specific credits", () => {
+    expect(
+      normalizePlaybackProgress({
+        positionSeconds: 1200,
+        durationSeconds: 1320,
+        completed: false,
+        kind: "episode",
+      }).completed,
+    ).toBe(true);
+
+    expect(
+      normalizePlaybackProgress({
+        positionSeconds: 1199,
+        durationSeconds: 1320,
+        completed: false,
+        kind: "episode",
+      }).completed,
+    ).toBe(false);
+
+    expect(
+      normalizePlaybackProgress({
+        positionSeconds: 6750,
+        durationSeconds: 7200,
+        completed: false,
+        kind: "movie",
+      }).completed,
+    ).toBe(true);
+
+    expect(
+      normalizePlaybackProgress({
+        positionSeconds: 6749,
+        durationSeconds: 7200,
+        completed: false,
+        kind: "movie",
+      }).completed,
+    ).toBe(false);
   });
 });
 

@@ -6,6 +6,7 @@ import {
 } from "$lib/playback/capabilities";
 import { normalizePreferredLanguage } from "$lib/media/preferred-language";
 import { getDb } from "../db";
+import type { MediaKind } from "../db/schema";
 import { loadPlaybackSegmentsForMediaItem } from "../introdb";
 import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media/files";
 import { getSegmentSkipPreferences, type SegmentSkipPreferences } from "./segment-skip-preferences";
@@ -130,10 +131,22 @@ export function parsePlaybackProgressBody(body: unknown): PlaybackProgressBody {
   };
 }
 
+const EPISODE_END_CREDITS_SECONDS = 90;
+const MOVIE_END_CREDITS_SECONDS = 420;
+const COMPLETION_GRACE_SECONDS = 30;
+const COMPLETION_MIN_FRACTION = 0.8;
+
+export function completionThresholdSeconds(durationSeconds: number, kind?: MediaKind): number | null {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return null;
+  const credits = kind === "episode" ? EPISODE_END_CREDITS_SECONDS : MOVIE_END_CREDITS_SECONDS;
+  return Math.max(durationSeconds - credits - COMPLETION_GRACE_SECONDS, durationSeconds * COMPLETION_MIN_FRACTION);
+}
+
 export function normalizePlaybackProgress(input: {
   positionSeconds: number;
   durationSeconds: number | null;
   completed: boolean;
+  kind?: MediaKind;
 }): NormalizedPlaybackProgress {
   const durationSeconds = input.durationSeconds === null ? null : Math.max(0, input.durationSeconds);
   let positionSeconds = Math.max(0, input.positionSeconds);
@@ -142,11 +155,12 @@ export function normalizePlaybackProgress(input: {
     positionSeconds = Math.min(positionSeconds, durationSeconds);
   }
 
+  const threshold = durationSeconds === null ? null : completionThresholdSeconds(durationSeconds, input.kind);
+
   return {
     positionSeconds,
     durationSeconds,
-    completed:
-      input.completed || (durationSeconds !== null && durationSeconds > 0 && positionSeconds / durationSeconds >= 0.9),
+    completed: input.completed || (threshold !== null && positionSeconds >= threshold),
   };
 }
 
@@ -412,7 +426,7 @@ export async function saveProgress(input: {
     .selectFrom("media_file")
     .innerJoin("media_item", "media_item.id", "media_file.media_item_id")
     .innerJoin("library", "library.id", "media_file.library_id")
-    .select("media_file.id")
+    .select(["media_file.id", "media_item.kind"])
     .where("media_file.id", "=", input.mediaFileId)
     .where("media_file.media_item_id", "=", input.mediaItemId)
     .where("media_item.kind", "in", ["movie", "episode"])
@@ -427,6 +441,7 @@ export async function saveProgress(input: {
     positionSeconds: input.positionSeconds,
     durationSeconds: input.durationSeconds,
     completed: input.completed,
+    kind: file.kind,
   });
   const existing = await db
     .selectFrom("watch_progress")
