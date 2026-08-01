@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.1 - 2026-08-01
+
+### Upgrade Note
+
+- Upgrading from a version earlier than 0.8.0? Run **Settings > Media probe > Repair** after updating to re-probe your library with the audio track data.
+
+### Added
+
+- Exposed probed audio track data on movie and episode detail APIs: files now include an `audio_tracks` list (language, codec, channels) alongside the existing primary-track fields, covering `GET /api/movies/{id}`, `GET /api/movies/{id}/overview`, and `GET /api/episodes/{id}`, with updated OpenAPI schemas. Backward compatible for existing clients.
+- Updated the movie and episode detail file sections to surface the newly exposed audio tracks: a "Dual audio / N audio" badge appears when a file has more than one track, and each track is listed by language, codec, and channels (falling back to the single primary-track label otherwise).
+
+### Changed
+
+- Updated frontend dependencies (SvelteKit, Vite, `@lucide/svelte`).
+
+### Fixed
+
+- Fixed playback mode decisions for dual-audio files: when a preferred audio language is set and matches a stream, that stream's codec now decides direct/remux/transcode instead of always the first audio track, letting copy-compatible preferred tracks remux instead of fully transcoding. Falls back to the first track when no preference is set or no stream matches.
+- Fixed items being marked watched based on a flat 90% threshold: completion now subtracts an estimated end-credits duration per kind (episode ~90s, movie ~7m) plus a small grace period, floored at 80% of runtime, so it adapts to content length.
+
 ## 0.9.0 - 2026-07-26
 
 ### Upgrade Note
