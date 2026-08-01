@@ -4,7 +4,7 @@
 
 ### Upgrade Note
 
-- Upgrading from a version earlier than 0.8.0? Run **Settings > Media probe > Repair** after updating to re-probe your library with the audio track data.
+- Upgrading from 0.8.0 or earlier? Run **Settings > Media probe > Repair** after updating to re-probe your library with the audio track data.
 
 ### Added
 
