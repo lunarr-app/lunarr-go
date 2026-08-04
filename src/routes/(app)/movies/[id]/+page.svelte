@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import MediaCastRail from "$lib/components/MediaCastRail.svelte";
   import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
@@ -6,6 +7,7 @@
   import FixMatchModal from "$lib/components/FixMatchModal.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
   import { deriveDetailPlaybackState } from "$lib/media/detail-playback";
+  import { revertFixMatch } from "$lib/media/fix-match-client";
   import {
     formatFileCountLabel,
     formatMediaDuration,
@@ -19,6 +21,18 @@
   let { data, form } = $props();
   let shareModalOpen = $state(false);
   let fixMatchOpen = $state(false);
+  let revertError = $state<string | null>(null);
+
+  async function handleRevertMatch() {
+    revertError = null;
+    try {
+      const result = await revertFixMatch("movie", data.movie.id);
+      await goto(`/movies/${result.mediaItemId}`);
+      await invalidateAll();
+    } catch (error) {
+      revertError = error instanceof Error ? error.message : "Could not revert the match.";
+    }
+  }
 
   const runtimeLabel = $derived(data.movie.runtime_seconds ? formatMediaDuration(data.movie.runtime_seconds) : null);
   const ratingLabel = $derived(formatVoteAverageLabel(data.movie.vote_average));
@@ -90,8 +104,10 @@
     <MovieMetadataSidebar
       movie={data.movie}
       onFixMatchOpen={() => (fixMatchOpen = true)}
+      onRevertMatch={() => void handleRevertMatch()}
       canManageMetadata={data.canManageMetadata}
       tmdbConfigured={data.tmdbConfigured}
+      manualMatch={Boolean(data.movie.manual_match)}
       {ratingLabel}
       {voteCountLabel}
       {runtimeLabel}
@@ -102,7 +118,7 @@
       {totalSizeBytes}
       productionCompanies={data.productionCompanies}
       keywords={data.keywords}
-      metadataError={form?.metadataError}
+      metadataError={revertError ?? form?.metadataError}
     />
   {/snippet}
 </MediaDetailLayout>

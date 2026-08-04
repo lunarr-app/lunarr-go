@@ -3,7 +3,7 @@ import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
 import { lookupMovieMetadataFromPath } from "./matching";
-import { movieMetadataValues, moveMediaShares, moveWatchlistEntries, syncMovieMetadataRelations } from "./store";
+import { movieMetadataValues, moveMediaShares, moveWatchlistEntries, syncMediaMetadataRelations } from "./store";
 import { matchMovieMetadata, matchMovieMetadataById, type MatchedMovieMetadata } from "./tmdb";
 
 type MovieMetadataMatcher = (title: string, year: number | null) => Promise<MatchedMovieMetadata | null>;
@@ -106,7 +106,7 @@ export async function applyMatchedMovieMetadata(
 
   if (existingProviderItem) {
     await db.updateTable("media_item").set(values).where("id", "=", existingProviderItem.id).execute();
-    await syncMovieMetadataRelations(db, existingProviderItem.id, metadata);
+    await syncMediaMetadataRelations(db, existingProviderItem.id, metadata);
     await moveWatchProgress(mediaItemId, existingProviderItem.id);
     await db
       .updateTable("media_file")
@@ -125,7 +125,7 @@ export async function applyMatchedMovieMetadata(
   }
 
   await db.updateTable("media_item").set(values).where("id", "=", mediaItemId).execute();
-  await syncMovieMetadataRelations(db, mediaItemId, metadata);
+  await syncMediaMetadataRelations(db, mediaItemId, metadata);
   return mediaItemId;
 }
 

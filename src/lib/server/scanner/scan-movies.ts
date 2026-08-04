@@ -2,7 +2,7 @@ import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
 import { isRemoteLibrarySource } from "../libraries/source";
-import { emptyMovieMetadataValues, movieMetadataValues, syncMovieMetadataRelations } from "../metadata/store";
+import { emptyMovieMetadataValues, movieMetadataValues, syncMediaMetadataRelations } from "../metadata/store";
 import { movieLookupCandidates, type ParsedMovieLookup } from "../metadata/movie-lookup";
 import { lookupMovieMetadataFromCandidates, type MovieMetadataMatcher } from "../metadata/matching";
 import type { StorageFileInfo } from "../storage";
@@ -80,7 +80,7 @@ async function findOrCreateMovieItem(
 
     if (existing) {
       await db.updateTable("media_item").set(values).where("id", "=", existing.id).execute();
-      await syncMovieMetadataRelations(db, existing.id, metadata);
+      await syncMediaMetadataRelations(db, existing.id, metadata);
       return existing.id;
     }
 
@@ -88,7 +88,7 @@ async function findOrCreateMovieItem(
 
     if (localExisting) {
       await db.updateTable("media_item").set(values).where("id", "=", localExisting.id).execute();
-      await syncMovieMetadataRelations(db, localExisting.id, metadata);
+      await syncMediaMetadataRelations(db, localExisting.id, metadata);
       return localExisting.id;
     }
 
@@ -97,7 +97,7 @@ async function findOrCreateMovieItem(
       .insertInto("media_item")
       .values({ id, ...values, created_at: now })
       .execute();
-    await syncMovieMetadataRelations(db, id, metadata);
+    await syncMediaMetadataRelations(db, id, metadata);
     return id;
   }
 

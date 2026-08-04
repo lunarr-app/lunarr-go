@@ -502,6 +502,23 @@ export const openApiDocument = {
           "404": errorResponse,
         },
       },
+      delete: {
+        tags: ["Catalog"],
+        summary: "Revert a movie to automatic TMDb matching.",
+        description:
+          "Clears the manual match flag and immediately re-matches the movie by filename. Returns 200 even when the automatic re-match finds nothing: the flag is cleared and the movie keeps its current metadata until the next scheduled refresh. Admin only.",
+        operationId: "revertMovieMatch",
+        parameters: [pathIdParameter()],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MediaMatchResponse",
+          }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
     },
     "/api/shows": {
       get: {
@@ -974,6 +991,23 @@ export const openApiDocument = {
         operationId: "fixShowMatch",
         parameters: [pathIdParameter()],
         requestBody: { $ref: "#/components/requestBodies/MediaMatchRequest" },
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MediaMatchResponse",
+          }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+      delete: {
+        tags: ["Catalog"],
+        summary: "Revert a show to automatic TMDb matching.",
+        description:
+          "Clears the manual match flag and immediately re-matches the show and its seasons by title. Returns 200 even when the automatic re-match finds nothing or the show has no seasons: the flag is cleared and the show keeps its current metadata until the next scheduled refresh. Admin only.",
+        operationId: "revertShowMatch",
+        parameters: [pathIdParameter()],
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/MediaMatchResponse",
@@ -2140,6 +2174,7 @@ export const openApiDocument = {
           collection_name: nullableStringSchema,
           provider: nullableStringSchema,
           provider_id: nullableStringSchema,
+          manual_match: nullableIntegerSchema,
           vote_average: nullableNumberSchema,
           updated_at: nullableStringSchema,
         },
@@ -2410,6 +2445,7 @@ export const openApiDocument = {
           },
           provider: nullableStringSchema,
           providerId: nullableStringSchema,
+          manualMatch: nullableIntegerSchema,
           updatedAt: nullableStringSchema,
           certification: nullableStringSchema,
           originalLanguage: nullableStringSchema,

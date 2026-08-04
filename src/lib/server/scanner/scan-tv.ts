@@ -4,7 +4,7 @@ import { nowIso } from "../time";
 import { isRemoteLibrarySource } from "../libraries/source";
 import {
   emptyMovieMetadataValues,
-  syncTvShowMetadataRelations,
+  syncMediaMetadataRelations,
   tvEpisodeMetadataValues,
   tvSeasonMetadataValues,
   tvShowMetadataValues,
@@ -86,7 +86,7 @@ async function findOrCreateShowItem(parsed: ParsedTvEpisode, now: string, metada
   if (existing) {
     if (metadata || !existing.provider) {
       await db.updateTable("media_item").set(values).where("id", "=", existing.id).execute();
-      if (metadata) await syncTvShowMetadataRelations(db, existing.id, metadata);
+      if (metadata) await syncMediaMetadataRelations(db, existing.id, metadata);
     }
     return existing.id;
   }
@@ -96,7 +96,7 @@ async function findOrCreateShowItem(parsed: ParsedTvEpisode, now: string, metada
     .insertInto("media_item")
     .values({ id, ...values, created_at: now })
     .execute();
-  if (metadata) await syncTvShowMetadataRelations(db, id, metadata);
+  if (metadata) await syncMediaMetadataRelations(db, id, metadata);
   return id;
 }
 

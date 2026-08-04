@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import MediaCastRail from "$lib/components/MediaCastRail.svelte";
   import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
   import FixMatchModal from "$lib/components/FixMatchModal.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
+  import { revertFixMatch } from "$lib/media/fix-match-client";
   import { playbackModalHref } from "$lib/playback/links";
   import { formatVoteAverageLabel, formatVoteCountLabel } from "$lib/media/format";
   import ShowDetailHero from "./_components/ShowDetailHero.svelte";
@@ -13,6 +15,18 @@
   let { data, form } = $props();
   let shareModalOpen = $state(false);
   let fixMatchOpen = $state(false);
+  let revertError = $state<string | null>(null);
+
+  async function handleRevertMatch() {
+    revertError = null;
+    try {
+      const result = await revertFixMatch("show", data.show.id);
+      await goto(`/shows/${result.mediaItemId}`);
+      await invalidateAll();
+    } catch (error) {
+      revertError = error instanceof Error ? error.message : "Could not revert the match.";
+    }
+  }
 
   const totalEpisodes = $derived(data.seasons.reduce((count, season) => count + season.episodeCount, 0));
   const watchedCount = $derived(data.seasons.reduce((count, season) => count + season.watchedCount, 0));
@@ -77,8 +91,10 @@
     <ShowMetadataSidebar
       show={data.show}
       onFixMatchOpen={() => (fixMatchOpen = true)}
+      onRevertMatch={() => void handleRevertMatch()}
       canManageMetadata={data.canManageMetadata}
       tmdbConfigured={data.tmdbConfigured}
+      manualMatch={Boolean(data.show.manualMatch)}
       {ratingLabel}
       {voteCountLabel}
       {providerLabel}
@@ -87,7 +103,7 @@
       {episodeCountLabel}
       productionCompanies={data.productionCompanies}
       keywords={data.keywords}
-      metadataError={form?.metadataError}
+      metadataError={revertError ?? form?.metadataError}
     />
   {/snippet}
 </MediaDetailLayout>

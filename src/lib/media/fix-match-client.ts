@@ -37,3 +37,11 @@ export async function applyFixMatch(kind: "movie" | "show", mediaItemId: string,
   }
   return (await response.json()) as { mediaItemId: string };
 }
+
+export async function revertFixMatch(kind: "movie" | "show", mediaItemId: string) {
+  const response = await fetch(matchApiBase(kind, mediaItemId), { method: "DELETE" });
+  if (!response.ok) {
+    await readJsonError(response, "Could not revert the match.");
+  }
+  return (await response.json()) as { mediaItemId: string };
+}

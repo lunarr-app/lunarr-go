@@ -7,7 +7,7 @@ import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests 
 import type { Database } from "../db/schema";
 import { createLibrary } from "../libraries";
 import { createScanJob, runScanJob } from "../scanner";
-import { fixMovieMatch, fixShowMatch } from "./fix-match";
+import { fixMovieMatch, fixShowMatch, revertFixMatch } from "./fix-match";
 import { refreshMovieMetadataResult } from "./movies";
 import { refreshTvShowMetadataResult } from "./tv";
 import { clearTmdbDetailCachesForTests, type MatchedMovieMetadata, type MatchedTvSeasonLookup } from "./tmdb";
@@ -289,99 +289,99 @@ describe("fixMovieMatch", () => {
   });
 });
 
-describe("fixShowMatch", () => {
-  async function seedShowTree() {
-    const timestamp = now();
-    await db
-      .insertInto("media_item")
-      .values([
-        {
-          id: "show-1",
-          kind: "show",
-          title: "Local Show",
-          sort_title: "local show",
-          year: 2008,
-          overview: null,
-          runtime_seconds: null,
-          poster_path: null,
-          backdrop_path: null,
-          release_date: null,
-          provider: null,
-          provider_id: null,
-          manual_match: 0,
-          parent_id: null,
-          popularity: null,
-          vote_average: null,
-          created_at: timestamp,
-          updated_at: timestamp,
-        },
-        {
-          id: "season-1",
-          kind: "season",
-          title: "Season 1",
-          sort_title: "0001",
-          year: null,
-          overview: null,
-          runtime_seconds: null,
-          poster_path: null,
-          backdrop_path: null,
-          release_date: null,
-          season_number: 1,
-          episode_number: null,
-          provider: null,
-          provider_id: null,
-          manual_match: 0,
-          parent_id: "show-1",
-          popularity: null,
-          vote_average: null,
-          created_at: timestamp,
-          updated_at: timestamp,
-        },
-        {
-          id: "episode-1",
-          kind: "episode",
-          title: "Episode 1",
-          sort_title: "s001e0001",
-          year: null,
-          overview: null,
-          runtime_seconds: null,
-          poster_path: null,
-          backdrop_path: null,
-          release_date: null,
-          season_number: 1,
-          episode_number: 1,
-          provider: null,
-          provider_id: null,
-          manual_match: 0,
-          parent_id: "season-1",
-          popularity: null,
-          vote_average: null,
-          created_at: timestamp,
-          updated_at: timestamp,
-        },
-      ])
-      .execute();
-    await db
-      .insertInto("media_file")
-      .values({
-        id: "file-tv-1",
-        library_id: "library-1",
-        media_item_id: "episode-1",
-        path: path.join(tempDir, "Local Show", "Season 01", "Local Show - S01E01.mkv"),
-        basename: "Local Show - S01E01.mkv",
-        extension: ".mkv",
-        size_bytes: 10,
-        mtime_ms: Date.now(),
-        duration_seconds: null,
-        video_codec: null,
-        audio_codec: null,
-        container: "mkv",
+async function seedShowTree() {
+  const timestamp = now();
+  await db
+    .insertInto("media_item")
+    .values([
+      {
+        id: "show-1",
+        kind: "show",
+        title: "Local Show",
+        sort_title: "local show",
+        year: 2008,
+        overview: null,
+        runtime_seconds: null,
+        poster_path: null,
+        backdrop_path: null,
+        release_date: null,
+        provider: null,
+        provider_id: null,
+        manual_match: 0,
+        parent_id: null,
+        popularity: null,
+        vote_average: null,
         created_at: timestamp,
         updated_at: timestamp,
-      })
-      .execute();
-  }
+      },
+      {
+        id: "season-1",
+        kind: "season",
+        title: "Season 1",
+        sort_title: "0001",
+        year: null,
+        overview: null,
+        runtime_seconds: null,
+        poster_path: null,
+        backdrop_path: null,
+        release_date: null,
+        season_number: 1,
+        episode_number: null,
+        provider: null,
+        provider_id: null,
+        manual_match: 0,
+        parent_id: "show-1",
+        popularity: null,
+        vote_average: null,
+        created_at: timestamp,
+        updated_at: timestamp,
+      },
+      {
+        id: "episode-1",
+        kind: "episode",
+        title: "Episode 1",
+        sort_title: "s001e0001",
+        year: null,
+        overview: null,
+        runtime_seconds: null,
+        poster_path: null,
+        backdrop_path: null,
+        release_date: null,
+        season_number: 1,
+        episode_number: 1,
+        provider: null,
+        provider_id: null,
+        manual_match: 0,
+        parent_id: "season-1",
+        popularity: null,
+        vote_average: null,
+        created_at: timestamp,
+        updated_at: timestamp,
+      },
+    ])
+    .execute();
+  await db
+    .insertInto("media_file")
+    .values({
+      id: "file-tv-1",
+      library_id: "library-1",
+      media_item_id: "episode-1",
+      path: path.join(tempDir, "Local Show", "Season 01", "Local Show - S01E01.mkv"),
+      basename: "Local Show - S01E01.mkv",
+      extension: ".mkv",
+      size_bytes: 10,
+      mtime_ms: Date.now(),
+      duration_seconds: null,
+      video_codec: null,
+      audio_codec: null,
+      container: "mkv",
+      created_at: timestamp,
+      updated_at: timestamp,
+    })
+    .execute();
+}
 
+describe("fixShowMatch", () => {
   test("applies show, season, and episode metadata and flags the show as manually matched", async () => {
     await seedShowTree();
     const calls: string[] = [];
@@ -815,6 +815,209 @@ describe("manual match durability on refresh", () => {
       provider_id: "1396",
       manual_match: 1,
     });
+  });
+});
+
+describe("revert manual match", () => {
+  test("reverting a manually matched movie clears the flag and re-matches by filename", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "603", manual_match: 1, title: "Wrong Title" })
+      .where("id", "=", "movie-1")
+      .execute();
+
+    const pathMatcherCalls: Array<{ title: string; year: number | null }> = [];
+    const pathMatcher = async (title: string, year: number | null): Promise<MatchedMovieMetadata | null> => {
+      pathMatcherCalls.push({ title, year });
+      return {
+        provider: "tmdb",
+        providerId: "777",
+        title: "The Matrix",
+        year,
+        overview: null,
+        runtimeSeconds: null,
+        posterPath: null,
+        backdropPath: null,
+        releaseDate: null,
+        popularity: null,
+        voteAverage: null,
+      };
+    };
+    const byIdCalls: number[] = [];
+    const byIdMatcher = async (tmdbId: number): Promise<MatchedMovieMetadata | null> => {
+      byIdCalls.push(tmdbId);
+      return null;
+    };
+
+    const result = await revertFixMatch("movie", "movie-1", {
+      movie: { metadataMatcher: pathMatcher, metadataByIdMatcher: byIdMatcher },
+    });
+
+    expect(result).toEqual({ status: "matched", mediaItemId: "movie-1" });
+    expect(pathMatcherCalls.length).toBe(1);
+    expect(byIdCalls).toEqual([]);
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
+    expect(movie).toMatchObject({ title: "The Matrix", provider_id: "777", manual_match: 0 });
+  });
+
+  test("reverting a title that is not manually matched changes nothing", async () => {
+    const result = await revertFixMatch("movie", "movie-1");
+    expect(result).toEqual({ status: "not_manual", mediaItemId: "movie-1" });
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
+    expect(movie).toMatchObject({ provider: null, provider_id: null, manual_match: 0 });
+  });
+
+  test("reverting an unknown item reports missing", async () => {
+    expect(await revertFixMatch("movie", "unknown")).toEqual({ status: "missing", mediaItemId: null });
+    expect(await revertFixMatch("show", "unknown")).toEqual({ status: "missing", mediaItemId: null });
+  });
+
+  test("reverting a manually matched show clears the flag and re-matches by title", async () => {
+    await seedShowTree();
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "1396", manual_match: 1, title: "Wrong Show" })
+      .where("id", "=", "show-1")
+      .execute();
+
+    const titleMatcherCalls: Array<{ title: string; seasonNumber: number }> = [];
+    const titleMatcher = async (
+      title: string,
+      _year: number | null,
+      seasonNumber: number,
+    ): Promise<MatchedTvSeasonLookup | null> => {
+      titleMatcherCalls.push({ title, seasonNumber });
+      return {
+        show: {
+          provider: "tmdb",
+          providerId: "888",
+          title: "Correct Show",
+          year: 2008,
+          overview: null,
+          posterPath: null,
+          backdropPath: null,
+          firstAirDate: "2008-01-20",
+          popularity: null,
+          voteAverage: null,
+          voteCount: null,
+          originalTitle: null,
+          tagline: null,
+          status: null,
+          homepage: null,
+          originalLanguage: null,
+          imdbId: null,
+          certification: null,
+          trailer: null,
+        },
+        season: {
+          provider: "tmdb",
+          providerId: "8881",
+          title: "Season 1",
+          seasonNumber: 1,
+          overview: null,
+          posterPath: null,
+          airDate: "2008-01-20",
+          voteAverage: null,
+        },
+        episodes: [],
+      };
+    };
+    const byIdCalls: Array<{ tmdbId: number; seasonNumber: number }> = [];
+    const byIdMatcher = async (tmdbId: number, seasonNumber: number): Promise<MatchedTvSeasonLookup | null> => {
+      byIdCalls.push({ tmdbId, seasonNumber });
+      return null;
+    };
+
+    const result = await revertFixMatch("show", "show-1", {
+      show: { metadataMatcher: titleMatcher, metadataByIdMatcher: byIdMatcher },
+    });
+
+    expect(result).toMatchObject({ status: "matched", mediaItemId: "show-1" });
+    expect(titleMatcherCalls).toEqual([{ title: "Wrong Show", seasonNumber: 1 }]);
+    expect(byIdCalls).toEqual([]);
+    const show = await db.selectFrom("media_item").selectAll().where("id", "=", "show-1").executeTakeFirstOrThrow();
+    expect(show).toMatchObject({ title: "Correct Show", provider_id: "888", manual_match: 0 });
+  });
+
+  test("reverting a manually matched show without seasons clears the flag and reports no seasons", async () => {
+    const timestamp = now();
+    await db
+      .insertInto("media_item")
+      .values({
+        id: "show-empty",
+        kind: "show",
+        title: "Empty Show",
+        sort_title: "empty show",
+        year: null,
+        overview: null,
+        runtime_seconds: null,
+        poster_path: null,
+        backdrop_path: null,
+        release_date: null,
+        provider: "tmdb",
+        provider_id: "555",
+        manual_match: 1,
+        parent_id: null,
+        popularity: null,
+        vote_average: null,
+        created_at: timestamp,
+        updated_at: timestamp,
+      })
+      .execute();
+
+    const result = await revertFixMatch("show", "show-empty");
+
+    expect(result).toEqual({ status: "no_seasons", mediaItemId: "show-empty" });
+    const show = await db.selectFrom("media_item").selectAll().where("id", "=", "show-empty").executeTakeFirstOrThrow();
+    expect(show).toMatchObject({ manual_match: 0 });
+  });
+
+  test("reverting a manually matched movie whose filename no longer matches clears the flag anyway", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "603", manual_match: 1 })
+      .where("id", "=", "movie-1")
+      .execute();
+
+    const result = await revertFixMatch("movie", "movie-1", {
+      movie: { metadataMatcher: async () => null },
+    });
+
+    expect(result).toEqual({ status: "unmatched", mediaItemId: "movie-1" });
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
+    expect(movie).toMatchObject({ manual_match: 0, provider_id: "603" });
+  });
+
+  test("reverting a manually matched movie without files clears the flag and reports unmatched", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "603", manual_match: 1 })
+      .where("id", "=", "movie-1")
+      .execute();
+    await db.deleteFrom("media_file").where("id", "=", "file-1").execute();
+
+    const result = await revertFixMatch("movie", "movie-1");
+
+    expect(result).toEqual({ status: "unmatched", mediaItemId: "movie-1" });
+    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
+    expect(movie).toMatchObject({ manual_match: 0, provider_id: "603" });
+  });
+
+  test("reverting a manually matched show whose title no longer matches clears the flag anyway", async () => {
+    await seedShowTree();
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "1396", manual_match: 1 })
+      .where("id", "=", "show-1")
+      .execute();
+
+    const result = await revertFixMatch("show", "show-1", {
+      show: { metadataMatcher: async () => null },
+    });
+
+    expect(result).toEqual({ status: "unmatched", mediaItemId: "show-1" });
+    const show = await db.selectFrom("media_item").selectAll().where("id", "=", "show-1").executeTakeFirstOrThrow();
+    expect(show).toMatchObject({ manual_match: 0, provider_id: "1396" });
   });
 });
 

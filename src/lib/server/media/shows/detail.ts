@@ -235,6 +235,7 @@ function buildPublicShow(show: NonNullable<Awaited<ReturnType<typeof fetchAccess
     genres,
     provider: show.provider,
     providerId: show.provider_id,
+    manualMatch: show.manual_match,
     updatedAt: show.updated_at,
     certification: show.certification,
     originalLanguage: show.original_language,

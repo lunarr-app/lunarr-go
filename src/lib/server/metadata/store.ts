@@ -200,23 +200,11 @@ async function clearMovieMetadataRelations(db: Kysely<Database>, mediaItemId: st
   await db.deleteFrom("media_item_spoken_language").where("media_item_id", "=", mediaItemId).execute();
 }
 
-export async function syncMovieMetadataRelations(
+export async function syncMediaMetadataRelations(
   db: Kysely<Database>,
   mediaItemId: string,
-  metadata: MatchedMovieMetadata,
+  metadata: MediaMetadataRelations,
 ) {
-  await syncMediaMetadataRelations(db, mediaItemId, metadata);
-}
-
-export async function syncTvShowMetadataRelations(
-  db: Kysely<Database>,
-  mediaItemId: string,
-  metadata: MatchedTvShowMetadata,
-) {
-  await syncMediaMetadataRelations(db, mediaItemId, metadata);
-}
-
-async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: string, metadata: MediaMetadataRelations) {
   await clearMovieMetadataRelations(db, mediaItemId);
 
   const genres = metadata.genres ?? [];

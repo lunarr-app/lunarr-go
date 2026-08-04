@@ -6,7 +6,7 @@ import {
   moveMediaShares,
   moveWatchlistEntries,
   remapShareSeasonId,
-  syncTvShowMetadataRelations,
+  syncMediaMetadataRelations,
   tvEpisodeMetadataValues,
   tvSeasonMetadataValues,
   tvShowMetadataValues,
@@ -169,7 +169,7 @@ async function upsertShowMetadata(currentShowId: string, metadata: MatchedTvShow
   const targetId = providerExisting?.id ?? currentShowId;
 
   await db.updateTable("media_item").set(values).where("id", "=", targetId).execute();
-  await syncTvShowMetadataRelations(db, targetId, metadata);
+  await syncMediaMetadataRelations(db, targetId, metadata);
   if (providerExisting) await mergeChildItems(currentShowId, targetId, now);
 
   return targetId;

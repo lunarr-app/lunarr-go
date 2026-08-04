@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PencilLine, RefreshCw } from "@lucide/svelte";
+  import { PencilLine, RefreshCw, Undo2 } from "@lucide/svelte";
   import type { Snippet } from "svelte";
 
   let {
@@ -14,7 +14,9 @@
     chips,
     blocks,
     keywords = [],
+    manualMatch = false,
     onFixMatchOpen,
+    onRevertMatch,
   }: {
     chipsLabel: string;
     ratingLabel: string | null;
@@ -27,7 +29,9 @@
     chips: Snippet;
     blocks: Snippet;
     keywords?: string[];
+    manualMatch?: boolean;
     onFixMatchOpen?: () => void;
+    onRevertMatch?: () => void;
   } = $props();
 </script>
 
@@ -48,6 +52,20 @@
           >
             <PencilLine size={14} aria-hidden="true" />
             Fix match
+          </button>
+        {/if}
+        {#if manualMatch && onRevertMatch}
+          <button
+            class="text-button"
+            type="button"
+            disabled={!tmdbConfigured}
+            title={tmdbConfigured
+              ? "Clear the manual match and go back to automatic matching"
+              : "TMDb credentials are not configured"}
+            onclick={() => onRevertMatch?.()}
+          >
+            <Undo2 size={14} aria-hidden="true" />
+            Revert match
           </button>
         {/if}
         <form class="media-metadata-refresh" method="POST" action="?/refreshMetadata">

@@ -5,8 +5,10 @@
   let {
     movie,
     onFixMatchOpen,
+    onRevertMatch,
     canManageMetadata,
     tmdbConfigured,
+    manualMatch = false,
     ratingLabel,
     voteCountLabel,
     runtimeLabel,
@@ -29,8 +31,10 @@
       collection_name: string | null;
     };
     onFixMatchOpen?: () => void;
+    onRevertMatch?: () => void;
     canManageMetadata: boolean;
     tmdbConfigured: boolean;
+    manualMatch?: boolean;
     ratingLabel: string | null;
     voteCountLabel: string | null;
     runtimeLabel: string | null;
@@ -55,7 +59,9 @@
   {tmdbConfigured}
   {metadataError}
   {keywords}
+  {manualMatch}
   {onFixMatchOpen}
+  {onRevertMatch}
 >
   {#snippet chips()}
     <span>{providerLabel}</span>

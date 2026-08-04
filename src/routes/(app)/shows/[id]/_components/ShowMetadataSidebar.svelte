@@ -5,8 +5,10 @@
   let {
     show,
     onFixMatchOpen,
+    onRevertMatch,
     canManageMetadata,
     tmdbConfigured,
+    manualMatch = false,
     ratingLabel,
     voteCountLabel,
     providerLabel,
@@ -26,8 +28,10 @@
       updatedAt: string;
     };
     onFixMatchOpen?: () => void;
+    onRevertMatch?: () => void;
     canManageMetadata: boolean;
     tmdbConfigured: boolean;
+    manualMatch?: boolean;
     ratingLabel: string | null;
     voteCountLabel: string | null;
     providerLabel: string;
@@ -50,7 +54,9 @@
   {tmdbConfigured}
   {metadataError}
   {keywords}
+  {manualMatch}
   {onFixMatchOpen}
+  {onRevertMatch}
 >
   {#snippet chips()}
     <span>{providerLabel}</span>

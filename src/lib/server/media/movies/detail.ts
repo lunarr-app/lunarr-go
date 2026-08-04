@@ -30,6 +30,7 @@ const MOVIE_DETAIL_SELECT = [
   "collection_name",
   "provider",
   "provider_id",
+  "manual_match",
   "vote_average",
   "updated_at",
 ] as const;

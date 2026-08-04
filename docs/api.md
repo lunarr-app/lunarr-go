@@ -512,8 +512,10 @@ POST /api/movies/:id/metadata/refresh
 POST /api/shows/:id/metadata/refresh
 GET /api/movies/:id/match/search?query=
 POST /api/movies/:id/match
+DELETE /api/movies/:id/match
 GET /api/shows/:id/match/search?query=
 POST /api/shows/:id/match
+DELETE /api/shows/:id/match
 POST /api/shares
 GET /api/shares?mediaItemId=
 DELETE /api/shares/:id
@@ -523,7 +525,7 @@ DELETE /api/shares/:id
 
 `GET /api/settings` includes TMDb credential state plus scheduled metadata refresh settings: `movieMetadataRefreshIntervalHours`, `tvMetadataRefreshIntervalHours`, `movieMetadataStalenessDays` (default 30), and `tvMetadataStalenessDays` (default 14). Update them with `PUT /api/settings/metadata` alongside TMDb credentials.
 
-Manual "fix match" endpoints let admins correct a wrong or missing TMDb match. `GET /api/movies/:id/match/search?query=` (and the shows variant) accepts a TMDb URL, a bare TMDb ID, or a name search; it returns `{ candidates, resolved }` with lightweight TMDb candidates (`providerId`, `title`, `year`, `overview`, `posterPath`) and 404s when the media item does not exist. `POST /api/movies/:id/match` (and the shows variant) applies a chosen candidate with `{ "tmdbId": 603 }`, returning `{ mediaItemId }` (the id can change when items merge). Show matching is all-or-nothing: it 400s without changing anything when a local season does not exist on the selected TMDb show. Manual matches are persisted: rescans and metadata refreshes keep the chosen TMDb entry instead of re-guessing from filenames.
+Manual "fix match" endpoints let admins correct a wrong or missing TMDb match. `GET /api/movies/:id/match/search?query=` (and the shows variant) accepts a TMDb URL, a bare TMDb ID, or a name search; it returns `{ candidates, resolved }` with lightweight TMDb candidates (`providerId`, `title`, `year`, `overview`, `posterPath`) and 404s when the media item does not exist. `POST /api/movies/:id/match` (and the shows variant) applies a chosen candidate with `{ "tmdbId": 603 }`, returning `{ mediaItemId }` (the id can change when items merge). Show matching is all-or-nothing: it 400s without changing anything when a local season does not exist on the selected TMDb show. `DELETE /api/movies/:id/match` (and the shows variant) reverts a manual match: it clears the manual flag and immediately re-matches automatically, returning `{ mediaItemId }`. It still returns 200 when the automatic re-match finds nothing (the flag is cleared and the item keeps its current metadata until the next scheduled refresh); it 400s only when the item is not manually matched. Manual matches are persisted: rescans and metadata refreshes keep the chosen TMDb entry instead of re-guessing from filenames.
 
 Create user body:
 

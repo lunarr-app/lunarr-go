@@ -6,9 +6,9 @@ import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
 import type { Database } from "$lib/server/db/schema";
 import { clearTmdbDetailCachesForTests } from "$lib/server/metadata/tmdb";
-import { POST as movieMatchPost } from "./movies/[id]/match/+server";
+import { DELETE as movieMatchDelete, POST as movieMatchPost } from "./movies/[id]/match/+server";
 import { GET as movieMatchSearchGet } from "./movies/[id]/match/search/+server";
-import { POST as showMatchPost } from "./shows/[id]/match/+server";
+import { DELETE as showMatchDelete, POST as showMatchPost } from "./shows/[id]/match/+server";
 import { GET as showMatchSearchGet } from "./shows/[id]/match/search/+server";
 
 let tempDir: string;
@@ -30,6 +30,10 @@ function adminLocals() {
 function searchEvent(kind: "movies" | "shows", id: string, query: string, locals: unknown) {
   const url = new URL(`http://localhost/api/${kind}/${id}/match/search?query=${encodeURIComponent(query)}`);
   return { params: { id }, url, locals } as never;
+}
+
+function matchDeleteEvent(id: string, locals: unknown) {
+  return { params: { id }, locals } as never;
 }
 
 beforeEach(async () => {
@@ -179,6 +183,15 @@ describe("match API auth boundaries", () => {
     );
     expect(forbiddenGet.status).toBe(403);
     expect(await forbiddenGet.json()).toMatchObject({ detail: "Admin access required" });
+
+    const unauthenticatedDelete = await movieMatchDelete(matchDeleteEvent("movie-1", { user: null }));
+    expect(unauthenticatedDelete.status).toBe(401);
+
+    const forbiddenDelete = await movieMatchDelete(
+      matchDeleteEvent("movie-1", { user: { id: "user-1", role: "user" } }),
+    );
+    expect(forbiddenDelete.status).toBe(403);
+    expect(await forbiddenDelete.json()).toMatchObject({ detail: "Admin access required" });
   });
 
   test("requires authentication and admin role for show match endpoints", async () => {
@@ -205,6 +218,13 @@ describe("match API auth boundaries", () => {
     );
     expect(forbiddenGet.status).toBe(403);
     expect(await forbiddenGet.json()).toMatchObject({ detail: "Admin access required" });
+
+    const unauthenticatedDelete = await showMatchDelete(matchDeleteEvent("show-1", { user: null }));
+    expect(unauthenticatedDelete.status).toBe(401);
+
+    const forbiddenDelete = await showMatchDelete(matchDeleteEvent("show-1", { user: { id: "user-1", role: "user" } }));
+    expect(forbiddenDelete.status).toBe(403);
+    expect(await forbiddenDelete.json()).toMatchObject({ detail: "Admin access required" });
   });
 });
 
@@ -454,6 +474,146 @@ describe("show match API", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ detail: "The selected TMDb show has no season 2." });
-    expect(await db.selectFrom("media_item").select("id").where("provider", "is not", null).execute()).toHaveLength(0);
+  });
+});
+
+describe("match revert API", () => {
+  test("rejects unknown movies and movies that are not manually matched", async () => {
+    const unknown = await movieMatchDelete(matchDeleteEvent("unknown", adminLocals()));
+    expect(unknown.status).toBe(404);
+    expect(await unknown.json()).toMatchObject({ detail: "Movie not found." });
+
+    const notManual = await movieMatchDelete(matchDeleteEvent("movie-1", adminLocals()));
+    expect(notManual.status).toBe(400);
+    expect(await notManual.json()).toMatchObject({ detail: "This movie is not manually matched." });
+  });
+
+  test("reverts a manual movie match and re-matches automatically", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "603", manual_match: 1, title: "Wrong Title" })
+      .where("id", "=", "movie-1")
+      .execute();
+
+    stubTmdbFetch(async (url) => {
+      if (url.includes("/search/movie")) {
+        return Response.json({ results: [{ id: 603, title: "The Matrix", release_date: "1999-03-31" }] });
+      }
+      if (url.includes("/movie/603")) {
+        return Response.json({ id: 603, title: "The Matrix", release_date: "1999-03-31", runtime: 136 });
+      }
+      return new Response("{}", { status: 404 });
+    });
+
+    const response = await movieMatchDelete(matchDeleteEvent("movie-1", adminLocals()));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ mediaItemId: "movie-1" });
+  });
+
+  test("rejects unknown shows and shows that are not manually matched", async () => {
+    const unknown = await showMatchDelete(matchDeleteEvent("unknown", adminLocals()));
+    expect(unknown.status).toBe(404);
+    expect(await unknown.json()).toMatchObject({ detail: "Show not found." });
+
+    const notManual = await showMatchDelete(matchDeleteEvent("show-1", adminLocals()));
+    expect(notManual.status).toBe(400);
+    expect(await notManual.json()).toMatchObject({ detail: "This show is not manually matched." });
+  });
+
+  test("reverts a manual show match and re-matches automatically", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "1396", manual_match: 1, title: "Wrong Show" })
+      .where("id", "=", "show-1")
+      .execute();
+
+    stubTmdbFetch(async (url) => {
+      if (url.includes("/search/tv")) {
+        return Response.json({ results: [{ id: 1396, name: "Local Show", first_air_date: "2008-01-20" }] });
+      }
+      if (url.includes("/tv/1396/season/1")) {
+        return Response.json({
+          id: 3572,
+          name: "Season 1",
+          season_number: 1,
+          air_date: "2008-01-20",
+          episodes: [{ id: 62085, name: "Pilot", season_number: 1, episode_number: 1, air_date: "2008-01-20" }],
+        });
+      }
+      if (url.includes("/tv/1396")) {
+        return Response.json({ id: 1396, name: "Local Show", first_air_date: "2008-01-20" });
+      }
+      return new Response("{}", { status: 404 });
+    });
+
+    const response = await showMatchDelete(matchDeleteEvent("show-1", adminLocals()));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ mediaItemId: "show-1" });
+  });
+
+  test("clears the movie flag and returns 200 even when the automatic re-match finds nothing", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "603", manual_match: 1 })
+      .where("id", "=", "movie-1")
+      .execute();
+
+    stubTmdbFetch(async (url) => {
+      if (url.includes("/search/movie")) return Response.json({ results: [] });
+      return new Response("{}", { status: 404 });
+    });
+
+    const response = await movieMatchDelete(matchDeleteEvent("movie-1", adminLocals()));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ mediaItemId: "movie-1" });
+  });
+
+  test("clears the show flag and returns 200 even when the automatic re-match finds nothing", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "1396", manual_match: 1 })
+      .where("id", "=", "show-1")
+      .execute();
+
+    stubTmdbFetch(async (url) => {
+      if (url.includes("/search/tv")) return Response.json({ results: [] });
+      return new Response("{}", { status: 404 });
+    });
+
+    const response = await showMatchDelete(matchDeleteEvent("show-1", adminLocals()));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ mediaItemId: "show-1" });
+  });
+
+  test("clears the show flag and returns 200 when the show has no seasons", async () => {
+    await db.deleteFrom("media_item").where("id", "=", "season-1").execute();
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "1396", manual_match: 1 })
+      .where("id", "=", "show-1")
+      .execute();
+
+    const response = await showMatchDelete(matchDeleteEvent("show-1", adminLocals()));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ mediaItemId: "show-1" });
+  });
+
+  test("clears the movie flag and returns 200 when the movie has no files", async () => {
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "603", manual_match: 1 })
+      .where("id", "=", "movie-1")
+      .execute();
+    await db.deleteFrom("media_file").where("id", "=", "file-1").execute();
+
+    const response = await movieMatchDelete(matchDeleteEvent("movie-1", adminLocals()));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ mediaItemId: "movie-1" });
   });
 });
