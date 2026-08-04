@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { RefreshCw } from "@lucide/svelte";
+  import { PencilLine, RefreshCw } from "@lucide/svelte";
   import type { Snippet } from "svelte";
 
   let {
@@ -14,6 +14,7 @@
     chips,
     blocks,
     keywords = [],
+    onFixMatchOpen,
   }: {
     chipsLabel: string;
     ratingLabel: string | null;
@@ -26,6 +27,7 @@
     chips: Snippet;
     blocks: Snippet;
     keywords?: string[];
+    onFixMatchOpen?: () => void;
   } = $props();
 </script>
 
@@ -33,16 +35,32 @@
   <div class="media-metadata-heading">
     <h2 id="metadata-heading">Metadata</h2>
     {#if canManageMetadata}
-      <form class="media-metadata-refresh" method="POST" action="?/refreshMetadata">
-        <button
-          class="text-button"
-          disabled={!tmdbConfigured}
-          title={tmdbConfigured ? "Refresh metadata from TMDb" : "TMDb credentials are not configured"}
-        >
-          <RefreshCw size={14} aria-hidden="true" />
-          Refresh
-        </button>
-      </form>
+      <div class="media-metadata-actions">
+        {#if onFixMatchOpen}
+          <button
+            class="text-button"
+            type="button"
+            disabled={!tmdbConfigured}
+            title={tmdbConfigured
+              ? "Manually point this title at the correct TMDb entry"
+              : "TMDb credentials are not configured"}
+            onclick={() => onFixMatchOpen?.()}
+          >
+            <PencilLine size={14} aria-hidden="true" />
+            Fix match
+          </button>
+        {/if}
+        <form class="media-metadata-refresh" method="POST" action="?/refreshMetadata">
+          <button
+            class="text-button"
+            disabled={!tmdbConfigured}
+            title={tmdbConfigured ? "Refresh metadata from TMDb" : "TMDb credentials are not configured"}
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+            Refresh
+          </button>
+        </form>
+      </div>
     {/if}
   </div>
   {#if metadataError}
@@ -88,6 +106,13 @@
     justify-content: space-between;
     gap: var(--space-3);
     margin-bottom: 0;
+  }
+
+  .media-metadata-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-shrink: 0;
   }
 
   .media-metadata-refresh {

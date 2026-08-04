@@ -354,3 +354,72 @@ async function syncMediaMetadataRelations(db: Kysely<Database>, mediaItemId: str
       .execute();
   }
 }
+
+export async function moveWatchlistEntries(db: Kysely<Database>, oldMediaItemId: string, newMediaItemId: string) {
+  if (oldMediaItemId === newMediaItemId) return;
+
+  const rows = await db.selectFrom("watchlist").select("user_id").where("media_item_id", "=", oldMediaItemId).execute();
+
+  for (const row of rows) {
+    const existing = await db
+      .selectFrom("watchlist")
+      .select("user_id")
+      .where("user_id", "=", row.user_id)
+      .where("media_item_id", "=", newMediaItemId)
+      .executeTakeFirst();
+
+    if (existing) {
+      await db
+        .deleteFrom("watchlist")
+        .where("user_id", "=", row.user_id)
+        .where("media_item_id", "=", oldMediaItemId)
+        .execute();
+    } else {
+      await db
+        .updateTable("watchlist")
+        .set({ media_item_id: newMediaItemId })
+        .where("user_id", "=", row.user_id)
+        .where("media_item_id", "=", oldMediaItemId)
+        .execute();
+    }
+  }
+}
+
+export async function moveMediaShares(db: Kysely<Database>, oldMediaItemId: string, newMediaItemId: string) {
+  if (oldMediaItemId === newMediaItemId) return;
+
+  await db
+    .updateTable("media_share")
+    .set({ media_item_id: newMediaItemId })
+    .where("media_item_id", "=", oldMediaItemId)
+    .execute();
+}
+
+export async function remapShareSeasonId(db: Kysely<Database>, oldSeasonId: string, newSeasonId: string) {
+  if (oldSeasonId === newSeasonId) return;
+
+  const shares = await db
+    .selectFrom("media_share")
+    .select(["id", "season_ids"])
+    .where("season_ids", "is not", null)
+    .execute();
+
+  for (const share of shares) {
+    let seasonIds: unknown;
+    try {
+      seasonIds = JSON.parse(share.season_ids as string);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(seasonIds) || !seasonIds.includes(oldSeasonId)) continue;
+
+    const remapped = [...new Set(seasonIds.map((id) => (id === oldSeasonId ? newSeasonId : id)))].filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+    await db
+      .updateTable("media_share")
+      .set({ season_ids: remapped.length ? JSON.stringify(remapped) : null })
+      .where("id", "=", share.id)
+      .execute();
+  }
+}

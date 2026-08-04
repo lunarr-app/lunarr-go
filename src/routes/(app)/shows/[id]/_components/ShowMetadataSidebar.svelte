@@ -4,6 +4,7 @@
 
   let {
     show,
+    onFixMatchOpen,
     canManageMetadata,
     tmdbConfigured,
     ratingLabel,
@@ -24,6 +25,7 @@
       providerId: string | null;
       updatedAt: string;
     };
+    onFixMatchOpen?: () => void;
     canManageMetadata: boolean;
     tmdbConfigured: boolean;
     ratingLabel: string | null;
@@ -48,6 +50,7 @@
   {tmdbConfigured}
   {metadataError}
   {keywords}
+  {onFixMatchOpen}
 >
   {#snippet chips()}
     <span>{providerLabel}</span>

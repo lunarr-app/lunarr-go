@@ -1,5 +1,6 @@
 import { getSetting } from "../settings";
 import { createTtlCache } from "$lib/server/cache/ttl-cache";
+import type { FixMatchCandidate } from "$lib/media/types";
 
 /** Bundled read-only TMDB access token used as a fallback when no user-configured credentials exist. */
 export const PUBLIC_TMDB_ACCESS_TOKEN =
@@ -224,12 +225,12 @@ type TmdbTvSeasonDetails = {
   }>;
 };
 
-type TmdbCredentials = {
+export type TmdbCredentials = {
   token?: string;
   apiKey?: string;
 };
 
-type TmdbFetch = typeof fetch;
+export type TmdbFetch = typeof fetch;
 
 export type MatchedMovieMetadata = {
   provider: "tmdb";
@@ -400,6 +401,10 @@ async function credentials(override?: TmdbCredentials) {
 export async function tmdbCredentialsConfigured(override?: TmdbCredentials) {
   const { token, apiKey } = await credentials(override);
   return Boolean(token || apiKey);
+}
+
+function isTmdbNotFoundError(error: unknown) {
+  return error instanceof Error && /TMDb request failed with 404/.test(error.message);
 }
 
 async function tmdbFetch<T>(url: URL, override?: TmdbCredentials, fetcher: TmdbFetch = fetch) {
@@ -1012,6 +1017,73 @@ export async function matchMovieMetadata(
   return null;
 }
 
+export async function matchMovieMetadataById(
+  movieId: number,
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+): Promise<MatchedMovieMetadata | null> {
+  let detail: TmdbMovieDetails | null;
+  try {
+    detail = await fetchMovieDetail(movieId, options);
+  } catch (error) {
+    if (isTmdbNotFoundError(error)) return null;
+    throw error;
+  }
+  if (!detail) return null;
+
+  const searchHit: TmdbSearchResult = {
+    id: detail.id,
+    title: detail.title,
+    original_title: detail.original_title,
+    original_language: detail.original_language,
+    overview: detail.overview,
+    poster_path: detail.poster_path,
+    backdrop_path: detail.backdrop_path,
+    release_date: detail.release_date,
+    popularity: detail.popularity,
+    vote_average: detail.vote_average,
+    vote_count: detail.vote_count,
+  };
+  return mapMatchedMovieMetadata(detail, searchHit, detail.title || detail.original_title || "");
+}
+
+const TMDB_MATCH_CANDIDATE_LIMIT = 10;
+
+export async function searchTmdbMovieCandidates(
+  query: string,
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+): Promise<FixMatchCandidate[]> {
+  const searchUrl = new URL("https://api.themoviedb.org/3/search/movie");
+  searchUrl.searchParams.set("query", query);
+  searchUrl.searchParams.set("include_adult", "true");
+
+  const search = await tmdbFetch<{ results: TmdbSearchResult[] }>(searchUrl, options.credentials, options.fetch);
+  return (search?.results ?? []).slice(0, TMDB_MATCH_CANDIDATE_LIMIT).map((result) => ({
+    providerId: String(result.id),
+    title: result.title || result.original_title || "",
+    year: extractYear(result.release_date),
+    overview: result.overview || null,
+    posterPath: result.poster_path ?? null,
+  }));
+}
+
+export async function searchTmdbTvCandidates(
+  query: string,
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+): Promise<FixMatchCandidate[]> {
+  const searchUrl = new URL("https://api.themoviedb.org/3/search/tv");
+  searchUrl.searchParams.set("query", query);
+  searchUrl.searchParams.set("include_adult", "true");
+
+  const search = await tmdbFetch<{ results: TmdbTvSearchResult[] }>(searchUrl, options.credentials, options.fetch);
+  return (search?.results ?? []).slice(0, TMDB_MATCH_CANDIDATE_LIMIT).map((result) => ({
+    providerId: String(result.id),
+    title: result.name || result.original_name || "",
+    year: extractYear(result.first_air_date),
+    overview: result.overview || null,
+    posterPath: result.poster_path ?? null,
+  }));
+}
+
 async function fetchTvDetail(tvId: number, options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {}) {
   const cacheKey = `tv:${tvId}`;
   const cached = tmdbTvDetailCache.get(cacheKey);
@@ -1062,6 +1134,48 @@ export async function matchTvSeasonMetadata(
 
   return {
     show: mapTvShowMetadata(detail, first),
+    season: mapTvSeasonMetadata(season, seasonNumber),
+    episodes: (season.episodes ?? [])
+      .filter((episode) => typeof episode.episode_number === "number")
+      .map((episode) => mapTvEpisodeMetadata(episode, seasonNumber, episode.episode_number ?? 0))
+      .filter((episode) => episode !== null),
+  } satisfies MatchedTvSeasonLookup;
+}
+
+export async function fetchTmdbShowMetadata(
+  tvId: number,
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+): Promise<MatchedTvShowMetadata | null> {
+  let detail: TmdbTvDetails | null;
+  try {
+    detail = await fetchTvDetail(tvId, options);
+  } catch (error) {
+    if (isTmdbNotFoundError(error)) return null;
+    throw error;
+  }
+  if (!detail) return null;
+  return mapTvShowMetadata(detail, detail);
+}
+
+export async function matchTvSeasonMetadataById(
+  tvId: number,
+  seasonNumber: number,
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+): Promise<MatchedTvSeasonLookup | null> {
+  const show = await fetchTmdbShowMetadata(tvId, options);
+  if (!show) return null;
+
+  let season: TmdbTvSeasonDetails | null;
+  try {
+    season = await fetchTvSeason(tvId, seasonNumber, options);
+  } catch (error) {
+    if (isTmdbNotFoundError(error)) return null;
+    throw error;
+  }
+  if (!season) return null;
+
+  return {
+    show,
     season: mapTvSeasonMetadata(season, seasonNumber),
     episodes: (season.episodes ?? [])
       .filter((episode) => typeof episode.episode_number === "number")

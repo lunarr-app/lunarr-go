@@ -3,6 +3,7 @@
   import MediaCastRail from "$lib/components/MediaCastRail.svelte";
   import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
   import MediaFilesSection from "$lib/components/MediaFilesSection.svelte";
+  import FixMatchModal from "$lib/components/FixMatchModal.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
   import { deriveDetailPlaybackState } from "$lib/media/detail-playback";
   import {
@@ -17,6 +18,7 @@
 
   let { data, form } = $props();
   let shareModalOpen = $state(false);
+  let fixMatchOpen = $state(false);
 
   const runtimeLabel = $derived(data.movie.runtime_seconds ? formatMediaDuration(data.movie.runtime_seconds) : null);
   const ratingLabel = $derived(formatVoteAverageLabel(data.movie.vote_average));
@@ -87,6 +89,7 @@
   {#snippet aside()}
     <MovieMetadataSidebar
       movie={data.movie}
+      onFixMatchOpen={() => (fixMatchOpen = true)}
       canManageMetadata={data.canManageMetadata}
       tmdbConfigured={data.tmdbConfigured}
       {ratingLabel}
@@ -111,4 +114,8 @@
     mediaItemId={data.movie.id}
     onClose={() => (shareModalOpen = false)}
   />
+{/if}
+
+{#if fixMatchOpen}
+  <FixMatchModal kind="movie" mediaItemId={data.movie.id} onClose={() => (fixMatchOpen = false)} />
 {/if}

@@ -2,6 +2,7 @@
   import { page } from "$app/state";
   import MediaCastRail from "$lib/components/MediaCastRail.svelte";
   import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
+  import FixMatchModal from "$lib/components/FixMatchModal.svelte";
   import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
   import { playbackModalHref } from "$lib/playback/links";
   import { formatVoteAverageLabel, formatVoteCountLabel } from "$lib/media/format";
@@ -11,6 +12,7 @@
 
   let { data, form } = $props();
   let shareModalOpen = $state(false);
+  let fixMatchOpen = $state(false);
 
   const totalEpisodes = $derived(data.seasons.reduce((count, season) => count + season.episodeCount, 0));
   const watchedCount = $derived(data.seasons.reduce((count, season) => count + season.watchedCount, 0));
@@ -74,6 +76,7 @@
   {#snippet aside()}
     <ShowMetadataSidebar
       show={data.show}
+      onFixMatchOpen={() => (fixMatchOpen = true)}
       canManageMetadata={data.canManageMetadata}
       tmdbConfigured={data.tmdbConfigured}
       {ratingLabel}
@@ -100,4 +103,8 @@
     }))}
     onClose={() => (shareModalOpen = false)}
   />
+{/if}
+
+{#if fixMatchOpen}
+  <FixMatchModal kind="show" mediaItemId={data.show.id} onClose={() => (fixMatchOpen = false)} />
 {/if}

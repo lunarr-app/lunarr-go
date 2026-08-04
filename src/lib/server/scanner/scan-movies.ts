@@ -174,13 +174,15 @@ export async function scanMovieFile(
       return "unchanged" as const;
     }
 
-    const mediaItemId = await findOrCreateMovieItem(
-      library.path,
-      filePath,
-      onMetadataError,
-      metadataMatcher,
-      fileValues.duration_seconds,
-    );
+    const mediaItemId = existing.existing_manual_match
+      ? existing.media_item_id
+      : await findOrCreateMovieItem(
+          library.path,
+          filePath,
+          onMetadataError,
+          metadataMatcher,
+          fileValues.duration_seconds,
+        );
     const values = {
       ...fileValues,
       media_item_id: mediaItemId,
@@ -197,6 +199,8 @@ export async function scanMovieFile(
       ...existing,
       ...values,
       existing_provider: existing.existing_provider,
+      existing_manual_match: existing.existing_manual_match,
+      existing_show_manual_match: existing.existing_show_manual_match,
     });
     await moveMediaFileAssociations(existing.id, existing.media_item_id, mediaItemId, now);
     await syncSidecarSubtitleTracks(mediaItemId, mediaFileId, filePath, now, context);
@@ -224,6 +228,8 @@ export async function scanMovieFile(
     id: mediaFileId,
     ...values,
     existing_provider: null,
+    existing_manual_match: null,
+    existing_show_manual_match: null,
   });
   await syncSidecarSubtitleTracks(mediaItemId, mediaFileId, filePath, now, context);
   return "added" as const;

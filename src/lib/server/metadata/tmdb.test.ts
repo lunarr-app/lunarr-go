@@ -6,10 +6,15 @@ import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from 
 import { setSetting } from "../settings";
 import {
   clearTmdbDetailCachesForTests,
+  fetchTmdbShowMetadata,
   matchMovieMetadata,
+  matchMovieMetadataById,
   matchTvSeasonMetadata,
+  matchTvSeasonMetadataById,
   movieMetadataMatchAccepts,
   movieMetadataRuntimesCompatible,
+  searchTmdbMovieCandidates,
+  searchTmdbTvCandidates,
   testTmdbConnection,
   tmdbCredentialsConfigured,
 } from "./tmdb";
@@ -892,5 +897,284 @@ describe("matchTvSeasonMetadata", () => {
       voteAverage: 8.7,
       voteCount: 20,
     });
+  });
+});
+
+describe("matchMovieMetadataById", () => {
+  test("maps a TMDb movie detail response fetched directly by ID", async () => {
+    const calls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      calls.push(url);
+      return Response.json({
+        id: 603,
+        title: "The Matrix",
+        overview: "A hacker discovers the nature of reality.",
+        release_date: "1999-03-31",
+        runtime: 136,
+        poster_path: "/poster.jpg",
+        backdrop_path: "/backdrop.jpg",
+        popularity: 100,
+        vote_average: 8.3,
+        vote_count: 12000,
+        imdb_id: "tt0133093",
+        genres: [{ id: 28, name: "Action" }],
+      });
+    };
+
+    const metadata = await matchMovieMetadataById(603, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain("/movie/603");
+    expect(metadata).toMatchObject({
+      provider: "tmdb",
+      providerId: "603",
+      title: "The Matrix",
+      year: 1999,
+      overview: "A hacker discovers the nature of reality.",
+      runtimeSeconds: 8160,
+      posterPath: "/poster.jpg",
+      imdbId: "tt0133093",
+    });
+    expect(metadata?.genres?.[0]?.name).toBe("Action");
+  });
+
+  test("returns null when TMDb has no movie for the ID", async () => {
+    const mockedFetch = async (_input: URL | RequestInfo) => new Response("{}", { status: 404 });
+
+    expect(
+      await matchMovieMetadataById(999999999, {
+        credentials: { token: "test-token" },
+        fetch: mockedFetch as typeof fetch,
+      }),
+    ).toBeNull();
+  });
+
+  test("rethrows non-404 TMDb errors", async () => {
+    const mockedFetch = async (_input: URL | RequestInfo) => new Response("{}", { status: 500 });
+
+    expect(
+      matchMovieMetadataById(603, {
+        credentials: { token: "test-token" },
+        fetch: mockedFetch as typeof fetch,
+      }),
+    ).rejects.toThrow("TMDb request failed with 500");
+  });
+});
+
+describe("fetchTmdbShowMetadata and matchTvSeasonMetadataById", () => {
+  const showDetail = {
+    id: 1396,
+    name: "Breaking Bad",
+    original_name: "Breaking Bad",
+    overview: "A chemistry teacher turns meth maker.",
+    first_air_date: "2008-01-20",
+    poster_path: "/bb.jpg",
+    backdrop_path: "/bb-backdrop.jpg",
+    popularity: 90,
+    vote_average: 8.9,
+    vote_count: 14000,
+    status: "Ended",
+    external_ids: { imdb_id: "tt0903747" },
+  };
+
+  test("fetches show metadata directly by ID without a search request", async () => {
+    const calls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      calls.push(String(input));
+      return Response.json(showDetail);
+    };
+
+    const metadata = await fetchTmdbShowMetadata(1396, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain("/tv/1396");
+    expect(metadata).toMatchObject({
+      provider: "tmdb",
+      providerId: "1396",
+      title: "Breaking Bad",
+      year: 2008,
+      firstAirDate: "2008-01-20",
+      posterPath: "/bb.jpg",
+      imdbId: "tt0903747",
+    });
+  });
+
+  test("maps season metadata for a show fetched by ID", async () => {
+    const calls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes("/tv/1396/season/1")) {
+        return Response.json({
+          id: 3572,
+          name: "Season 1",
+          season_number: 1,
+          air_date: "2008-01-20",
+          episodes: [
+            {
+              id: 62085,
+              name: "Pilot",
+              season_number: 1,
+              episode_number: 1,
+              air_date: "2008-01-20",
+              runtime: 58,
+            },
+          ],
+        });
+      }
+      return Response.json(showDetail);
+    };
+
+    const lookup = await matchTvSeasonMetadataById(1396, 1, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(calls.some((url) => url.includes("/tv/1396"))).toBe(true);
+    expect(calls.some((url) => url.includes("/tv/1396/season/1"))).toBe(true);
+    expect(calls.every((url) => !url.includes("/search/tv"))).toBe(true);
+    expect(lookup?.show.providerId).toBe("1396");
+    expect(lookup?.season).toMatchObject({ providerId: "3572", seasonNumber: 1 });
+    expect(lookup?.episodes[0]).toMatchObject({
+      providerId: "62085",
+      title: "Pilot",
+      seasonNumber: 1,
+      episodeNumber: 1,
+      runtimeSeconds: 3480,
+    });
+  });
+
+  test("returns null when the show or season is missing on TMDb", async () => {
+    const notFoundFetch = async (_input: URL | RequestInfo) => new Response("{}", { status: 404 });
+
+    expect(
+      await fetchTmdbShowMetadata(999999999, {
+        credentials: { token: "test-token" },
+        fetch: notFoundFetch as typeof fetch,
+      }),
+    ).toBeNull();
+
+    const missingSeasonFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/season/")) return new Response("{}", { status: 404 });
+      return Response.json(showDetail);
+    };
+
+    expect(
+      await matchTvSeasonMetadataById(1396, 99, {
+        credentials: { token: "test-token" },
+        fetch: missingSeasonFetch as typeof fetch,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("TMDb match candidate search", () => {
+  test("maps movie search results into lightweight candidates", async () => {
+    const calls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      calls.push(String(input));
+      return Response.json({
+        results: [
+          {
+            id: 603,
+            title: "The Matrix",
+            release_date: "1999-03-31",
+            overview: "A hacker discovers the nature of reality.",
+            poster_path: "/matrix.jpg",
+          },
+          {
+            id: 604,
+            title: "The Matrix Reloaded",
+            release_date: "2003-05-15",
+            poster_path: null,
+          },
+        ],
+      });
+    };
+
+    const candidates = await searchTmdbMovieCandidates("matrix", {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(calls[0]).toContain("/search/movie");
+    expect(calls[0]).toContain("query=matrix");
+    expect(candidates).toEqual([
+      {
+        providerId: "603",
+        title: "The Matrix",
+        year: 1999,
+        overview: "A hacker discovers the nature of reality.",
+        posterPath: "/matrix.jpg",
+      },
+      {
+        providerId: "604",
+        title: "The Matrix Reloaded",
+        year: 2003,
+        overview: null,
+        posterPath: null,
+      },
+    ]);
+  });
+
+  test("maps TV search results into lightweight candidates", async () => {
+    const calls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      calls.push(String(input));
+      return Response.json({
+        results: [
+          {
+            id: 1396,
+            name: "Breaking Bad",
+            first_air_date: "2008-01-20",
+            overview: "A chemistry teacher turns meth maker.",
+            poster_path: "/bb.jpg",
+          },
+        ],
+      });
+    };
+
+    const candidates = await searchTmdbTvCandidates("breaking bad", {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(calls[0]).toContain("/search/tv");
+    expect(calls[0]).toContain("query=breaking+bad");
+    expect(candidates).toEqual([
+      {
+        providerId: "1396",
+        title: "Breaking Bad",
+        year: 2008,
+        overview: "A chemistry teacher turns meth maker.",
+        posterPath: "/bb.jpg",
+      },
+    ]);
+  });
+
+  test("caps candidate lists", async () => {
+    const mockedFetch = async (_input: URL | RequestInfo) =>
+      Response.json({
+        results: Array.from({ length: 25 }, (_, index) => ({
+          id: index + 1,
+          title: `Movie ${index + 1}`,
+          release_date: "2020-01-01",
+        })),
+      });
+
+    const candidates = await searchTmdbMovieCandidates("movie", {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(candidates).toHaveLength(10);
   });
 });

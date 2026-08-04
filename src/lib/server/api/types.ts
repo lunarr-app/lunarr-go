@@ -31,7 +31,14 @@ import type { PlaybackData } from "$lib/server/playback";
 import type { SegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
 import type { TranscodePolicy } from "$lib/server/transcoding/policy";
 import type { CreateSharePayload, PublicShareRecord, SharePageData, ShareSeasonData } from "$lib/shares/types";
-import type { CatalogPageInfo, MovieRowsResponse, MovieSummary, ShowRowsResponse, ShowSummary } from "$lib/media/types";
+import type {
+  CatalogPageInfo,
+  FixMatchCandidate,
+  MovieRowsResponse,
+  MovieSummary,
+  ShowRowsResponse,
+  ShowSummary,
+} from "$lib/media/types";
 
 export type {
   CatalogPageInfo,
@@ -164,6 +171,13 @@ export type ShareRevokeResponse = {
 };
 
 export type MetadataRefreshResponse = RefreshMovieMetadataResult | RefreshTvShowMetadataResult;
+export type MatchSearchResponse = {
+  candidates: FixMatchCandidate[];
+  resolved: boolean;
+};
+export type MediaMatchResponse = {
+  mediaItemId: string;
+};
 export type ScanStartResponse = string;
 export type PlaybackDataResponse = PlaybackData;
 
@@ -300,6 +314,9 @@ export const OPENAPI_TYPED_SCHEMAS = [
   "LibraryDetailResponse",
   "LibrariesResponse",
   "MetadataRefreshResponse",
+  "FixMatchCandidate",
+  "MatchSearchResponse",
+  "MediaMatchResponse",
   "ScanStartResponse",
   "WatchlistToggleResponse",
   "WatchlistStatusResponse",

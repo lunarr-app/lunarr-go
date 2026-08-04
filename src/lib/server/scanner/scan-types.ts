@@ -50,6 +50,8 @@ export type ExistingMediaFile = {
   audio_language: string | null;
   audio_bit_rate: number | null;
   existing_provider: string | null;
+  existing_manual_match: boolean | number | null;
+  existing_show_manual_match: boolean | number | null;
 };
 
 export type ScannableLibrary = {

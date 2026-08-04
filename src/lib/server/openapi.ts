@@ -127,6 +127,14 @@ const searchParameter = {
   schema: stringSchema,
 };
 
+const matchQueryParameter = () => ({
+  name: "query",
+  in: "query",
+  required: true,
+  description: "TMDb URL, TMDb ID, or a text search query.",
+  schema: { ...stringSchema, maxLength: 500 },
+});
+
 const pageParameter = {
   name: "page",
   in: "query",
@@ -448,6 +456,45 @@ export const openApiDocument = {
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/MetadataRefreshResponse",
+          }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+    },
+    "/api/movies/{id}/match/search": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Search TMDb candidates to manually match a movie.",
+        description:
+          "Accepts a TMDb movie URL or ID (resolved into a single candidate) or a text query searched against TMDb. Admin only.",
+        operationId: "searchMovieMatchCandidates",
+        parameters: [pathIdParameter(), matchQueryParameter()],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MatchSearchResponse",
+          }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+    },
+    "/api/movies/{id}/match": {
+      post: {
+        tags: ["Catalog"],
+        summary: "Manually match a movie to a TMDb entry chosen by an admin.",
+        description:
+          "Points the movie at the given TMDb movie ID and marks the match as manual so future scans and refreshes keep it. Admin only.",
+        operationId: "fixMovieMatch",
+        parameters: [pathIdParameter()],
+        requestBody: { $ref: "#/components/requestBodies/MediaMatchRequest" },
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MediaMatchResponse",
           }),
           "400": errorResponse,
           "401": errorResponse,
@@ -891,6 +938,45 @@ export const openApiDocument = {
         responses: {
           "200": jsonResponse({
             $ref: "#/components/schemas/MetadataRefreshResponse",
+          }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+    },
+    "/api/shows/{id}/match/search": {
+      get: {
+        tags: ["Catalog"],
+        summary: "Search TMDb candidates to manually match a show.",
+        description:
+          "Accepts a TMDb show URL or ID (resolved into a single candidate) or a text query searched against TMDb. Admin only.",
+        operationId: "searchShowMatchCandidates",
+        parameters: [pathIdParameter(), matchQueryParameter()],
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MatchSearchResponse",
+          }),
+          "400": errorResponse,
+          "401": errorResponse,
+          "403": errorResponse,
+          "404": errorResponse,
+        },
+      },
+    },
+    "/api/shows/{id}/match": {
+      post: {
+        tags: ["Catalog"],
+        summary: "Manually match a show to a TMDb entry chosen by an admin.",
+        description:
+          "Points the show and its seasons at the given TMDb show ID and marks the match as manual so future scans and refreshes keep it. Admin only.",
+        operationId: "fixShowMatch",
+        parameters: [pathIdParameter()],
+        requestBody: { $ref: "#/components/requestBodies/MediaMatchRequest" },
+        responses: {
+          "200": jsonResponse({
+            $ref: "#/components/schemas/MediaMatchResponse",
           }),
           "400": errorResponse,
           "401": errorResponse,
@@ -1614,6 +1700,14 @@ export const openApiDocument = {
         content: {
           "application/json": {
             schema: { $ref: "#/components/schemas/SeasonWatchedRequest" },
+          },
+        },
+      },
+      MediaMatchRequest: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/MediaMatchRequest" },
           },
         },
       },
@@ -3553,6 +3647,48 @@ export const openApiDocument = {
             },
           },
         ],
+      },
+      MediaMatchRequest: {
+        type: "object",
+        required: ["tmdbId"],
+        properties: {
+          tmdbId: { type: "integer", minimum: 1 },
+        },
+      },
+      FixMatchCandidate: {
+        type: "object",
+        required: ["providerId", "title", "year", "overview", "posterPath"],
+        properties: {
+          providerId: stringSchema,
+          title: stringSchema,
+          year: nullableIntegerSchema,
+          overview: nullableStringSchema,
+          posterPath: nullableStringSchema,
+        },
+      },
+      MatchSearchResponse: {
+        type: "object",
+        required: ["candidates", "resolved"],
+        properties: {
+          candidates: {
+            type: "array",
+            items: { $ref: "#/components/schemas/FixMatchCandidate" },
+          },
+          resolved: {
+            type: "boolean",
+            description: "True when the query was a TMDb URL or ID resolved into a single candidate.",
+          },
+        },
+      },
+      MediaMatchResponse: {
+        type: "object",
+        required: ["mediaItemId"],
+        properties: {
+          mediaItemId: {
+            ...stringSchema,
+            description: "Media item identifier after the match, which can change when items are merged.",
+          },
+        },
       },
       LastScanSummary: {
         type: "object",

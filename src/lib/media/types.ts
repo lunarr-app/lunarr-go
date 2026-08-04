@@ -93,3 +93,11 @@ export type ShowRowsResponse = {
   nextUp: EpisodeSummary[];
   nextUpPage: CatalogPageInfo;
 } & ShowBrowseRowsResponse;
+
+export type FixMatchCandidate = {
+  providerId: string;
+  title: string;
+  year: number | null;
+  overview: string | null;
+  posterPath: string | null;
+};

@@ -3,13 +3,16 @@ import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
 import { lookupMovieMetadataFromPath } from "./matching";
-import { movieMetadataValues, syncMovieMetadataRelations } from "./store";
-import { matchMovieMetadata, type MatchedMovieMetadata } from "./tmdb";
+import { movieMetadataValues, moveMediaShares, moveWatchlistEntries, syncMovieMetadataRelations } from "./store";
+import { matchMovieMetadata, matchMovieMetadataById, type MatchedMovieMetadata } from "./tmdb";
 
 type MovieMetadataMatcher = (title: string, year: number | null) => Promise<MatchedMovieMetadata | null>;
 
+export type MovieMetadataByIdMatcher = (tmdbId: number) => Promise<MatchedMovieMetadata | null>;
+
 export type RefreshMetadataOptions = {
   metadataMatcher?: MovieMetadataMatcher;
+  metadataByIdMatcher?: MovieMetadataByIdMatcher;
   stalenessDays?: number;
 };
 
@@ -79,50 +82,17 @@ async function moveWatchProgress(oldMediaItemId: string, newMediaItemId: string)
   }
 }
 
-export async function refreshMovieMetadataResult(
+export async function applyMatchedMovieMetadata(
   mediaItemId: string,
-  options: RefreshMetadataOptions = {},
-): Promise<RefreshMovieMetadataResult> {
+  metadata: MatchedMovieMetadata,
+  options: { manualMatch?: boolean } = {},
+): Promise<string> {
   const db = await getDb();
-  const movie = await db
-    .selectFrom("media_item")
-    .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
-    .innerJoin("library", "library.id", "media_file.library_id")
-    .select([
-      "media_item.id",
-      "media_item.title",
-      "media_item.year",
-      "media_file.basename as basename",
-      "media_file.path as path",
-      "media_file.duration_seconds as duration_seconds",
-      "library.path as library_path",
-    ])
-    .where("media_item.id", "=", mediaItemId)
-    .where("media_item.kind", "=", "movie")
-    .orderBy("media_file.basename", "asc")
-    .executeTakeFirst();
-
-  if (!movie) return { status: "missing", mediaItemId: null };
-
-  const metadataMatcher = options.metadataMatcher ?? matchMovieMetadata;
-  const lookup =
-    (await lookupMovieMetadataFromPath(movie.path ?? movie.basename ?? "", {
-      libraryRoot: movie.library_path,
-      fileRuntimeSeconds: movie.duration_seconds,
-      fallback: {
-        title: movie.title,
-        year: movie.year,
-      },
-      matcher: metadataMatcher,
-    })) ?? null;
-  if (!lookup) return { status: "unmatched", mediaItemId };
-
-  const { metadata } = lookup;
-
   const now = nowIso();
   const values = {
     ...movieMetadataValues(metadata, now),
     sort_title: sortTitle(metadata.title),
+    ...(options.manualMatch ? { manual_match: 1 } : {}),
   };
 
   const existingProviderItem = await db
@@ -148,14 +118,69 @@ export async function refreshMovieMetadataResult(
       .set({ media_item_id: existingProviderItem.id, updated_at: now })
       .where("media_item_id", "=", mediaItemId)
       .execute();
+    await moveWatchlistEntries(db, mediaItemId, existingProviderItem.id);
+    await moveMediaShares(db, mediaItemId, existingProviderItem.id);
     await db.deleteFrom("media_item").where("id", "=", mediaItemId).execute();
-    return { status: "matched", mediaItemId: existingProviderItem.id };
+    return existingProviderItem.id;
   }
 
   await db.updateTable("media_item").set(values).where("id", "=", mediaItemId).execute();
   await syncMovieMetadataRelations(db, mediaItemId, metadata);
+  return mediaItemId;
+}
 
-  return { status: "matched", mediaItemId };
+export async function refreshMovieMetadataResult(
+  mediaItemId: string,
+  options: RefreshMetadataOptions = {},
+): Promise<RefreshMovieMetadataResult> {
+  const db = await getDb();
+  const movie = await db
+    .selectFrom("media_item")
+    .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+    .innerJoin("library", "library.id", "media_file.library_id")
+    .select([
+      "media_item.id",
+      "media_item.title",
+      "media_item.year",
+      "media_item.provider",
+      "media_item.provider_id",
+      "media_item.manual_match",
+      "media_file.basename as basename",
+      "media_file.path as path",
+      "media_file.duration_seconds as duration_seconds",
+      "library.path as library_path",
+    ])
+    .where("media_item.id", "=", mediaItemId)
+    .where("media_item.kind", "=", "movie")
+    .orderBy("media_file.basename", "asc")
+    .executeTakeFirst();
+
+  if (!movie) return { status: "missing", mediaItemId: null };
+
+  let metadata: MatchedMovieMetadata | null = null;
+
+  if (movie.manual_match && movie.provider === "tmdb" && movie.provider_id) {
+    const metadataByIdMatcher = options.metadataByIdMatcher ?? matchMovieMetadataById;
+    metadata = await metadataByIdMatcher(Number(movie.provider_id));
+  } else {
+    const metadataMatcher = options.metadataMatcher ?? matchMovieMetadata;
+    const lookup =
+      (await lookupMovieMetadataFromPath(movie.path ?? movie.basename ?? "", {
+        libraryRoot: movie.library_path,
+        fileRuntimeSeconds: movie.duration_seconds,
+        fallback: {
+          title: movie.title,
+          year: movie.year,
+        },
+        matcher: metadataMatcher,
+      })) ?? null;
+    metadata = lookup?.metadata ?? null;
+  }
+
+  if (!metadata) return { status: "unmatched", mediaItemId };
+
+  const finalMediaItemId = await applyMatchedMovieMetadata(mediaItemId, metadata);
+  return { status: "matched", mediaItemId: finalMediaItemId };
 }
 
 async function addMetadataJobError(jobId: string, item: string, error: unknown) {

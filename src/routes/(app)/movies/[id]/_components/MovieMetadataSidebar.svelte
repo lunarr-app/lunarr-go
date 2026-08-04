@@ -4,6 +4,7 @@
 
   let {
     movie,
+    onFixMatchOpen,
     canManageMetadata,
     tmdbConfigured,
     ratingLabel,
@@ -27,6 +28,7 @@
       updated_at: string;
       collection_name: string | null;
     };
+    onFixMatchOpen?: () => void;
     canManageMetadata: boolean;
     tmdbConfigured: boolean;
     ratingLabel: string | null;
@@ -53,6 +55,7 @@
   {tmdbConfigured}
   {metadataError}
   {keywords}
+  {onFixMatchOpen}
 >
   {#snippet chips()}
     <span>{providerLabel}</span>

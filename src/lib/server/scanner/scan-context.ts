@@ -94,6 +94,8 @@ export async function loadExistingLibraryFiles(libraryId: string) {
   const files = await db
     .selectFrom("media_file")
     .leftJoin("media_item", "media_item.id", "media_file.media_item_id")
+    .leftJoin("media_item as season", "season.id", "media_item.parent_id")
+    .leftJoin("media_item as show", "show.id", "season.parent_id")
     .select([
       "media_file.id",
       "media_file.library_id",
@@ -113,6 +115,8 @@ export async function loadExistingLibraryFiles(libraryId: string) {
       "media_file.audio_language",
       "media_file.audio_bit_rate",
       "media_item.provider as existing_provider",
+      "media_item.manual_match as existing_manual_match",
+      "show.manual_match as existing_show_manual_match",
     ])
     .where("media_file.library_id", "=", libraryId)
     .execute();

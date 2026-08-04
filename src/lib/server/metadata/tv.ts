@@ -3,6 +3,9 @@ import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
 import {
+  moveMediaShares,
+  moveWatchlistEntries,
+  remapShareSeasonId,
   syncTvShowMetadataRelations,
   tvEpisodeMetadataValues,
   tvSeasonMetadataValues,
@@ -10,6 +13,7 @@ import {
 } from "./store";
 import {
   matchTvSeasonMetadata,
+  matchTvSeasonMetadataById,
   type MatchedTvEpisodeMetadata,
   type MatchedTvSeasonLookup,
   type MatchedTvSeasonMetadata,
@@ -24,8 +28,14 @@ type TvSeasonMetadataMatcher = (
   seasonNumber: number,
 ) => Promise<MatchedTvSeasonLookup | null>;
 
+export type TvSeasonMetadataByIdMatcher = (
+  tmdbId: number,
+  seasonNumber: number,
+) => Promise<MatchedTvSeasonLookup | null>;
+
 export type RefreshTvMetadataOptions = {
   metadataMatcher?: TvSeasonMetadataMatcher;
+  metadataByIdMatcher?: TvSeasonMetadataByIdMatcher;
   stalenessDays?: number;
 };
 
@@ -67,7 +77,9 @@ async function mergeChildItems(oldParentId: string, newParentId: string, now: st
     .set({ parent_id: newParentId, updated_at: now })
     .where("parent_id", "=", oldParentId)
     .execute();
-  await db.deleteFrom("media_item").where("id", "=", oldParentId).where("provider", "is", null).execute();
+  await moveWatchlistEntries(db, oldParentId, newParentId);
+  await moveMediaShares(db, oldParentId, newParentId);
+  await db.deleteFrom("media_item").where("id", "=", oldParentId).execute();
 }
 
 export async function moveEpisodeAssociations(oldMediaItemId: string, newMediaItemId: string, now: string) {
@@ -132,6 +144,7 @@ export async function moveEpisodeAssociations(oldMediaItemId: string, newMediaIt
     .set({ media_item_id: newMediaItemId, updated_at: now })
     .where("media_item_id", "=", oldMediaItemId)
     .execute();
+  await moveWatchlistEntries(db, oldMediaItemId, newMediaItemId);
   await db.deleteFrom("media_item").where("id", "=", oldMediaItemId).where("provider", "is", null).execute();
 }
 
@@ -186,7 +199,10 @@ async function upsertSeasonMetadata(
   const targetId = providerExisting?.id ?? currentSeasonId;
 
   await db.updateTable("media_item").set(values).where("id", "=", targetId).execute();
-  if (providerExisting) await mergeChildItems(currentSeasonId, targetId, now);
+  if (providerExisting) {
+    await mergeChildItems(currentSeasonId, targetId, now);
+    await remapShareSeasonId(db, currentSeasonId, targetId);
+  }
 
   return targetId;
 }
@@ -236,6 +252,23 @@ async function upsertEpisodeMetadata(seasonId: string, metadata: MatchedTvEpisod
   return { id, created: true };
 }
 
+export async function applyMatchedTvSeasonMetadata(
+  showId: string,
+  seasonId: string,
+  metadata: MatchedTvSeasonLookup,
+): Promise<{ addedEpisodes: number; showId: string }> {
+  const now = nowIso();
+  const updatedShowId = await upsertShowMetadata(showId, metadata.show, now);
+  const updatedSeasonId = await upsertSeasonMetadata(updatedShowId, seasonId, metadata.season, now);
+  let addedEpisodes = 0;
+  for (const episode of metadata.episodes) {
+    const result = await upsertEpisodeMetadata(updatedSeasonId, episode, now);
+    if (result.created) addedEpisodes += 1;
+  }
+
+  return { addedEpisodes, showId: updatedShowId };
+}
+
 async function refreshTvSeasonMetadataResult(
   seasonId: string,
   options: RefreshTvMetadataOptions = {},
@@ -250,6 +283,9 @@ async function refreshTvSeasonMetadataResult(
       "show.id as show_id",
       "show.title as show_title",
       "show.year as show_year",
+      "show.provider as show_provider",
+      "show.provider_id as show_provider_id",
+      "show.manual_match as show_manual_match",
     ])
     .where("season.id", "=", seasonId)
     .where("season.kind", "=", "season")
@@ -258,20 +294,18 @@ async function refreshTvSeasonMetadataResult(
 
   if (!season || season.season_number === null) return { status: "missing", addedEpisodes: 0 };
 
-  const metadataMatcher = options.metadataMatcher ?? matchTvSeasonMetadata;
-  const metadata = await metadataMatcher(season.show_title, season.show_year, season.season_number);
+  let metadata: MatchedTvSeasonLookup | null;
+  if (season.show_manual_match && season.show_provider === "tmdb" && season.show_provider_id) {
+    const metadataByIdMatcher = options.metadataByIdMatcher ?? matchTvSeasonMetadataById;
+    metadata = await metadataByIdMatcher(Number(season.show_provider_id), season.season_number);
+  } else {
+    const metadataMatcher = options.metadataMatcher ?? matchTvSeasonMetadata;
+    metadata = await metadataMatcher(season.show_title, season.show_year, season.season_number);
+  }
   if (!metadata) return { status: "unmatched", addedEpisodes: 0 };
 
-  const now = nowIso();
-  const showId = await upsertShowMetadata(season.show_id, metadata.show, now);
-  const updatedSeasonId = await upsertSeasonMetadata(showId, season.id, metadata.season, now);
-  let addedEpisodes = 0;
-  for (const episode of metadata.episodes) {
-    const result = await upsertEpisodeMetadata(updatedSeasonId, episode, now);
-    if (result.created) addedEpisodes += 1;
-  }
-
-  return { status: "matched", addedEpisodes, showId };
+  const result = await applyMatchedTvSeasonMetadata(season.show_id, season.id, metadata);
+  return { status: "matched", addedEpisodes: result.addedEpisodes, showId: result.showId };
 }
 
 export async function refreshTvShowMetadataResult(

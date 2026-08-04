@@ -36,6 +36,7 @@ export type MediaItemTable = {
   collection_backdrop_path: NullableText;
   provider: NullableText;
   provider_id: NullableText;
+  manual_match: ColumnType<boolean, boolean | number | undefined, boolean | number>;
   parent_id: NullableText;
   popularity: NullableNumber;
   vote_average: NullableNumber;
