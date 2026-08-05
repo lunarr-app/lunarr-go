@@ -43,5 +43,5 @@ export async function revertFixMatch(kind: "movie" | "show", mediaItemId: string
   if (!response.ok) {
     await readJsonError(response, "Could not revert the match.");
   }
-  return (await response.json()) as { mediaItemId: string };
+  return (await response.json()) as { mediaItemId: string | null };
 }

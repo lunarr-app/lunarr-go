@@ -2,7 +2,9 @@ import { sql } from "kysely";
 import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
+import { parseTvEpisodePath } from "../scanner/tv-parser";
 import {
+  emptyMovieMetadataValues,
   moveMediaShares,
   moveWatchlistEntries,
   remapShareSeasonId,
@@ -352,6 +354,204 @@ export async function refreshTvShowMetadataResult(
   if (matchedSeasons === 0) return { status: "unmatched", mediaItemId };
 
   return { status: "matched", mediaItemId, matchedSeasons, unmatchedSeasons, addedEpisodes };
+}
+
+export type RematchTvShowSeasonsResult =
+  | {
+      status: "matched";
+      mediaItemId: string;
+      splitShowIds: string[];
+      matchedSeasons: number;
+      unmatchedSeasons: number;
+    }
+  | { status: "unmatched"; mediaItemId: string | null }
+  | { status: "no_seasons"; mediaItemId: string }
+  | { status: "missing"; mediaItemId: null };
+
+async function findOrCreateProviderShowItem(metadata: MatchedTvShowMetadata, now: string, excludeShowId?: string) {
+  const db = await getDb();
+  const values = {
+    ...tvShowMetadataValues(metadata, now),
+    kind: "show" as const,
+    sort_title: sortTitle(metadata.title),
+    season_number: null,
+    episode_number: null,
+    parent_id: null,
+  };
+  let query = db
+    .selectFrom("media_item")
+    .select("id")
+    .where("kind", "=", "show")
+    .where("provider", "=", metadata.provider)
+    .where("provider_id", "=", metadata.providerId);
+  if (excludeShowId) query = query.where("id", "!=", excludeShowId);
+  const existing = await query.executeTakeFirst();
+  if (existing) {
+    await db.updateTable("media_item").set(values).where("id", "=", existing.id).execute();
+    await syncMediaMetadataRelations(db, existing.id, metadata);
+    return existing.id;
+  }
+  const id = createId();
+  await db
+    .insertInto("media_item")
+    .values({ id, ...values, created_at: now })
+    .execute();
+  await syncMediaMetadataRelations(db, id, metadata);
+  return id;
+}
+
+async function findOrCreateLocalShowItem(title: string, now: string, excludeShowId?: string) {
+  const db = await getDb();
+  let query = db
+    .selectFrom("media_item")
+    .select("id")
+    .where("kind", "=", "show")
+    .where("title", "=", title)
+    .where("provider", "is", null);
+  if (excludeShowId) query = query.where("id", "!=", excludeShowId);
+  const existing = await query.executeTakeFirst();
+  if (existing) return existing.id;
+  const id = createId();
+  await db
+    .insertInto("media_item")
+    .values({
+      id,
+      kind: "show",
+      title,
+      sort_title: sortTitle(title),
+      year: null,
+      season_number: null,
+      episode_number: null,
+      release_date: null,
+      ...emptyMovieMetadataValues(),
+      parent_id: null,
+      updated_at: now,
+      created_at: now,
+    })
+    .execute();
+  return id;
+}
+
+async function moveSeasonToShow(seasonId: string, targetShowId: string, now: string) {
+  const db = await getDb();
+  await db
+    .updateTable("media_item")
+    .set({ parent_id: targetShowId, provider: null, provider_id: null, updated_at: now })
+    .where("id", "=", seasonId)
+    .execute();
+}
+
+export async function rematchTvShowSeasons(
+  showId: string,
+  options: RefreshTvMetadataOptions = {},
+): Promise<RematchTvShowSeasonsResult> {
+  const db = await getDb();
+  const show = await db
+    .selectFrom("media_item")
+    .select(["id", "title", "provider", "provider_id"])
+    .where("id", "=", showId)
+    .where("kind", "=", "show")
+    .executeTakeFirst();
+  if (!show) return { status: "missing", mediaItemId: null };
+
+  const seasons = await db
+    .selectFrom("media_item")
+    .select(["id", "season_number"])
+    .where("parent_id", "=", showId)
+    .where("kind", "=", "season")
+    .where("season_number", "is not", null)
+    .orderBy("season_number", "asc")
+    .execute();
+  if (seasons.length === 0) return { status: "no_seasons", mediaItemId: showId };
+
+  const metadataMatcher = options.metadataMatcher ?? matchTvSeasonMetadata;
+  const now = nowIso();
+  const groups: Array<{ entries: Array<{ seasonId: string; lookup: MatchedTvSeasonLookup }> }> = [];
+  const groupIndex = new Map<string, number>();
+  const unmatched: Array<{ seasonId: string; title: string }> = [];
+
+  for (const season of seasons) {
+    const episodeFile = await db
+      .selectFrom("media_item as episode")
+      .innerJoin("media_file", "media_file.media_item_id", "episode.id")
+      .innerJoin("library", "library.id", "media_file.library_id")
+      .select(["media_file.path as path", "library.path as library_path"])
+      .where("episode.parent_id", "=", season.id)
+      .where("episode.kind", "=", "episode")
+      .orderBy("media_file.basename", "asc")
+      .limit(1)
+      .executeTakeFirst();
+    const parsed = episodeFile
+      ? parseTvEpisodePath(episodeFile.path ?? "", episodeFile.library_path ?? undefined)
+      : null;
+    const title = parsed?.showTitle || show.title;
+    const lookup = await metadataMatcher(title, null, season.season_number as number);
+    if (!lookup) {
+      unmatched.push({ seasonId: season.id, title });
+      continue;
+    }
+    const key = `${lookup.show.provider}:${lookup.show.providerId}`;
+    const existingIndex = groupIndex.get(key);
+    if (existingIndex === undefined) {
+      groupIndex.set(key, groups.length);
+      groups.push({ entries: [{ seasonId: season.id, lookup }] });
+    } else {
+      groups[existingIndex].entries.push({ seasonId: season.id, lookup });
+    }
+  }
+
+  const splitShowIds = new Set<string>();
+
+  const originalProviderIndex = groups.findIndex(
+    (group) =>
+      group.entries[0].lookup.show.provider === show.provider &&
+      group.entries[0].lookup.show.providerId === show.provider_id,
+  );
+  if (originalProviderIndex > 0) {
+    const [group] = groups.splice(originalProviderIndex, 1);
+    groups.unshift(group);
+  }
+
+  for (const season of unmatched) {
+    const targetShowId = await findOrCreateLocalShowItem(season.title, now, showId);
+    await moveSeasonToShow(season.seasonId, targetShowId, now);
+    splitShowIds.add(targetShowId);
+  }
+
+  for (const group of groups.slice(1)) {
+    const targetShowId = await findOrCreateProviderShowItem(group.entries[0].lookup.show, now, showId);
+    for (const entry of group.entries) {
+      const updatedSeasonId = await upsertSeasonMetadata(targetShowId, entry.seasonId, entry.lookup.season, now);
+      for (const episode of entry.lookup.episodes) {
+        await upsertEpisodeMetadata(updatedSeasonId, episode, now);
+      }
+    }
+    splitShowIds.add(targetShowId);
+  }
+
+  if (groups.length === 0) {
+    const firstTarget = splitShowIds.values().next().value;
+    if (firstTarget) {
+      await moveWatchlistEntries(db, showId, firstTarget);
+      await moveMediaShares(db, showId, firstTarget);
+    }
+    await db.deleteFrom("media_item").where("id", "=", showId).execute();
+    return { status: "unmatched", mediaItemId: null };
+  }
+
+  let mediaItemId = showId;
+  for (const entry of groups[0].entries) {
+    const result = await applyMatchedTvSeasonMetadata(showId, entry.seasonId, entry.lookup);
+    mediaItemId = result.showId;
+  }
+
+  return {
+    status: "matched",
+    mediaItemId,
+    splitShowIds: [...splitShowIds],
+    matchedSeasons: groups.reduce((total, group) => total + group.entries.length, 0),
+    unmatchedSeasons: unmatched.length,
+  };
 }
 
 async function addMetadataJobError(jobId: string, item: string, error: unknown) {

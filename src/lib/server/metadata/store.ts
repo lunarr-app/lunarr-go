@@ -383,6 +383,66 @@ export async function moveMediaShares(db: Kysely<Database>, oldMediaItemId: stri
     .execute();
 }
 
+export async function moveWatchProgressForFiles(
+  db: Kysely<Database>,
+  mediaFileIds: string[],
+  oldMediaItemId: string,
+  newMediaItemId: string,
+) {
+  if (oldMediaItemId === newMediaItemId || mediaFileIds.length === 0) return;
+
+  for (const mediaFileId of mediaFileIds) {
+    const progressRows = await db
+      .selectFrom("watch_progress")
+      .selectAll()
+      .where("media_file_id", "=", mediaFileId)
+      .where("media_item_id", "=", oldMediaItemId)
+      .execute();
+
+    for (const progress of progressRows) {
+      const existingProgress = await db
+        .selectFrom("watch_progress")
+        .selectAll()
+        .where("user_id", "=", progress.user_id)
+        .where("media_item_id", "=", newMediaItemId)
+        .where("media_file_id", "=", progress.media_file_id)
+        .executeTakeFirst();
+
+      if (existingProgress) {
+        if (new Date(progress.updated_at).getTime() >= new Date(existingProgress.updated_at).getTime()) {
+          await db
+            .updateTable("watch_progress")
+            .set({
+              position_seconds: progress.position_seconds,
+              duration_seconds: progress.duration_seconds,
+              completed: progress.completed,
+              updated_at: progress.updated_at,
+            })
+            .where("user_id", "=", progress.user_id)
+            .where("media_item_id", "=", newMediaItemId)
+            .where("media_file_id", "=", progress.media_file_id)
+            .execute();
+        }
+
+        await db
+          .deleteFrom("watch_progress")
+          .where("user_id", "=", progress.user_id)
+          .where("media_item_id", "=", oldMediaItemId)
+          .where("media_file_id", "=", progress.media_file_id)
+          .execute();
+      } else {
+        await db
+          .updateTable("watch_progress")
+          .set({ media_item_id: newMediaItemId })
+          .where("user_id", "=", progress.user_id)
+          .where("media_item_id", "=", oldMediaItemId)
+          .where("media_file_id", "=", progress.media_file_id)
+          .execute();
+      }
+    }
+  }
+}
+
 export async function remapShareSeasonId(db: Kysely<Database>, oldSeasonId: string, newSeasonId: string) {
   if (oldSeasonId === newSeasonId) return;
 

@@ -21,7 +21,7 @@
     revertError = null;
     try {
       const result = await revertFixMatch("show", data.show.id);
-      await goto(`/shows/${result.mediaItemId}`);
+      await goto(result.mediaItemId ? `/shows/${result.mediaItemId}` : "/shows");
       await invalidateAll();
     } catch (error) {
       revertError = error instanceof Error ? error.message : "Could not revert the match.";

@@ -568,7 +568,7 @@ describe("match revert API", () => {
     const response = await movieMatchDelete(matchDeleteEvent("movie-1", adminLocals()));
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ mediaItemId: "movie-1" });
+    expect(await response.json()).toEqual({ mediaItemId: null });
   });
 
   test("clears the show flag and returns 200 even when the automatic re-match finds nothing", async () => {
@@ -586,7 +586,7 @@ describe("match revert API", () => {
     const response = await showMatchDelete(matchDeleteEvent("show-1", adminLocals()));
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ mediaItemId: "show-1" });
+    expect(await response.json()).toEqual({ mediaItemId: null });
   });
 
   test("clears the show flag and returns 200 when the show has no seasons", async () => {

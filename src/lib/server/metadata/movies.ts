@@ -3,7 +3,15 @@ import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
 import { lookupMovieMetadataFromPath } from "./matching";
-import { movieMetadataValues, moveMediaShares, moveWatchlistEntries, syncMediaMetadataRelations } from "./store";
+import { movieLookupCandidates } from "./movie-lookup";
+import {
+  emptyMovieMetadataValues,
+  moveMediaShares,
+  moveWatchlistEntries,
+  moveWatchProgressForFiles,
+  movieMetadataValues,
+  syncMediaMetadataRelations,
+} from "./store";
 import { matchMovieMetadata, matchMovieMetadataById, type MatchedMovieMetadata } from "./tmdb";
 
 type MovieMetadataMatcher = (title: string, year: number | null) => Promise<MatchedMovieMetadata | null>;
@@ -32,54 +40,15 @@ function sortTitle(title: string) {
 }
 
 async function moveWatchProgress(oldMediaItemId: string, newMediaItemId: string) {
+  if (oldMediaItemId === newMediaItemId) return;
   const db = await getDb();
-  const progressRows = await db
-    .selectFrom("watch_progress")
-    .selectAll()
-    .where("media_item_id", "=", oldMediaItemId)
-    .execute();
-
-  for (const progress of progressRows) {
-    const existingProgress = await db
-      .selectFrom("watch_progress")
-      .selectAll()
-      .where("user_id", "=", progress.user_id)
-      .where("media_item_id", "=", newMediaItemId)
-      .where("media_file_id", "=", progress.media_file_id)
-      .executeTakeFirst();
-
-    if (existingProgress) {
-      if (new Date(progress.updated_at).getTime() >= new Date(existingProgress.updated_at).getTime()) {
-        await db
-          .updateTable("watch_progress")
-          .set({
-            position_seconds: progress.position_seconds,
-            duration_seconds: progress.duration_seconds,
-            completed: progress.completed,
-            updated_at: progress.updated_at,
-          })
-          .where("user_id", "=", progress.user_id)
-          .where("media_item_id", "=", newMediaItemId)
-          .where("media_file_id", "=", progress.media_file_id)
-          .execute();
-      }
-
-      await db
-        .deleteFrom("watch_progress")
-        .where("user_id", "=", progress.user_id)
-        .where("media_item_id", "=", oldMediaItemId)
-        .where("media_file_id", "=", progress.media_file_id)
-        .execute();
-    } else {
-      await db
-        .updateTable("watch_progress")
-        .set({ media_item_id: newMediaItemId })
-        .where("user_id", "=", progress.user_id)
-        .where("media_item_id", "=", oldMediaItemId)
-        .where("media_file_id", "=", progress.media_file_id)
-        .execute();
-    }
-  }
+  const fileRows = await db.selectFrom("media_file").select("id").where("media_item_id", "=", oldMediaItemId).execute();
+  await moveWatchProgressForFiles(
+    db,
+    fileRows.map((file) => file.id),
+    oldMediaItemId,
+    newMediaItemId,
+  );
 }
 
 export async function applyMatchedMovieMetadata(
@@ -127,6 +96,207 @@ export async function applyMatchedMovieMetadata(
   await db.updateTable("media_item").set(values).where("id", "=", mediaItemId).execute();
   await syncMediaMetadataRelations(db, mediaItemId, metadata);
   return mediaItemId;
+}
+
+export type RematchMovieItemFilesResult =
+  | { status: "matched"; mediaItemId: string; splitItemIds: string[]; unmatchedFiles: number }
+  | { status: "unmatched"; mediaItemId: string | null };
+
+async function createLocalMovieItem(title: string, year: number | null, now: string) {
+  const db = await getDb();
+  const id = createId();
+  await db
+    .insertInto("media_item")
+    .values({
+      id,
+      kind: "movie",
+      title,
+      sort_title: sortTitle(title),
+      year,
+      release_date: year ? `${year}-01-01` : null,
+      ...emptyMovieMetadataValues(),
+      parent_id: null,
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+  return id;
+}
+
+async function findLocalMovieItem(title: string, year: number | null, excludeItemId?: string) {
+  const db = await getDb();
+  let query = db
+    .selectFrom("media_item")
+    .select("id")
+    .where("kind", "=", "movie")
+    .where("provider", "is", null)
+    .where("title", "=", title)
+    .where((eb) => (year === null ? eb("year", "is", null) : eb("year", "=", year)));
+  if (excludeItemId) query = query.where("id", "!=", excludeItemId);
+  const item = await query.executeTakeFirst();
+  return item?.id ?? null;
+}
+
+async function createProviderMovieItem(metadata: MatchedMovieMetadata, now: string) {
+  const db = await getDb();
+  const id = createId();
+  await db
+    .insertInto("media_item")
+    .values({
+      id,
+      ...movieMetadataValues(metadata, now),
+      kind: "movie",
+      sort_title: sortTitle(metadata.title),
+      parent_id: null,
+      created_at: now,
+    })
+    .execute();
+  await syncMediaMetadataRelations(db, id, metadata);
+  return id;
+}
+
+async function applyMovieMetadataToItem(mediaItemId: string, metadata: MatchedMovieMetadata) {
+  const db = await getDb();
+  const values = {
+    ...movieMetadataValues(metadata, nowIso()),
+    sort_title: sortTitle(metadata.title),
+  };
+  await db.updateTable("media_item").set(values).where("id", "=", mediaItemId).execute();
+  await syncMediaMetadataRelations(db, mediaItemId, metadata);
+  return mediaItemId;
+}
+
+async function moveMediaFilesToItem(mediaFileIds: string[], fromItemId: string, toItemId: string, now: string) {
+  const db = await getDb();
+  await db
+    .updateTable("media_file")
+    .set({ media_item_id: toItemId, updated_at: now })
+    .where("id", "in", mediaFileIds)
+    .execute();
+  await db
+    .updateTable("subtitle_track")
+    .set({ media_item_id: toItemId, updated_at: now })
+    .where("media_file_id", "in", mediaFileIds)
+    .execute();
+  await moveWatchProgressForFiles(db, mediaFileIds, fromItemId, toItemId);
+}
+
+export async function rematchMovieItemFiles(
+  mediaItemId: string,
+  options: RefreshMetadataOptions = {},
+): Promise<RematchMovieItemFilesResult> {
+  const db = await getDb();
+  const now = nowIso();
+  const files = await db
+    .selectFrom("media_item")
+    .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+    .innerJoin("library", "library.id", "media_file.library_id")
+    .select([
+      "media_file.id as file_id",
+      "media_file.basename as basename",
+      "media_file.path as path",
+      "media_file.duration_seconds as duration_seconds",
+      "library.path as library_path",
+      "media_item.provider as provider",
+      "media_item.provider_id as provider_id",
+    ])
+    .where("media_item.id", "=", mediaItemId)
+    .where("media_item.kind", "=", "movie")
+    .orderBy("media_file.basename", "asc")
+    .execute();
+
+  if (files.length === 0) return { status: "unmatched", mediaItemId };
+
+  const metadataMatcher = options.metadataMatcher ?? matchMovieMetadata;
+  const groups: Array<{ metadata: MatchedMovieMetadata; fileIds: string[] }> = [];
+  const groupIndex = new Map<string, number>();
+  const unmatched: Array<{ fileId: string; path: string | null; basename: string; libraryPath: string | null }> = [];
+
+  for (const file of files) {
+    const lookup = await lookupMovieMetadataFromPath(file.path ?? file.basename ?? "", {
+      libraryRoot: file.library_path,
+      fileRuntimeSeconds: file.duration_seconds,
+      matcher: metadataMatcher,
+    });
+    const metadata = lookup?.metadata ?? null;
+    if (!metadata) {
+      unmatched.push({
+        fileId: file.file_id,
+        path: file.path,
+        basename: file.basename,
+        libraryPath: file.library_path,
+      });
+      continue;
+    }
+    const key = `${metadata.provider}:${metadata.providerId}`;
+    const existingIndex = groupIndex.get(key);
+    if (existingIndex === undefined) {
+      groupIndex.set(key, groups.length);
+      groups.push({ metadata, fileIds: [file.file_id] });
+    } else {
+      groups[existingIndex].fileIds.push(file.file_id);
+    }
+  }
+
+  const movedToIds = new Set<string>();
+  const localItemsByKey = new Map<string, string>();
+
+  const originalProviderIndex = groups.findIndex(
+    (group) => group.metadata.provider === files[0].provider && group.metadata.providerId === files[0].provider_id,
+  );
+  if (originalProviderIndex > 0) {
+    const [group] = groups.splice(originalProviderIndex, 1);
+    groups.unshift(group);
+  }
+
+  for (const file of unmatched) {
+    const candidates = movieLookupCandidates(file.path ?? file.basename ?? "", undefined, {
+      libraryRoot: file.libraryPath,
+    });
+    const parsed = candidates[0] ?? { title: file.basename, year: null };
+    const localKey = `${parsed.title}:${parsed.year ?? ""}`;
+    let localItemId = localItemsByKey.get(localKey) ?? null;
+    if (!localItemId) {
+      localItemId =
+        (await findLocalMovieItem(parsed.title, parsed.year, mediaItemId)) ??
+        (await createLocalMovieItem(parsed.title, parsed.year, now));
+      localItemsByKey.set(localKey, localItemId);
+    }
+    await moveMediaFilesToItem([file.fileId], mediaItemId, localItemId, now);
+    movedToIds.add(localItemId);
+  }
+
+  for (const group of groups.slice(1)) {
+    const existing = await db
+      .selectFrom("media_item")
+      .select("id")
+      .where("kind", "=", "movie")
+      .where("provider", "=", group.metadata.provider)
+      .where("provider_id", "=", group.metadata.providerId)
+      .where("id", "!=", mediaItemId)
+      .executeTakeFirst();
+    const targetId = existing?.id ?? (await createProviderMovieItem(group.metadata, now));
+    await applyMovieMetadataToItem(targetId, group.metadata);
+    await moveMediaFilesToItem(group.fileIds, mediaItemId, targetId, now);
+    movedToIds.add(targetId);
+  }
+
+  if (groups.length === 0) {
+    await moveWatchlistEntries(db, mediaItemId, movedToIds.values().next().value ?? mediaItemId);
+    await moveMediaShares(db, mediaItemId, movedToIds.values().next().value ?? mediaItemId);
+    await db.deleteFrom("media_item").where("id", "=", mediaItemId).execute();
+    return { status: "unmatched", mediaItemId: null };
+  }
+
+  const primary = groups[0];
+  const finalMediaItemId = await applyMatchedMovieMetadata(mediaItemId, primary.metadata);
+  const splitItemIds = [...movedToIds].filter((id) => id !== finalMediaItemId);
+  return {
+    status: "matched",
+    mediaItemId: finalMediaItemId,
+    splitItemIds,
+    unmatchedFiles: unmatched.length,
+  };
 }
 
 export async function refreshMovieMetadataResult(

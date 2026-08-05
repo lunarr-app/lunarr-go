@@ -1118,7 +1118,7 @@ describe("revert manual match", () => {
     });
 
     expect(result).toMatchObject({ status: "matched", mediaItemId: "show-1" });
-    expect(titleMatcherCalls).toEqual([{ title: "Wrong Show", seasonNumber: 1 }]);
+    expect(titleMatcherCalls).toEqual([{ title: "Local Show", seasonNumber: 1 }]);
     expect(byIdCalls).toEqual([]);
     const show = await db.selectFrom("media_item").selectAll().where("id", "=", "show-1").executeTakeFirstOrThrow();
     expect(show).toMatchObject({ title: "Correct Show", provider_id: "888", manual_match: 0 });
@@ -1392,7 +1392,7 @@ describe("revert manual match", () => {
     expect(show).toMatchObject({ manual_match: 0 });
   });
 
-  test("reverting a manually matched movie whose filename no longer matches clears the flag anyway", async () => {
+  test("reverting a manually matched movie whose filename no longer matches moves the file to a local item", async () => {
     await db
       .updateTable("media_item")
       .set({ provider: "tmdb", provider_id: "603", manual_match: 1 })
@@ -1403,9 +1403,20 @@ describe("revert manual match", () => {
       movie: { metadataMatcher: async () => null },
     });
 
-    expect(result).toEqual({ status: "unmatched", mediaItemId: "movie-1" });
-    const movie = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
-    expect(movie).toMatchObject({ manual_match: 0, provider_id: "603" });
+    expect(result).toEqual({ status: "unmatched", mediaItemId: null });
+    expect(
+      await db.selectFrom("media_item").select("id").where("id", "=", "movie-1").executeTakeFirst(),
+    ).toBeUndefined();
+    const local = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "movie")
+      .where("provider", "is", null)
+      .executeTakeFirstOrThrow();
+    expect(local).toMatchObject({ title: "The Matrix", year: 1999, manual_match: 0 });
+    expect(
+      await db.selectFrom("media_file").select("media_item_id").where("id", "=", "file-1").executeTakeFirstOrThrow(),
+    ).toMatchObject({ media_item_id: local.id });
   });
 
   test("reverting a manually matched movie without files clears the flag and reports unmatched", async () => {
@@ -1423,7 +1434,7 @@ describe("revert manual match", () => {
     expect(movie).toMatchObject({ manual_match: 0, provider_id: "603" });
   });
 
-  test("reverting a manually matched show whose title no longer matches clears the flag anyway", async () => {
+  test("reverting a manually matched show whose title no longer matches moves seasons to a local show", async () => {
     await seedShowTree();
     await db
       .updateTable("media_item")
@@ -1435,9 +1446,344 @@ describe("revert manual match", () => {
       show: { metadataMatcher: async () => null },
     });
 
-    expect(result).toEqual({ status: "unmatched", mediaItemId: "show-1" });
+    expect(result).toEqual({ status: "unmatched", mediaItemId: null });
+    expect(
+      await db.selectFrom("media_item").select("id").where("id", "=", "show-1").executeTakeFirst(),
+    ).toBeUndefined();
+    const local = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "show")
+      .where("provider", "is", null)
+      .executeTakeFirstOrThrow();
+    expect(local).toMatchObject({ title: "Local Show", manual_match: 0 });
+    expect(
+      await db
+        .selectFrom("media_item")
+        .select(["id", "parent_id", "provider", "provider_id"])
+        .where("id", "=", "season-1")
+        .executeTakeFirstOrThrow(),
+    ).toMatchObject({ parent_id: local.id, provider: null, provider_id: null });
+  });
+
+  test("reverting a manually matched movie splits files into separate items", async () => {
+    const timestamp = now();
+    await seedUser("user-1");
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "603", manual_match: 1 })
+      .where("id", "=", "movie-1")
+      .execute();
+    await db
+      .insertInto("media_file")
+      .values({
+        id: "file-2",
+        library_id: "library-1",
+        media_item_id: "movie-1",
+        path: path.join(tempDir, "Superman.1978.mkv"),
+        basename: "Superman.1978.mkv",
+        extension: ".mkv",
+        size_bytes: 10,
+        mtime_ms: Date.now(),
+        duration_seconds: null,
+        video_codec: null,
+        audio_codec: null,
+        container: "mkv",
+        created_at: timestamp,
+        updated_at: timestamp,
+      })
+      .execute();
+    await db
+      .insertInto("watch_progress")
+      .values([
+        {
+          user_id: "user-1",
+          media_item_id: "movie-1",
+          media_file_id: "file-1",
+          position_seconds: 120,
+          duration_seconds: 7200,
+          completed: 0,
+          updated_at: timestamp,
+        },
+        {
+          user_id: "user-1",
+          media_item_id: "movie-1",
+          media_file_id: "file-2",
+          position_seconds: 300,
+          duration_seconds: 7200,
+          completed: 0,
+          updated_at: timestamp,
+        },
+      ])
+      .execute();
+
+    const matcher = async (title: string, _year: number | null): Promise<MatchedMovieMetadata | null> => {
+      if (title === "Superman") {
+        return {
+          provider: "tmdb",
+          providerId: "777",
+          title,
+          year: 1978,
+          overview: null,
+          runtimeSeconds: null,
+          posterPath: null,
+          backdropPath: null,
+          releaseDate: "1978-12-15",
+          popularity: null,
+          voteAverage: null,
+        };
+      }
+      if (title === "The Matrix") {
+        return {
+          provider: "tmdb",
+          providerId: "603",
+          title,
+          year: 1999,
+          overview: null,
+          runtimeSeconds: null,
+          posterPath: null,
+          backdropPath: null,
+          releaseDate: "1999-03-31",
+          popularity: null,
+          voteAverage: null,
+        };
+      }
+      return null;
+    };
+
+    const result = await revertFixMatch("movie", "movie-1", { movie: { metadataMatcher: matcher } });
+
+    expect(result).toEqual({ status: "matched", mediaItemId: "movie-1" });
+    const main = await db.selectFrom("media_item").selectAll().where("id", "=", "movie-1").executeTakeFirstOrThrow();
+    expect(main).toMatchObject({ title: "The Matrix", provider_id: "603", manual_match: 0 });
+    const target = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "movie")
+      .where("provider_id", "=", "777")
+      .executeTakeFirstOrThrow();
+    expect(target.id).not.toBe("movie-1");
+    expect(target).toMatchObject({ title: "Superman", manual_match: 0 });
+    expect(
+      await db.selectFrom("media_file").select("media_item_id").where("id", "=", "file-1").executeTakeFirstOrThrow(),
+    ).toMatchObject({ media_item_id: "movie-1" });
+    expect(
+      await db.selectFrom("media_file").select("media_item_id").where("id", "=", "file-2").executeTakeFirstOrThrow(),
+    ).toMatchObject({ media_item_id: target.id });
+    expect(
+      await db
+        .selectFrom("watch_progress")
+        .select(["media_file_id", "media_item_id"])
+        .where("user_id", "=", "user-1")
+        .orderBy("media_file_id")
+        .execute(),
+    ).toEqual([
+      { media_file_id: "file-1", media_item_id: "movie-1" },
+      { media_file_id: "file-2", media_item_id: target.id },
+    ]);
+  });
+
+  test("reverting a manually matched movie keeps multi-part files in one item", async () => {
+    const timestamp = now();
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "603", manual_match: 1 })
+      .where("id", "=", "movie-1")
+      .execute();
+    await db
+      .insertInto("media_file")
+      .values({
+        id: "file-2",
+        library_id: "library-1",
+        media_item_id: "movie-1",
+        path: path.join(tempDir, "The.Matrix.2003.mkv"),
+        basename: "The.Matrix.2003.mkv",
+        extension: ".mkv",
+        size_bytes: 10,
+        mtime_ms: Date.now(),
+        duration_seconds: null,
+        video_codec: null,
+        audio_codec: null,
+        container: "mkv",
+        created_at: timestamp,
+        updated_at: timestamp,
+      })
+      .execute();
+
+    const matcher = async (_title: string, year: number | null): Promise<MatchedMovieMetadata | null> => ({
+      provider: "tmdb",
+      providerId: "603",
+      title: "The Matrix",
+      year,
+      overview: null,
+      runtimeSeconds: null,
+      posterPath: null,
+      backdropPath: null,
+      releaseDate: "1999-03-31",
+      popularity: null,
+      voteAverage: null,
+    });
+
+    const result = await revertFixMatch("movie", "movie-1", { movie: { metadataMatcher: matcher } });
+
+    expect(result).toEqual({ status: "matched", mediaItemId: "movie-1" });
+    expect(
+      await db
+        .selectFrom("media_file")
+        .select("media_item_id")
+        .where("id", "in", ["file-1", "file-2"])
+        .orderBy("id")
+        .execute(),
+    ).toEqual([{ media_item_id: "movie-1" }, { media_item_id: "movie-1" }]);
+    expect(await db.selectFrom("media_item").select("id").where("kind", "=", "movie").execute()).toHaveLength(1);
+  });
+
+  test("reverting a manually matched show splits seasons into separate shows", async () => {
+    const timestamp = now();
+    await seedShowTree();
+    await db
+      .insertInto("media_item")
+      .values([
+        {
+          id: "season-2",
+          kind: "season",
+          title: "Season 2",
+          sort_title: "0002",
+          year: null,
+          overview: null,
+          runtime_seconds: null,
+          poster_path: null,
+          backdrop_path: null,
+          release_date: null,
+          season_number: 2,
+          episode_number: null,
+          provider: null,
+          provider_id: null,
+          manual_match: 0,
+          parent_id: "show-1",
+          popularity: null,
+          vote_average: null,
+          created_at: timestamp,
+          updated_at: timestamp,
+        },
+        {
+          id: "episode-2",
+          kind: "episode",
+          title: "Episode 1",
+          sort_title: "s002e0001",
+          year: null,
+          overview: null,
+          runtime_seconds: null,
+          poster_path: null,
+          backdrop_path: null,
+          release_date: null,
+          season_number: 2,
+          episode_number: 1,
+          provider: null,
+          provider_id: null,
+          manual_match: 0,
+          parent_id: "season-2",
+          popularity: null,
+          vote_average: null,
+          created_at: timestamp,
+          updated_at: timestamp,
+        },
+      ])
+      .execute();
+    await db
+      .insertInto("media_file")
+      .values({
+        id: "file-tv-2",
+        library_id: "library-1",
+        media_item_id: "episode-2",
+        path: path.join(tempDir, "Other Show", "Season 02", "Other Show - S02E01.mkv"),
+        basename: "Other Show - S02E01.mkv",
+        extension: ".mkv",
+        size_bytes: 10,
+        mtime_ms: Date.now(),
+        duration_seconds: null,
+        video_codec: null,
+        audio_codec: null,
+        container: "mkv",
+        created_at: timestamp,
+        updated_at: timestamp,
+      })
+      .execute();
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "1396", manual_match: 1 })
+      .where("id", "=", "show-1")
+      .execute();
+
+    const matcher = async (
+      _title: string,
+      _year: number | null,
+      seasonNumber: number,
+    ): Promise<MatchedTvSeasonLookup | null> => {
+      const showId = seasonNumber === 1 ? "888" : "777";
+      const showTitle = seasonNumber === 1 ? "Correct Show" : "Other Show";
+      return {
+        show: {
+          provider: "tmdb",
+          providerId: showId,
+          title: showTitle,
+          year: 2008,
+          overview: null,
+          posterPath: null,
+          backdropPath: null,
+          firstAirDate: "2008-01-20",
+          popularity: null,
+          voteAverage: null,
+          voteCount: null,
+          originalTitle: null,
+          tagline: null,
+          status: null,
+          homepage: null,
+          originalLanguage: null,
+          imdbId: null,
+          certification: null,
+          trailer: null,
+        },
+        season: {
+          provider: "tmdb",
+          providerId: `${showId}${seasonNumber}`,
+          title: `Season ${seasonNumber}`,
+          seasonNumber,
+          overview: null,
+          posterPath: null,
+          airDate: "2008-01-20",
+          voteAverage: null,
+        },
+        episodes: [],
+      };
+    };
+
+    const result = await revertFixMatch("show", "show-1", { show: { metadataMatcher: matcher } });
+
+    expect(result).toEqual({ status: "matched", mediaItemId: "show-1" });
     const show = await db.selectFrom("media_item").selectAll().where("id", "=", "show-1").executeTakeFirstOrThrow();
-    expect(show).toMatchObject({ manual_match: 0, provider_id: "1396" });
+    expect(show).toMatchObject({ title: "Correct Show", provider_id: "888", manual_match: 0 });
+    const splitShow = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "show")
+      .where("provider_id", "=", "777")
+      .executeTakeFirstOrThrow();
+    expect(splitShow).toMatchObject({ title: "Other Show", manual_match: 0 });
+    expect(
+      await db
+        .selectFrom("media_item")
+        .select(["id", "parent_id", "provider", "provider_id"])
+        .where("id", "=", "season-1")
+        .executeTakeFirstOrThrow(),
+    ).toMatchObject({ parent_id: "show-1", provider_id: "8881" });
+    expect(
+      await db
+        .selectFrom("media_item")
+        .select(["id", "parent_id", "provider", "provider_id"])
+        .where("id", "=", "season-2")
+        .executeTakeFirstOrThrow(),
+    ).toMatchObject({ parent_id: splitShow.id, provider_id: "7772" });
   });
 });
 

@@ -1,8 +1,8 @@
 import type { FixMatchCandidate } from "$lib/media/types";
 import { getDb } from "../db";
 import { nowIso } from "../time";
-import { applyMatchedMovieMetadata, refreshMovieMetadataResult, type RefreshMetadataOptions } from "./movies";
-import { applyMatchedTvSeasonMetadata, refreshTvShowMetadataResult, type RefreshTvMetadataOptions } from "./tv";
+import { applyMatchedMovieMetadata, rematchMovieItemFiles, type RefreshMetadataOptions } from "./movies";
+import { applyMatchedTvSeasonMetadata, rematchTvShowSeasons, type RefreshTvMetadataOptions } from "./tv";
 import {
   fetchTmdbShowMetadata,
   matchMovieMetadataById,
@@ -171,7 +171,7 @@ export async function fixShowMatch(
 
 export type RevertFixMatchResult =
   | { status: "matched"; mediaItemId: string }
-  | { status: "unmatched"; mediaItemId: string }
+  | { status: "unmatched"; mediaItemId: string | null }
   | { status: "no_seasons"; mediaItemId: string }
   | { status: "not_manual"; mediaItemId: string }
   | { status: "missing"; mediaItemId: null };
@@ -208,16 +208,23 @@ export async function revertFixMatch(
   await clearManualMatchFlag(mediaItemId);
 
   if (kind === "movie") {
-    const result = await refreshMovieMetadataResult(mediaItemId, options.movie);
-    if (result.status === "missing") return { status: "unmatched", mediaItemId };
+    const result = await rematchMovieItemFiles(mediaItemId, options.movie);
+    if (result.status === "unmatched") {
+      if (result.mediaItemId && result.mediaItemId !== mediaItemId) await clearManualMatchFlag(result.mediaItemId);
+      return { status: "unmatched", mediaItemId: result.mediaItemId };
+    }
     // The re-match may merge this item into another item that is still
     // flagged as manual; the surviving item must not stay manual after a revert.
     if (result.mediaItemId !== mediaItemId) await clearManualMatchFlag(result.mediaItemId);
-    return { status: result.status, mediaItemId: result.mediaItemId };
+    return { status: "matched", mediaItemId: result.mediaItemId };
   }
 
-  const result = await refreshTvShowMetadataResult(mediaItemId, options.show);
+  const result = await rematchTvShowSeasons(mediaItemId, options.show);
   if (result.status === "missing") return { status: "missing", mediaItemId: null };
+  if (result.status === "unmatched") {
+    if (result.mediaItemId && result.mediaItemId !== mediaItemId) await clearManualMatchFlag(result.mediaItemId);
+    return { status: "unmatched", mediaItemId: result.mediaItemId };
+  }
   if (result.mediaItemId !== mediaItemId) await clearManualMatchFlag(result.mediaItemId);
   return { status: result.status, mediaItemId: result.mediaItemId };
 }

@@ -176,7 +176,7 @@ export type MatchSearchResponse = {
   resolved: boolean;
 };
 export type MediaMatchResponse = {
-  mediaItemId: string;
+  mediaItemId: string | null;
 };
 export type ScanStartResponse = string;
 export type PlaybackDataResponse = PlaybackData;
