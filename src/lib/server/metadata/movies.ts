@@ -99,8 +99,7 @@ export async function applyMatchedMovieMetadata(
 }
 
 export type RematchMovieItemFilesResult =
-  | { status: "matched"; mediaItemId: string; splitItemIds: string[]; unmatchedFiles: number }
-  | { status: "unmatched"; mediaItemId: string | null };
+  { status: "matched"; mediaItemId: string } | { status: "unmatched"; mediaItemId: string | null };
 
 async function createLocalMovieItem(title: string, year: number | null, now: string) {
   const db = await getDb();
@@ -292,14 +291,10 @@ export async function rematchMovieItemFiles(
     return { status: "unmatched", mediaItemId: null };
   }
 
-  const primary = groups[0];
-  const finalMediaItemId = await applyMatchedMovieMetadata(mediaItemId, primary.metadata);
-  const splitItemIds = [...movedToIds].filter((id) => id !== finalMediaItemId);
+  const finalMediaItemId = await applyMatchedMovieMetadata(mediaItemId, groups[0].metadata);
   return {
     status: "matched",
     mediaItemId: finalMediaItemId,
-    splitItemIds,
-    unmatchedFiles: unmatched.length,
   };
 }
 

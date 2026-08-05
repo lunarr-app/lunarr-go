@@ -3721,8 +3721,9 @@ export const openApiDocument = {
         required: ["mediaItemId"],
         properties: {
           mediaItemId: {
-            ...stringSchema,
-            description: "Media item identifier after the match, which can change when items are merged.",
+            ...nullableStringSchema,
+            description:
+              "Media item identifier after the match, which can change when items are merged. Null when the revert found no automatic match and the item was replaced by local items.",
           },
         },
       },

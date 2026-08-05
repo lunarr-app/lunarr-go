@@ -7,6 +7,7 @@ import {
   emptyMovieMetadataValues,
   moveMediaShares,
   moveWatchlistEntries,
+  moveWatchProgressForFiles,
   remapShareSeasonId,
   syncMediaMetadataRelations,
   tvEpisodeMetadataValues,
@@ -88,53 +89,13 @@ export async function moveEpisodeAssociations(oldMediaItemId: string, newMediaIt
   if (oldMediaItemId === newMediaItemId) return;
 
   const db = await getDb();
-  const progressRows = await db
-    .selectFrom("watch_progress")
-    .selectAll()
-    .where("media_item_id", "=", oldMediaItemId)
-    .execute();
-
-  for (const progress of progressRows) {
-    const existingProgress = await db
-      .selectFrom("watch_progress")
-      .selectAll()
-      .where("user_id", "=", progress.user_id)
-      .where("media_item_id", "=", newMediaItemId)
-      .where("media_file_id", "=", progress.media_file_id)
-      .executeTakeFirst();
-
-    if (existingProgress) {
-      if (new Date(progress.updated_at).getTime() >= new Date(existingProgress.updated_at).getTime()) {
-        await db
-          .updateTable("watch_progress")
-          .set({
-            position_seconds: progress.position_seconds,
-            duration_seconds: progress.duration_seconds,
-            completed: progress.completed,
-            updated_at: progress.updated_at,
-          })
-          .where("user_id", "=", progress.user_id)
-          .where("media_item_id", "=", newMediaItemId)
-          .where("media_file_id", "=", progress.media_file_id)
-          .execute();
-      }
-
-      await db
-        .deleteFrom("watch_progress")
-        .where("user_id", "=", progress.user_id)
-        .where("media_item_id", "=", oldMediaItemId)
-        .where("media_file_id", "=", progress.media_file_id)
-        .execute();
-    } else {
-      await db
-        .updateTable("watch_progress")
-        .set({ media_item_id: newMediaItemId })
-        .where("user_id", "=", progress.user_id)
-        .where("media_item_id", "=", oldMediaItemId)
-        .where("media_file_id", "=", progress.media_file_id)
-        .execute();
-    }
-  }
+  const fileRows = await db.selectFrom("media_file").select("id").where("media_item_id", "=", oldMediaItemId).execute();
+  await moveWatchProgressForFiles(
+    db,
+    fileRows.map((file) => file.id),
+    oldMediaItemId,
+    newMediaItemId,
+  );
 
   await db
     .updateTable("media_file")
@@ -357,13 +318,7 @@ export async function refreshTvShowMetadataResult(
 }
 
 export type RematchTvShowSeasonsResult =
-  | {
-      status: "matched";
-      mediaItemId: string;
-      splitShowIds: string[];
-      matchedSeasons: number;
-      unmatchedSeasons: number;
-    }
+  | { status: "matched"; mediaItemId: string }
   | { status: "unmatched"; mediaItemId: string | null }
   | { status: "no_seasons"; mediaItemId: string }
   | { status: "missing"; mediaItemId: null };
@@ -434,6 +389,12 @@ async function moveSeasonToShow(seasonId: string, targetShowId: string, now: str
     .updateTable("media_item")
     .set({ parent_id: targetShowId, provider: null, provider_id: null, updated_at: now })
     .where("id", "=", seasonId)
+    .execute();
+  await db
+    .updateTable("media_item")
+    .set({ provider: null, provider_id: null, updated_at: now })
+    .where("parent_id", "=", seasonId)
+    .where("kind", "=", "episode")
     .execute();
 }
 
@@ -541,9 +502,6 @@ export async function rematchTvShowSeasons(
   return {
     status: "matched",
     mediaItemId,
-    splitShowIds: [...splitShowIds],
-    matchedSeasons: groups.reduce((total, group) => total + group.entries.length, 0),
-    unmatchedSeasons: unmatched.length,
   };
 }
 

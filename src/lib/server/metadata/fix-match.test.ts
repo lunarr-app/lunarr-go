@@ -1466,6 +1466,42 @@ describe("revert manual match", () => {
     ).toMatchObject({ parent_id: local.id, provider: null, provider_id: null });
   });
 
+  test("reverting a manually matched show clears stale episode providers when seasons move to a local show", async () => {
+    await seedShowTree();
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "1396", manual_match: 1 })
+      .where("id", "=", "show-1")
+      .execute();
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "13961" })
+      .where("id", "=", "season-1")
+      .execute();
+    await db
+      .updateTable("media_item")
+      .set({ provider: "tmdb", provider_id: "1396101" })
+      .where("id", "=", "episode-1")
+      .execute();
+
+    const result = await revertFixMatch("show", "show-1", {
+      show: { metadataMatcher: async () => null },
+    });
+
+    expect(result).toEqual({ status: "unmatched", mediaItemId: null });
+    expect(
+      await db
+        .selectFrom("media_item")
+        .select(["id", "provider", "provider_id"])
+        .where("id", "in", ["season-1", "episode-1"])
+        .orderBy("id")
+        .execute(),
+    ).toEqual([
+      { id: "episode-1", provider: null, provider_id: null },
+      { id: "season-1", provider: null, provider_id: null },
+    ]);
+  });
+
   test("reverting a manually matched movie splits files into separate items", async () => {
     const timestamp = now();
     await seedUser("user-1");
