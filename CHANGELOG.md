@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.2 - 2026-08-05
+
+### Added
+
+- Added admin **Fix Match** to override TMDb matching for movies and shows ([#170](https://github.com/lunarr-app/lunarr-go/issues/170)): admins can point a wrong or unmatched item at the correct TMDb entry via URL/ID paste or name search with preview, persisting across scans and metadata refreshes. Includes a `media_item.manual_match` flag with migration, TMDb lookup-by-ID and top-10 search candidates, a TMDb URL/ID reference parser, and `POST /api/{movies,shows}/[id]/match` plus `GET /api/{movies,shows}/[id]/match/search` endpoints (admin-only, TMDb-config guard, 404 for unknown items) with OpenAPI docs.
+- Added the ability to revert a manual Fix Match back to automatic matching: `DELETE /api/{movies,shows}/[id]/match` clears the manual flag and immediately re-matches via the existing refresh logic, with a Revert button in the metadata panel shown only when the title is manually matched. `manualMatch` is now exposed on movie/show detail responses.
+
+### Changed
+
+- Migration 0010 also tunes indexes: adds missing FK/lookup indexes (`scan_job_error`, `watchlist`, `playback_session.cache_id`, better-auth tables) and drops 11 redundant ones.
+- Bumped `better-auth` and `@better-auth/api-key` to `1.6.26`.
+
 ## 0.9.1 - 2026-08-01
 
 ### Upgrade Note
