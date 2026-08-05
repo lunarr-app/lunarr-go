@@ -386,11 +386,7 @@ async function findOrCreateProviderShowItem(metadata: MatchedTvShowMetadata, now
     .where("provider_id", "=", metadata.providerId);
   if (excludeShowId) query = query.where("id", "!=", excludeShowId);
   const existing = await query.executeTakeFirst();
-  if (existing) {
-    await db.updateTable("media_item").set(values).where("id", "=", existing.id).execute();
-    await syncMediaMetadataRelations(db, existing.id, metadata);
-    return existing.id;
-  }
+  if (existing) return existing.id;
   const id = createId();
   await db
     .insertInto("media_item")
@@ -521,10 +517,7 @@ export async function rematchTvShowSeasons(
   for (const group of groups.slice(1)) {
     const targetShowId = await findOrCreateProviderShowItem(group.entries[0].lookup.show, now, showId);
     for (const entry of group.entries) {
-      const updatedSeasonId = await upsertSeasonMetadata(targetShowId, entry.seasonId, entry.lookup.season, now);
-      for (const episode of entry.lookup.episodes) {
-        await upsertEpisodeMetadata(updatedSeasonId, episode, now);
-      }
+      await applyMatchedTvSeasonMetadata(targetShowId, entry.seasonId, entry.lookup);
     }
     splitShowIds.add(targetShowId);
   }

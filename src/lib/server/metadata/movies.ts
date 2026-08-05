@@ -137,8 +137,17 @@ async function findLocalMovieItem(title: string, year: number | null, excludeIte
   return item?.id ?? null;
 }
 
-async function createProviderMovieItem(metadata: MatchedMovieMetadata, now: string) {
+async function findOrCreateProviderMovieItem(metadata: MatchedMovieMetadata, now: string, excludeItemId?: string) {
   const db = await getDb();
+  let query = db
+    .selectFrom("media_item")
+    .select("id")
+    .where("kind", "=", "movie")
+    .where("provider", "=", metadata.provider)
+    .where("provider_id", "=", metadata.providerId);
+  if (excludeItemId) query = query.where("id", "!=", excludeItemId);
+  const existing = await query.executeTakeFirst();
+  if (existing) return existing.id;
   const id = createId();
   await db
     .insertInto("media_item")
@@ -267,23 +276,18 @@ export async function rematchMovieItemFiles(
   }
 
   for (const group of groups.slice(1)) {
-    const existing = await db
-      .selectFrom("media_item")
-      .select("id")
-      .where("kind", "=", "movie")
-      .where("provider", "=", group.metadata.provider)
-      .where("provider_id", "=", group.metadata.providerId)
-      .where("id", "!=", mediaItemId)
-      .executeTakeFirst();
-    const targetId = existing?.id ?? (await createProviderMovieItem(group.metadata, now));
+    const targetId = await findOrCreateProviderMovieItem(group.metadata, now, mediaItemId);
     await applyMovieMetadataToItem(targetId, group.metadata);
     await moveMediaFilesToItem(group.fileIds, mediaItemId, targetId, now);
     movedToIds.add(targetId);
   }
 
   if (groups.length === 0) {
-    await moveWatchlistEntries(db, mediaItemId, movedToIds.values().next().value ?? mediaItemId);
-    await moveMediaShares(db, mediaItemId, movedToIds.values().next().value ?? mediaItemId);
+    const firstTarget = movedToIds.values().next().value;
+    if (firstTarget) {
+      await moveWatchlistEntries(db, mediaItemId, firstTarget);
+      await moveMediaShares(db, mediaItemId, firstTarget);
+    }
     await db.deleteFrom("media_item").where("id", "=", mediaItemId).execute();
     return { status: "unmatched", mediaItemId: null };
   }
