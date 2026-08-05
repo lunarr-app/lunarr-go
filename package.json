@@ -26,9 +26,9 @@
     "verify:tmdb": "node scripts/verify-tmdb.mjs"
   },
   "dependencies": {
-    "@better-auth/api-key": "1.6.25",
+    "@better-auth/api-key": "1.6.26",
     "@lucide/svelte": "1.28.0",
-    "better-auth": "1.6.25",
+    "better-auth": "1.6.26",
     "chokidar": "5.0.0",
     "guessit-js": "4.0.0",
     "hls.js": "1.6.16",
