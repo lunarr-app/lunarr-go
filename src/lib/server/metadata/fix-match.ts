@@ -181,6 +181,15 @@ export type RevertFixMatchOptions = {
   show?: RefreshTvMetadataOptions;
 };
 
+async function clearManualMatchFlag(mediaItemId: string) {
+  const db = await getDb();
+  await db
+    .updateTable("media_item")
+    .set({ manual_match: 0, updated_at: nowIso() })
+    .where("id", "=", mediaItemId)
+    .execute();
+}
+
 export async function revertFixMatch(
   kind: "movie" | "show",
   mediaItemId: string,
@@ -196,19 +205,19 @@ export async function revertFixMatch(
   if (!item) return { status: "missing", mediaItemId: null };
   if (!item.manual_match) return { status: "not_manual", mediaItemId };
 
-  await db
-    .updateTable("media_item")
-    .set({ manual_match: 0, updated_at: nowIso() })
-    .where("id", "=", mediaItemId)
-    .execute();
+  await clearManualMatchFlag(mediaItemId);
 
   if (kind === "movie") {
     const result = await refreshMovieMetadataResult(mediaItemId, options.movie);
     if (result.status === "missing") return { status: "unmatched", mediaItemId };
+    // The re-match may merge this item into another item that is still
+    // flagged as manual; the surviving item must not stay manual after a revert.
+    if (result.mediaItemId !== mediaItemId) await clearManualMatchFlag(result.mediaItemId);
     return { status: result.status, mediaItemId: result.mediaItemId };
   }
 
   const result = await refreshTvShowMetadataResult(mediaItemId, options.show);
   if (result.status === "missing") return { status: "missing", mediaItemId: null };
+  if (result.mediaItemId !== mediaItemId) await clearManualMatchFlag(result.mediaItemId);
   return { status: result.status, mediaItemId: result.mediaItemId };
 }
