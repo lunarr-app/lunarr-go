@@ -268,7 +268,6 @@ export function decidePlaybackMode(input: {
   const target = input.target ?? "web";
   const profile = playbackTargetProfile({ target, clientCapabilities: input.clientCapabilities });
   const directCompatible = isDirectPlayCompatible(input.file, input.clientCapabilities, target);
-  const remuxCompatible = isRemuxCompatible(input.file, input.clientCapabilities, input.hlsSegmentFormat, target);
   const preference: PlaybackPreference = input.policy.playbackPreference;
 
   if (profile.allowUniversalDirect) {
@@ -284,10 +283,6 @@ export function decidePlaybackMode(input: {
 
   if (preference === "prefer_transcode" && input.policy.transcodingEnabled) {
     return { mode: "transcode", reason: "user_preference" };
-  }
-
-  if (remuxCompatible && input.policy.transcodingEnabled) {
-    return { mode: "remux", reason: "container_unsupported" };
   }
 
   if (!directCompatible && input.policy.transcodingEnabled) {

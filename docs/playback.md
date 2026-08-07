@@ -8,13 +8,13 @@ Lunarr prefers direct browser playback when the media file is already browser-co
 
 The web player sends conservative client capability hints when starting playback. For example, MP4 HEVC or AV1 files and WebM VP8/VP9/AV1 files can direct play only when the browser reports support for the matching container and codecs, otherwise they fall back to temporary HLS. Capability checks understand common FFmpeg and browser codec-string aliases such as `avc1.*`, `mp4a.*`, `hvc1.*`, `av01.*`, and `vp09.*`.
 
-When direct playback is not suitable, Lunarr serves request-driven HLS through direct FFmpeg CLI process management. HLS-compatible files can use copied remux so FFmpeg repackages the source streams without re-encoding. Lunarr waits for FFmpeg's authored event playlist before treating a requested segment as ready, so segment availability follows FFmpeg's real timing instead of only the virtual playlist grid. Unknown video codecs and unknown audio codecs are not copied through HLS remux. Unsupported codecs use FFmpeg-generated HLS transcoding. NodeAV remains useful for probe-oriented work such as metadata and stream inspection, but it is not the user-facing HLS segment generator.
+When direct playback is not suitable, Lunarr serves request-driven HLS through direct FFmpeg CLI process management. Auto `auto` and `prefer_direct` playback select **direct or transcode**, not remux. Remux (stream copy) is no longer chosen automatically because FFmpeg can only split copied streams at existing source keyframes, so the virtual VOD playlist's declared segment durations would drift from the actual segment boundaries; full transcode forces keyframes at each boundary and avoids that drift. Unsupported codecs use FFmpeg-generated HLS transcoding. NodeAV remains useful for probe-oriented work such as metadata and stream inspection, but it is not the user-facing HLS segment generator.
 
 Request-driven HLS defaults to MPEG-TS segments for broad compatibility. `LUNARR_HLS_SEGMENT_FORMAT=fmp4` forces fMP4/CMAF segments. `LUNARR_HLS_SEGMENT_FORMAT=auto` selects fMP4 only when the client proves native HLS or MediaSource support, other clients keep MPEG-TS. In fMP4 mode, virtual playlists include an `init.mp4` map and request `.m4s` segments while FFmpeg writes matching fMP4 HLS artifacts.
 
-HEVC HLS remux compatibility is deliberately narrower than HEVC direct play. The compatibility checks require HEVC, native HLS, fMP4 HLS support, and an fMP4 server segment format before a copied HEVC/AAC HLS stream is considered safe. Other HEVC HLS requests fall back to transcode.
+HEVC HLS remux compatibility is deliberately narrower than HEVC direct play. The compatibility checks require HEVC, native HLS, fMP4 HLS support, and an fMP4 server segment format before a copied HEVC/AAC HLS stream is considered safe. These remux checks are retained for internal/forced use but are not selected by automatic playback; HEVC HLS requests use transcode.
 
-For SFTP and WebDAV libraries, browser-compatible files direct-play through authenticated range reads when automatic mode selects direct playback. HLS is used only when remux or transcode is required. Remote HLS and direct playback both read from the remote server through Lunarr. Remote playback quality depends on server/network range-read performance, known file sizes, and stable remote connectivity.
+For SFTP and WebDAV libraries, browser-compatible files direct-play through authenticated range reads when automatic mode selects direct playback. HLS is used only when transcoding is required. Remote HLS and direct playback both read from the remote server through Lunarr. Remote playback quality depends on server/network range-read performance, known file sizes, and stable remote connectivity.
 
 Request-driven HLS encodes only a bounded window ahead of the current playhead. FFmpeg is limited to a configurable number of segments beyond the requested segment (default 4, about 64 seconds at 16-second segments) instead of running to end-of-file. The same encode-ahead value controls both the FFmpeg window and post-segment prefetch depth.
 
@@ -35,7 +35,7 @@ Encoded HLS segments are stored in a server-wide cache keyed by media file ident
 
 Admins can choose an HLS quality preset in Settings. `Auto` preserves the default output behavior. `720p` and `1080p` cap transcode height without upscaling and adjust FFmpeg bitrate/CRF targets. `Original resolution` keeps source height and uses a higher transcode target.
 
-Users can set a preferred audio language in Profile. Temporary HLS transcoding prefers a matching audio stream when probe metadata includes language tags. Copied remux generation prefers AAC-family audio compatibility first, then applies the user's language preference when multiple compatible streams are available. If copied remux generation fails while the session is still playable, Lunarr falls back to full transcode.
+Users can set a preferred audio language in Profile. Temporary HLS transcoding prefers a matching audio stream when probe metadata includes language tags. Copied remux generation prefers AAC-family audio compatibility first, then applies the user's language preference when multiple compatible streams are available. If copied remux generation fails while the session is still playable, Lunarr falls back to full transcode. Remux generation is not selected by automatic playback and only runs when a session is forced into remux mode.
 
 Users can also set a preferred subtitle language in Profile. Lunarr still returns applicable external subtitle tracks for the selected file, but marks the matching language as the default track when available. Sidecar `.srt` subtitle files are converted to WebVTT on the fly for browser playback (`GET /media/subtitles/:subtitleId` and the HLS subtitle URLs).
 
@@ -56,12 +56,12 @@ Users configure segment skip on **Profile → Skip intro & credits** or through 
 
 `GET /api/playback/:mediaItemId` accepts a `target` query parameter. Lunarr uses the target to choose a client capability profile before it decides between direct play and temporary HLS. The web player omits `target` (equivalent to `web`). Cast, AirPlay, and API clients set `target` explicitly when preparing playback.
 
-| Target  | Query value          | Used by                                | Server assumes                                      | Typical outcome                                                  |
-| ------- | -------------------- | -------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------- |
-| Web     | omit or `target=web` | Lunarr web player                      | Browser codec hints (`hevc=1`, `webm=1`, and so on) | Direct when browser-compatible, otherwise HLS remux or transcode |
-| Cast    | `target=cast`        | Chromecast receiver                    | HLS-capable receiver, no WebM direct                | Direct MP4/H.264 when possible, otherwise signed HLS             |
-| AirPlay | `target=airplay`     | AirPlay receiver                       | Safari/client hints, no WebM direct                 | Direct when receiver-compatible, otherwise signed HLS            |
-| Native  | `target=native`      | VLC, mobile apps, other native players | Client decodes locally                              | Signed direct file stream, HLS only when `transcode=1`           |
+| Target  | Query value          | Used by                                | Server assumes                                      | Typical outcome                                         |
+| ------- | -------------------- | -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
+| Web     | omit or `target=web` | Lunarr web player                      | Browser codec hints (`hevc=1`, `webm=1`, and so on) | Direct when browser-compatible, otherwise HLS transcode |
+| Cast    | `target=cast`        | Chromecast receiver                    | HLS-capable receiver, no WebM direct                | Direct MP4/H.264 when possible, otherwise signed HLS    |
+| AirPlay | `target=airplay`     | AirPlay receiver                       | Safari/client hints, no WebM direct                 | Direct when receiver-compatible, otherwise signed HLS   |
+| Native  | `target=native`      | VLC, mobile apps, other native players | Client decodes locally                              | Signed direct file stream, HLS only when `transcode=1`  |
 
 Capability hints matter for `web`, `cast`, and `airplay`. They are optional for `target=native`. See [API](api.md#playback) for the full query contract.
 

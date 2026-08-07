@@ -744,15 +744,15 @@ describe("getPlaybackDecision", () => {
     });
   }
 
-  test("decides remux for a dual-audio file when the preferred language track is copy-compatible", async () => {
+  test("decides transcode for a dual-audio file even when the preferred language track is copy-compatible", async () => {
     await insertDualAudioFile("dual-audio-file");
     setSegmentGeneratingBackendForTests();
     await setUserPreferredAudioLanguage("user-1", "eng");
 
     const decision = await getPlaybackDecision("movie-1", "dual-audio-file", "user-1");
 
-    expect(decision?.mode).toBe("remux");
-    expect(decision?.modeDecision).toEqual({ mode: "remux", reason: "container_unsupported" });
+    expect(decision?.mode).toBe("transcode");
+    expect(decision?.modeDecision).toEqual({ mode: "transcode", reason: "direct_unsupported" });
   });
 
   test("decides transcode for a dual-audio file when the preferred language track needs re-encoding", async () => {
@@ -1014,7 +1014,7 @@ describe("getPlaybackDecision", () => {
     }
   });
 
-  test("uses fMP4 HLS remux for compatible HEVC when the client can play it", async () => {
+  test("uses fMP4 HLS transcode for HEVC files that are not directly playable", async () => {
     const originalHlsSegmentFormat = process.env.LUNARR_HLS_SEGMENT_FORMAT;
     process.env.LUNARR_HLS_SEGMENT_FORMAT = "auto";
     await db
@@ -1049,12 +1049,12 @@ describe("getPlaybackDecision", () => {
         },
       });
 
-      expect(decision?.mode).toBe("remux");
+      expect(decision?.mode).toBe("transcode");
       expect(decision?.modeDecision).toEqual({
-        mode: "remux",
-        reason: "container_unsupported",
+        mode: "transcode",
+        reason: "direct_unsupported",
       });
-      expect(generations).toEqual([{ mode: "remux", format: "fmp4" }]);
+      expect(generations).toEqual([{ mode: "transcode", format: "fmp4" }]);
     } finally {
       if (originalHlsSegmentFormat === undefined) {
         delete process.env.LUNARR_HLS_SEGMENT_FORMAT;
@@ -1279,7 +1279,7 @@ describe("getPlaybackDecision", () => {
     });
   });
 
-  test("falls back to transcode when request-driven remux generation fails", async () => {
+  test("decides transcode directly for a copy-compatible non-direct file (no remux fallback needed)", async () => {
     const requestedModes: string[] = [];
     setTranscodeBackendForTests({
       async generateHlsSegmentWindow(input) {
@@ -1297,13 +1297,13 @@ describe("getPlaybackDecision", () => {
       mode: "transcode",
       status: "ready",
       modeDecision: {
-        mode: "remux",
-        reason: "container_unsupported",
+        mode: "transcode",
+        reason: "direct_unsupported",
       },
       streamStartSeconds: 0,
       message: null,
     });
-    expect(requestedModes).toEqual(["remux", "transcode"]);
+    expect(requestedModes).toEqual(["transcode"]);
 
     const sessionId = decision?.playbackSessionId;
     if (!sessionId) throw new Error("Expected request-driven playback session id.");

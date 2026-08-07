@@ -469,11 +469,11 @@ describe("playback data", () => {
 
     expect(result.startSeconds).toBe(125);
     expect(result.playback).toMatchObject({
-      mode: "remux",
+      mode: "transcode",
       status: "ready",
       modeDecision: {
-        mode: "remux",
-        reason: "container_unsupported",
+        mode: "transcode",
+        reason: "direct_unsupported",
       },
       streamStartSeconds: 0,
     });
@@ -501,8 +501,8 @@ describe("playback data", () => {
       mode: "transcode",
       status: "ready",
       modeDecision: {
-        mode: "remux",
-        reason: "container_unsupported",
+        mode: "transcode",
+        reason: "direct_unsupported",
       },
       streamStartSeconds: 0,
     });

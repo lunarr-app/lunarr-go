@@ -415,8 +415,8 @@ describe("transcode capabilities", () => {
         policy: { transcodingEnabled: true, playbackPreference: "auto" },
       }),
     ).toEqual({
-      mode: "remux",
-      reason: "container_unsupported",
+      mode: "transcode",
+      reason: "direct_unsupported",
     });
     expect(
       decidePlaybackMode({
