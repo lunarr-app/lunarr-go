@@ -7,7 +7,7 @@ export type ParsedTvEpisode = {
   episodeTitle: string | null;
 };
 
-const SEASON_DIR = /^(?:specials|season[\s._-]*\d{1,3})$/i;
+const SEASON_DIR = /^(?:specials|(?:season|staffel|saison|stagione|temporada|seizoen)[\s._-]*\d{1,3})$/i;
 const NOISE = new Set(["tv", "hdtv", "hd tv", "television"]);
 
 function num(value: number | number[] | null | undefined): number | null {
