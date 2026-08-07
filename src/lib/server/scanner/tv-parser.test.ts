@@ -131,42 +131,40 @@ describe("parseTvEpisodePath", () => {
   });
 
   test("recognizes localized season directory names", () => {
+    const cases: Array<[string, string, string, number, number]> = [
+      ["/media/Series/Xena (1995)/Staffel 4/S04E05 - Krieg und Frieden.avi", "/media/Series", "Xena", 4, 5],
+      ["/media/series/Kaamelott/Saison 1/Kaamelott.S01E01.mkv", "/media/series", "Kaamelott", 1, 1],
+      ["/media/series/Pepita/Stagione 2/Pepita.S02E03.mkv", "/media/series", "Pepita", 2, 3],
+      ["/media/series/La Casa de Papel/Temporada 3/La.Casa.de.Papel.S03E01.mkv", "/media/series", "La Casa de Papel", 3, 1],
+      ["/media/series/Flikken/Seizoen 5/Flikken.S05E04.mkv", "/media/series", "Flikken", 5, 4],
+      ["/media/series/Wiedźmin/Sezon 3/Wiedzmin.S03E01.mkv", "/media/series", "Wiedźmin", 3, 1],
+      ["/media/series/Bron/Säsong 2/Bron.S02E01.mkv", "/media/series", "Bron", 2, 1],
+      ["/media/series/Stromann/Évad 1/Stromann.S01E02.mkv", "/media/series", "Stromann", 1, 2],
+      ["/media/series/Бригада/Сезон 1/Бригада.S01E01.mkv", "/media/series", "Бригада", 1, 1],
+      ["/media/series/シリーズ/シーズン 2/Episode.S02E01.mkv", "/media/series", "シリーズ", 2, 1],
+    ];
+
+    for (const [path, root, showTitle, seasonNumber, episodeNumber] of cases) {
+      expect(parseTvEpisodePath(path, root)).toEqual({ showTitle, seasonNumber, episodeNumber, episodeTitle: null });
+    }
+  });
+
+  test("falls back to digit-based season detection for unrecognized season dirs", () => {
     expect(
-      parseTvEpisodePath("/media/Series/Xena (1995)/Staffel 4/S04E05 - Krieg und Frieden.avi", "/media/Series"),
+      parseTvEpisodePath("/media/Series/Xena (1995)/सीजन 4/S04E05 - Krieg und Frieden.avi", "/media/Series"),
     ).toEqual({
       showTitle: "Xena",
       seasonNumber: 4,
       episodeNumber: 5,
       episodeTitle: null,
     });
+  });
 
-    expect(parseTvEpisodePath("/media/series/Kaamelott/Saison 1/Kaamelott.S01E01.mkv", "/media/series")).toEqual({
-      showTitle: "Kaamelott",
-      seasonNumber: 1,
-      episodeNumber: 1,
-      episodeTitle: null,
-    });
-
-    expect(parseTvEpisodePath("/media/series/Pepita/Stagione 2/Pepita.S02E03.mkv", "/media/series")).toEqual({
-      showTitle: "Pepita",
+  test("does not treat numeric show directories as season directories", () => {
+    expect(parseTvEpisodePath("/media/shows/Category/24/24.S02E03.mkv", "/media/shows")).toEqual({
+      showTitle: "24",
       seasonNumber: 2,
       episodeNumber: 3,
-      episodeTitle: null,
-    });
-
-    expect(
-      parseTvEpisodePath("/media/series/La Casa de Papel/Temporada 3/La.Casa.de.Papel.S03E01.mkv", "/media/series"),
-    ).toEqual({
-      showTitle: "La Casa de Papel",
-      seasonNumber: 3,
-      episodeNumber: 1,
-      episodeTitle: null,
-    });
-
-    expect(parseTvEpisodePath("/media/series/Flikken/Seizoen 5/Flikken.S05E04.mkv", "/media/series")).toEqual({
-      showTitle: "Flikken",
-      seasonNumber: 5,
-      episodeNumber: 4,
       episodeTitle: null,
     });
   });

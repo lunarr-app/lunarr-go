@@ -7,7 +7,8 @@ export type ParsedTvEpisode = {
   episodeTitle: string | null;
 };
 
-const SEASON_DIR = /^(?:specials|(?:season|staffel|saison|stagione|temporada|seizoen)[\s._-]*\d{1,3})$/i;
+const SEASON_DIR =
+  /^(?:specials|(?:season|staffel|saison|stagione|temporada|seizoen|sezon|sezona|sezóna|séria|säsong|sesong|sæson|kausi|évad|série|musim|сезон|серия|σεζόν|シーズン|시즌)[\s._-]*\d{1,3})$/iu;
 const NOISE = new Set(["tv", "hdtv", "hd tv", "television"]);
 
 function num(value: number | number[] | null | undefined): number | null {
@@ -68,7 +69,13 @@ export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpi
   if (seasonNumber === null || episodeNumber === null) return null;
 
   const dirs = parts.slice(0, -1);
-  const seasonIdx = dirs.findLastIndex((dir) => SEASON_DIR.test(dir));
+  let seasonIdx = dirs.findLastIndex((dir) => SEASON_DIR.test(dir));
+  if (seasonIdx === -1) {
+    const digitIdx = dirs.findLastIndex((dir) => /\d/.test(dir));
+    if (digitIdx > 0 && clean(dirs[digitIdx]) !== clean(str(result.title) ?? "")) {
+      seasonIdx = digitIdx;
+    }
+  }
   const showTitle = clean(seasonIdx > 0 ? dirs[seasonIdx - 1] : str(result.title) || dirs[dirs.length - 1] || "");
   if (!showTitle) return null;
 
