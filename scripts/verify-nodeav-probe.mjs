@@ -5,6 +5,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { ffmpegFixtureArgs, runFfmpeg } from "./smoke-ffmpeg-transcode.mjs";
+import * as NodeAvApi from "node-av/api";
+import * as NodeAvConstants from "node-av/constants";
+import * as NodeAvLib from "node-av/lib";
+
+NodeAvLib.Log.setLevel(NodeAvConstants.AV_LOG_QUIET);
 
 export function validateNodeAvProbeSummary(summary) {
   if (!summary || typeof summary !== "object") {
@@ -21,27 +26,12 @@ export function validateNodeAvProbeSummary(summary) {
   }
 }
 
-async function loadNodeAvModules() {
-  try {
-    const [api, constants, lib] = await Promise.all([
-      import("node-av/api"),
-      import("node-av/constants"),
-      import("node-av/lib"),
-    ]);
-    lib.Log.setLevel(constants.AV_LOG_QUIET);
-    return { api, constants };
-  } catch (error) {
-    throw new Error(`NodeAV failed to load for probing: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
 export async function probeWithNodeAv(sourcePath) {
-  const modules = await loadNodeAvModules();
   let demuxer;
   try {
-    demuxer = await modules.api.Demuxer.open(sourcePath);
+    demuxer = await NodeAvApi.Demuxer.open(sourcePath);
     const videoStreamCount = demuxer.streams.filter(
-      (stream) => stream.codecpar.codecType === modules.constants.AVMEDIA_TYPE_VIDEO,
+      (stream) => stream.codecpar.codecType === NodeAvConstants.AVMEDIA_TYPE_VIDEO,
     ).length;
     const durationSeconds = Number.isFinite(demuxer.duration) && demuxer.duration > 0 ? demuxer.duration : null;
     const summary = {

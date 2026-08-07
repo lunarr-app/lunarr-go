@@ -1,7 +1,7 @@
 import type { MediaProbe, MediaProbeStream, ProbeBackend, ProbeInput, SeekableTranscodeInputSource } from "./backend";
-import type * as NodeAvApi from "node-av/api";
-import type * as NodeAvConstants from "node-av/constants";
-import type * as NodeAvLib from "node-av/lib";
+import * as NodeAvApi from "node-av/api";
+import * as NodeAvConstants from "node-av/constants";
+import * as NodeAvLib from "node-av/lib";
 
 type NodeAvModules = {
   api: typeof NodeAvApi;
@@ -9,7 +9,13 @@ type NodeAvModules = {
   lib: typeof NodeAvLib;
 };
 
-type NodeAvModuleLoader = () => Promise<NodeAvModules>;
+const modules: NodeAvModules = {
+  api: NodeAvApi,
+  constants: NodeAvConstants,
+  lib: NodeAvLib,
+};
+
+NodeAvLib.Log.setLevel(NodeAvConstants.AV_LOG_QUIET);
 
 type NodeAvStream = {
   index: number;
@@ -44,73 +50,10 @@ export class NodeAvBackendError extends Error {
   }
 }
 
-let moduleLoader: NodeAvModuleLoader = defaultNodeAvModuleLoader;
-let modulesPromise: Promise<NodeAvModules> | null = null;
-
-async function defaultNodeAvModuleLoader(): Promise<NodeAvModules> {
-  const [api, constants, lib] = await Promise.all([
-    import("node-av/api"),
-    import("node-av/constants"),
-    import("node-av/lib"),
-  ]);
-  lib.Log.setLevel(constants.AV_LOG_QUIET);
-
-  return { api, constants, lib };
-}
-
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function nodeAvOperationCancelledError() {
-  return new NodeAvBackendError("NodeAV operation was cancelled.");
-}
-
 function throwIfNodeAvOperationAborted(signal?: AbortSignal) {
   if (signal?.aborted) {
-    throw nodeAvOperationCancelledError();
+    throw new NodeAvBackendError("NodeAV operation was cancelled.");
   }
-}
-
-function withAbortSignal<T>(promise: Promise<T>, signal?: AbortSignal, onAbort?: () => void) {
-  if (!signal) return promise;
-  throwIfNodeAvOperationAborted(signal);
-
-  let abort: (() => void) | undefined;
-  const abortPromise = new Promise<never>((_, reject) => {
-    abort = () => {
-      onAbort?.();
-      reject(nodeAvOperationCancelledError());
-    };
-    signal.addEventListener("abort", abort, { once: true });
-  });
-
-  return Promise.race([promise, abortPromise]).finally(() => {
-    if (abort) {
-      signal.removeEventListener("abort", abort);
-    }
-  });
-}
-
-async function loadNodeAvModules(signal?: AbortSignal) {
-  throwIfNodeAvOperationAborted(signal);
-  const loading =
-    modulesPromise ??
-    moduleLoader().catch((error: unknown) => {
-      modulesPromise = null;
-      throw new NodeAvBackendError(`NodeAV failed to load: ${errorMessage(error)}`);
-    });
-  modulesPromise = loading;
-  return withAbortSignal(loading, signal, () => {
-    if (modulesPromise === loading) {
-      modulesPromise = null;
-    }
-  }).catch((error: unknown) => {
-    if (error instanceof NodeAvBackendError && modulesPromise === loading) {
-      modulesPromise = null;
-    }
-    throw error;
-  });
 }
 
 function demuxerInput(modules: NodeAvModules, input: ProbeDemuxInput, controller: AbortController) {
@@ -156,19 +99,15 @@ function demuxerInput(modules: NodeAvModules, input: ProbeDemuxInput, controller
   };
 }
 
-function demuxerOptions(input: ProbeDemuxInput, controller: AbortController) {
-  return {
-    signal: controller.signal,
-    format: input.inputSource?.format || undefined,
-  };
-}
-
 function openDemuxer(modules: NodeAvModules, input: ProbeDemuxInput, controller: AbortController) {
   const open = modules.api.Demuxer.open as unknown as (
     source: unknown,
     options?: unknown,
   ) => ReturnType<NodeAvModules["api"]["Demuxer"]["open"]>;
-  return open(demuxerInput(modules, input, controller), demuxerOptions(input, controller));
+  return open(demuxerInput(modules, input, controller), {
+    signal: controller.signal,
+    format: input.inputSource?.format || undefined,
+  });
 }
 
 function finiteNumber(value: number) {
@@ -202,13 +141,9 @@ function streamType(
   return "data";
 }
 
-function streamMetadata(stream: NodeAvStream) {
-  return stream.metadata?.getAll() ?? {};
-}
-
 function mapStream(stream: NodeAvStream, modules: NodeAvModules): MediaProbeStream {
   const codec = modules.lib.Codec.findDecoder(stream.codecpar.codecId);
-  const metadata = streamMetadata(stream);
+  const metadata = stream.metadata?.getAll() ?? {};
   const type = streamType(stream.codecpar.codecType, modules.constants);
 
   return {
@@ -237,7 +172,6 @@ function mapStream(stream: NodeAvStream, modules: NodeAvModules): MediaProbeStre
 
 export const nodeAvBackend: ProbeBackend = {
   async probe(input: ProbeInput): Promise<MediaProbe> {
-    const modules = await loadNodeAvModules(input.signal);
     throwIfNodeAvOperationAborted(input.signal);
     const controller = new AbortController();
     const cancelFromInputSignal = () => controller.abort();
