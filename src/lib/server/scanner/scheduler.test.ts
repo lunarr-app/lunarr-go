@@ -1,5 +1,13 @@
-import { describe, expect, test } from "bun:test";
-import { scheduledScanDelayMs, shouldScheduleLibraryScan } from "./scheduler";
+import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import type { Kysely } from "kysely";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
+import type { Database } from "../db/schema";
+import { createLibrary } from "../libraries";
+import * as scanJobs from "./scan-jobs";
+import { scheduledScanDelayMs, shouldScheduleLibraryScan, syncScheduledLibraryScans } from "./scheduler";
 
 describe("scheduled library scans", () => {
   test("only schedules scannable libraries with an interval", () => {
@@ -41,5 +49,75 @@ describe("scheduled library scans", () => {
 
     expect(scheduledScanDelayMs(library, anchorMs)).toBe(maxTimeoutMs);
     expect(scheduledScanDelayMs(library, anchorMs + maxTimeoutMs)).toBe(43_200 * 60_000 - maxTimeoutMs);
+  });
+});
+
+describe("syncScheduledLibraryScans", () => {
+  let tempDir: string;
+  let db: Kysely<Database>;
+
+  beforeAll(async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-scheduler-db-"));
+    await useDatabaseFileForTests(path.join(tempDir, "lunarr.db"));
+    await migrateDatabase();
+    db = await getDb();
+  });
+
+  afterAll(async () => {
+    await closeDatabaseForTests();
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  test("schedules and runs a scan for a library that is due", async () => {
+    const mediaDir = path.join(tempDir, "due-library");
+    await mkdir(mediaDir);
+    const library = await createLibrary({
+      name: "Due Library",
+      kind: "movie",
+      path: mediaDir,
+      scanIntervalMinutes: 60,
+    });
+    const now = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    await db.updateTable("library").set({ last_scheduled_scan_at: now }).where("id", "=", library.id).execute();
+
+    const startSpy = spyOn(scanJobs, "startScan").mockResolvedValue(library.id);
+    try {
+      await syncScheduledLibraryScans();
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(startSpy).toHaveBeenCalledTimes(1);
+      expect(startSpy.mock.calls[0][0]).toBe(library.id);
+
+      const updated = await db
+        .selectFrom("library")
+        .select("last_scheduled_scan_at")
+        .where("id", "=", library.id)
+        .executeTakeFirstOrThrow();
+      expect(updated.last_scheduled_scan_at).not.toBeNull();
+    } finally {
+      startSpy.mockRestore();
+    }
+
+    await db.deleteFrom("library").where("id", "=", library.id).execute();
+  });
+
+  test("does not schedule libraries without an interval", async () => {
+    const mediaDir = path.join(tempDir, "unscheduled-library");
+    await mkdir(mediaDir);
+    const library = await createLibrary({
+      name: "Unscheduled Library",
+      kind: "movie",
+      path: mediaDir,
+    });
+
+    const startSpy = spyOn(scanJobs, "startScan").mockResolvedValue(library.id);
+    try {
+      await syncScheduledLibraryScans();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      expect(startSpy).not.toHaveBeenCalled();
+    } finally {
+      startSpy.mockRestore();
+    }
+
+    await db.deleteFrom("library").where("id", "=", library.id).execute();
   });
 });

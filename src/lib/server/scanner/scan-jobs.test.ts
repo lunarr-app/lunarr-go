@@ -575,4 +575,304 @@ describe("runScanJob", () => {
 
     await db.deleteFrom("library").where("id", "=", probedLibrary.id).execute();
   });
+
+  async function settleAllActiveJobs() {
+    await db
+      .updateTable("scan_job")
+      .set({ status: "cancelled", finished_at: new Date().toISOString() })
+      .where("status", "in", ["queued", "running"])
+      .execute();
+  }
+
+  test("resumes movie metadata refresh jobs after restart", async () => {
+    await settleAllActiveJobs();
+    const jobId = await createScanJob(library.id);
+    await db
+      .updateTable("scan_job")
+      .set({
+        job_kind: "movie_metadata_refresh",
+        library_id: null,
+        status: "running",
+        started_at: new Date().toISOString(),
+        runner_token: "stale-runner",
+        runner_heartbeat_at: new Date().toISOString(),
+      })
+      .where("id", "=", jobId)
+      .execute();
+
+    const recovered = await resumeInterruptedJobs({
+      movieMetadataOptions: { metadataMatcher: async () => null },
+    });
+    expect(recovered).toEqual({ resumed: 1, failed: 0 });
+
+    const recoveredJob = await waitForScanJob(jobId);
+    expect(recoveredJob.status).toBe("completed");
+  });
+
+  test("resumes tv metadata refresh jobs after restart", async () => {
+    await settleAllActiveJobs();
+    const jobId = await createScanJob(library.id);
+    await db
+      .updateTable("scan_job")
+      .set({
+        job_kind: "tv_metadata_refresh",
+        library_id: null,
+        status: "running",
+        started_at: new Date().toISOString(),
+        runner_token: "stale-runner",
+        runner_heartbeat_at: new Date().toISOString(),
+      })
+      .where("id", "=", jobId)
+      .execute();
+
+    const recovered = await resumeInterruptedJobs({
+      tvMetadataOptions: { metadataMatcher: async () => null },
+    });
+    expect(recovered).toEqual({ resumed: 1, failed: 0 });
+
+    const recoveredJob = await waitForScanJob(jobId);
+    expect(recoveredJob.status).toBe("completed");
+  });
+
+  test("resumes media probe refresh jobs after restart", async () => {
+    await settleAllActiveJobs();
+    const jobId = await createScanJob(library.id);
+    await db
+      .updateTable("scan_job")
+      .set({
+        job_kind: "media_probe_refresh",
+        library_id: null,
+        status: "running",
+        started_at: new Date().toISOString(),
+        runner_token: "stale-runner",
+        runner_heartbeat_at: new Date().toISOString(),
+      })
+      .where("id", "=", jobId)
+      .execute();
+
+    const recovered = await resumeInterruptedJobs({
+      mediaProbeOptions: {
+        probeBackend: {
+          async probe() {
+            return {
+              container: null,
+              durationSeconds: null,
+              bitRate: null,
+              streams: [],
+            };
+          },
+        },
+      },
+    });
+    expect(recovered).toEqual({ resumed: 1, failed: 0 });
+
+    const recoveredJob = await waitForScanJob(jobId);
+    expect(recoveredJob.status).toBe("completed");
+  });
+
+  test("fails unknown job kinds during restart", async () => {
+    await settleAllActiveJobs();
+    const now = new Date().toISOString();
+    const jobId = await createScanJob(library.id);
+    await db
+      .updateTable("scan_job")
+      .set({
+        job_kind: "unknown_job_kind" as unknown as "library_scan",
+        library_id: null,
+        status: "running",
+        started_at: now,
+        runner_token: "stale-runner",
+        runner_heartbeat_at: now,
+      })
+      .where("id", "=", jobId)
+      .execute();
+
+    const recovered = await resumeInterruptedJobs();
+    expect(recovered).toEqual({ resumed: 0, failed: 1 });
+
+    const failedJob = await waitForScanJob(jobId, "failed");
+    expect(failedJob).toMatchObject({
+      status: "failed",
+      errors_count: 1,
+    });
+    const errors = await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", jobId).execute();
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({
+      path: "job",
+      message: "Unknown job kind: unknown_job_kind",
+    });
+  });
+
+  test("fails library scan jobs without a library during restart", async () => {
+    await settleAllActiveJobs();
+    const now = new Date().toISOString();
+    const jobId = await createScanJob(library.id);
+    await db
+      .updateTable("scan_job")
+      .set({
+        library_id: null,
+        status: "running",
+        started_at: now,
+        runner_token: "stale-runner",
+        runner_heartbeat_at: now,
+      })
+      .where("id", "=", jobId)
+      .execute();
+
+    const recovered = await resumeInterruptedJobs();
+    expect(recovered).toEqual({ resumed: 0, failed: 1 });
+
+    const failedJob = await waitForScanJob(jobId, "failed");
+    expect(failedJob).toMatchObject({
+      status: "failed",
+      errors_count: 1,
+    });
+    const errors = await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", jobId).execute();
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toBe("Library scan job has no library.");
+  });
+
+  test("marks a scan job failed when the file walker throws", async () => {
+    const mediaDir = path.join(tempDir, "walker-throw");
+    await mkdir(mediaDir);
+    const thrownLibrary = await createLibrary({
+      name: "Walker Throw",
+      kind: "movie",
+      path: mediaDir,
+    });
+    const jobId = await createScanJob(thrownLibrary.id);
+
+    await runScanJob(jobId, {
+      async *fileWalker() {
+        throw new Error("disk exploded");
+      },
+    });
+
+    const failedJob = await waitForScanJob(jobId, "failed");
+    expect(failedJob).toMatchObject({
+      status: "failed",
+      errors_count: 1,
+    });
+    const errors = await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", jobId).execute();
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toBe("disk exploded");
+
+    await db.deleteFrom("library").where("id", "=", thrownLibrary.id).execute();
+  });
+
+  test("marks a scan job cancelled when the walker throws after a cancellation request", async () => {
+    const mediaDir = path.join(tempDir, "walker-throw-cancel");
+    await mkdir(mediaDir);
+    const cancelledLibrary = await createLibrary({
+      name: "Walker Throw Cancel",
+      kind: "movie",
+      path: mediaDir,
+    });
+    const jobId = await createScanJob(cancelledLibrary.id);
+
+    await runScanJob(jobId, {
+      async *fileWalker() {
+        await cancelScanJob(jobId);
+        throw new Error("disk exploded");
+      },
+    });
+
+    await waitForScanJob(jobId, "cancelled");
+    const errors = await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", jobId).execute();
+    expect(errors).toHaveLength(0);
+
+    await db.deleteFrom("library").where("id", "=", cancelledLibrary.id).execute();
+  });
+
+  test("fails a resumed scan when the checkpoint is no longer in the walk", async () => {
+    const mediaDir = path.join(tempDir, "checkpoint-missing");
+    await mkdir(mediaDir);
+    const checkpointLibrary = await createLibrary({
+      name: "Checkpoint Missing",
+      kind: "movie",
+      path: mediaDir,
+    });
+    const now = new Date().toISOString();
+    const jobId = await createScanJob(checkpointLibrary.id);
+    await db
+      .updateTable("scan_job")
+      .set({
+        status: "running",
+        started_at: now,
+        files_seen: 1,
+        files_added: 1,
+        checkpoint_value: path.join(mediaDir, "Gone.Movie.2026.mp4"),
+        runner_token: null,
+        runner_heartbeat_at: null,
+      })
+      .where("id", "=", jobId)
+      .execute();
+
+    await runScanJob(jobId, {
+      async *fileWalker() {
+        yield { kind: "file", path: path.join(mediaDir, "Other.Movie.2026.mp4") };
+      },
+    });
+
+    const failedJob = await waitForScanJob(jobId, "failed");
+    expect(failedJob).toMatchObject({
+      status: "failed",
+      errors_count: 1,
+    });
+    const errors = await db.selectFrom("scan_job_error").selectAll().where("scan_job_id", "=", jobId).execute();
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("Scan checkpoint was not found");
+
+    await db.deleteFrom("library").where("id", "=", checkpointLibrary.id).execute();
+  });
+
+  test("cancelScanJob reports missing and inactive jobs", async () => {
+    expect(await cancelScanJob("no-such-job")).toBe("missing");
+
+    const mediaDir = path.join(tempDir, "inactive-cancel");
+    await mkdir(mediaDir);
+    const inactiveLibrary = await createLibrary({
+      name: "Inactive Cancel",
+      kind: "movie",
+      path: mediaDir,
+    });
+    const jobId = await createScanJob(inactiveLibrary.id);
+    await db
+      .updateTable("scan_job")
+      .set({ status: "completed", finished_at: new Date().toISOString() })
+      .where("id", "=", jobId)
+      .execute();
+
+    expect(await cancelScanJob(jobId)).toBe("inactive");
+    await db.deleteFrom("library").where("id", "=", inactiveLibrary.id).execute();
+  });
+
+  test("startScan throws for an unknown library", async () => {
+    await expect(startScan("missing-library")).rejects.toThrow("Library not found.");
+  });
+
+  test("startScan returns an existing active job when creating a new one races", async () => {
+    const mediaDir = path.join(tempDir, "start-race");
+    await mkdir(mediaDir);
+    const raceLibrary = await createLibrary({
+      name: "Start Race",
+      kind: "movie",
+      path: mediaDir,
+    });
+    const activeJobId = await createScanJob(raceLibrary.id);
+    await db
+      .updateTable("scan_job")
+      .set({ status: "running", runner_token: "existing-runner", runner_heartbeat_at: new Date().toISOString() })
+      .where("id", "=", activeJobId)
+      .execute();
+
+    const options = {
+      metadataMatcher: async () => null,
+    };
+    const secondJobId = await startScan(raceLibrary.id, options);
+    expect(secondJobId).toBe(activeJobId);
+
+    await db.updateTable("scan_job").set({ status: "cancelled" }).where("id", "=", activeJobId).execute();
+    await db.deleteFrom("library").where("id", "=", raceLibrary.id).execute();
+  });
 });

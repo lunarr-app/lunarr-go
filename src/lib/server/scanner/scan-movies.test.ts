@@ -13,6 +13,7 @@ import { getMovieDetail } from "../media/movies/detail";
 import { getPlaybackDecision, saveProgress } from "../playback";
 import { getServerStatus } from "../status";
 import type { LibraryStorage } from "../storage";
+import type { ProbeBackend } from "../transcoding/backend";
 import { setTranscodeBackendForTests } from "../transcoding/manager";
 import { createScanJob, runScanJob } from "./scan-jobs";
 
@@ -817,6 +818,116 @@ describe("runScanJob", () => {
     await db.deleteFrom("library").where("id", "=", "webdav-library").execute();
   });
 
+  test("probes remote media through a seekable input source", async () => {
+    const now = new Date().toISOString();
+    const remoteRoot = "/media/movies";
+    const remoteFile = "/media/movies/Remote.Probe.2026.mp4";
+    await db
+      .insertInto("library")
+      .values({
+        id: "sftp-probe-library",
+        name: "SFTP Probe Movies",
+        kind: "movie",
+        source: "sftp",
+        path: "sftp://mediauser@sftp.example.test:22/media/movies",
+        config_json: "{}",
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+
+    const storage: LibraryStorage = {
+      source: "sftp",
+      root: remoteRoot,
+      async statFile(filePath) {
+        if (filePath !== remoteFile) return null;
+        return {
+          path: filePath,
+          basename: path.posix.basename(filePath),
+          extension: ".mp4",
+          size: 1234,
+          mtimeMs: 1_800_000_000_000,
+        };
+      },
+      async listFiles() {
+        return [];
+      },
+      async *walkFiles(root) {
+        expect(root).toBe(remoteRoot);
+        yield {
+          kind: "file",
+          path: remoteFile,
+          file: {
+            path: remoteFile,
+            basename: path.posix.basename(remoteFile),
+            extension: ".mp4",
+            size: 1234,
+            mtimeMs: 1_800_000_000_000,
+          },
+        };
+      },
+      async createReadStream() {
+        return Readable.from([]);
+      },
+      async close() {
+        return;
+      },
+    };
+
+    let probeInputSourceSeen = false;
+    const probeBackend: ProbeBackend = {
+      async probe(input) {
+        probeInputSourceSeen = input.inputSource !== undefined;
+        return {
+          container: "mov,mp4,m4a,3gp,3g2,mj2",
+          durationSeconds: 90,
+          bitRate: 2_000,
+          streams: [
+            {
+              index: 0,
+              type: "video",
+              codecName: "h264",
+              codecLongName: "H.264 / AVC",
+              language: null,
+              title: null,
+              width: 1920,
+              height: 1080,
+              channels: null,
+              sampleRate: null,
+              durationSeconds: 90,
+              bitRate: 1_800_000,
+              frameRate: 23.976,
+              rFrameRate: 24,
+              nbFrames: null,
+              raw: null,
+            },
+          ],
+        };
+      },
+    };
+
+    const jobId = await createScanJob("sftp-probe-library");
+    await runScanJob(jobId, {
+      storage,
+      metadataMatcher: async () => null,
+      probeBackend,
+    });
+
+    expect(probeInputSourceSeen).toBe(true);
+    const file = await db
+      .selectFrom("media_file")
+      .selectAll()
+      .where("library_id", "=", "sftp-probe-library")
+      .executeTakeFirstOrThrow();
+    expect(file).toMatchObject({
+      duration_seconds: 90,
+      video_codec: "h264",
+      container: "mp4",
+    });
+
+    await db.deleteFrom("library").where("id", "=", "sftp-probe-library").execute();
+  });
+
   test("keeps existing file rows when a yielded file cannot be processed", async () => {
     const mediaDir = path.join(tempDir, "disappearing-file");
     await mkdir(mediaDir);
@@ -1197,5 +1308,255 @@ describe("runScanJob", () => {
       .orderBy("basename", "asc")
       .execute();
     expect(new Set(files.map((file) => file.media_item_id)).size).toBe(2);
+  });
+
+  test("adopts an unmatched local movie when metadata matches on a later scan", async () => {
+    const mediaDir = path.join(tempDir, "local-adoption");
+    await mkdir(mediaDir);
+    const moviePath = path.join(mediaDir, "Adopt.Me.2024.mp4");
+    await writeFile(moviePath, "movie");
+    const adoptionLibrary = await createLibrary({
+      name: "Local Adoption",
+      kind: "movie",
+      path: mediaDir,
+    });
+
+    const firstJobId = await createScanJob(adoptionLibrary.id);
+    await runScanJob(firstJobId, { metadataMatcher: async () => null });
+    const localMovie = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "movie")
+      .where("title", "=", "Adopt Me")
+      .executeTakeFirstOrThrow();
+    expect(localMovie.provider).toBeNull();
+
+    const secondJobId = await createScanJob(adoptionLibrary.id);
+    await runScanJob(secondJobId, {
+      metadataMatcher: async (title, year) => ({
+        provider: "tmdb",
+        providerId: "42",
+        title,
+        year,
+        overview: "A movie that was adopted after metadata began matching.",
+        runtimeSeconds: 6000,
+        posterPath: "/adopt.jpg",
+        backdropPath: "/adopt-backdrop.jpg",
+        releaseDate: "2024-01-01",
+        popularity: 15,
+        voteAverage: 7.0,
+      }),
+    });
+
+    const adopted = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "movie")
+      .where("title", "=", "Adopt Me")
+      .executeTakeFirstOrThrow();
+    expect(adopted.id).toBe(localMovie.id);
+    expect(adopted).toMatchObject({
+      provider: "tmdb",
+      provider_id: "42",
+      poster_path: "/adopt.jpg",
+    });
+
+    const movies = await db
+      .selectFrom("media_item")
+      .select("id")
+      .where("kind", "=", "movie")
+      .where("title", "=", "Adopt Me")
+      .execute();
+    expect(movies).toHaveLength(1);
+    await db.deleteFrom("library").where("id", "=", adoptionLibrary.id).execute();
+  });
+
+  test("skips reprobing unchanged files that already have probe metadata", async () => {
+    const mediaDir = path.join(tempDir, "skip-probe");
+    await mkdir(mediaDir);
+    const moviePath = path.join(mediaDir, "Skip.Probe.2024.mp4");
+    await writeFile(moviePath, "movie");
+    const probedLibrary = await createLibrary({
+      name: "Skip Probe",
+      kind: "movie",
+      path: mediaDir,
+    });
+    let probeCalls = 0;
+    const probeBackend: ProbeBackend = {
+      async probe() {
+        probeCalls += 1;
+        return {
+          container: "mov,mp4,m4a,3gp,3g2,mj2",
+          durationSeconds: 120,
+          bitRate: 2_000,
+          streams: [
+            {
+              index: 0,
+              type: "video",
+              codecName: "h264",
+              codecLongName: "H.264 / AVC",
+              language: null,
+              title: null,
+              width: 1920,
+              height: 1080,
+              channels: null,
+              sampleRate: null,
+              durationSeconds: 120,
+              bitRate: 1_800_000,
+              frameRate: 23.976,
+              rFrameRate: 24,
+              nbFrames: null,
+              raw: null,
+            },
+          ],
+        };
+      },
+    };
+
+    const firstJobId = await createScanJob(probedLibrary.id);
+    await runScanJob(firstJobId, {
+      metadataMatcher: async () => null,
+      probeBackend,
+    });
+    expect(probeCalls).toBe(1);
+
+    const secondJobId = await createScanJob(probedLibrary.id);
+    await runScanJob(secondJobId, {
+      metadataMatcher: async () => null,
+      probeBackend,
+    });
+    expect(probeCalls).toBe(1);
+
+    const file = await db
+      .selectFrom("media_file")
+      .selectAll()
+      .where("library_id", "=", probedLibrary.id)
+      .executeTakeFirstOrThrow();
+    expect(file).toMatchObject({
+      duration_seconds: 120,
+      video_codec: "h264",
+      container: "mp4",
+    });
+
+    await db.deleteFrom("library").where("id", "=", probedLibrary.id).execute();
+  });
+
+  test("merges watch progress when a file moves to an already-progressed media item", async () => {
+    const mediaDir = path.join(tempDir, "progress-merge");
+    await mkdir(mediaDir);
+    const moviePath = path.join(mediaDir, "Progress.Merge.2024.mp4");
+    await writeFile(moviePath, "movie");
+    const mergeLibrary = await createLibrary({
+      name: "Progress Merge",
+      kind: "movie",
+      path: mediaDir,
+    });
+    const now = new Date().toISOString();
+    await db
+      .insertInto("user")
+      .values({
+        id: "merge-user",
+        name: "Merge User",
+        email: "merge@example.test",
+        role: "user",
+        email_verified: 0,
+        image: null,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      })
+      .execute();
+
+    const firstJobId = await createScanJob(mergeLibrary.id);
+    await runScanJob(firstJobId, { metadataMatcher: async () => null });
+    const localMovie = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "movie")
+      .where("title", "=", "Progress Merge")
+      .executeTakeFirstOrThrow();
+    const file = await db
+      .selectFrom("media_file")
+      .selectAll()
+      .where("library_id", "=", mergeLibrary.id)
+      .executeTakeFirstOrThrow();
+
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "merge-user",
+        media_item_id: localMovie.id,
+        media_file_id: file.id,
+        position_seconds: 30,
+        duration_seconds: 120,
+        completed: 0,
+        updated_at: now,
+      })
+      .execute();
+
+    await db
+      .insertInto("media_item")
+      .values({
+        id: "merge-provider-movie",
+        kind: "movie",
+        title: "Progress Merge",
+        sort_title: "progress merge",
+        year: 2024,
+        overview: null,
+        runtime_seconds: null,
+        poster_path: null,
+        backdrop_path: null,
+        release_date: "2024-01-01",
+        provider: "tmdb",
+        provider_id: "77",
+        parent_id: null,
+        popularity: null,
+        vote_average: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    await db
+      .insertInto("watch_progress")
+      .values({
+        user_id: "merge-user",
+        media_item_id: "merge-provider-movie",
+        media_file_id: file.id,
+        position_seconds: 5,
+        duration_seconds: 120,
+        completed: 0,
+        updated_at: now,
+      })
+      .execute();
+
+    const secondJobId = await createScanJob(mergeLibrary.id);
+    await runScanJob(secondJobId, {
+      metadataMatcher: async (title, year) => ({
+        provider: "tmdb",
+        providerId: "77",
+        title,
+        year,
+        overview: "Matched.",
+        runtimeSeconds: 6000,
+        posterPath: null,
+        backdropPath: null,
+        releaseDate: "2024-01-01",
+        popularity: 5,
+        voteAverage: 6.0,
+      }),
+    });
+
+    const progress = await db
+      .selectFrom("watch_progress")
+      .selectAll()
+      .where("user_id", "=", "merge-user")
+      .where("media_file_id", "=", file.id)
+      .execute();
+    expect(progress).toHaveLength(1);
+    expect(progress[0]).toMatchObject({
+      media_item_id: "merge-provider-movie",
+      position_seconds: 30,
+    });
+
+    await db.deleteFrom("library").where("id", "=", mergeLibrary.id).execute();
   });
 });

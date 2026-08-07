@@ -7,6 +7,7 @@ import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import { createLibrary } from "../libraries";
+import type { MatchedTvSeasonLookup } from "../metadata/tmdb";
 import { getShowDetail } from "../media/shows/detail";
 import { getPlaybackDecision, saveProgress } from "../playback";
 import type { LibraryStorage } from "../storage";
@@ -565,5 +566,368 @@ describe("runScanJob", () => {
       errors_count: 0,
     });
     expect(repeatLookups).toBe(1);
+  });
+
+  test("moves file associations to a provider episode row when both exist", async () => {
+    const showsDir = path.join(tempDir, "moved-associations");
+    const seasonDir = path.join(showsDir, "Moved Show", "Season 01");
+    await mkdir(seasonDir, { recursive: true });
+    const episodePath = path.join(seasonDir, "Moved Show - S01E01 - Pilot.mkv");
+    await writeFile(episodePath, "episode");
+    const tvLibrary = await createLibrary({
+      name: "Moved Associations",
+      kind: "tv",
+      path: showsDir,
+    });
+
+    const firstJobId = await createScanJob(tvLibrary.id);
+    await runScanJob(firstJobId, { tvSeasonMetadataMatcher: async () => null });
+    const libraryShow = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "show")
+      .where("title", "=", "Moved Show")
+      .executeTakeFirstOrThrow();
+    const localEpisode = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "episode")
+      .where("parent_id", "in", (qb) =>
+        qb.selectFrom("media_item").select("id").where("parent_id", "=", libraryShow.id),
+      )
+      .executeTakeFirstOrThrow();
+
+    const providerEpisodeId = "provider-episode-1";
+    await db
+      .insertInto("media_item")
+      .values({
+        id: providerEpisodeId,
+        kind: "episode",
+        title: "Pilot",
+        sort_title: "s001e0001",
+        year: null,
+        season_number: 1,
+        episode_number: 1,
+        release_date: null,
+        poster_path: null,
+        backdrop_path: null,
+        provider: "tmdb",
+        provider_id: "provider-ep-1",
+        parent_id: localEpisode.parent_id,
+        popularity: null,
+        vote_average: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .execute();
+
+    const secondJobId = await createScanJob(tvLibrary.id);
+    await runScanJob(secondJobId, {
+      tvSeasonMetadataMatcher: async () => ({
+        show: {
+          provider: "tmdb",
+          providerId: "moved-show",
+          title: "Moved Show",
+          year: 2024,
+          originalTitle: "Moved Show",
+          overview: null,
+          tagline: null,
+          posterPath: null,
+          backdropPath: null,
+          firstAirDate: "2024-01-01",
+          status: "Ended",
+          homepage: null,
+          originalLanguage: "en",
+          imdbId: null,
+          popularity: 10,
+          voteAverage: 6.0,
+          voteCount: 5,
+          certification: null,
+          trailer: null,
+          genres: [],
+          cast: [],
+          crew: [],
+          videos: [],
+          keywords: [],
+          productionCompanies: [],
+          productionCountries: [],
+          spokenLanguages: [],
+        },
+        season: {
+          provider: "tmdb",
+          providerId: "moved-season",
+          title: "Season 1",
+          seasonNumber: 1,
+          overview: null,
+          posterPath: null,
+          airDate: "2024-01-01",
+          voteAverage: 6.0,
+        },
+        episodes: [
+          {
+            provider: "tmdb",
+            providerId: "provider-ep-1",
+            title: "Pilot",
+            seasonNumber: 1,
+            episodeNumber: 1,
+            overview: null,
+            stillPath: null,
+            airDate: "2024-01-01",
+            runtimeSeconds: 1200,
+            voteAverage: 6.0,
+            voteCount: 5,
+          },
+        ],
+      }),
+    });
+
+    const file = await db
+      .selectFrom("media_file")
+      .select("media_item_id")
+      .where("library_id", "=", tvLibrary.id)
+      .executeTakeFirstOrThrow();
+    expect(file.media_item_id).toBe(providerEpisodeId);
+
+    const localEpisodeRows = await db
+      .selectFrom("media_item")
+      .select("id")
+      .where("kind", "=", "episode")
+      .where("parent_id", "in", (qb) =>
+        qb.selectFrom("media_item").select("id").where("parent_id", "=", libraryShow.id),
+      )
+      .execute();
+    expect(localEpisodeRows.map((row) => row.id)).toEqual([providerEpisodeId]);
+
+    await db.deleteFrom("library").where("id", "=", tvLibrary.id).execute();
+  });
+
+  test("updates an existing library episode when metadata matches it", async () => {
+    const showsDir = path.join(tempDir, "adopted-episode");
+    const seasonDir = path.join(showsDir, "Adopted Show", "Season 01");
+    await mkdir(seasonDir, { recursive: true });
+    const episodePath = path.join(seasonDir, "Adopted Show - S01E01 - Pilot.mkv");
+    await writeFile(episodePath, "episode");
+    const tvLibrary = await createLibrary({
+      name: "Adopted Episode",
+      kind: "tv",
+      path: showsDir,
+    });
+
+    const firstJobId = await createScanJob(tvLibrary.id);
+    await runScanJob(firstJobId, { tvSeasonMetadataMatcher: async () => null });
+    const adoptedShow = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("kind", "=", "show")
+      .where("title", "=", "Adopted Show")
+      .executeTakeFirstOrThrow();
+    const localEpisodeId = await db
+      .selectFrom("media_item")
+      .select("id")
+      .where("kind", "=", "episode")
+      .where("parent_id", "in", (qb) =>
+        qb.selectFrom("media_item").select("id").where("parent_id", "=", adoptedShow.id),
+      )
+      .executeTakeFirstOrThrow()
+      .then((row) => row.id);
+
+    const secondJobId = await createScanJob(tvLibrary.id);
+    await runScanJob(secondJobId, {
+      tvSeasonMetadataMatcher: async () => ({
+        show: {
+          provider: "tmdb",
+          providerId: "adopted-show",
+          title: "Adopted Show",
+          year: 2024,
+          originalTitle: "Adopted Show",
+          overview: null,
+          tagline: null,
+          posterPath: null,
+          backdropPath: null,
+          firstAirDate: "2024-01-01",
+          status: "Ended",
+          homepage: null,
+          originalLanguage: "en",
+          imdbId: null,
+          popularity: 10,
+          voteAverage: 6.0,
+          voteCount: 5,
+          certification: null,
+          trailer: null,
+          genres: [],
+          cast: [],
+          crew: [],
+          videos: [],
+          keywords: [],
+          productionCompanies: [],
+          productionCountries: [],
+          spokenLanguages: [],
+        },
+        season: {
+          provider: "tmdb",
+          providerId: "adopted-season",
+          title: "Season 1",
+          seasonNumber: 1,
+          overview: null,
+          posterPath: null,
+          airDate: "2024-01-01",
+          voteAverage: 6.0,
+        },
+        episodes: [
+          {
+            provider: "tmdb",
+            providerId: "adopted-ep-1",
+            title: "Pilot",
+            seasonNumber: 1,
+            episodeNumber: 1,
+            overview: "The adopted episode.",
+            stillPath: null,
+            airDate: "2024-01-01",
+            runtimeSeconds: 1200,
+            voteAverage: 6.0,
+            voteCount: 5,
+          },
+          {
+            provider: "tmdb",
+            providerId: "adopted-ep-2",
+            title: "Second",
+            seasonNumber: 1,
+            episodeNumber: 2,
+            overview: null,
+            stillPath: null,
+            airDate: "2024-01-08",
+            runtimeSeconds: 1200,
+            voteAverage: 5.0,
+            voteCount: 3,
+          },
+        ],
+      }),
+    });
+
+    const adoptedEpisode = await db
+      .selectFrom("media_item")
+      .selectAll()
+      .where("id", "=", localEpisodeId)
+      .executeTakeFirstOrThrow();
+    expect(adoptedEpisode).toMatchObject({
+      provider: "tmdb",
+      provider_id: "adopted-ep-1",
+      overview: "The adopted episode.",
+    });
+
+    const matchedEpisode = await db
+      .selectFrom("media_file")
+      .innerJoin("media_item", "media_item.id", "media_file.media_item_id")
+      .select(["media_item.provider_id", "media_item.overview"])
+      .where("media_file.library_id", "=", tvLibrary.id)
+      .executeTakeFirstOrThrow();
+    expect(matchedEpisode).toEqual({
+      provider_id: "adopted-ep-1",
+      overview: "The adopted episode.",
+    });
+
+    await db.deleteFrom("library").where("id", "=", tvLibrary.id).execute();
+  });
+
+  test("reuses the season episode sync cache across files in the same season", async () => {
+    const showsDir = path.join(tempDir, "episode-sync-cache");
+    const seasonDir = path.join(showsDir, "Cached Show", "Season 01");
+    await mkdir(seasonDir, { recursive: true });
+    await writeFile(path.join(seasonDir, "Cached Show - S01E01 - First.mkv"), "episode");
+    await writeFile(path.join(seasonDir, "Cached Show - S01E02 - Second.mkv"), "episode");
+    const tvLibrary = await createLibrary({
+      name: "Episode Sync Cache",
+      kind: "tv",
+      path: showsDir,
+    });
+
+    const matcherResult: MatchedTvSeasonLookup = {
+      show: {
+        provider: "tmdb",
+        providerId: "cached-show",
+        title: "Cached Show",
+        year: 2024,
+        originalTitle: "Cached Show",
+        overview: null,
+        tagline: null,
+        posterPath: null,
+        backdropPath: null,
+        firstAirDate: "2024-01-01",
+        status: "Ended",
+        homepage: null,
+        originalLanguage: "en",
+        imdbId: null,
+        popularity: 10,
+        voteAverage: 6.0,
+        voteCount: 5,
+        certification: null,
+        trailer: null,
+        genres: [],
+        cast: [],
+        crew: [],
+        videos: [],
+        keywords: [],
+        productionCompanies: [],
+        productionCountries: [],
+        spokenLanguages: [],
+      },
+      season: {
+        provider: "tmdb",
+        providerId: "cached-season",
+        title: "Season 1",
+        seasonNumber: 1,
+        overview: null,
+        posterPath: null,
+        airDate: "2024-01-01",
+        voteAverage: 6.0,
+      },
+      episodes: [
+        {
+          provider: "tmdb",
+          providerId: "cached-ep-1",
+          title: "First",
+          seasonNumber: 1,
+          episodeNumber: 1,
+          overview: null,
+          stillPath: null,
+          airDate: "2024-01-01",
+          runtimeSeconds: 1200,
+          voteAverage: 6.0,
+          voteCount: 5,
+        },
+        {
+          provider: "tmdb",
+          providerId: "cached-ep-2",
+          title: "Second",
+          seasonNumber: 1,
+          episodeNumber: 2,
+          overview: null,
+          stillPath: null,
+          airDate: "2024-01-08",
+          runtimeSeconds: 1200,
+          voteAverage: 5.0,
+          voteCount: 3,
+        },
+      ],
+    };
+
+    const jobId = await createScanJob(tvLibrary.id);
+    await runScanJob(jobId, {
+      tvSeasonMetadataMatcher: async () => matcherResult,
+    });
+
+    const episodes = await db
+      .selectFrom("media_item")
+      .select(["title", "provider_id"])
+      .where("kind", "=", "episode")
+      .where("provider_id", "in", ["cached-ep-1", "cached-ep-2"])
+      .orderBy("episode_number", "asc")
+      .execute();
+    expect(episodes).toEqual([
+      { title: "First", provider_id: "cached-ep-1" },
+      { title: "Second", provider_id: "cached-ep-2" },
+    ]);
+
+    await db.deleteFrom("library").where("id", "=", tvLibrary.id).execute();
   });
 });
