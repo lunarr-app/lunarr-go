@@ -10,6 +10,7 @@ export type ParsedTvEpisode = {
 const SEASON_DIR =
   /^(?:specials|(?:season|staffel|saison|stagione|temporada|seizoen|sezon|sezona|sezóna|séria|säsong|sesong|sæson|kausi|évad|série|musim|сезон|серия|σεζόν|シーズン|시즌)[\s._-]*\d{1,3})$/iu;
 const NOISE = new Set(["tv", "hdtv", "hd tv", "television"]);
+const SXXEYY = /\bs(\d{1,2})[\s._-]*e(\d{1,3})\b/i;
 
 function num(value: number | number[] | null | undefined): number | null {
   const n = Array.isArray(value) ? value[0] : value;
@@ -64,8 +65,9 @@ export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpi
   if (parts.length === 0) return null;
   const result = guessit(parts.join("/"), { type: "episode" });
 
-  const seasonNumber = num(result.season);
-  const episodeNumber = num(result.episode);
+  const fallback = parts[parts.length - 1].match(SXXEYY);
+  const seasonNumber = num(result.season) ?? (fallback ? Number(fallback[1]) : null);
+  const episodeNumber = num(result.episode) ?? (fallback ? Number(fallback[2]) : null);
   if (seasonNumber === null || episodeNumber === null) return null;
 
   const dirs = parts.slice(0, -1);

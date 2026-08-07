@@ -135,7 +135,13 @@ describe("parseTvEpisodePath", () => {
       ["/media/Series/Xena (1995)/Staffel 4/S04E05 - Krieg und Frieden.avi", "/media/Series", "Xena", 4, 5],
       ["/media/series/Kaamelott/Saison 1/Kaamelott.S01E01.mkv", "/media/series", "Kaamelott", 1, 1],
       ["/media/series/Pepita/Stagione 2/Pepita.S02E03.mkv", "/media/series", "Pepita", 2, 3],
-      ["/media/series/La Casa de Papel/Temporada 3/La.Casa.de.Papel.S03E01.mkv", "/media/series", "La Casa de Papel", 3, 1],
+      [
+        "/media/series/La Casa de Papel/Temporada 3/La.Casa.de.Papel.S03E01.mkv",
+        "/media/series",
+        "La Casa de Papel",
+        3,
+        1,
+      ],
       ["/media/series/Flikken/Seizoen 5/Flikken.S05E04.mkv", "/media/series", "Flikken", 5, 4],
       ["/media/series/Wiedźmin/Sezon 3/Wiedzmin.S03E01.mkv", "/media/series", "Wiedźmin", 3, 1],
       ["/media/series/Bron/Säsong 2/Bron.S02E01.mkv", "/media/series", "Bron", 2, 1],
@@ -247,6 +253,17 @@ describe("parseTvEpisodePath", () => {
       showTitle: "The Expanse",
       seasonNumber: 2,
       episodeNumber: 3,
+      episodeTitle: null,
+    });
+  });
+
+  test("extracts season and episode from hash-like filenames guessit cannot parse", () => {
+    expect(
+      parseTvEpisodePath("/media/Series/Under the Dome/Season 02/euhd-dome-s02e13-720p.mkv", "/media/Series"),
+    ).toEqual({
+      showTitle: "Under the Dome",
+      seasonNumber: 2,
+      episodeNumber: 13,
       episodeTitle: null,
     });
   });
