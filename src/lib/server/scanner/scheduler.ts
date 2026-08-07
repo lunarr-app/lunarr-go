@@ -1,7 +1,7 @@
 import { getDb } from "../db";
 import { listLibraries } from "../libraries";
 import { MAX_SCHEDULED_TIMEOUT_MS, nowIso } from "../time";
-import { startScan } from ".";
+import { startScan } from "./scan-jobs";
 
 type SchedulableLibrary = {
   id: string;

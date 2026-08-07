@@ -1,7 +1,7 @@
 import { apiError, apiJson } from "$lib/server/api/json";
 import type { ApiOkResponse } from "$lib/server/api/types";
 import { requireJsonAdmin } from "$lib/server/api";
-import { cancelScanJob } from "$lib/server/scanner";
+import { cancelScanJob } from "$lib/server/scanner/scan-jobs";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async ({ params, locals }) => {

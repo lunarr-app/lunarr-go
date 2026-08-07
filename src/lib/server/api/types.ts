@@ -1,7 +1,7 @@
 import type { getHealthStatus } from "$lib/server/health";
 import type { approveDevicePairing, pollDevicePairing, startDevicePairing } from "$lib/server/auth/device-pairing";
 import type { runSettingsAction, getAdminSettingsResponse } from "$lib/server/settings-commands";
-import type { startAllLibraryScans } from "$lib/server/scanner";
+import type { startAllLibraryScans } from "$lib/server/scanner/scan-jobs";
 import type { startMovieMetadataRefreshJob } from "$lib/server/metadata/movies";
 import type { listAllShares, listSharesForMedia } from "$lib/server/shares/index";
 import type { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";

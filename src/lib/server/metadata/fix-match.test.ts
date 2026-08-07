@@ -6,7 +6,7 @@ import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import { createLibrary } from "../libraries";
-import { createScanJob, runScanJob } from "../scanner";
+import { createScanJob, runScanJob } from "../scanner/scan-jobs";
 import { fixMovieMatch, fixShowMatch, revertFixMatch } from "./fix-match";
 import { refreshMovieMetadataResult } from "./movies";
 import { refreshTvShowMetadataResult } from "./tv";

@@ -10,7 +10,7 @@ import { createLibrary } from "../libraries";
 import { getShowDetail } from "../media/shows/detail";
 import { getPlaybackDecision, saveProgress } from "../playback";
 import type { LibraryStorage } from "../storage";
-import { createScanJob, runScanJob } from "./index";
+import { createScanJob, runScanJob } from "./scan-jobs";
 
 let tempDir: string;
 let db: Kysely<Database>;

@@ -14,7 +14,7 @@ import {
   runScanJob,
   startAllMovieScans,
   startScan,
-} from "./index";
+} from "./scan-jobs";
 
 let tempDir: string;
 let db: Kysely<Database>;

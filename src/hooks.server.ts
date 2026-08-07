@@ -7,7 +7,7 @@ import { cleanupJobHistory } from "$lib/server/jobs";
 import { cleanupExpiredShares } from "$lib/server/shares";
 import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM } from "$lib/server/playback/signed-token";
 import { SHARE_TOKEN_QUERY_PARAM } from "$lib/shares/constants";
-import { resumeInterruptedJobs } from "$lib/server/scanner";
+import { resumeInterruptedJobs } from "$lib/server/scanner/scan-jobs";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
 import { startStaleTranscodeExpiryLoop } from "$lib/server/transcoding/manager";

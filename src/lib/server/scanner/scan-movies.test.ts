@@ -14,7 +14,7 @@ import { getPlaybackDecision, saveProgress } from "../playback";
 import { getServerStatus } from "../status";
 import type { LibraryStorage } from "../storage";
 import { setTranscodeBackendForTests } from "../transcoding/manager";
-import { createScanJob, runScanJob } from "./index";
+import { createScanJob, runScanJob } from "./scan-jobs";
 
 let tempDir: string;
 let db: Kysely<Database>;

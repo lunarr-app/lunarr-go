@@ -11,7 +11,7 @@ import { getMovieDetail } from "./media/movies/detail";
 import { mediaStreamResponse } from "./media/stream";
 import type { MatchedMovieMetadata } from "./metadata/tmdb";
 import { getPlaybackDecision, saveProgress } from "./playback";
-import { startScan } from "./scanner";
+import { startScan } from "./scanner/scan-jobs";
 import { getServerStatus } from "./status";
 
 describe("local movie library MVP workflow", () => {

@@ -1,7 +1,7 @@
 import { startMovieMetadataRefreshJob } from "./metadata/movies";
 import { startTvMetadataRefreshJob } from "./metadata/tv";
 import { PUBLIC_TMDB_ACCESS_TOKEN, testTmdbConnection, tmdbCredentialsConfigured } from "./metadata/tmdb";
-import { startAllLibraryScans } from "./scanner";
+import { startAllLibraryScans } from "./scanner/scan-jobs";
 import { deleteSetting, getBooleanSetting, getSetting, setBooleanSetting, setSetting } from "./settings";
 import {
   getMetadataRefreshIntervalHours,

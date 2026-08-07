@@ -3,7 +3,7 @@ import path from "node:path";
 import { appEnv } from "../config/env";
 import { listLibraries } from "../libraries";
 import { isSidecarSubtitlePath, isVideoFilePath } from "./media-files";
-import { startScan } from ".";
+import { startScan } from "./scan-jobs";
 
 type WatchedLibrary = {
   id: string;

@@ -9,7 +9,7 @@ import {
 } from "$lib/server/libraries";
 import { libraryFormState, parseCreateLibraryInput, parseUpdateLibraryInput } from "$lib/server/libraries/input";
 import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
-import { startScan } from "$lib/server/scanner";
+import { startScan } from "$lib/server/scanner/scan-jobs";
 import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
 import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
 import { fail, redirect } from "@sveltejs/kit";
