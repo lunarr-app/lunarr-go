@@ -145,12 +145,3 @@ export function movieLookupCandidates(
   });
   return candidates;
 }
-
-export function movieLookupFromPath(
-  filePath: string,
-  fallback?: ParsedMovieLookup,
-  options: MovieLookupOptions = {},
-): ParsedMovieLookup {
-  const candidates = movieLookupCandidates(filePath, fallback, options);
-  return candidates[0] ?? { title: fallback?.title ?? "", year: fallback?.year ?? null };
-}

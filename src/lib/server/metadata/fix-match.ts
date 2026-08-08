@@ -8,8 +8,7 @@ import {
   matchMovieMetadataById,
   matchTvSeasonMetadataById,
   type MatchedTvSeasonLookup,
-  type TmdbCredentials,
-  type TmdbFetch,
+  type TmdbRequestOptions,
 } from "./tmdb";
 import { z } from "zod";
 
@@ -27,11 +26,6 @@ export function parseMatchQuery(url: URL): MatchQueryParse {
   if (query.length > MAX_MATCH_QUERY_LENGTH) return { ok: false, error: "Query is too long." };
   return { ok: true, query };
 }
-
-export type FixMatchOptions = {
-  credentials?: TmdbCredentials;
-  fetch?: TmdbFetch;
-};
 
 export async function fixMatchTargetExists(kind: "movie" | "show", mediaItemId: string): Promise<boolean> {
   const db = await getDb();
@@ -74,7 +68,7 @@ function toMatchCandidate(metadata: {
 
 export async function resolveMovieMatchCandidate(
   tmdbId: number,
-  options: FixMatchOptions = {},
+  options: TmdbRequestOptions = {},
 ): Promise<FixMatchCandidate | null> {
   const metadata = await matchMovieMetadataById(tmdbId, options);
   return metadata ? toMatchCandidate(metadata) : null;
@@ -82,7 +76,7 @@ export async function resolveMovieMatchCandidate(
 
 export async function resolveShowMatchCandidate(
   tmdbId: number,
-  options: FixMatchOptions = {},
+  options: TmdbRequestOptions = {},
 ): Promise<FixMatchCandidate | null> {
   const metadata = await fetchTmdbShowMetadata(tmdbId, options);
   return metadata ? toMatchCandidate(metadata) : null;
@@ -91,7 +85,7 @@ export async function resolveShowMatchCandidate(
 export async function fixMovieMatch(
   mediaItemId: string,
   tmdbId: number,
-  options: FixMatchOptions = {},
+  options: TmdbRequestOptions = {},
 ): Promise<FixMovieMatchResult> {
   const db = await getDb();
   const movie = await db
@@ -112,7 +106,7 @@ export async function fixMovieMatch(
 export async function fixShowMatch(
   showId: string,
   tmdbId: number,
-  options: FixMatchOptions = {},
+  options: TmdbRequestOptions = {},
 ): Promise<FixShowMatchResult> {
   const db = await getDb();
   const show = await db

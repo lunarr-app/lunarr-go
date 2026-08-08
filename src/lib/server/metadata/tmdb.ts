@@ -241,7 +241,10 @@ export type TmdbCredentials = {
   apiKey?: string;
 };
 
-export type TmdbFetch = typeof fetch;
+export type TmdbRequestOptions = {
+  credentials?: TmdbCredentials;
+  fetch?: typeof fetch;
+};
 
 export type MatchedMovieMetadata = {
   provider: "tmdb";
@@ -418,7 +421,7 @@ function isTmdbNotFoundError(error: unknown) {
   return error instanceof Error && /TMDb request failed with 404/.test(error.message);
 }
 
-async function tmdbFetch<T>(url: URL, override?: TmdbCredentials, fetcher: TmdbFetch = fetch) {
+async function tmdbFetch<T>(url: URL, override?: TmdbCredentials, fetcher: typeof fetch = fetch) {
   const { token, apiKey } = await credentials(override);
   const headers: Record<string, string> = {
     accept: "application/json",
@@ -1006,12 +1009,7 @@ function mapMatchedMovieMetadata(
 const MOVIE_DETAIL_CANDIDATE_LIMIT = 5;
 const MOVIE_TOTAL_DETAIL_BUDGET = 10;
 
-type MovieMetadataMatchOptions = {
-  credentials?: TmdbCredentials;
-  fetch?: TmdbFetch;
-};
-
-async function fetchMovieDetail(movieId: number, options: MovieMetadataMatchOptions = {}) {
+async function fetchMovieDetail(movieId: number, options: TmdbRequestOptions = {}) {
   const cacheKey = String(movieId);
   const cached = tmdbMovieDetailCache.get(cacheKey);
   if (cached) return cached;
@@ -1027,7 +1025,7 @@ async function matchMovieMetadataForSearchYear(
   title: string,
   searchYear: number | null,
   resultYear: number | null,
-  options: MovieMetadataMatchOptions = {},
+  options: TmdbRequestOptions = {},
   remainingDetailBudget: { value: number },
   seenProviderIds: Set<number>,
 ) {
@@ -1062,20 +1060,16 @@ async function matchMovieMetadataForSearchYear(
   return null;
 }
 
-function movieMetadataSearchYears(queryYear: number | null) {
+function metadataSearchYears(queryYear: number | null) {
   if (queryYear === null) return [null];
   return [queryYear, queryYear - 1, queryYear + 1, null];
 }
 
-export async function matchMovieMetadata(
-  title: string,
-  year: number | null,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
-) {
+export async function matchMovieMetadata(title: string, year: number | null, options: TmdbRequestOptions = {}) {
   const seenProviderIds = new Set<number>();
   const remainingDetailBudget = { value: MOVIE_TOTAL_DETAIL_BUDGET };
 
-  for (const searchYear of movieMetadataSearchYears(year)) {
+  for (const searchYear of metadataSearchYears(year)) {
     const metadata = await matchMovieMetadataForSearchYear(
       title,
       searchYear,
@@ -1093,7 +1087,7 @@ export async function matchMovieMetadata(
 
 export async function matchMovieMetadataById(
   movieId: number,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+  options: TmdbRequestOptions = {},
 ): Promise<MatchedMovieMetadata | null> {
   let detail: TmdbMovieDetails | null;
   try {
@@ -1124,7 +1118,7 @@ const TMDB_MATCH_CANDIDATE_LIMIT = 10;
 
 export async function searchTmdbMovieCandidates(
   query: string,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+  options: TmdbRequestOptions = {},
 ): Promise<FixMatchCandidate[]> {
   const searchUrl = new URL("https://api.themoviedb.org/3/search/movie");
   searchUrl.searchParams.set("query", query);
@@ -1142,7 +1136,7 @@ export async function searchTmdbMovieCandidates(
 
 export async function searchTmdbTvCandidates(
   query: string,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+  options: TmdbRequestOptions = {},
 ): Promise<FixMatchCandidate[]> {
   const searchUrl = new URL("https://api.themoviedb.org/3/search/tv");
   searchUrl.searchParams.set("query", query);
@@ -1158,7 +1152,7 @@ export async function searchTmdbTvCandidates(
   }));
 }
 
-async function fetchTvDetail(tvId: number, options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {}) {
+async function fetchTvDetail(tvId: number, options: TmdbRequestOptions = {}) {
   const cacheKey = `tv:${tvId}`;
   const cached = tmdbTvDetailCache.get(cacheKey);
   if (cached) return cached;
@@ -1173,11 +1167,7 @@ async function fetchTvDetail(tvId: number, options: { credentials?: TmdbCredenti
   return detail;
 }
 
-async function fetchTvSeason(
-  tvId: number,
-  seasonNumber: number,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
-) {
+async function fetchTvSeason(tvId: number, seasonNumber: number, options: TmdbRequestOptions = {}) {
   const cacheKey = `tv:${tvId}:s${seasonNumber}`;
   const cached = tmdbTvSeasonCache.get(cacheKey);
   if (cached) return cached;
@@ -1210,12 +1200,12 @@ export async function matchTvSeasonMetadata(
   title: string,
   year: number | null,
   seasonNumber: number,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+  options: TmdbRequestOptions = {},
 ) {
   const seenProviderIds = new Set<number>();
   let remainingDetailBudget = TV_TOTAL_DETAIL_BUDGET;
 
-  for (const searchYear of tvSeasonMetadataSearchYears(year)) {
+  for (const searchYear of metadataSearchYears(year)) {
     const searchUrl = new URL("https://api.themoviedb.org/3/search/tv");
     searchUrl.searchParams.set("query", title);
     if (searchYear !== null) searchUrl.searchParams.set("first_air_date_year", String(searchYear));
@@ -1241,14 +1231,9 @@ export async function matchTvSeasonMetadata(
   return null;
 }
 
-function tvSeasonMetadataSearchYears(queryYear: number | null) {
-  if (queryYear === null) return [null];
-  return [queryYear, queryYear - 1, queryYear + 1, null];
-}
-
 export async function fetchTmdbShowMetadata(
   tvId: number,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+  options: TmdbRequestOptions = {},
 ): Promise<MatchedTvShowMetadata | null> {
   let detail: TmdbTvDetails | null;
   try {
@@ -1264,7 +1249,7 @@ export async function fetchTmdbShowMetadata(
 export async function matchTvSeasonMetadataById(
   tvId: number,
   seasonNumber: number,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+  options: TmdbRequestOptions = {},
 ): Promise<MatchedTvSeasonLookup | null> {
   const show = await fetchTmdbShowMetadata(tvId, options);
   if (!show) return null;
@@ -1288,7 +1273,7 @@ export async function matchTvSeasonMetadataById(
   } satisfies MatchedTvSeasonLookup;
 }
 
-export async function testTmdbConnection(options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {}) {
+export async function testTmdbConnection(options: TmdbRequestOptions = {}) {
   const metadata = await matchMovieMetadata("The Matrix", 1999, options);
   if (!metadata) {
     return {

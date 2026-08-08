@@ -2,7 +2,8 @@ import { sql } from "kysely";
 import { getDb } from "../db";
 import { createId } from "../id";
 import { nowIso } from "../time";
-import { lookupMovieMetadataFromPath } from "./matching";
+import { lookupMovieMetadataFromPath, type MovieMetadataMatcher } from "./matching";
+import { createMetadataRefreshJob, runMetadataRefreshJob } from "./metadata-jobs";
 import { movieLookupCandidates } from "./movie-lookup";
 import {
   emptyMovieMetadataValues,
@@ -13,8 +14,6 @@ import {
   syncMediaMetadataRelations,
 } from "./store";
 import { matchMovieMetadata, matchMovieMetadataById, type MatchedMovieMetadata } from "./tmdb";
-
-type MovieMetadataMatcher = (title: string, year: number | null) => Promise<MatchedMovieMetadata | null>;
 
 export type MovieMetadataByIdMatcher = (tmdbId: number) => Promise<MatchedMovieMetadata | null>;
 
@@ -28,12 +27,6 @@ export type RefreshMovieMetadataResult =
   | { status: "matched"; mediaItemId: string }
   | { status: "unmatched"; mediaItemId: string }
   | { status: "missing"; mediaItemId: null };
-
-const runningMovieMetadataJobs = new Set<string>();
-
-function isTerminalJobStatus(status: "queued" | "running" | "completed" | "failed" | "cancelled") {
-  return status === "completed" || status === "failed" || status === "cancelled";
-}
 
 function sortTitle(title: string) {
   return title.replace(/^(the|a|an)\s+/i, "").toLowerCase();
@@ -352,290 +345,39 @@ export async function refreshMovieMetadataResult(
   return { status: "matched", mediaItemId: finalMediaItemId };
 }
 
-async function addMetadataJobError(jobId: string, item: string, error: unknown) {
-  const db = await getDb();
-  await db
-    .insertInto("scan_job_error")
-    .values({
-      scan_job_id: jobId,
-      path: item,
-      message: error instanceof Error ? error.message : String(error),
-      created_at: nowIso(),
-    })
-    .execute();
-}
-
-async function updateMetadataJob(
-  jobId: string,
-  values: Partial<{
-    status: "queued" | "running" | "completed" | "failed" | "cancelled";
-    started_at: string | null;
-    finished_at: string | null;
-    files_seen: number;
-    files_added: number;
-    files_updated: number;
-    files_removed: number;
-    errors_count: number;
-    checkpoint_value: string | null;
-    runner_token: string | null;
-    runner_heartbeat_at: string | null;
-  }>,
-  runnerToken?: string,
-) {
-  const db = await getDb();
-  const now = nowIso();
-  const terminalStatus = values.status ? isTerminalJobStatus(values.status) : false;
-  let query = db
-    .updateTable("scan_job")
-    .set({
-      ...values,
-      ...(terminalStatus
-        ? {
-            checkpoint_value: null,
-            runner_token: null,
-            runner_heartbeat_at: null,
-          }
-        : runnerToken
-          ? { runner_heartbeat_at: now }
-          : {}),
-      updated_at: now,
-    })
-    .where("id", "=", jobId);
-  if (runnerToken) query = query.where("runner_token", "=", runnerToken);
-  await query.execute();
-}
-
-async function getActiveMovieMetadataJobId() {
-  const db = await getDb();
-  const job = await db
-    .selectFrom("scan_job")
-    .select("id")
-    .where("job_kind", "=", "movie_metadata_refresh")
-    .where("library_id", "is", null)
-    .where("status", "in", ["queued", "running"])
-    .orderBy("created_at", "desc")
-    .executeTakeFirst();
-  return job?.id ?? null;
-}
-
-async function isMetadataJobCancellationRequested(jobId: string) {
-  const db = await getDb();
-  const job = await db.selectFrom("scan_job").select("cancel_requested_at").where("id", "=", jobId).executeTakeFirst();
-  return Boolean(job?.cancel_requested_at);
-}
-
-async function createMovieMetadataRefreshJob() {
-  const activeJobId = await getActiveMovieMetadataJobId();
-  if (activeJobId) return { id: activeJobId, existing: true };
-
-  const db = await getDb();
-  const now = nowIso();
-  const id = createId();
-  try {
-    await db
-      .insertInto("scan_job")
-      .values({
-        id,
-        job_kind: "movie_metadata_refresh",
-        library_id: null,
-        status: "queued",
-        started_at: null,
-        finished_at: null,
-        files_seen: 0,
-        files_added: 0,
-        files_updated: 0,
-        files_removed: 0,
-        errors_count: 0,
-        cancel_requested_at: null,
-        rescan_requested_at: null,
-        checkpoint_value: null,
-        runner_token: null,
-        runner_heartbeat_at: null,
-        created_at: now,
-        updated_at: now,
-      })
-      .execute();
-  } catch (error) {
-    const activeJobId = await getActiveMovieMetadataJobId();
-    if (activeJobId) return { id: activeJobId, existing: true };
-    throw error;
-  }
-
-  return { id, existing: false };
-}
-
 export async function runMovieMetadataRefreshJob(jobId: string, options: RefreshMetadataOptions = {}) {
-  if (runningMovieMetadataJobs.has(jobId)) return;
-  runningMovieMetadataJobs.add(jobId);
-
-  const db = await getDb();
-  const runnerToken = createId();
-  let seen = 0;
-  let matched = 0;
-  let merged = 0;
-  let errors = 0;
-  let resumeCheckpoint: string | null = null;
-  let waitingForCheckpoint = false;
-
-  try {
-    const job = await db.selectFrom("scan_job").selectAll().where("id", "=", jobId).executeTakeFirst();
-    if (!job || (job.status !== "queued" && job.status !== "running")) return;
-
-    const startedAt = job.started_at ?? nowIso();
-    const now = nowIso();
-    const isResume = job.status === "running" && job.checkpoint_value !== null;
-    const result = await db
-      .updateTable("scan_job")
-      .set({
-        status: "running",
-        started_at: startedAt,
-        finished_at: null,
-        ...(isResume
-          ? {}
-          : {
-              files_seen: 0,
-              files_added: 0,
-              files_updated: 0,
-              files_removed: 0,
-              errors_count: 0,
-              checkpoint_value: null,
-            }),
-        runner_token: runnerToken,
-        runner_heartbeat_at: now,
-        updated_at: now,
-      })
-      .where("id", "=", jobId)
-      .where("status", "in", ["queued", "running"])
-      .where("runner_token", "is", null)
-      .executeTakeFirst();
-    if (result.numUpdatedRows === 0n) return;
-    if (!isResume) await db.deleteFrom("scan_job_error").where("scan_job_id", "=", jobId).execute();
-
-    seen = isResume ? job.files_seen : 0;
-    matched = isResume ? job.files_updated : 0;
-    merged = isResume ? job.files_removed : 0;
-    errors = isResume ? job.errors_count : 0;
-    resumeCheckpoint = isResume ? job.checkpoint_value : null;
-
-    const moviesQuery = db
-      .selectFrom("media_item")
-      .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
-      .select(["media_item.id", "media_item.title", "media_item.sort_title", "media_item.updated_at"])
-      .where("media_item.kind", "=", "movie")
-      .groupBy("media_item.id")
-      .orderBy("media_item.sort_title", "asc");
-
-    const movies =
-      options.stalenessDays && options.stalenessDays > 0
-        ? await moviesQuery
-            .where(sql<boolean>`media_item.updated_at < datetime('now', '-' || ${options.stalenessDays} || ' days')`)
-            .execute()
-        : await moviesQuery.execute();
-
-    if (resumeCheckpoint && !movies.some((movie) => movie.id === resumeCheckpoint)) {
-      seen = 0;
-      matched = 0;
-      merged = 0;
-      errors = 0;
-      resumeCheckpoint = null;
-      await db.deleteFrom("scan_job_error").where("scan_job_id", "=", jobId).execute();
-      await updateMetadataJob(
-        jobId,
-        {
-          files_seen: 0,
-          files_updated: 0,
-          files_removed: 0,
-          errors_count: 0,
-          checkpoint_value: null,
-        },
-        runnerToken,
-      );
-    }
-    waitingForCheckpoint = resumeCheckpoint !== null;
-
-    for (const movie of movies) {
-      if (await isMetadataJobCancellationRequested(jobId)) {
-        await updateMetadataJob(
-          jobId,
-          {
-            status: "cancelled",
-            finished_at: nowIso(),
-            files_seen: seen,
-            files_updated: matched,
-            files_removed: merged,
-            errors_count: errors,
-          },
-          runnerToken,
-        );
-        return;
-      }
-
-      if (waitingForCheckpoint) {
-        if (movie.id === resumeCheckpoint) waitingForCheckpoint = false;
-        continue;
-      }
-
-      seen += 1;
-      try {
-        const result = await refreshMovieMetadataResult(movie.id, options);
-        if (result.status === "matched") {
-          matched += 1;
-          if (result.mediaItemId !== movie.id) merged += 1;
-        }
-      } catch (error) {
-        errors += 1;
-        await addMetadataJobError(jobId, movie.title || movie.id, error);
-      }
-
-      await updateMetadataJob(
-        jobId,
-        {
-          files_seen: seen,
-          files_updated: matched,
-          files_removed: merged,
-          errors_count: errors,
-          checkpoint_value: movie.id,
-        },
-        runnerToken,
-      );
-    }
-
-    await updateMetadataJob(
-      jobId,
-      {
-        status: "completed",
-        finished_at: nowIso(),
-        files_seen: seen,
-        files_updated: matched,
-        files_removed: merged,
-        errors_count: errors,
-      },
-      runnerToken,
-    );
-  } catch (error) {
-    errors += 1;
-    await addMetadataJobError(jobId, "movie metadata refresh", error);
-    await db
-      .updateTable("scan_job")
-      .set({
-        status: (await isMetadataJobCancellationRequested(jobId)) ? "cancelled" : "failed",
-        finished_at: nowIso(),
-        errors_count: sql<number>`errors_count + 1`,
-        checkpoint_value: null,
-        runner_token: null,
-        runner_heartbeat_at: null,
-        updated_at: nowIso(),
-      })
-      .where("id", "=", jobId)
-      .where("runner_token", "=", runnerToken)
-      .execute();
-  } finally {
-    runningMovieMetadataJobs.delete(jobId);
-  }
+  return runMetadataRefreshJob(jobId, {
+    jobKind: "movie_metadata_refresh",
+    stalenessDays: options.stalenessDays,
+    fetchItems: async (stalenessDays) => {
+      const db = await getDb();
+      const moviesQuery = db
+        .selectFrom("media_item")
+        .innerJoin("media_file", "media_file.media_item_id", "media_item.id")
+        .select(["media_item.id", "media_item.title", "media_item.sort_title", "media_item.updated_at"])
+        .where("media_item.kind", "=", "movie")
+        .groupBy("media_item.id")
+        .orderBy("media_item.sort_title", "asc");
+      const movies =
+        stalenessDays && stalenessDays > 0
+          ? await moviesQuery
+              .where(sql<boolean>`media_item.updated_at < datetime('now', '-' || ${stalenessDays} || ' days')`)
+              .execute()
+          : await moviesQuery.execute();
+      return movies.map((movie) => ({ id: movie.id, label: movie.title || movie.id }));
+    },
+    processItem: async (movieId) => {
+      const result = await refreshMovieMetadataResult(movieId, options);
+      return result.status === "matched"
+        ? { updated: true, removed: result.mediaItemId !== movieId ? 1 : 0 }
+        : { updated: false };
+    },
+    errorLabel: "movie metadata refresh",
+  });
 }
 
 export async function startMovieMetadataRefreshJob(options: RefreshMetadataOptions = {}) {
-  const job = await createMovieMetadataRefreshJob();
+  const job = await createMetadataRefreshJob("movie_metadata_refresh", "null");
   if (!job.existing) void runMovieMetadataRefreshJob(job.id, options);
   return job;
 }
