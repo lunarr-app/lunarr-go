@@ -376,6 +376,11 @@ export async function scanTvFile(
       existing.audio_language === fileValues.audio_language &&
       existing.audio_bit_rate === fileValues.audio_bit_rate;
 
+    if (fileUnchanged && existing.existing_provider) {
+      await syncSidecarSubtitleTracks(existing.media_item_id, mediaFileId, filePath, now, context);
+      return "unchanged" as const;
+    }
+
     const mediaItemId = existing.existing_show_manual_match
       ? existing.media_item_id
       : await findOrCreateEpisodeItem(

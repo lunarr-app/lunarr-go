@@ -565,7 +565,7 @@ describe("runScanJob", () => {
       files_updated: 0,
       errors_count: 0,
     });
-    expect(repeatLookups).toBe(1);
+    expect(repeatLookups).toBe(0);
   });
 
   test("moves file associations to a provider episode row when both exist", async () => {
