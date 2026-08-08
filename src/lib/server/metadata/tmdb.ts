@@ -1172,7 +1172,7 @@ async function fetchTvSeason(
   return season;
 }
 
-const TV_DETAIL_CANDIDATE_LIMIT = 5;
+const TV_TOTAL_DETAIL_BUDGET = 10;
 
 function buildTvSeasonLookup(
   detail: TmdbTvDetails,
@@ -1197,6 +1197,7 @@ export async function matchTvSeasonMetadata(
   options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
 ) {
   const seenProviderIds = new Set<number>();
+  let remainingDetailBudget = TV_TOTAL_DETAIL_BUDGET;
 
   for (const searchYear of tvSeasonMetadataSearchYears(year)) {
     const searchUrl = new URL("https://api.themoviedb.org/3/search/tv");
@@ -1206,17 +1207,17 @@ export async function matchTvSeasonMetadata(
 
     const search = await tmdbFetch<{ results: TmdbTvSearchResult[] }>(searchUrl, options.credentials, options.fetch);
 
-    for (const candidate of tvSearchResultCandidates(search?.results, title, year).slice(
-      0,
-      TV_DETAIL_CANDIDATE_LIMIT,
-    )) {
+    for (const candidate of tvSearchResultCandidates(search?.results, title, year)) {
+      if (seenProviderIds.has(candidate.id)) continue;
+      if (remainingDetailBudget <= 0) break;
+      remainingDetailBudget -= 1;
+
       const detail = await fetchTvDetail(candidate.id, options);
       if (!detail) continue;
       if (!queryMatchesTvShowTitles(title, detail)) continue;
-      if (seenProviderIds.has(detail.id)) continue;
+      seenProviderIds.add(detail.id);
       const season = await fetchTvSeason(detail.id, seasonNumber, options);
       if (!season) continue;
-      seenProviderIds.add(detail.id);
       return buildTvSeasonLookup(detail, candidate, season, seasonNumber);
     }
   }

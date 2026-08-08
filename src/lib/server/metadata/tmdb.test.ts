@@ -1115,6 +1115,32 @@ describe("matchTvSeasonMetadata year-agnostic scan matching", () => {
     expect(metadata?.show.providerId).toBe("2");
     expect(detailCalls.filter((call) => call.includes("/tv/2") && !call.includes("/season"))).toHaveLength(1);
   });
+
+  test("caps the total number of detail fetches across all search-year passes", async () => {
+    let detailCalls = 0;
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: Array.from({ length: 20 }, (_, i) => ({
+            id: 1000 + i,
+            name: `Unrelated Show ${i}`,
+            first_air_date: `${2000 + i}-01-01`,
+          })),
+        });
+      }
+      detailCalls += 1;
+      return Response.json({ id: url.match(/\/tv\/(\d+)/)?.[1], name: "Unrelated Show" });
+    };
+
+    const metadata = await matchTvSeasonMetadata("Something Unique", 2000, 1, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(metadata).toBeNull();
+    expect(detailCalls).toBeLessThanOrEqual(10);
+  });
 });
 
 describe("matchMovieMetadataById", () => {

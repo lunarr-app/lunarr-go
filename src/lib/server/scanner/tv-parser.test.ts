@@ -244,6 +244,24 @@ describe("parseTvEpisodePath", () => {
     });
   });
 
+  test("does not treat a year-like show title as a year", () => {
+    expect(parseTvEpisodePath("/media/shows/1883/Season 1/1883.S01E01.mkv", "/media/shows")).toEqual({
+      showTitle: "1883",
+      seasonNumber: 1,
+      episodeNumber: 1,
+      episodeTitle: null,
+      year: null,
+    });
+
+    expect(parseTvEpisodePath("/media/shows/1984 (1954)/Season 1/1984.S01E01.mkv", "/media/shows")).toEqual({
+      showTitle: "1984",
+      seasonNumber: 1,
+      episodeNumber: 1,
+      episodeTitle: null,
+      year: 1954,
+    });
+  });
+
   test("keeps episode titles like Pilot", () => {
     expect(parseTvEpisodePath("/media/shows/Lost/Season 1/Lost.S01E01.Pilot.mkv", "/media/shows")).toEqual({
       showTitle: "Lost",

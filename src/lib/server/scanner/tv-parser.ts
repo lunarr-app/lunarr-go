@@ -35,9 +35,16 @@ function clean(value: string): string {
 }
 
 function extractYear(value: string): number | null {
-  const match =
-    value.match(/\((?:19|20)\d{2}\)/) ?? value.match(/\b(?:19|20)\d{2}\b\s*$/) ?? value.match(/(?:19|20)\d{2}/);
-  return match ? Number(match[0].replace(/\D/g, "")) : null;
+  const parenthetical = value.match(/\((?:19|20)\d{2}\)/);
+  if (parenthetical) return Number(parenthetical[0].replace(/\D/g, ""));
+
+  const trailing = value.match(/\b(?:19|20)\d{2}\b\s*$/);
+  if (trailing) {
+    const before = value.slice(0, trailing.index);
+    if (before.trim()) return Number(trailing[0].replace(/\D/g, ""));
+  }
+
+  return null;
 }
 
 function isNoise(value: string, showTitle: string): boolean {
