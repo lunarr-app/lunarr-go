@@ -1004,6 +1004,7 @@ function mapMatchedMovieMetadata(
 }
 
 const MOVIE_DETAIL_CANDIDATE_LIMIT = 5;
+const MOVIE_TOTAL_DETAIL_BUDGET = 10;
 
 type MovieMetadataMatchOptions = {
   credentials?: TmdbCredentials;
@@ -1027,6 +1028,7 @@ async function matchMovieMetadataForSearchYear(
   searchYear: number | null,
   resultYear: number | null,
   options: MovieMetadataMatchOptions = {},
+  remainingDetailBudget: { value: number },
 ) {
   const searchUrl = new URL("https://api.themoviedb.org/3/search/movie");
   searchUrl.searchParams.set("query", title);
@@ -1040,6 +1042,9 @@ async function matchMovieMetadataForSearchYear(
   const candidates = searchResultCandidates(search?.results, title, resultYear);
 
   for (const candidate of candidates.slice(0, MOVIE_DETAIL_CANDIDATE_LIMIT)) {
+    if (remainingDetailBudget.value <= 0) break;
+    remainingDetailBudget.value -= 1;
+
     const detail = await fetchMovieDetail(candidate.id, options);
     if (!detail) continue;
 
@@ -1064,9 +1069,16 @@ export async function matchMovieMetadata(
   options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
 ) {
   const seenProviderIds = new Set<string>();
+  const remainingDetailBudget = { value: MOVIE_TOTAL_DETAIL_BUDGET };
 
   for (const searchYear of movieMetadataSearchYears(year)) {
-    const metadata = await matchMovieMetadataForSearchYear(title, searchYear, searchYear ?? year, options);
+    const metadata = await matchMovieMetadataForSearchYear(
+      title,
+      searchYear,
+      searchYear ?? year,
+      options,
+      remainingDetailBudget,
+    );
     if (!metadata || seenProviderIds.has(metadata.providerId)) continue;
     seenProviderIds.add(metadata.providerId);
     return metadata;

@@ -656,6 +656,32 @@ describe("matchMovieMetadata", () => {
       message: "TMDb credentials are missing or no test movie was returned.",
     });
   });
+
+  test("caps the total number of movie detail fetches across all search-year passes", async () => {
+    let detailCalls = 0;
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/movie")) {
+        return Response.json({
+          results: Array.from({ length: 20 }, (_, i) => ({
+            id: 1000 + i,
+            title: `Unrelated Movie ${i}`,
+            release_date: `${2000 + i}-01-01`,
+          })),
+        });
+      }
+      detailCalls += 1;
+      return Response.json({ id: url.match(/\/movie\/(\d+)/)?.[1], title: "Unrelated Movie" });
+    };
+
+    const metadata = await matchMovieMetadata("Something Unique", 2000, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(metadata).toBeNull();
+    expect(detailCalls).toBeLessThanOrEqual(10);
+  });
 });
 
 describe("movie metadata acceptance", () => {
