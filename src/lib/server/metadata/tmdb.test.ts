@@ -637,6 +637,31 @@ describe("matchMovieMetadata", () => {
     expect(detailCalls).toHaveLength(1);
   });
 
+  test("does not re-fetch a title-mismatched TV detail across search-year passes", async () => {
+    let detailCalls = 0;
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/search/tv")) {
+        clearTmdbDetailCachesForTests();
+        return Response.json({
+          results: [{ id: 123, name: "Different Show", first_air_date: "2004-01-01" }],
+        });
+      }
+
+      detailCalls += 1;
+      return Response.json({ id: 123, name: "Different Show", original_name: "Different Show" });
+    };
+
+    const metadata = await matchTvSeasonMetadata("Battlestar Galactica", 2004, 1, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(metadata).toBeNull();
+    expect(detailCalls).toBe(1);
+  });
+
   test("connection test reports a successful metadata lookup", async () => {
     const mockedFetch = async (input: URL | RequestInfo) => {
       const url = String(input);

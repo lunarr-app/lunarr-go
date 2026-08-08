@@ -1220,8 +1220,8 @@ export async function matchTvSeasonMetadata(
 
       const detail = await fetchTvDetail(candidate.id, options);
       if (!detail) continue;
-      if (!queryMatchesTvShowTitles(title, detail)) continue;
       seenProviderIds.add(detail.id);
+      if (!queryMatchesTvShowTitles(title, detail)) continue;
       const season = await fetchTvSeason(detail.id, seasonNumber, options);
       if (!season) continue;
       return buildTvSeasonLookup(detail, candidate, season, seasonNumber);

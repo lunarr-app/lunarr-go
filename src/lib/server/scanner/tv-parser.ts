@@ -88,7 +88,7 @@ export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpi
   let seasonIdx = dirs.findLastIndex((dir) => SEASON_DIR.test(dir));
   if (seasonIdx === -1) {
     const digitIdx = dirs.findLastIndex((dir) => /\d/.test(dir));
-    if (digitIdx > 0 && clean(dirs[digitIdx]) !== clean(str(result.title) ?? "")) {
+    if (digitIdx >= 0 && digitIdx === dirs.length - 1 && clean(dirs[digitIdx]) !== clean(str(result.title) ?? "")) {
       seasonIdx = digitIdx;
     }
   }

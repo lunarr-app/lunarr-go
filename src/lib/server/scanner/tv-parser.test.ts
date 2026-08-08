@@ -196,6 +196,26 @@ describe("parseTvEpisodePath", () => {
     });
   });
 
+  test("does not treat a numeric grouping folder above the show dir as a season dir", () => {
+    expect(parseTvEpisodePath("/TV/Library/4/Show.Name/show.s01e01.mkv", "/TV")).toEqual({
+      showTitle: "show",
+      seasonNumber: 1,
+      episodeNumber: 1,
+      episodeTitle: null,
+      year: null,
+    });
+  });
+
+  test("does not treat a year grouping folder above the show dir as a season dir", () => {
+    expect(parseTvEpisodePath("/TV/2010/Show.Name/Show.Name.s01e01.mkv", "/TV")).toEqual({
+      showTitle: "Show Name",
+      seasonNumber: 1,
+      episodeNumber: 1,
+      episodeTitle: null,
+      year: null,
+    });
+  });
+
   test("handles titles returned as arrays from full paths", () => {
     expect(
       parseTvEpisodePath(
