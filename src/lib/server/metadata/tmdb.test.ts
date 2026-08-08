@@ -586,6 +586,27 @@ describe("matchMovieMetadata", () => {
     expect(metadata?.providerId).toBe("447365");
   });
 
+  test("does not re-fetch the same movie detail across search-year passes", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/movie")) {
+        return Response.json({
+          results: [{ id: 603, title: "Unrelated", release_date: "1999-03-31" }],
+        });
+      }
+      detailCalls.push(url);
+      return Response.json({ id: 603, title: "Unrelated", release_date: "1999-03-31" });
+    };
+
+    await matchMovieMetadata("Something Unique That Matches Nothing", 2000, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(detailCalls.filter((call) => call.includes("/movie/"))).toHaveLength(1);
+  });
+
   test("does not accept unrelated same-year TV results", async () => {
     const detailCalls: string[] = [];
     const mockedFetch = async (input: URL | RequestInfo) => {
