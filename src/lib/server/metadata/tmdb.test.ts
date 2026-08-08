@@ -604,7 +604,7 @@ describe("matchMovieMetadata", () => {
       }
 
       detailCalls.push(url);
-      return Response.json({ id: 123, name: "Different Show" });
+      return Response.json({ id: 123, name: "Different Show", original_name: "Different Show" });
     };
 
     const metadata = await matchTvSeasonMetadata("Battlestar Galactica", 2004, 1, {
@@ -613,7 +613,7 @@ describe("matchMovieMetadata", () => {
     });
 
     expect(metadata).toBeNull();
-    expect(detailCalls).toEqual([]);
+    expect(detailCalls).toHaveLength(1);
   });
 
   test("connection test reports a successful metadata lookup", async () => {
@@ -897,6 +897,223 @@ describe("matchTvSeasonMetadata", () => {
       voteAverage: 8.7,
       voteCount: 20,
     });
+  });
+});
+
+describe("matchTvSeasonMetadata year-agnostic scan matching", () => {
+  test("matches a German-titled show via its translated title even when search results are ordered by popularity", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: [
+            { id: 1, name: "NCIS: Origins", first_air_date: "2024-10-14" },
+            { id: 2, name: "NCIS: New Orleans", first_air_date: "2014-09-23" },
+            { id: 3, name: "NCIS", first_air_date: "2003-09-23" },
+          ],
+        });
+      }
+      detailCalls.push(url);
+      if (url.includes("/tv/1")) {
+        return Response.json({
+          id: 1,
+          name: "NCIS: Origins",
+          original_name: "NCIS: Origins",
+          first_air_date: "2024-10-14",
+          translations: { translations: [{ iso_639_1: "de", data: { name: "Navy CIS: Origins" } }] },
+        });
+      }
+      if (url.includes("/tv/2")) {
+        return Response.json({
+          id: 2,
+          name: "NCIS: New Orleans",
+          original_name: "NCIS: New Orleans",
+          first_air_date: "2014-09-23",
+          translations: { translations: [] },
+        });
+      }
+      if (url.includes("/tv/3/season/1")) {
+        return Response.json({
+          id: 100,
+          name: "Season 1",
+          season_number: 1,
+          air_date: "2003-09-23",
+          episodes: [],
+        });
+      }
+      return Response.json({
+        id: 3,
+        name: "NCIS",
+        original_name: "NCIS",
+        first_air_date: "2003-09-23",
+        translations: { translations: [{ iso_639_1: "de", data: { name: "Navy CIS" } }] },
+      });
+    };
+
+    const metadata = await matchTvSeasonMetadata("Navy CIS", null, 1, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(metadata?.show.providerId).toBe("3");
+    expect(detailCalls.filter((call) => call.includes("/tv/1") && !call.includes("/season"))).toHaveLength(1);
+    expect(detailCalls.filter((call) => call.includes("/tv/2") && !call.includes("/season"))).toHaveLength(1);
+    expect(detailCalls.filter((call) => call.includes("/tv/3") && !call.includes("/season"))).toHaveLength(1);
+  });
+
+  test("matches a show whose translated title is a sequence sequel name", async () => {
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: [{ id: 4616, name: "Xena: Warrior Princess", first_air_date: "1995-09-04" }],
+        });
+      }
+      if (url.includes("/season/1")) {
+        return Response.json({ id: 9, name: "Season 1", season_number: 1, episodes: [] });
+      }
+      return Response.json({
+        id: 4616,
+        name: "Xena: Warrior Princess",
+        original_name: "Xena: Warrior Princess",
+        first_air_date: "1995-09-04",
+        translations: { translations: [{ iso_639_1: "de", data: { name: "Xena" } }] },
+      });
+    };
+
+    const metadata = await matchTvSeasonMetadata("Xena", null, 1, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(metadata?.show.providerId).toBe("4616");
+  });
+
+  test("returns null when no candidate matches the queried title", async () => {
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: [{ id: 7, name: "Kingdom", first_air_date: "2020-07-30" }],
+        });
+      }
+      return Response.json({
+        id: 7,
+        name: "Transformers: War for Cybertron: Kingdom",
+        original_name: "Transformers: War for Cybertron: Kingdom",
+        first_air_date: "2020-07-30",
+        translations: { translations: [] },
+      });
+    };
+
+    const metadata = await matchTvSeasonMetadata("Transformers War For Cybertron Trilogy", null, 1, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(metadata).toBeNull();
+  });
+
+  test("prefers the candidate whose year matches the folder year for ambiguous titles", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: [
+            { id: 1, name: "V", first_air_date: "1984-05-01" },
+            { id: 2, name: "V", first_air_date: "2009-11-03" },
+          ],
+        });
+      }
+      detailCalls.push(url);
+      if (url.includes("/tv/2/season/2")) {
+        return Response.json({ id: 100, name: "Season 2", season_number: 2, episodes: [] });
+      }
+      if (url.includes("/tv/2")) {
+        return Response.json({ id: 2, name: "V", original_name: "V", first_air_date: "2009-11-03" });
+      }
+      if (url.includes("/season/2")) {
+        return Response.json({ id: 101, name: "Season 2", season_number: 2, episodes: [] });
+      }
+      return Response.json({ id: 1, name: "V", original_name: "V", first_air_date: "1984-05-01" });
+    };
+
+    const metadata = await matchTvSeasonMetadata("V", 2009, 2, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(metadata?.show.providerId).toBe("2");
+    expect(detailCalls.filter((call) => call.includes("/tv/2") && !call.includes("/season"))).toHaveLength(1);
+  });
+
+  test("retries the search without a year filter when the folder year is off by more than one", async () => {
+    const searchQueries: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/tv")) {
+        searchQueries.push(url);
+        if (url.includes("first_air_date_year")) {
+          return Response.json({ results: [] });
+        }
+        return Response.json({
+          results: [{ id: 1396, name: "Breaking Bad", first_air_date: "2008-01-20" }],
+        });
+      }
+      if (url.includes("/tv/1396/season/1")) {
+        return Response.json({ id: 3572, name: "Season 1", season_number: 1, episodes: [] });
+      }
+      return Response.json({
+        id: 1396,
+        name: "Breaking Bad",
+        original_name: "Breaking Bad",
+        first_air_date: "2008-01-20",
+      });
+    };
+
+    const metadata = await matchTvSeasonMetadata("Breaking Bad", 2005, 1, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(searchQueries.some((url) => !url.includes("first_air_date_year"))).toBe(true);
+    expect(metadata?.show.providerId).toBe("1396");
+  });
+
+  test("ranks a candidate whose year is within one of the folder year ahead of an exact same-name rival", async () => {
+    const detailCalls: string[] = [];
+    const mockedFetch = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/search/tv")) {
+        return Response.json({
+          results: [
+            { id: 1, name: "V", first_air_date: "1984-05-01" },
+            { id: 2, name: "V", first_air_date: "2009-11-03" },
+          ],
+        });
+      }
+      detailCalls.push(url);
+      if (url.includes("/tv/2/season/3")) {
+        return Response.json({ id: 100, name: "Season 3", season_number: 3, episodes: [] });
+      }
+      if (url.includes("/tv/2")) {
+        return Response.json({ id: 2, name: "V", original_name: "V", first_air_date: "2009-11-03" });
+      }
+      if (url.includes("/season/3")) {
+        return Response.json({ id: 101, name: "Season 3", season_number: 3, episodes: [] });
+      }
+      return Response.json({ id: 1, name: "V", original_name: "V", first_air_date: "1984-05-01" });
+    };
+
+    const metadata = await matchTvSeasonMetadata("V", 2008, 3, {
+      credentials: { token: "test-token" },
+      fetch: mockedFetch as typeof fetch,
+    });
+
+    expect(metadata?.show.providerId).toBe("2");
+    expect(detailCalls.filter((call) => call.includes("/tv/2") && !call.includes("/season"))).toHaveLength(1);
   });
 });
 

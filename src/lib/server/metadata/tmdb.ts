@@ -201,6 +201,17 @@ type TmdbTvDetails = TmdbTvSearchResult & {
   external_ids?: {
     imdb_id?: string | null;
   };
+  alternative_titles?: {
+    results?: Array<{ iso_3166_1?: string; title?: string }>;
+  };
+  translations?: {
+    translations?: Array<{
+      iso_3166_1?: string;
+      iso_639_1?: string;
+      name?: string;
+      data?: { name?: string | null; title?: string | null };
+    }>;
+  };
 };
 
 type TmdbTvSeasonDetails = {
@@ -633,13 +644,60 @@ function searchResultCandidates(results: TmdbSearchResult[] | undefined, title: 
   return ordered;
 }
 
-function bestTvSearchResult(results: TmdbTvSearchResult[] | undefined, title: string, year: number | null) {
-  if (!results?.length) return null;
-  const exactTitle = results.find((result) => tvTitleMatches(result, title));
-  if (!year) return exactTitle ?? results[0];
+function tvShowTitleCandidates(detail: TmdbTvDetails) {
+  const seen = new Set<string>();
+  const titles: string[] = [];
+  const push = (value: string | null | undefined) => {
+    const clean = stringOrNull(value);
+    if (!clean) return;
+    const key = normalizeTitle(clean);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    titles.push(clean);
+  };
 
-  const exactYearResults = results.filter((result) => extractYear(result.first_air_date) === year);
-  return exactYearResults.find((result) => tvTitleMatches(result, title)) ?? exactTitle ?? null;
+  push(detail.name);
+  push(detail.original_name);
+  for (const entry of detail.alternative_titles?.results ?? []) push(entry.title);
+  for (const translation of detail.translations?.translations ?? []) push(translation.data?.name);
+  return titles;
+}
+
+function queryMatchesTvShowTitles(queryTitle: string, detail: TmdbTvDetails) {
+  return tvShowTitleCandidates(detail).some((candidate) => exactTitleMatches(queryTitle, candidate));
+}
+
+function tvSearchResultCandidates(results: TmdbTvSearchResult[] | undefined, title: string, year: number | null) {
+  if (!results?.length) return [];
+
+  const ordered: TmdbTvSearchResult[] = [];
+  const seenIds = new Set<number>();
+  const push = (result: TmdbTvSearchResult) => {
+    if (seenIds.has(result.id)) return;
+    seenIds.add(result.id);
+    ordered.push(result);
+  };
+
+  const titleMatched = results.filter((result) => tvTitleMatches(result, title));
+  const yearMatched = year === null ? [] : results.filter((result) => tvYearNear(result, year));
+
+  for (const result of yearMatched.filter((result) => tvTitleMatches(result, title))) push(result);
+  for (const result of titleMatched) push(result);
+  for (const result of yearMatched) push(result);
+  for (const result of results) push(result);
+  return ordered;
+}
+
+function tvYearDelta(result: TmdbTvSearchResult, year: number | null) {
+  if (year === null) return null;
+  const resultYear = extractYear(result.first_air_date);
+  if (resultYear === null) return null;
+  return Math.abs(resultYear - year);
+}
+
+function tvYearNear(result: TmdbTvSearchResult, year: number | null) {
+  const delta = tvYearDelta(result, year);
+  return delta !== null && delta <= 1;
 }
 
 function numberOrNull(value: number | null | undefined) {
@@ -1090,7 +1148,10 @@ async function fetchTvDetail(tvId: number, options: { credentials?: TmdbCredenti
   if (cached) return cached;
 
   const detailUrl = new URL(`https://api.themoviedb.org/3/tv/${tvId}`);
-  detailUrl.searchParams.set("append_to_response", "aggregate_credits,videos,keywords,content_ratings,external_ids");
+  detailUrl.searchParams.set(
+    "append_to_response",
+    "aggregate_credits,videos,keywords,content_ratings,external_ids,alternative_titles,translations",
+  );
   const detail = await tmdbFetch<TmdbTvDetails>(detailUrl, options.credentials, options.fetch);
   if (detail) tmdbTvDetailCache.set(cacheKey, detail);
   return detail;
@@ -1111,35 +1172,61 @@ async function fetchTvSeason(
   return season;
 }
 
-export async function matchTvSeasonMetadata(
-  title: string,
-  year: number | null,
+const TV_DETAIL_CANDIDATE_LIMIT = 5;
+
+function buildTvSeasonLookup(
+  detail: TmdbTvDetails,
+  searchHit: TmdbTvSearchResult,
+  season: TmdbTvSeasonDetails,
   seasonNumber: number,
-  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
 ) {
-  const searchUrl = new URL("https://api.themoviedb.org/3/search/tv");
-  searchUrl.searchParams.set("query", title);
-  if (year) searchUrl.searchParams.set("first_air_date_year", String(year));
-  searchUrl.searchParams.set("include_adult", "true");
-
-  const search = await tmdbFetch<{ results: TmdbTvSearchResult[] }>(searchUrl, options.credentials, options.fetch);
-  const first = bestTvSearchResult(search?.results, title, year);
-  if (!first) return null;
-
-  const detail = await fetchTvDetail(first.id, options);
-  if (!detail) return null;
-
-  const season = await fetchTvSeason(detail.id, seasonNumber, options);
-  if (!season) return null;
-
   return {
-    show: mapTvShowMetadata(detail, first),
+    show: mapTvShowMetadata(detail, searchHit),
     season: mapTvSeasonMetadata(season, seasonNumber),
     episodes: (season.episodes ?? [])
       .filter((episode) => typeof episode.episode_number === "number")
       .map((episode) => mapTvEpisodeMetadata(episode, seasonNumber, episode.episode_number ?? 0))
       .filter((episode) => episode !== null),
   } satisfies MatchedTvSeasonLookup;
+}
+
+export async function matchTvSeasonMetadata(
+  title: string,
+  year: number | null,
+  seasonNumber: number,
+  options: { credentials?: TmdbCredentials; fetch?: TmdbFetch } = {},
+) {
+  const seenProviderIds = new Set<number>();
+
+  for (const searchYear of tvSeasonMetadataSearchYears(year)) {
+    const searchUrl = new URL("https://api.themoviedb.org/3/search/tv");
+    searchUrl.searchParams.set("query", title);
+    if (searchYear !== null) searchUrl.searchParams.set("first_air_date_year", String(searchYear));
+    searchUrl.searchParams.set("include_adult", "true");
+
+    const search = await tmdbFetch<{ results: TmdbTvSearchResult[] }>(searchUrl, options.credentials, options.fetch);
+
+    for (const candidate of tvSearchResultCandidates(search?.results, title, year).slice(
+      0,
+      TV_DETAIL_CANDIDATE_LIMIT,
+    )) {
+      const detail = await fetchTvDetail(candidate.id, options);
+      if (!detail) continue;
+      if (!queryMatchesTvShowTitles(title, detail)) continue;
+      if (seenProviderIds.has(detail.id)) continue;
+      const season = await fetchTvSeason(detail.id, seasonNumber, options);
+      if (!season) continue;
+      seenProviderIds.add(detail.id);
+      return buildTvSeasonLookup(detail, candidate, season, seasonNumber);
+    }
+  }
+
+  return null;
+}
+
+function tvSeasonMetadataSearchYears(queryYear: number | null) {
+  if (queryYear === null) return [null];
+  return [queryYear, queryYear - 1, queryYear + 1, null];
 }
 
 export async function fetchTmdbShowMetadata(

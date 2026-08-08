@@ -182,7 +182,7 @@ async function lookupCachedTvSeasonMetadata(
 
   const lookup = lookupTvSeasonMetadata(
     parsed.showTitle,
-    null,
+    parsed.year,
     parsed.seasonNumber,
     onMetadataError,
     tvSeasonMetadataMatcher,

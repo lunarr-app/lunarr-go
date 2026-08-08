@@ -5,6 +5,7 @@ export type ParsedTvEpisode = {
   seasonNumber: number;
   episodeNumber: number;
   episodeTitle: string | null;
+  year: number | null;
 };
 
 const SEASON_DIR =
@@ -31,6 +32,12 @@ function clean(value: string): string {
     .replace(/\s+/g, " ")
     .replace(/ (?:19|20)\d{2}\s*$/, "")
     .trim();
+}
+
+function extractYear(value: string): number | null {
+  const match =
+    value.match(/\((?:19|20)\d{2}\)/) ?? value.match(/\b(?:19|20)\d{2}\b\s*$/) ?? value.match(/(?:19|20)\d{2}/);
+  return match ? Number(match[0].replace(/\D/g, "")) : null;
 }
 
 function isNoise(value: string, showTitle: string): boolean {
@@ -78,7 +85,8 @@ export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpi
       seasonIdx = digitIdx;
     }
   }
-  const showTitle = clean(seasonIdx > 0 ? dirs[seasonIdx - 1] : str(result.title) || dirs[dirs.length - 1] || "");
+  const showDir = seasonIdx > 0 ? dirs[seasonIdx - 1] : null;
+  const showTitle = clean(showDir === null ? str(result.title) || dirs[dirs.length - 1] || "" : showDir);
   if (!showTitle) return null;
 
   return {
@@ -86,5 +94,6 @@ export function parseTvEpisodePath(filePath: string, root?: string): ParsedTvEpi
     seasonNumber,
     episodeNumber,
     episodeTitle: episodeTitle(result.episode_details, result.alternative_title, showTitle),
+    year: showDir ? extractYear(showDir) : null,
   };
 }

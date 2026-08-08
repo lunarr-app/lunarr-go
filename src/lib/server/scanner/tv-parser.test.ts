@@ -10,6 +10,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 1,
       episodeNumber: 2,
       episodeTitle: "The Big Empty",
+      year: null,
     });
 
     expect(parseTvEpisodePath("/media/shows/The.Expanse.S02E03.mkv", "/media/shows")).toEqual({
@@ -17,6 +18,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 2,
       episodeNumber: 3,
       episodeTitle: null,
+      year: null,
     });
 
     expect(parseTvEpisodePath("/media/shows/The Expanse/The Expanse 3x04.mkv", "/media/shows")).toEqual({
@@ -24,6 +26,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 3,
       episodeNumber: 4,
       episodeTitle: null,
+      year: null,
     });
   });
 
@@ -33,6 +36,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 1,
       episodeNumber: 2,
       episodeTitle: "The Big Empty",
+      year: null,
     });
 
     expect(parseTvEpisodePath("/media/shows/The Expanse/Specials/S00E01.mkv", "/media/shows")).toEqual({
@@ -40,6 +44,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 0,
       episodeNumber: 1,
       episodeTitle: "Special",
+      year: null,
     });
   });
 
@@ -51,6 +56,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 2,
       episodeNumber: 1,
       episodeTitle: "What If",
+      year: null,
     });
   });
 
@@ -65,6 +71,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 7,
       episodeNumber: 23,
       episodeTitle: null,
+      year: null,
     });
 
     expect(
@@ -77,6 +84,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 9,
       episodeNumber: 19,
       episodeTitle: "The Truth",
+      year: null,
     });
 
     expect(
@@ -89,6 +97,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 3,
       episodeNumber: 35,
       episodeTitle: "Operation Dude Rescue",
+      year: null,
     });
 
     expect(
@@ -101,6 +110,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 4,
       episodeNumber: 53,
       episodeTitle: null,
+      year: null,
     });
   });
 
@@ -115,6 +125,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 1,
       episodeNumber: 4,
       episodeTitle: "Road to the Top",
+      year: null,
     });
 
     expect(
@@ -127,31 +138,39 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 3,
       episodeNumber: 12,
       episodeTitle: "Busamen Gachi Fighter",
+      year: null,
     });
   });
 
   test("recognizes localized season directory names", () => {
-    const cases: Array<[string, string, string, number, number]> = [
-      ["/media/Series/Xena (1995)/Staffel 4/S04E05 - Krieg und Frieden.avi", "/media/Series", "Xena", 4, 5],
-      ["/media/series/Kaamelott/Saison 1/Kaamelott.S01E01.mkv", "/media/series", "Kaamelott", 1, 1],
-      ["/media/series/Pepita/Stagione 2/Pepita.S02E03.mkv", "/media/series", "Pepita", 2, 3],
+    const cases: Array<[string, string, string, number, number, number | null]> = [
+      ["/media/Series/Xena (1995)/Staffel 4/S04E05 - Krieg und Frieden.avi", "/media/Series", "Xena", 4, 5, 1995],
+      ["/media/series/Kaamelott/Saison 1/Kaamelott.S01E01.mkv", "/media/series", "Kaamelott", 1, 1, null],
+      ["/media/series/Pepita/Stagione 2/Pepita.S02E03.mkv", "/media/series", "Pepita", 2, 3, null],
       [
         "/media/series/La Casa de Papel/Temporada 3/La.Casa.de.Papel.S03E01.mkv",
         "/media/series",
         "La Casa de Papel",
         3,
         1,
+        null,
       ],
-      ["/media/series/Flikken/Seizoen 5/Flikken.S05E04.mkv", "/media/series", "Flikken", 5, 4],
-      ["/media/series/Wiedźmin/Sezon 3/Wiedzmin.S03E01.mkv", "/media/series", "Wiedźmin", 3, 1],
-      ["/media/series/Bron/Säsong 2/Bron.S02E01.mkv", "/media/series", "Bron", 2, 1],
-      ["/media/series/Stromann/Évad 1/Stromann.S01E02.mkv", "/media/series", "Stromann", 1, 2],
-      ["/media/series/Бригада/Сезон 1/Бригада.S01E01.mkv", "/media/series", "Бригада", 1, 1],
-      ["/media/series/シリーズ/シーズン 2/Episode.S02E01.mkv", "/media/series", "シリーズ", 2, 1],
+      ["/media/series/Flikken/Seizoen 5/Flikken.S05E04.mkv", "/media/series", "Flikken", 5, 4, null],
+      ["/media/series/Wiedźmin/Sezon 3/Wiedzmin.S03E01.mkv", "/media/series", "Wiedźmin", 3, 1, null],
+      ["/media/series/Bron/Säsong 2/Bron.S02E01.mkv", "/media/series", "Bron", 2, 1, null],
+      ["/media/series/Stromann/Évad 1/Stromann.S01E02.mkv", "/media/series", "Stromann", 1, 2, null],
+      ["/media/series/Бригада/Сезон 1/Бригада.S01E01.mkv", "/media/series", "Бригада", 1, 1, null],
+      ["/media/series/シリーズ/シーズン 2/Episode.S02E01.mkv", "/media/series", "シリーズ", 2, 1, null],
     ];
 
-    for (const [path, root, showTitle, seasonNumber, episodeNumber] of cases) {
-      expect(parseTvEpisodePath(path, root)).toEqual({ showTitle, seasonNumber, episodeNumber, episodeTitle: null });
+    for (const [path, root, showTitle, seasonNumber, episodeNumber, year] of cases) {
+      expect(parseTvEpisodePath(path, root)).toEqual({
+        showTitle,
+        seasonNumber,
+        episodeNumber,
+        episodeTitle: null,
+        year,
+      });
     }
   });
 
@@ -163,6 +182,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 4,
       episodeNumber: 5,
       episodeTitle: null,
+      year: 1995,
     });
   });
 
@@ -172,6 +192,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 2,
       episodeNumber: 3,
       episodeTitle: null,
+      year: null,
     });
   });
 
@@ -185,6 +206,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 2,
       episodeNumber: 7,
       episodeTitle: null,
+      year: 2024,
     });
 
     expect(
@@ -196,6 +218,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 1,
       episodeNumber: 8,
       episodeTitle: null,
+      year: 2024,
     });
   });
 
@@ -205,6 +228,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 9,
       episodeNumber: 19,
       episodeTitle: null,
+      year: null,
     });
   });
 
@@ -216,6 +240,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 1,
       episodeNumber: 1,
       episodeTitle: null,
+      year: 2020,
     });
   });
 
@@ -225,6 +250,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 1,
       episodeNumber: 1,
       episodeTitle: "Pilot",
+      year: null,
     });
   });
 
@@ -236,6 +262,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 0,
       episodeNumber: 1,
       episodeTitle: "Christmas Special",
+      year: null,
     });
 
     expect(
@@ -245,6 +272,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 0,
       episodeNumber: 1,
       episodeTitle: "Special Homecoming",
+      year: null,
     });
   });
 
@@ -254,6 +282,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 2,
       episodeNumber: 3,
       episodeTitle: null,
+      year: null,
     });
   });
 
@@ -265,6 +294,7 @@ describe("parseTvEpisodePath", () => {
       seasonNumber: 2,
       episodeNumber: 13,
       episodeTitle: null,
+      year: null,
     });
   });
 

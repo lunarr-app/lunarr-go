@@ -530,7 +530,7 @@ describe("match revert API", () => {
 
     stubTmdbFetch(async (url) => {
       if (url.includes("/search/tv")) {
-        return Response.json({ results: [{ id: 1396, name: "Local Show", first_air_date: "2008-01-20" }] });
+        return Response.json({ results: [{ id: 1396, name: "Wrong Show", first_air_date: "2008-01-20" }] });
       }
       if (url.includes("/tv/1396/season/1")) {
         return Response.json({
@@ -542,7 +542,7 @@ describe("match revert API", () => {
         });
       }
       if (url.includes("/tv/1396")) {
-        return Response.json({ id: 1396, name: "Local Show", first_air_date: "2008-01-20" });
+        return Response.json({ id: 1396, name: "Wrong Show", first_air_date: "2008-01-20" });
       }
       return new Response("{}", { status: 404 });
     });

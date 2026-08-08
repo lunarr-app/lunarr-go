@@ -442,7 +442,7 @@ export async function rematchTvShowSeasons(
       ? parseTvEpisodePath(episodeFile.path ?? "", episodeFile.library_path ?? undefined)
       : null;
     const title = parsed?.showTitle || show.title;
-    const lookup = await metadataMatcher(title, null, season.season_number as number);
+    const lookup = await metadataMatcher(title, parsed?.year ?? null, season.season_number as number);
     if (!lookup) {
       unmatched.push({ seasonId: season.id, title });
       continue;
