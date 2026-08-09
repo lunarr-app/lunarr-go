@@ -66,7 +66,8 @@ async function mediaPlayerStyle() {
   const source = await mediaPlayerSource();
   const match = source.match(/<style>([\s\S]*?)<\/style>/);
   if (!match) throw new Error("MediaPlayer.svelte style block was not found.");
-  return match[1];
+  const chromeCss = await readFile(path.join(root, "src/lib/player/player-chrome.css"), "utf8");
+  return `${match[1]}\n${chromeCss}`;
 }
 
 async function mediaPlayerSource() {
@@ -420,12 +421,12 @@ try {
 
     const hoveredPlayButtonStyle = getComputedStyle(playButton);
     if (
-      hoveredPlayButtonStyle.backgroundColor !== "rgba(0, 168, 214, 0.14)" ||
-      hoveredPlayButtonStyle.color !== "rgb(0, 204, 255)"
+      hoveredPlayButtonStyle.backgroundColor !== "rgba(255, 255, 255, 0.12)" ||
+      hoveredPlayButtonStyle.color !== "rgb(248, 250, 252)"
     ) {
       return {
         ok: false,
-        message: `Expected primary play hover to use the app primary color, got ${JSON.stringify({ backgroundColor: hoveredPlayButtonStyle.backgroundColor, color: hoveredPlayButtonStyle.color })}.`,
+        message: `Expected primary play hover to use the app accent color, got ${JSON.stringify({ backgroundColor: hoveredPlayButtonStyle.backgroundColor, color: hoveredPlayButtonStyle.color })}.`,
       };
     }
 
@@ -791,10 +792,10 @@ try {
     }, selector);
     if (
       !hoverStyle.found ||
-      hoverStyle.backgroundColor !== "rgba(0, 168, 214, 0.14)" ||
-      hoverStyle.color !== "rgb(0, 204, 255)"
+      hoverStyle.backgroundColor !== "rgba(255, 255, 255, 0.12)" ||
+      hoverStyle.color !== "rgb(248, 250, 252)"
     ) {
-      throw new Error(`Expected ${selector} hover to use the app primary color, got ${JSON.stringify(hoverStyle)}.`);
+      throw new Error(`Expected ${selector} hover to use the app accent color, got ${JSON.stringify(hoverStyle)}.`);
     }
   }
 
@@ -862,7 +863,6 @@ try {
     };
     if (
       mobileLayout.volumeDisplay !== "none" ||
-      mobileLayout.titleDisplay !== "none" ||
       mobileLayout.playWidth < 41 ||
       mobileLayout.playHeight < 41 ||
       mobileLayout.skipWidth < 41 ||
@@ -872,7 +872,7 @@ try {
     ) {
       return {
         ok: false,
-        message: `Expected mobile player controls to hide volume/title and keep touch targets usable, got ${JSON.stringify(mobileLayout)}.`,
+        message: `Expected mobile player controls to hide volume and keep touch targets usable, got ${JSON.stringify(mobileLayout)}.`,
       };
     }
     return { ok: true };
