@@ -435,7 +435,7 @@ describe.serial("playback-session HLS routes", () => {
         videoFrameRate: 30,
       }),
     ).toBe(
-      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-START:TIME-OFFSET=5.000\n#EXTINF:4.000,\nsegments/segment-00000.ts\n#EXT-X-DISCONTINUITY\n#EXTINF:4.000,\nsegments/segment-00001.ts\n#EXT-X-DISCONTINUITY\n#EXTINF:4.000,\nsegments/segment-00002.ts\n#EXT-X-DISCONTINUITY\n#EXTINF:1.000,\nsegments/segment-00003.ts\n#EXT-X-ENDLIST\n",
+      "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-START:TIME-OFFSET=5.000\n#EXTINF:4.000,\nsegments/segment-00000.ts\n#EXTINF:4.000,\nsegments/segment-00001.ts\n#EXTINF:4.000,\nsegments/segment-00002.ts\n#EXTINF:1.000,\nsegments/segment-00003.ts\n#EXT-X-ENDLIST\n",
     );
   });
 
