@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.3 - 2026-08-09
+
+### Fixed
+
+- Fixed HLS audio/video drift on remuxed playback: `auto` and `prefer_direct` playback preferences now resolve to direct or full transcode instead of remux. FFmpeg can only split copied streams at existing source keyframes, so the virtual VOD playlist's fixed `EXTINF` durations drift from the actual remux segment boundaries. Full transcode forces keyframes at each boundary and eliminates the drift. Remux capabilities and generation code paths remain for forced/fallback use but are no longer chosen automatically.
+- Fixed TV season matching to verify candidates against translated/alternative titles and prefer the candidate whose year matches the folder year, so German-titled shows and ambiguous same-name shows resolve correctly.
+- Fixed year-like show directory names (e.g. `1883`) being misread as release years unless they appear as a parenthesized or trailing year preceded by other title content, and bounded TV detail fetches across search-year passes to a fixed budget.
+- Fixed rounding out localized season folder support, including recognizing localized season folder names and parsing `sxxeyy` from hash-like TV filenames.
+- Fixed redundant TMDb detail fetches: movie and TV lookups are now deduplicated across search-year passes and bounded to a fixed candidate budget so an unresolved title walks at most a fixed number of candidates.
+- Fixed TV rescans re-querying TMDb for unchanged, already-matched files by reusing the existing provider-matched media item on rescan.
+
+### Refactored
+
+- Deduplicated and cleaned up metadata matching code, removed the scanner index barrel, split scanner index tests by concern, and loaded node-av as a static dependency.
+
+### Changed
+
+- Updated `hls.js`, `@lucide/svelte`, `vite`, `svelte-check`, `theintrodb`, and `vite-plugin-svelte` dependencies.
+
 ## 0.9.2 - 2026-08-05
 
 ### Added
