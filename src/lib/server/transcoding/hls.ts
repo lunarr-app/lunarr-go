@@ -538,6 +538,11 @@ export function hlsPlaylist(input: {
   }
 
   for (let index = 0; index < segmentCount; index += 1) {
+    // Each request-driven encode window may restart media timestamps, so every
+    // segment is treated as an independent timeline to keep players in sync.
+    if (index > 0) {
+      lines.push("#EXT-X-DISCONTINUITY");
+    }
     const segmentDuration = index === segmentCount - 1 ? durationSeconds - effectiveSeconds * index : effectiveSeconds;
     lines.push(`#EXTINF:${segmentDuration.toFixed(3)},`);
     lines.push(`${SEGMENT_ROUTE_PREFIX}${hlsSegmentName(index, segmentFormat)}${segmentQuery}`);
