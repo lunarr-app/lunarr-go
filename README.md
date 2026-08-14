@@ -4,11 +4,10 @@ Lunarr is a self-hosted media server for movie and TV libraries on local disks, 
 
 ![Lunarr preview](static/images/lunarr-preview.gif)
 
-Available on [Google Play](https://play.google.com/store/apps/details?id=app.lunarr.mobile) for mobile, tablets, and TV.
+Available on [Google Play](https://play.google.com/store/apps/details?id=app.lunarr.mobile) for mobile, tablets, and TV, and on the [App Store](https://apps.apple.com/app/lunarr/id6790165981) for iOS and tvOS.
 
 [<img src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png" alt="Get it on Google Play" width="200">](https://play.google.com/store/apps/details?id=app.lunarr.mobile)
-
-iOS and tvOS apps are available in [TestFlight](https://github.com/lunarr-app/lunarr-go/issues/150).
+[<img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" width="200">](https://apps.apple.com/app/lunarr/id6790165981)
 
 ## Features
 
