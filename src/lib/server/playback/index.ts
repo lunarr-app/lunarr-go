@@ -30,6 +30,15 @@ export type SubtitleTrack = {
   default: boolean;
 };
 
+export type AudioTrack = {
+  id: number;
+  label: string;
+  language: string;
+  channels: number | null;
+  codec: string;
+  default: boolean;
+};
+
 type PlayableFile = NonNullable<
   Awaited<ReturnType<typeof getFirstPlayableFile>> | Awaited<ReturnType<typeof getPlayableFile>>
 >;
@@ -44,6 +53,7 @@ export type PlaybackDecision = {
   streamUrl: string | null;
   streamStartSeconds: number;
   tracks: SubtitleTrack[];
+  audioTracks: AudioTrack[];
   message: string | null;
 };
 
@@ -175,24 +185,69 @@ export function isRewatchFromStart(positionSeconds: number, durationSeconds: num
   return positionSeconds <= REWATCH_MAX_START_SECONDS;
 }
 
-async function resolveDecisionAudioCodec(
-  mediaFileId: string,
-  fallbackAudioCodec: string | null,
-  preferredAudioLanguage: string | null,
-): Promise<string | null> {
-  if (!preferredAudioLanguage) return fallbackAudioCodec;
+async function fetchAudioStreams(mediaFileId: string) {
   const db = await getDb();
-  const audioStreams = await db
+  return db
     .selectFrom("media_stream_info")
-    .select(["codec_name", "language"])
+    .select(["stream_index", "codec_name", "language", "channels"])
     .where("media_file_id", "=", mediaFileId)
     .where("stream_type", "=", "audio")
     .orderBy("stream_index", "asc")
     .execute();
+}
+
+async function resolveDecisionAudioCodec(
+  audioStreams: { codec_name: string | null; language: string | null }[],
+  fallbackAudioCodec: string | null,
+  preferredAudioLanguage: string | null,
+): Promise<string | null> {
+  if (!preferredAudioLanguage) return fallbackAudioCodec;
   const preferredStream = audioStreams.find(
     (stream) => normalizePreferredLanguage(stream.language) === preferredAudioLanguage,
   );
   return preferredStream?.codec_name ?? fallbackAudioCodec;
+}
+
+function buildAudioTracks(
+  audioStreams: {
+    stream_index: number;
+    codec_name: string | null;
+    language: string | null;
+    channels: number | null;
+  }[],
+  normalizedPreference: string | null,
+): AudioTrack[] {
+  let defaultAssigned = false;
+
+  return audioStreams.map((stream) => {
+    const codec = stream.codec_name ?? "Unknown";
+    const language = stream.language ?? "";
+    const matchesPreference =
+      Boolean(normalizedPreference) && normalizePreferredLanguage(language) === normalizedPreference;
+    const isDefault = matchesPreference
+      ? !defaultAssigned
+      : !normalizedPreference && !defaultAssigned;
+    if (isDefault) defaultAssigned = true;
+
+    return {
+      id: stream.stream_index,
+      label: formatAudioTrackLabel({ codec, language, channels: stream.channels }),
+      language,
+      channels: stream.channels,
+      codec,
+      default: isDefault,
+    };
+  });
+}
+
+function formatAudioTrackLabel(input: {
+  codec: string;
+  language: string;
+  channels: number | null;
+}): string {
+  const language = input.language || "Unknown";
+  const channels = input.channels && input.channels > 0 ? `${input.channels}ch` : "";
+  return [language, input.codec, channels].filter(Boolean).join(" · ");
 }
 
 export async function getPlaybackDecision(
@@ -214,10 +269,12 @@ export async function getPlaybackDecision(
     : await getFirstPlayableFile(mediaItemId, effectiveUserId);
   const policy = await getTranscodePolicy(userId);
   if (!file) return null;
+  const audioStreams = await fetchAudioStreams(file.id);
+  const normalizedAudioPreference = normalizePreferredLanguage(policy.preferredAudioLanguage);
   const decisionAudioCodec = await resolveDecisionAudioCodec(
-    file.id,
+    audioStreams,
     file.audio_codec,
-    normalizePreferredLanguage(policy.preferredAudioLanguage),
+    normalizedAudioPreference,
   );
   const mediaCapabilities = {
     extension: file.extension,
@@ -278,6 +335,8 @@ export async function getPlaybackDecision(
     source: file.source,
   };
 
+  const audioTracks = buildAudioTracks(audioStreams, normalizedAudioPreference);
+
   if (modeDecision.mode === "unavailable") {
     return {
       mode: "unavailable",
@@ -289,6 +348,7 @@ export async function getPlaybackDecision(
       streamUrl: null,
       streamStartSeconds: 0,
       tracks: mappedTracks,
+      audioTracks,
       message: TRANSCODING_DISABLED_MESSAGE,
     };
   }
@@ -314,6 +374,7 @@ export async function getPlaybackDecision(
       streamUrl: transcode.streamUrl,
       streamStartSeconds: transcode.streamStartSeconds,
       tracks: mappedTracks,
+      audioTracks,
       message: normalizePlaybackSessionMessage(transcode.message),
     };
   }
@@ -329,6 +390,7 @@ export async function getPlaybackDecision(
       streamUrl: null,
       streamStartSeconds: 0,
       tracks: mappedTracks,
+      audioTracks,
       message: "Sign in to start playback.",
     };
   }
@@ -343,6 +405,7 @@ export async function getPlaybackDecision(
     streamUrl: `/media/files/${file.id}/stream`,
     streamStartSeconds: 0,
     tracks: mappedTracks,
+    audioTracks,
     message: null,
   };
 }

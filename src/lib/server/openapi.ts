@@ -3227,6 +3227,18 @@ export const openApiDocument = {
           default: { type: "boolean" },
         },
       },
+      AudioTrack: {
+        type: "object",
+        required: ["id", "label", "language", "codec", "default"],
+        properties: {
+          id: { type: "integer", minimum: 0 },
+          label: stringSchema,
+          language: stringSchema,
+          channels: nullableIntegerSchema,
+          codec: stringSchema,
+          default: { type: "boolean" },
+        },
+      },
       PlayableFileSummary: {
         type: "object",
         required: ["id", "basename", "extension", "size_bytes"],
@@ -3279,6 +3291,10 @@ export const openApiDocument = {
           tracks: {
             type: "array",
             items: { $ref: "#/components/schemas/SubtitleTrack" },
+          },
+          audioTracks: {
+            type: "array",
+            items: { $ref: "#/components/schemas/AudioTrack" },
           },
           message: nullableStringSchema,
         },
