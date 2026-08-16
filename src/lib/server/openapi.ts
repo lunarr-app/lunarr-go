@@ -3229,7 +3229,7 @@ export const openApiDocument = {
       },
       AudioTrack: {
         type: "object",
-        required: ["id", "label", "language", "codec", "default"],
+        required: ["id", "label", "language", "codec", "default", "channels"],
         properties: {
           id: { type: "integer", minimum: 0 },
           label: stringSchema,
