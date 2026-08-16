@@ -224,9 +224,7 @@ function buildAudioTracks(
     const language = stream.language ?? "";
     const matchesPreference =
       Boolean(normalizedPreference) && normalizePreferredLanguage(language) === normalizedPreference;
-    const isDefault = matchesPreference
-      ? !defaultAssigned
-      : !normalizedPreference && !defaultAssigned;
+    const isDefault = matchesPreference ? !defaultAssigned : !normalizedPreference && !defaultAssigned;
     if (isDefault) defaultAssigned = true;
 
     return {
@@ -240,11 +238,7 @@ function buildAudioTracks(
   });
 }
 
-function formatAudioTrackLabel(input: {
-  codec: string;
-  language: string;
-  channels: number | null;
-}): string {
+function formatAudioTrackLabel(input: { codec: string; language: string; channels: number | null }): string {
   const language = input.language || "Unknown";
   const channels = input.channels && input.channels > 0 ? `${input.channels}ch` : "";
   return [language, input.codec, channels].filter(Boolean).join(" · ");
@@ -271,11 +265,7 @@ export async function getPlaybackDecision(
   if (!file) return null;
   const audioStreams = await fetchAudioStreams(file.id);
   const normalizedAudioPreference = normalizePreferredLanguage(policy.preferredAudioLanguage);
-  const decisionAudioCodec = await resolveDecisionAudioCodec(
-    audioStreams,
-    file.audio_codec,
-    normalizedAudioPreference,
-  );
+  const decisionAudioCodec = await resolveDecisionAudioCodec(audioStreams, file.audio_codec, normalizedAudioPreference);
   const mediaCapabilities = {
     extension: file.extension,
     container: file.container,
