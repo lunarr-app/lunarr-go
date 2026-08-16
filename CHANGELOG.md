@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.4 - 2026-08-16
+
+### Added
+
+- Added audio track metadata to playback decisions: responses now include an `audioTracks` array (id, label, language, codec, channels, default) built from the probed audio streams, so clients can surface and select audio without re-probing. The default track follows the preferred audio language when set, otherwise the first stream. Audio-track-aware codec selection now reads directly from the probed streams instead of the file's primary track.
+
+### Changed
+
+- Updated `@better-auth/api-key`, `better-auth`, `@lucide/svelte`, `hls.js`, `kysely`, `svelte`, and `svelte-check` dependencies.
+
+### Fixed
+
+- Fixed web playback stalling at the first HLS encode-window boundary ([#175](https://github.com/lunarr-app/lunarr-go/issues/175)). Each encode window (4 × 16s segments) is a fresh FFmpeg process that input-seeks, which restarted media timestamps near zero for every window while the served VOD playlist declared a continuous timeline. HLS.js discarded the out-of-range segments and playback froze at ~1:04. Windows now apply `-output_ts_offset` matching their start time (and use `-avoid_negative_ts make_non_negative`, which preserves it) so segment timestamps stay continuous across windows, fixing playback from the start, after mid-playback seeks, and after resuming past the first window.
+
 ## 0.9.3 - 2026-08-09
 
 ### Fixed
