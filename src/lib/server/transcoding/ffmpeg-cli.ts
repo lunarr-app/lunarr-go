@@ -329,7 +329,7 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
     "-max_muxing_queue_size",
     "2048",
     "-avoid_negative_ts",
-    "make_zero",
+    "make_non_negative",
     "-f",
     "hls",
     "-hls_time",
@@ -341,6 +341,14 @@ export function ffmpegHlsArgs(input: HlsTranscodeInput, options?: FfmpegHlsOptio
     "-hls_flags",
     input.mode === "remux" ? "temp_file" : "independent_segments+temp_file",
   );
+  if (startTimeSeconds > 0) {
+    // Input seeking (-ss before -i) re-bases each encode window's output
+    // timestamps back to ~0. The static VOD playlist declares the true global
+    // timeline, so re-apply the window's start offset here to keep segment PTS
+    // continuous across encode windows. make_non_negative (not make_zero) is
+    // required so this offset is preserved on every window.
+    args.push("-output_ts_offset", String(startTimeSeconds));
+  }
   if (segmentFormat === "fmp4") {
     args.push("-hls_segment_type", "fmp4", "-hls_fmp4_init_filename", "init.mp4");
   }

@@ -251,7 +251,7 @@ describe("FFmpeg HLS playback backend", () => {
       "-max_muxing_queue_size",
       "2048",
       "-avoid_negative_ts",
-      "make_zero",
+      "make_non_negative",
       "-f",
       "hls",
       "-hls_time",
@@ -262,6 +262,8 @@ describe("FFmpeg HLS playback backend", () => {
       "event",
       "-hls_flags",
       "independent_segments+temp_file",
+      "-output_ts_offset",
+      "42",
       "-hls_segment_filename",
       "/tmp/lunarr-hls/segment-%05d.ts",
       "/tmp/lunarr-hls/master.m3u8",
@@ -272,6 +274,27 @@ describe("FFmpeg HLS playback backend", () => {
     const artifactDirectory = "/tmp/lunarr-hls";
     const args = ffmpegHlsArgs(input({ artifactDirectory }), { startSegmentNumber: 5 });
     expect(args.at(-1)).toBe(path.join(artifactDirectory, "encode-session-1-5.m3u8"));
+  });
+
+  test("keeps media timestamps continuous across encode windows with an output offset", () => {
+    const offsetIndex = (args: string[]) => args.indexOf("-output_ts_offset");
+
+    const atStart = ffmpegHlsArgs(input({ startTimeSeconds: 0 }));
+    expect(offsetIndex(atStart)).toBe(-1);
+
+    const atSecondWindow = ffmpegHlsArgs(input({ startTimeSeconds: 64.064 }), { startSegmentNumber: 4 });
+    expect(atSecondWindow.slice(offsetIndex(atSecondWindow), offsetIndex(atSecondWindow) + 2)).toEqual([
+      "-output_ts_offset",
+      "64.064",
+    ]);
+
+    const remuxSecondWindow = ffmpegHlsArgs(input({ mode: "remux", startTimeSeconds: 64.064 }), {
+      startSegmentNumber: 4,
+    });
+    expect(remuxSecondWindow.slice(offsetIndex(remuxSecondWindow), offsetIndex(remuxSecondWindow) + 2)).toEqual([
+      "-output_ts_offset",
+      "64.064",
+    ]);
   });
 
   test("uses a fixed init.mp4 fMP4 filename regardless of startSegmentNumber", () => {
@@ -301,7 +324,7 @@ describe("FFmpeg HLS playback backend", () => {
       "-max_muxing_queue_size",
       "2048",
       "-avoid_negative_ts",
-      "make_zero",
+      "make_non_negative",
       "-f",
       "hls",
       "-hls_time",
@@ -402,7 +425,7 @@ describe("FFmpeg HLS playback backend", () => {
       "-max_muxing_queue_size",
       "2048",
       "-avoid_negative_ts",
-      "make_zero",
+      "make_non_negative",
       "-f",
       "hls",
       "-hls_time",
