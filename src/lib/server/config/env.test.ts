@@ -2,39 +2,7 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { appEnvDefaultsForEnvironment, AUTH_SECRET_FILE, resolveAuthSecret } from "./env";
-
-describe("appEnvDefaultsForEnvironment", () => {
-  test("provides a local development origin outside production start", () => {
-    expect(appEnvDefaultsForEnvironment({})).toMatchObject({
-      ORIGIN: "http://127.0.0.1:5173",
-    });
-  });
-
-  test("does not override an explicit auth secret", () => {
-    expect(
-      appEnvDefaultsForEnvironment({
-        AUTH_SECRET: "configured-secret",
-      }),
-    ).toEqual({});
-  });
-
-  test("requires no defaults for production and packaged start", () => {
-    expect(appEnvDefaultsForEnvironment({ NODE_ENV: "production" })).toEqual({});
-    expect(appEnvDefaultsForEnvironment({ npm_lifecycle_event: "start" })).toEqual({});
-  });
-
-  test("keeps local origin during production-mode builds", () => {
-    expect(
-      appEnvDefaultsForEnvironment({
-        NODE_ENV: "production",
-        npm_lifecycle_event: "build",
-      }),
-    ).toMatchObject({
-      ORIGIN: "http://127.0.0.1:5173",
-    });
-  });
-});
+import { AUTH_SECRET_FILE, resolveAuthSecret } from "./env";
 
 describe("resolveAuthSecret", () => {
   let dir: string;

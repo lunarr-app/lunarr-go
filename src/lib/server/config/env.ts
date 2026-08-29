@@ -42,7 +42,7 @@ function loadDotenv() {
 
 const envSchema = z.object({
   AUTH_SECRET: z.string().trim().min(32, "AUTH_SECRET must be at least 32 characters.").optional(),
-  ORIGIN: z.url().trim().default("http://127.0.0.1:5173"),
+  ORIGIN: z.url().trim().default("http://127.0.0.1:3000"),
   LUNARR_DATA_DIR: z.string().trim().min(1).default(".lunarr"),
   LUNARR_WATCH_USE_POLLING: z
     .preprocess(
@@ -84,17 +84,6 @@ const envSchema = z.object({
   FFMPEG_VAAPI_DEVICE: z.string().trim().default("/dev/dri/renderD128"),
 });
 
-export function appEnvDefaultsForEnvironment(env: NodeJS.ProcessEnv) {
-  const lifecycle = env.npm_lifecycle_event;
-  if (env.AUTH_SECRET || lifecycle === "start" || (env.NODE_ENV === "production" && lifecycle !== "build")) {
-    return {};
-  }
-
-  return {
-    ORIGIN: "http://127.0.0.1:5173",
-  };
-}
-
 export function resolveAuthSecret(dataDir: string, provided: string | undefined): string {
   if (provided) return provided;
 
@@ -121,7 +110,6 @@ export function resolveAuthSecret(dataDir: string, provided: string | undefined)
 function buildEnvInput(env: NodeJS.ProcessEnv) {
   const dataDir = env.LUNARR_DATA_DIR?.trim() || ".lunarr";
   return {
-    ...appEnvDefaultsForEnvironment(env),
     AUTH_SECRET: resolveAuthSecret(dataDir, env.AUTH_SECRET),
     ...env,
   };
@@ -135,7 +123,6 @@ function parseAppEnv() {
     throw new Error(`Invalid Lunarr environment: ${message}`);
   }
 
-  // AUTH_SECRET is always resolved (provided, persisted, or generated) to a string before parsing.
   return result.data as Omit<typeof result.data, "AUTH_SECRET"> & {
     AUTH_SECRET: string;
   };
