@@ -42,7 +42,7 @@ function loadDotenv() {
 
 const envSchema = z.object({
   AUTH_SECRET: z.string().trim().min(32, "AUTH_SECRET must be at least 32 characters.").optional(),
-  ORIGIN: z.url().trim().default("http://127.0.0.1:3000"),
+  ORIGIN: z.url().trim(),
   LUNARR_DATA_DIR: z.string().trim().min(1).default(".lunarr"),
   LUNARR_WATCH_USE_POLLING: z
     .preprocess(
@@ -112,7 +112,14 @@ function buildEnvInput(env: NodeJS.ProcessEnv) {
   return {
     AUTH_SECRET: resolveAuthSecret(dataDir, env.AUTH_SECRET),
     ...env,
+    ORIGIN: env.ORIGIN || buildDefaultOrigin(env),
   };
+}
+
+function buildDefaultOrigin(env: NodeJS.ProcessEnv) {
+  const host = env.HOST || "127.0.0.1";
+  const port = env.PORT || "3000";
+  return `http://${host}:${port}`;
 }
 
 function parseAppEnv() {
