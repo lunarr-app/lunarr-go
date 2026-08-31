@@ -117,8 +117,10 @@ function buildEnvInput(env: NodeJS.ProcessEnv) {
 }
 
 function buildDefaultOrigin(env: NodeJS.ProcessEnv) {
-  const host = env.HOST || "127.0.0.1";
+  let host = env.HOST || "127.0.0.1";
   const port = env.PORT || "3000";
+  if (host === "0.0.0.0" || host === "::") host = "127.0.0.1";
+  if (host.includes(":") && !host.startsWith("[")) host = `[${host}]`;
   return `http://${host}:${port}`;
 }
 
