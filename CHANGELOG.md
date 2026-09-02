@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0 - 2026-09-02
+
+### Upgrade Note
+
+- Adds `account.issuer` and unique index via `0011` migration and uses `provider-id` identity
+- Downgrade is not supported after this upgrade
+
+### Changed
+
+- Updated `better-auth` `1.6.29` to `1.7.2`, `zod` `4.4.3` to `4.5.4`, `svelte` `5.56.9` to `5.57.0`, `@sveltejs/kit` `2.70.2` to `2.70.3`, `vite` `8.2.1` to `8.2.2`, `@lucide/svelte` `1.31.0` to `1.34.0`, `hls.js` `1.7.0` to `1.7.1`, `@types/bun` `1.3.14` to `1.4.0`
+
+### Fixed
+
+- Fixed `ORIGIN` default when unset to use `HOST` and `PORT` instead of `http://127.0.0.1:5173`
+- Fixed `HOST=::` and `HOST=0.0.0.0` producing invalid `http://:::3000` for `ORIGIN` by mapping wildcards to `127.0.0.1` and bracketing IPv6
+
 ## 0.9.4 - 2026-08-16
 
 ### Added
