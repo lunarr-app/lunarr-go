@@ -25,7 +25,7 @@ export async function sessionHeadersFor(
       .insertInto("account")
       .values({
         id: createId(),
-        account_id: user.email,
+        account_id: user.id,
         provider_id: "credential",
         user_id: user.id,
         access_token: null,
@@ -35,6 +35,7 @@ export async function sessionHeadersFor(
         refresh_token_expires_at: null,
         scope: null,
         password: await hashPassword(password),
+        issuer: "local:credential",
         created_at: now,
         updated_at: now,
       })

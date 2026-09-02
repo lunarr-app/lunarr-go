@@ -15,6 +15,7 @@ import migration0007 from "./migrations/0007_watchlist.sql?raw";
 import migration0008 from "./migrations/0008_indexes.sql?raw";
 import migration0009 from "./migrations/0009_media_file_probe_details.sql?raw";
 import migration0010 from "./migrations/0010_manual_match_and_index_tuning.sql?raw";
+import migration0011 from "./migrations/0011_better_auth_1_7_account_issuer.sql?raw";
 
 const DATA_DIR = path.resolve(appEnv.LUNARR_DATA_DIR);
 const DB_FILE = path.join(DATA_DIR, "lunarr.db");
@@ -30,6 +31,7 @@ const MIGRATION_SOURCES = {
   "0008_indexes": migration0008,
   "0009_media_file_probe_details": migration0009,
   "0010_manual_match_and_index_tuning": migration0010,
+  "0011_better_auth_1_7_account_issuer": migration0011,
 } satisfies Record<string, string>;
 
 let sqlite: LibsqlDatabase.Database | undefined;

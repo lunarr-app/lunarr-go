@@ -43,6 +43,7 @@ async function createAuth() {
       updateAge: 60 * 60 * 24,
     },
     account: {
+      identityStrategy: "provider-id",
       fields: {
         accountId: "account_id",
         providerId: "provider_id",
@@ -54,6 +55,7 @@ async function createAuth() {
         refreshTokenExpiresAt: "refresh_token_expires_at",
         createdAt: "created_at",
         updatedAt: "updated_at",
+        issuer: "issuer",
       },
     },
     verification: {

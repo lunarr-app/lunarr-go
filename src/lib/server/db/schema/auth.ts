@@ -39,6 +39,7 @@ export type AccountTable = {
   refresh_token_expires_at: TimestampMs | null;
   scope: string | null;
   password: string | null;
+  issuer: string | null;
   created_at: TimestampMs;
   updated_at: TimestampMs;
 };
