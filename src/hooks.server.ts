@@ -2,7 +2,7 @@ import { building } from "$app/environment";
 import { auth } from "$lib/server/auth";
 import { hasRegisteredUsers } from "$lib/server/auth/users";
 import { cleanupStaleDevicePairings } from "$lib/server/auth/device-pairing";
-import { migrateDatabase } from "$lib/server/db";
+import { ensureDatabaseReady } from "$lib/server/db";
 import { cleanupJobHistory } from "$lib/server/jobs";
 import { cleanupExpiredShares } from "$lib/server/shares";
 import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM } from "$lib/server/playback/signed-token";
@@ -29,7 +29,7 @@ let startupPromise: Promise<void> | undefined;
 
 function ensureStartup() {
   startupPromise ??= (async () => {
-    await migrateDatabase();
+    await ensureDatabaseReady();
     await recoverInterruptedTranscodeSessions();
     await cleanupConfiguredPlaybackSessionArtifacts();
     await cleanupJobHistory();

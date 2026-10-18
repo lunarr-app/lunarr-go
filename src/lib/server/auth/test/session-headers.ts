@@ -35,7 +35,6 @@ export async function sessionHeadersFor(
         refresh_token_expires_at: null,
         scope: null,
         password: await hashPassword(password),
-        issuer: "local:credential",
         created_at: now,
         updated_at: now,
       })

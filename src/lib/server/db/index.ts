@@ -16,6 +16,7 @@ import migration0008 from "./migrations/0008_indexes.sql?raw";
 import migration0009 from "./migrations/0009_media_file_probe_details.sql?raw";
 import migration0010 from "./migrations/0010_manual_match_and_index_tuning.sql?raw";
 import migration0011 from "./migrations/0011_better_auth_1_7_account_issuer.sql?raw";
+import migration0012 from "./migrations/0012_restore_better_auth_1_6_account_schema.sql?raw";
 
 const DATA_DIR = path.resolve(appEnv.LUNARR_DATA_DIR);
 const DB_FILE = path.join(DATA_DIR, "lunarr.db");
@@ -32,6 +33,7 @@ const MIGRATION_SOURCES = {
   "0009_media_file_probe_details": migration0009,
   "0010_manual_match_and_index_tuning": migration0010,
   "0011_better_auth_1_7_account_issuer": migration0011,
+  "0012_restore_better_auth_1_6_account_schema": migration0012,
 } satisfies Record<string, string>;
 
 let sqlite: LibsqlDatabase.Database | undefined;
@@ -101,11 +103,30 @@ export async function migrateDatabase() {
   }
 }
 
+let readyPromise: Promise<void> | undefined;
+
+/**
+ * Runs pending migrations once per database instance.
+ *
+ * Auth validates the schema during init, so migrations have to finish before
+ * `betterAuth()` is called. Startup also needs them, and both paths share this
+ * promise to keep the ordering deterministic and avoid a second migrator pass.
+ * Failures are not cached, so the next caller retries.
+ */
+export async function ensureDatabaseReady() {
+  readyPromise ??= migrateDatabase().catch((error) => {
+    readyPromise = undefined;
+    throw error;
+  });
+  return readyPromise;
+}
+
 export async function closeDatabaseForTests() {
   await kysely?.destroy();
   kysely = undefined;
   sqlite?.close();
   sqlite = undefined;
+  readyPromise = undefined;
 }
 
 export function currentDatabasePaths() {

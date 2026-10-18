@@ -4,7 +4,7 @@ import { betterAuth } from "better-auth";
 import { admin } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { appEnv } from "../config/env";
-import { getDb } from "../db";
+import { getDb, ensureDatabaseReady } from "../db";
 import {
   API_KEY_DISPLAY_PREFIX_LENGTH,
   API_KEY_MAX_EXPIRES_IN_DAYS,
@@ -15,6 +15,7 @@ import { lunarrAuthSafeguards } from "./plugins/lunarr-auth-safeguards";
 import { lunarrSignupPolicy } from "./plugins/signup-policy";
 
 async function createAuth() {
+  await ensureDatabaseReady();
   return betterAuth({
     appName: "Lunarr",
     baseURL: appEnv.ORIGIN,
@@ -43,7 +44,6 @@ async function createAuth() {
       updateAge: 60 * 60 * 24,
     },
     account: {
-      identityStrategy: "provider-id",
       fields: {
         accountId: "account_id",
         providerId: "provider_id",
@@ -55,7 +55,6 @@ async function createAuth() {
         refreshTokenExpiresAt: "refresh_token_expires_at",
         createdAt: "created_at",
         updatedAt: "updated_at",
-        issuer: "issuer",
       },
     },
     verification: {
