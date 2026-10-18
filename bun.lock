@@ -15,7 +15,7 @@
         "libsql": "0.5.29",
         "node-av": "6.1.1",
         "ssh2": "1.17.0",
-        "theintrodb": "3.2.0",
+        "theintrodb": "4.0.0",
         "webdav": "5.10.0",
         "zod": "4.5.4",
       },
@@ -564,7 +564,7 @@
 
     "svelte-check": ["svelte-check@4.7.6", "", { "dependencies": { "@jridgewell/trace-mapping": "^0.3.25", "@sveltejs/load-config": "^0.2.3", "chokidar": "^4.0.1", "fdir": "^6.2.0", "picocolors": "^1.0.0", "sade": "^1.7.4" }, "peerDependencies": { "svelte": "^4.0.0 || ^5.0.0-next.0", "typescript": "^5.0.0 || ^6.0.0" }, "bin": { "svelte-check": "bin/svelte-check" } }, "sha512-t2scM//ZuVbSY/T2w6FSBw1v9s2NEmh/g+sy1lqtosW5ylBV5AF4wFb1Ts9Kf3MbfPDUDJDZ9L436YT0SPTdvw=="],
 
-    "theintrodb": ["theintrodb@3.2.0", "", { "dependencies": { "zod": "^3.25.76" } }, "sha512-i/T5RMSBrrEzlWWoPulZo6ZY0GVFMzPf5SsjCCWAXn6H2mSYZW1vpqjlPfkTvKUyp9pElkA5L7gByRAuAvNmCw=="],
+    "theintrodb": ["theintrodb@4.0.0", "", { "dependencies": { "zod": "^3.25.76" } }, "sha512-WYNWM+2tia1uMIAyez2pu8gfacY0oRi+YQLu2HzsvTPj9+U/RkjdNNHP8Xc7foOtQTAQw2YKWRcBxlTIrpMY7A=="],
 
     "thunky": ["thunky@1.1.0", "", {}, "sha512-eHY7nBftgThBqOyHGVN+l8gF0BucP09fMo0oO/Lb0w1OF80dJv+lDVpXG60WMQvkcxAkNybKsrEIE3ZtKGmPrA=="],
 

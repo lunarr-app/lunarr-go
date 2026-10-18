@@ -15,10 +15,15 @@ const introDbCache = createTtlCache<MediaRecord>({
 });
 
 function introDbCacheKey(params: GetMediaParams) {
-  const parts = [String(params.tmdbId)];
-  if ("season" in params && params.season !== undefined) parts.push(`s${params.season}`);
-  if ("episode" in params && params.episode !== undefined) parts.push(`e${params.episode}`);
-  if ("durationMs" in params && params.durationMs !== undefined) parts.push(`d${params.durationMs}`);
+  const parts: string[] = [];
+  if (params.tvdbId !== undefined) parts.push(`tvdb${params.tvdbId}`);
+  if (params.tmdbId !== undefined) parts.push(`tmdb${params.tmdbId}`);
+  if (params.imdbId !== undefined) parts.push(`imdb${params.imdbId}`);
+  if (params.season !== undefined) parts.push(`s${params.season}`);
+  if (params.episode !== undefined) parts.push(`e${params.episode}`);
+  if (params.mapping !== undefined) parts.push(`m${params.mapping}`);
+  if (params.tvdbEpisodeId !== undefined) parts.push(`te${params.tvdbEpisodeId}`);
+  if (params.durationMs !== undefined) parts.push(`d${params.durationMs}`);
   return parts.join(":");
 }
 
@@ -127,9 +132,10 @@ export async function fetchIntroDbMedia(
   const timeout = setTimeout(() => controller.abort(), INTRODB_FETCH_TIMEOUT_MS);
 
   try {
-    const record = await getMedia(params, { signal: controller.signal });
-    introDbCache.set(cacheKey, record);
-    return record;
+    const response = await getMedia(params, { signal: controller.signal });
+    if (response.kind !== "media") return null;
+    introDbCache.set(cacheKey, response);
+    return response;
   } catch {
     return null;
   } finally {

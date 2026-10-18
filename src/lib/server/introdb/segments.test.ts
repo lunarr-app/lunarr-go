@@ -5,10 +5,12 @@ import { clampPlaybackSegments, playbackSegmentsFromMediaRecord } from "./index"
 describe("introDb segment normalization", () => {
   test("maps intro and credits timestamps into playback segments", () => {
     const record: MediaRecord = {
-      tmdbId: 1396,
+      kind: "media",
+      tvdbId: 1396,
       type: "tv",
       season: 1,
       episode: 2,
+      groupDurationMs: null,
       intro: [{ startMs: 314500, endMs: 331000, durationMs: 16500, startsAtBeginning: false, endsAtMediaEnd: false }],
       recap: [],
       credits: [{ startMs: 2843000, endMs: null, durationMs: null, startsAtBeginning: false, endsAtMediaEnd: true }],
@@ -33,10 +35,12 @@ describe("introDb segment normalization", () => {
 
   test("treats null start times as the beginning of media", () => {
     const record: MediaRecord = {
-      tmdbId: 1396,
+      kind: "media",
+      tvdbId: 1396,
       type: "tv",
       season: 1,
       episode: 1,
+      groupDurationMs: null,
       intro: [],
       recap: [{ startMs: 0, endMs: 90000, durationMs: 90000, startsAtBeginning: true, endsAtMediaEnd: false }],
       credits: [],
