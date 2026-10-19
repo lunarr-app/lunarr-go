@@ -1,7 +1,12 @@
-import { apiErrorFrom, requireJsonAdmin } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import type { JobsResponse } from "$lib/server/api/types";
-import { getPlaybackSessionSummary, getScanJobSummary, listPlaybackSessions, listScanJobs } from "$lib/server/jobs";
+import { apiErrorFrom, requireJsonAdmin } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import type { JobsResponse } from "#lib/server/api/types.js";
+import {
+  getPlaybackSessionSummary,
+  getScanJobSummary,
+  listPlaybackSessions,
+  listScanJobs,
+} from "#lib/server/jobs/index.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals }) => {

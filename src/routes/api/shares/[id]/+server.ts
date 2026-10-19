@@ -1,7 +1,7 @@
-import { apiErrorFrom, requireJsonAdmin } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import type { ShareRevokeResponse } from "$lib/server/api/types";
-import { revokeShare } from "$lib/server/shares";
+import { apiErrorFrom, requireJsonAdmin } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import type { ShareRevokeResponse } from "#lib/server/api/types.js";
+import { revokeShare } from "#lib/server/shares/index.js";
 import type { RequestHandler } from "./$types";
 
 export const DELETE: RequestHandler = async ({ locals, params }) => {

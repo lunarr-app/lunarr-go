@@ -1,8 +1,8 @@
-import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
-import { apiError, apiJson } from "$lib/server/api/json";
-import type { SimilarShowsResponse } from "$lib/server/api/types";
-import { SHOW_PAGE_SIZE, normalizeLimit, normalizePage } from "$lib/server/media/catalog";
-import { loadSimilarShows } from "$lib/server/media/similar-page-load";
+import { apiErrorFrom, requireJsonUser } from "#lib/server/api.js";
+import { apiError, apiJson } from "#lib/server/api/json.js";
+import type { SimilarShowsResponse } from "#lib/server/api/types.js";
+import { SHOW_PAGE_SIZE, normalizeLimit, normalizePage } from "#lib/server/media/catalog.js";
+import { loadSimilarShows } from "#lib/server/media/similar-page-load.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals, url }) => {

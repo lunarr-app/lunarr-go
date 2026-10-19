@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
+import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
 import {
   DEFAULT_SEGMENT_SKIP_PREFERENCES,
   getSegmentSkipPreferences,

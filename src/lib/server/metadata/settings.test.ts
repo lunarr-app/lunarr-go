@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
+import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtemp, rm } from "node:fs/promises";

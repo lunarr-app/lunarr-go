@@ -3,12 +3,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import type { Database } from "$lib/server/db/schema";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import type { Database } from "#lib/server/db/schema.js";
 import {
   resetGuestShareRateLimitsForTests,
   setGuestShareRateLimitOverridesForTests,
-} from "$lib/server/shares/rate-limit";
+} from "#lib/server/shares/rate-limit.js";
 import { GET as shareGet } from "../share/[token]/+server";
 import { GET as shareSeasonGet } from "../share/[token]/seasons/[seasonId]/+server";
 import { GET as sharePlaybackGet } from "../share/[token]/playback/[mediaItemId]/+server";

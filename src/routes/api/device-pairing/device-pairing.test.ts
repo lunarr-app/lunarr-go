@@ -1,17 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { devicePairingApiKeyExpiresInSeconds } from "$lib/server/device-pairing/env";
+import { devicePairingApiKeyExpiresInSeconds } from "#lib/server/device-pairing/env.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { cleanupStaleDevicePairings } from "$lib/server/auth/device-pairing";
-import { resetAuthForTests } from "$lib/server/auth/test/setup";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import { cleanupStaleDevicePairings } from "#lib/server/auth/device-pairing.js";
+import { resetAuthForTests } from "#lib/server/auth/test/setup.js";
 import {
   isDevicePairingRateLimited,
   resetDevicePairingRateLimitsForTests,
   setDevicePairingRateLimitOverridesForTests,
-} from "$lib/server/auth/device-pairing-rate-limit";
+} from "#lib/server/auth/device-pairing-rate-limit.js";
 import { POST as startPost } from "./+server";
 import { GET as pollGet } from "./poll/+server";
 import { POST as approvePost } from "./approve/+server";

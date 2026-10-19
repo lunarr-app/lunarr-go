@@ -40,7 +40,7 @@ async function expectRedirect(operation: unknown, location: string) {
 describe("logout route", () => {
   beforeEach(async () => {
     signOut.mockClear();
-    const authModule = await import("$lib/server/auth");
+    const authModule = await import("#lib/server/auth/index.js");
     signOutSpy = spyOn(authModule.auth.api, "signOut").mockImplementation(
       signOut as unknown as typeof authModule.auth.api.signOut,
     );

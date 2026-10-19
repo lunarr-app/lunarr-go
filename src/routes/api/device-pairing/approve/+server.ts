@@ -1,8 +1,8 @@
-import { parseBody, requireJsonUser } from "$lib/server/api";
-import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { DevicePairingApproveResponse } from "$lib/server/api/types";
-import { approveDevicePairing, devicePairingHttpStatus } from "$lib/server/auth/device-pairing";
-import { enforceDevicePairingRateLimit } from "$lib/server/auth/device-pairing-rate-limit";
+import { parseBody, requireJsonUser } from "#lib/server/api.js";
+import { apiError, apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { DevicePairingApproveResponse } from "#lib/server/api/types.js";
+import { approveDevicePairing, devicePairingHttpStatus } from "#lib/server/auth/device-pairing.js";
+import { enforceDevicePairingRateLimit } from "#lib/server/auth/device-pairing-rate-limit.js";
 import { z } from "zod";
 import type { RequestHandler } from "./$types";
 

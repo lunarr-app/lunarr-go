@@ -1,9 +1,9 @@
-import { getPlaybackData } from "$lib/server/playback";
-import { PlaybackSourceRequestError, withSignedPlaybackSource } from "$lib/server/playback/signed-source";
-import { apiError, apiJson } from "$lib/server/api/json";
-import type { PlaybackDataResponse } from "$lib/server/api/types";
-import { assertShareAllowsPlayableItem, resolveShare } from "$lib/server/shares";
-import { enforceGuestShareRateLimit } from "$lib/server/shares/rate-limit";
+import { getPlaybackData } from "#lib/server/playback/index.js";
+import { PlaybackSourceRequestError, withSignedPlaybackSource } from "#lib/server/playback/signed-source.js";
+import { apiError, apiJson } from "#lib/server/api/json.js";
+import type { PlaybackDataResponse } from "#lib/server/api/types.js";
+import { assertShareAllowsPlayableItem, resolveShare } from "#lib/server/shares/index.js";
+import { enforceGuestShareRateLimit } from "#lib/server/shares/rate-limit.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async (event) => {

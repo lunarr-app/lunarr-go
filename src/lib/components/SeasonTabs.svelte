@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { seasonTabLabel } from "$lib/media/format";
+  import { seasonTabLabel } from "#lib/media/format.js";
 
   export type SeasonTab = {
     id: string;

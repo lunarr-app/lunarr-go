@@ -1,10 +1,10 @@
 <script lang="ts">
-  import Pagination from "$lib/components/Pagination.svelte";
-  import SearchField from "$lib/components/SearchField.svelte";
-  import ShowCard from "$lib/components/ShowCard.svelte";
-  import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
-  import { SHOW_SEARCH_PLACEHOLDER } from "$lib/media/search";
-  import type { ShowSummary } from "$lib/media/types";
+  import Pagination from "#lib/components/Pagination.svelte";
+  import SearchField from "#lib/components/SearchField.svelte";
+  import ShowCard from "#lib/components/ShowCard.svelte";
+  import { createDebouncedCatalogSearch } from "#lib/media/catalog-search.svelte.js";
+  import { SHOW_SEARCH_PLACEHOLDER } from "#lib/media/search.js";
+  import type { ShowSummary } from "#lib/media/types.js";
 
   type PageInfo = {
     page: number;

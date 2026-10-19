@@ -1,4 +1,4 @@
-import type { MovieBrowseRailResponse, MovieRowsResponse } from "$lib/media/types";
+import type { MovieBrowseRailResponse, MovieRowsResponse } from "#lib/media/types.js";
 import { sql } from "kysely";
 import { getDb } from "../../db";
 import {

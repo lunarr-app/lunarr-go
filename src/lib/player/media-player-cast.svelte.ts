@@ -1,4 +1,4 @@
-import { browser } from "$app/environment";
+import { browser } from "$app/env";
 import {
   castMediaTimelineSeconds,
   castPlaybackSecondsAfterSeek,
@@ -10,9 +10,9 @@ import {
   markCastOwnedPlaybackSession,
   releaseCastOwnedPlaybackSession,
   type PlayerControlUiState,
-} from "$lib/playback/controls";
-import { playbackContentTypeForMode } from "$lib/playback/content-type";
-import { connectedCastSession } from "$lib/playback/cast";
+} from "#lib/playback/controls.js";
+import { playbackContentTypeForMode } from "#lib/playback/content-type.js";
+import { connectedCastSession } from "#lib/playback/cast.js";
 import type {
   CastApi,
   CastMediaSession,
@@ -20,11 +20,11 @@ import type {
   CastRemotePlayer,
   CastRemotePlayerController,
   CastSession,
-} from "$lib/playback/cast";
-import type { PlaybackTarget } from "$lib/playback/capabilities";
-import { playbackTargetHref, streamRelativePlaybackSeconds } from "$lib/playback/seek";
-import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
-import { activePlaybackSessionId } from "$lib/playback/session";
+} from "#lib/playback/cast.js";
+import type { PlaybackTarget } from "#lib/playback/capabilities.js";
+import { playbackTargetHref, streamRelativePlaybackSeconds } from "#lib/playback/seek.js";
+import type { PlaybackData, PlaybackDecision } from "#lib/server/playback/index.js";
+import { activePlaybackSessionId } from "#lib/playback/session.js";
 
 type ProgressPayload = {
   mediaFileId: string;
@@ -288,6 +288,7 @@ export function createMediaPlayerCast(deps: MediaPlayerCastDeps) {
         castRemotePlayer.isPaused === true ||
         castRemotePlayer.playerState === "PAUSED" ||
         castRemotePlayer.playerState === "IDLE";
+
       if ((command === "play" && paused) || (command === "pause" && !paused)) {
         castRemotePlayerController.playOrPause();
       }
@@ -436,9 +437,11 @@ export function createMediaPlayerCast(deps: MediaPlayerCastDeps) {
         mode: data.playback.mode,
         streamStartSeconds: data.playback.streamStartSeconds,
       });
+
       const defaultTrackIds = data.playback.tracks
         .map((track, index) => (track.default ? index + 1 : null))
         .filter((id): id is number => id !== null);
+
       if (defaultTrackIds.length > 0) {
         loadRequest.activeTrackIds = defaultTrackIds;
       }

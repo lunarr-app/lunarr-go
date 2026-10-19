@@ -1,8 +1,8 @@
 import {
   formatDevicePairingApiKeyExpiryLabel,
   type DevicePairingApiKeyExpirySettings,
-} from "$lib/device-pairing/expiry-label";
-import { appEnv } from "$lib/server/config/env";
+} from "#lib/device-pairing/expiry-label.js";
+import { appEnv } from "#lib/server/config/env.js";
 
 export function devicePairingApiKeyExpiresInSeconds(
   days = appEnv.LUNARR_DEVICE_PAIRING_API_KEY_EXPIRES_IN_DAYS,

@@ -1,7 +1,7 @@
-import { externalSubtitleResponse } from "$lib/server/media/subtitles";
-import { authorizeSubtitleMedia } from "$lib/server/shares/media-auth";
-import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "$lib/server/playback/signed-token";
-import { apiError } from "$lib/server/api/json";
+import { externalSubtitleResponse } from "#lib/server/media/subtitles.js";
+import { authorizeSubtitleMedia } from "#lib/server/shares/media-auth.js";
+import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "#lib/server/playback/signed-token.js";
+import { apiError } from "#lib/server/api/json.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals, request, url }) => {

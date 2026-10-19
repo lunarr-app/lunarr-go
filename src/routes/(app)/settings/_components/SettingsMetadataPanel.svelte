@@ -3,8 +3,8 @@
     METADATA_REFRESH_FIELDS,
     METADATA_REFRESH_INTERVAL_OPTIONS,
     type MetadataRefreshKind,
-  } from "$lib/metadata/refresh";
-  import { DEFAULT_MOVIE_METADATA_STALENESS_DAYS, DEFAULT_TV_METADATA_STALENESS_DAYS } from "$lib/metadata/settings";
+  } from "#lib/metadata/refresh.js";
+  import { DEFAULT_MOVIE_METADATA_STALENESS_DAYS, DEFAULT_TV_METADATA_STALENESS_DAYS } from "#lib/metadata/settings.js";
 
   let {
     tmdbAccessTokenSaved,

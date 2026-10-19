@@ -14,7 +14,7 @@ import {
 } from "./sessions";
 import { acquirePlaybackCache } from "./cache";
 import { normalizedStartTimeSeconds } from "./normalization";
-import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
+import type { ClientPlaybackCapabilities } from "#lib/playback/capabilities.js";
 import {
   DEFAULT_HLS_SEGMENT_SECONDS,
   type HlsSegmentFormat,

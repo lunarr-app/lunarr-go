@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { goto, invalidateAll } from "$app/navigation";
+  import { goto, refreshAll } from "$app/navigation";
   import { page } from "$app/state";
-  import MediaCastRail from "$lib/components/MediaCastRail.svelte";
-  import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
-  import FixMatchModal from "$lib/components/FixMatchModal.svelte";
-  import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
-  import { revertFixMatch } from "$lib/media/fix-match-client";
-  import { playbackModalHref } from "$lib/playback/links";
-  import { formatVoteAverageLabel, formatVoteCountLabel } from "$lib/media/format";
+  import MediaCastRail from "#lib/components/MediaCastRail.svelte";
+  import MediaDetailLayout from "#lib/components/MediaDetailLayout.svelte";
+  import FixMatchModal from "#lib/components/FixMatchModal.svelte";
+  import ShareLinkModal from "#lib/components/ShareLinkModal.svelte";
+  import { revertFixMatch } from "#lib/media/fix-match-client.js";
+  import { playbackModalHref } from "#lib/playback/links.js";
+  import { formatVoteAverageLabel, formatVoteCountLabel } from "#lib/media/format.js";
   import ShowDetailHero from "./_components/ShowDetailHero.svelte";
   import ShowMetadataSidebar from "./_components/ShowMetadataSidebar.svelte";
   import ShowSeasonsSection from "./_components/ShowSeasonsSection.svelte";
@@ -22,7 +22,7 @@
     try {
       const result = await revertFixMatch("show", data.show.id);
       await goto(result.mediaItemId ? `/shows/${result.mediaItemId}` : "/shows");
-      await invalidateAll();
+      await refreshAll();
     } catch (error) {
       revertError = error instanceof Error ? error.message : "Could not revert the match.";
     }

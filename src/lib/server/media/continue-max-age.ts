@@ -1,8 +1,9 @@
-import { sql, type RawBuilder } from "kysely";
-import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
+import { sql } from "kysely";
+import type { RawBuilder } from "kysely";
+import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "#lib/media/continue.js";
 import { getSetting, setSetting } from "../settings";
 
-export { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
+export { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "#lib/media/continue.js";
 export const MIN_CONTINUE_POSITION_SECONDS = 60;
 
 export function userContinueMaxAgeDaysKey(userId: string) {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { formatClockDuration, formatFileSize, formatMediaDuration } from "$lib/media/format";
-  import { playbackModalHref } from "$lib/playback/links";
+  import { formatClockDuration, formatFileSize, formatMediaDuration } from "#lib/media/format.js";
+  import { playbackModalHref } from "#lib/playback/links.js";
   import { Eye, EyeOff, Play } from "@lucide/svelte";
 
   type MediaFile = {

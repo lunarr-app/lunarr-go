@@ -1,4 +1,4 @@
-import { normalizePreferredLanguage } from "$lib/media/preferred-language";
+import { normalizePreferredLanguage } from "#lib/media/preferred-language.js";
 import { getBooleanSetting, getSetting, setBooleanSetting, setSetting } from "../settings";
 
 export const PLAYBACK_PREFERENCES = ["auto", "prefer_direct", "prefer_transcode"] as const;
@@ -48,7 +48,7 @@ export function normalizePlaybackPreference(value: string | null | undefined): P
   return PLAYBACK_PREFERENCES.includes(value as PlaybackPreference) ? (value as PlaybackPreference) : "auto";
 }
 
-export { normalizePreferredLanguage as normalizePreferredAudioLanguage } from "$lib/media/preferred-language";
+export { normalizePreferredLanguage as normalizePreferredAudioLanguage } from "#lib/media/preferred-language.js";
 
 export function normalizeHardwareAccelerationMode(value: string | null | undefined): HardwareAccelerationMode {
   return HARDWARE_ACCELERATION_MODES.includes(value as HardwareAccelerationMode)

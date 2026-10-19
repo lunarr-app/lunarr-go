@@ -1,8 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Readable } from "node:stream";
 import { encryptSecret } from "../secrets";
+import type * as WebdavModule from "./webdav";
 import type { WebdavLibraryConfig } from "./webdav";
-import { expectRejectsToThrow } from "$lib/test/async-expect";
+import { expectRejectsToThrow } from "#lib/test/async-expect.js";
 
 type MockWebdavStat = {
   type: "file" | "directory";
@@ -36,9 +37,9 @@ mock.module("webdav", () => ({
   }),
 }));
 
-let createWebdavStorage: typeof import("./webdav").createWebdavStorage;
-let parseWebdavConfig: typeof import("./webdav").parseWebdavConfig;
-let testWebdavConnection: typeof import("./webdav").testWebdavConnection;
+let createWebdavStorage: typeof WebdavModule.createWebdavStorage;
+let parseWebdavConfig: typeof WebdavModule.parseWebdavConfig;
+let testWebdavConnection: typeof WebdavModule.testWebdavConnection;
 
 function sampleConfig(overrides: Partial<WebdavLibraryConfig> = {}): WebdavLibraryConfig {
   return {

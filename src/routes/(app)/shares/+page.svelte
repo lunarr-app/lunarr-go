@@ -1,11 +1,12 @@
 <script lang="ts">
-  import Pagination from "$lib/components/Pagination.svelte";
-  import ConfirmAction from "$lib/components/ConfirmAction.svelte";
-  import { formatDateTime } from "$lib/media/format";
-  import { shareLinkUrl } from "$lib/shares/client";
-  import { SHARE_LIST_STATUSES, type ShareListStatus } from "$lib/shares/constants";
-  import { shareScopeLabel, shareStatusDetail, shareStatusLabel } from "$lib/shares/format";
-  import type { AdminShareRecord } from "$lib/shares/types";
+  import Pagination from "#lib/components/Pagination.svelte";
+  import ConfirmAction from "#lib/components/ConfirmAction.svelte";
+  import { formatDateTime } from "#lib/media/format.js";
+  import { shareLinkUrl } from "#lib/shares/client.js";
+  import { SHARE_LIST_STATUSES } from "#lib/shares/constants.js";
+  import type { ShareListStatus } from "#lib/shares/constants.js";
+  import { shareScopeLabel, shareStatusDetail, shareStatusLabel } from "#lib/shares/format.js";
+  import type { AdminShareRecord } from "#lib/shares/types.js";
   import { Copy, ExternalLink } from "@lucide/svelte";
 
   let { data } = $props();

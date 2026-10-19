@@ -2,10 +2,17 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { sql, type Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
-import { clearTmdbDetailCachesForTests } from "$lib/server/metadata/tmdb";
-import { setSetting } from "$lib/server/settings";
+import { sql } from "kysely";
+import type { Kysely } from "kysely";
+import {
+  closeDatabaseForTests,
+  getDb,
+  migrateDatabase,
+  useDatabaseFileForTests,
+  type Database,
+} from "#lib/server/db/index.js";
+import { clearTmdbDetailCachesForTests } from "#lib/server/metadata/tmdb.js";
+import { setSetting } from "#lib/server/settings.js";
 import { actions as showActions, load as showLoad } from "./[id]/+page.server";
 import { actions as seasonActions, load as seasonLoad } from "./[id]/seasons/[seasonId]/+page.server";
 import { load as showsLoad } from "./+page.server";

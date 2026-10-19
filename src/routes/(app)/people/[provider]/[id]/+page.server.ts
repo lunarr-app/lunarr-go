@@ -1,5 +1,5 @@
-import { getPersonDetail } from "$lib/server/media/people";
-import { normalizePage } from "$lib/server/media/catalog";
+import { getPersonDetail } from "#lib/server/media/people.js";
+import { normalizePage } from "#lib/server/media/catalog.js";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 

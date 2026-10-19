@@ -1,5 +1,5 @@
-import { auth } from "$lib/server/auth";
-import { hasRegisteredUsers } from "$lib/server/auth/users";
+import { auth } from "#lib/server/auth/index.js";
+import { hasRegisteredUsers } from "#lib/server/auth/users.js";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import MediaMetadataPanel from "$lib/components/MediaMetadataPanel.svelte";
-  import { formatFileSize } from "$lib/media/format";
+  import MediaMetadataPanel from "#lib/components/MediaMetadataPanel.svelte";
+  import { formatFileSize } from "#lib/media/format.js";
 
   let {
     episodeCode,

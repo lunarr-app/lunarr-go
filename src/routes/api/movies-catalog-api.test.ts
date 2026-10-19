@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
 import { GET as movieGet } from "./movies/[id]/+server";
 import { GET as creditsGet } from "./movies/[id]/credits/+server";
 import { GET as overviewGet } from "./movies/[id]/overview/+server";

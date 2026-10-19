@@ -1,4 +1,4 @@
-import type { CreateSharePayload, PublicShareRecord, ShareSeasonData } from "$lib/shares/types";
+import type { CreateSharePayload, PublicShareRecord, ShareSeasonData } from "#lib/shares/types.js";
 
 async function readJsonError(response: Response, fallback: string) {
   const body = await response.json().catch(() => null);

@@ -1,12 +1,12 @@
-import { getTranscodePolicy } from "$lib/server/transcoding/policy";
-import { cancelPlaybackSession, TRANSCODING_DISABLED_MESSAGE } from "$lib/server/transcoding/manager";
+import { getTranscodePolicy } from "#lib/server/transcoding/policy.js";
+import { cancelPlaybackSession, TRANSCODING_DISABLED_MESSAGE } from "#lib/server/transcoding/manager.js";
 import {
   getAuthorizedHlsArtifact,
   isEndedPlaybackArtifactFresh,
   type AuthorizedHlsArtifact,
-} from "$lib/server/transcoding/sessions";
-import { normalizePlaybackSessionMessage } from "$lib/server/transcoding/messages";
-import { apiError } from "$lib/server/api/json";
+} from "#lib/server/transcoding/sessions.js";
+import { normalizePlaybackSessionMessage } from "#lib/server/transcoding/messages.js";
+import { apiError } from "#lib/server/api/json.js";
 
 export type PlayableHlsArtifact = AuthorizedHlsArtifact & {
   playlistPath: string;

@@ -1,8 +1,8 @@
-import { API_KEY_MAX_EXPIRES_IN_SECONDS, API_KEY_MAX_NAME_LENGTH } from "$lib/server/auth/api-key-config";
-import { createApiKey, listApiKeys, apiKeyHttpStatus } from "$lib/server/auth/api-keys";
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiKeyListResponse, CreateApiKeyResponse } from "$lib/server/api/types";
-import { parseBody, requireJsonUser } from "$lib/server/api";
+import { API_KEY_MAX_EXPIRES_IN_SECONDS, API_KEY_MAX_NAME_LENGTH } from "#lib/server/auth/api-key-config.js";
+import { createApiKey, listApiKeys, apiKeyHttpStatus } from "#lib/server/auth/api-keys.js";
+import { apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { ApiKeyListResponse, CreateApiKeyResponse } from "#lib/server/api/types.js";
+import { parseBody, requireJsonUser } from "#lib/server/api.js";
 import { z } from "zod";
 import type { RequestHandler } from "./$types";
 

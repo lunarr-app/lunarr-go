@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
+  import { browser } from "$app/env";
   import { onDestroy, tick } from "svelte";
-  import PlayerShell from "$lib/player/PlayerShell.svelte";
+  import PlayerShell from "#lib/player/PlayerShell.svelte";
   import "./player-chrome.css";
   import {
     Airplay,
@@ -19,10 +19,10 @@
     VolumeX,
     X,
   } from "@lucide/svelte";
-  import { createMediaPlayerCast } from "$lib/player/media-player-cast.svelte";
-  import { createMediaPlayerHls } from "$lib/player/media-player-hls.svelte";
-  import { createMediaPlayerSegments } from "$lib/player/media-player-segments.svelte";
-  import { createMediaPlayerSession } from "$lib/player/media-player-session.svelte";
+  import { createMediaPlayerCast } from "#lib/player/media-player-cast.svelte.js";
+  import { createMediaPlayerHls } from "#lib/player/media-player-hls.svelte.js";
+  import { createMediaPlayerSegments } from "#lib/player/media-player-segments.svelte.js";
+  import { createMediaPlayerSession } from "#lib/player/media-player-session.svelte.js";
   import {
     airPlayActiveFromVideo,
     airPlayAvailableFromEvent,
@@ -64,8 +64,8 @@
     volumeStateForSliderValue,
     type SeekSliderHoverPreview,
     type PlayerControlUiState,
-  } from "$lib/playback/controls";
-  import type { PlaybackData } from "$lib/server/playback";
+  } from "#lib/playback/controls.js";
+  import type { PlaybackData } from "#lib/server/playback/index.js";
 
   type SafariVideoElement = HTMLVideoElement & {
     webkitDisplayingFullscreen?: boolean;
@@ -865,6 +865,7 @@
     const videoFullscreen = Boolean(
       safariVideo?.webkitDisplayingFullscreen || (isFullscreen && document.fullscreenElement === null),
     );
+
     const action = fullscreenAction({
       documentFullscreen: document.fullscreenElement !== null,
       canExitDocumentFullscreen: typeof document.exitFullscreen === "function",

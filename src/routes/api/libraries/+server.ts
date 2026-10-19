@@ -1,11 +1,11 @@
-import { apiErrorFrom, parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import type { LibrariesResponse, LibraryResponse } from "$lib/server/api/types";
-import { createLibrary, listLibrariesWithScanStatus, listLibraryShareUsers } from "$lib/server/libraries";
-import { parseCreateLibraryInput } from "$lib/server/libraries/input";
-import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
-import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
-import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
+import { apiErrorFrom, parseBody, recordObjectSchema, requireJsonAdmin } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import type { LibrariesResponse, LibraryResponse } from "#lib/server/api/types.js";
+import { createLibrary, listLibrariesWithScanStatus, listLibraryShareUsers } from "#lib/server/libraries/index.js";
+import { parseCreateLibraryInput } from "#lib/server/libraries/input.js";
+import { tmdbCredentialsConfigured } from "#lib/server/metadata/tmdb.js";
+import { syncScheduledLibraryScans } from "#lib/server/scanner/scheduler.js";
+import { syncLibraryWatchers } from "#lib/server/scanner/watchers.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals }) => {

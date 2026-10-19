@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { showSeasonHref } from "$lib/media/seasons";
+  import { showSeasonHref } from "#lib/media/seasons.js";
 
   type Season = {
     id: string;

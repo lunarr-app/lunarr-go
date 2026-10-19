@@ -1,4 +1,4 @@
-import { DEFAULT_SHARE_EXPIRY_SECONDS, MAX_SHARE_EXPIRY_SECONDS } from "$lib/shares/constants";
+import { DEFAULT_SHARE_EXPIRY_SECONDS, MAX_SHARE_EXPIRY_SECONDS } from "#lib/shares/constants.js";
 import type { MediaShareKind } from "../db/schema/shares";
 
 function isObject(value: unknown): value is Record<string, unknown> {

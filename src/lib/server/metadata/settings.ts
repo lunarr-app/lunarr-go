@@ -1,4 +1,4 @@
-import { DEFAULT_MOVIE_METADATA_STALENESS_DAYS, DEFAULT_TV_METADATA_STALENESS_DAYS } from "$lib/metadata/settings";
+import { DEFAULT_MOVIE_METADATA_STALENESS_DAYS, DEFAULT_TV_METADATA_STALENESS_DAYS } from "#lib/metadata/settings.js";
 import { getSetting, setSetting } from "../settings";
 
 const MIN_REFRESH_INTERVAL_HOURS = 1;

@@ -1,4 +1,4 @@
-import { tmdbImageUrl } from "$lib/media/images";
+import { tmdbImageUrl } from "#lib/media/images.js";
 import { getDb } from "../../db";
 import { accessibleLibrarySql } from "../catalog";
 import { fetchAudioTracksByFileId } from "../files";

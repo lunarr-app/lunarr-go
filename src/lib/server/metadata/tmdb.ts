@@ -1,6 +1,6 @@
 import { getSetting } from "../settings";
-import { createTtlCache } from "$lib/server/cache/ttl-cache";
-import type { FixMatchCandidate } from "$lib/media/types";
+import { createTtlCache } from "#lib/server/cache/ttl-cache.js";
+import type { FixMatchCandidate } from "#lib/media/types.js";
 
 /** Bundled read-only TMDB access token used as a fallback when no user-configured credentials exist. */
 export const PUBLIC_TMDB_ACCESS_TOKEN =

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
-  import { getStoredTheme, setStoredTheme, type Theme } from "$lib/theme";
+  import { browser } from "$app/env";
+  import { getStoredTheme, setStoredTheme } from "#lib/theme.js";
+  import type { Theme } from "#lib/theme.js";
   import { SunMoon } from "@lucide/svelte";
 
   let selectedTheme = $state<Theme>("dark");

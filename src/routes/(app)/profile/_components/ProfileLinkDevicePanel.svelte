@@ -1,7 +1,7 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
-  import { DEVICE_PAIRING_CODE_EXPIRY_MINUTES } from "$lib/device-pairing/constants";
-  import type { DevicePairingApiKeyExpirySettings } from "$lib/device-pairing/expiry-label";
+  import { DEVICE_PAIRING_CODE_EXPIRY_MINUTES } from "#lib/device-pairing/constants.js";
+  import type { DevicePairingApiKeyExpirySettings } from "#lib/device-pairing/expiry-label.js";
   import { Link2, Tv } from "@lucide/svelte";
 
   let {
@@ -30,7 +30,8 @@
       {/if}
       Revoke linked keys in API Keys below.
     </p>
-    <a class="button link-device-action" href={resolve("/link-device")}>
+
+    <a class="button link-device-action" href={resolve("link-device")}>
       <Link2 size={16} aria-hidden="true" />
       Link a device
     </a>

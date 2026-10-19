@@ -1,6 +1,6 @@
 <script lang="ts">
   import LibraryAutomationFields from "./LibraryAutomationFields.svelte";
-  import ModalDialog from "$lib/components/ModalDialog.svelte";
+  import ModalDialog from "#lib/components/ModalDialog.svelte";
   import { libraryRemoteFieldValues } from "./libraryRemoteFieldValues";
   import RemoteLibraryFields from "./RemoteLibraryFields.svelte";
   import type { Library } from "./types";

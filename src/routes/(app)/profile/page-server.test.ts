@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { auth } from "$lib/server/auth";
-import { createApiKeyForUserId, listApiKeys } from "$lib/server/auth/api-keys";
-import { resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
-import { getTranscodePolicy } from "$lib/server/transcoding/policy";
-import { getContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
-import { getSegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import { auth } from "#lib/server/auth/index.js";
+import { createApiKeyForUserId, listApiKeys } from "#lib/server/auth/api-keys.js";
+import { resetAuthForTests, sessionHeadersFor } from "#lib/server/auth/test/setup.js";
+import { getTranscodePolicy } from "#lib/server/transcoding/policy.js";
+import { getContinueMaxAgeDays } from "#lib/server/media/continue-max-age.js";
+import { getSegmentSkipPreferences } from "#lib/server/playback/segment-skip-preferences.js";
+import type * as ProfilePage from "./+page.server";
 
 const testUser = {
   id: "user-1",
@@ -31,10 +32,8 @@ async function expectRedirect(operation: unknown, location: string) {
 
 describe("profile page server", () => {
   let tempDir: string;
-  let load: (
-    event: Parameters<(typeof import("./+page.server"))["load"]>[0],
-  ) => ReturnType<(typeof import("./+page.server"))["load"]>;
-  let actions: (typeof import("./+page.server"))["actions"];
+  let load: (event: Parameters<typeof ProfilePage.load>[0]) => ReturnType<typeof ProfilePage.load>;
+  let actions: typeof ProfilePage.actions;
   let sessionHeaders: Headers;
 
   beforeEach(async () => {

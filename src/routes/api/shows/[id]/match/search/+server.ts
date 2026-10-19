@@ -1,9 +1,9 @@
-import { requireJsonAdmin } from "$lib/server/api";
-import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { MatchSearchResponse } from "$lib/server/api/types";
-import { fixMatchTargetExists, parseMatchQuery, resolveShowMatchCandidate } from "$lib/server/metadata/fix-match";
-import { searchTmdbTvCandidates, tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
-import { parseTmdbReference } from "$lib/server/metadata/tmdb-reference";
+import { requireJsonAdmin } from "#lib/server/api.js";
+import { apiError, apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { MatchSearchResponse } from "#lib/server/api/types.js";
+import { fixMatchTargetExists, parseMatchQuery, resolveShowMatchCandidate } from "#lib/server/metadata/fix-match.js";
+import { searchTmdbTvCandidates, tmdbCredentialsConfigured } from "#lib/server/metadata/tmdb.js";
+import { parseTmdbReference } from "#lib/server/metadata/tmdb-reference.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals, url }) => {

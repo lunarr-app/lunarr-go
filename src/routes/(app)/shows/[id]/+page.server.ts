@@ -1,9 +1,9 @@
-import { isAdmin } from "$lib/server/auth/users";
-import { getShowCredits, getShowOverview, getShowResumeEpisode } from "$lib/server/media/shows/detail";
-import { toggleWatchlist } from "$lib/server/media/watchlist";
-import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
-import { refreshTvShowMetadataResult } from "$lib/server/metadata/tv";
-import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
+import { isAdmin } from "#lib/server/auth/users.js";
+import { getShowCredits, getShowOverview, getShowResumeEpisode } from "#lib/server/media/shows/detail.js";
+import { toggleWatchlist } from "#lib/server/media/watchlist.js";
+import { metadataRefreshFailure, metadataRefreshPrerequisites } from "#lib/server/metadata/detail-refresh.js";
+import { refreshTvShowMetadataResult } from "#lib/server/metadata/tv.js";
+import { tmdbCredentialsConfigured } from "#lib/server/metadata/tmdb.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

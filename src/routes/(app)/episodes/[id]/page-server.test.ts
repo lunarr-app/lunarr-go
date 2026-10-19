@@ -2,8 +2,15 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { sql, type Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
+import { sql } from "kysely";
+import type { Kysely } from "kysely";
+import {
+  closeDatabaseForTests,
+  getDb,
+  migrateDatabase,
+  useDatabaseFileForTests,
+  type Database,
+} from "#lib/server/db/index.js";
 import { actions, load } from "./+page.server";
 
 async function expectRedirect(operation: unknown, location: string) {

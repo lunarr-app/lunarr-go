@@ -1,5 +1,5 @@
-import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM, verifySignedPlaybackToken } from "$lib/server/playback/signed-token";
-import { SHARE_TOKEN_QUERY_PARAM } from "$lib/shares/constants";
+import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM, verifySignedPlaybackToken } from "#lib/server/playback/signed-token.js";
+import { SHARE_TOKEN_QUERY_PARAM } from "#lib/shares/constants.js";
 import { verifyShareMediaAccess, verifySharePlaybackSessionAccess, verifyShareSubtitleAccess } from "./access";
 
 export type MediaAuthResult = {

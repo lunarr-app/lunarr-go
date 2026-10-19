@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { goto, invalidateAll } from "$app/navigation";
-  import ModalDialog from "$lib/components/ModalDialog.svelte";
-  import { applyFixMatch, searchFixMatchCandidates } from "$lib/media/fix-match-client";
-  import type { FixMatchCandidate } from "$lib/media/types";
-  import { tmdbImageUrl } from "$lib/media/images";
+  import { goto, refreshAll } from "$app/navigation";
+  import ModalDialog from "#lib/components/ModalDialog.svelte";
+  import { applyFixMatch, searchFixMatchCandidates } from "#lib/media/fix-match-client.js";
+  import type { FixMatchCandidate } from "#lib/media/types.js";
+  import { tmdbImageUrl } from "#lib/media/images.js";
   import { Check, Search } from "@lucide/svelte";
 
   let {
@@ -56,7 +56,7 @@
     try {
       const result = await applyFixMatch(kind, mediaItemId, Number(selected.providerId));
       await goto(`/${kind === "movie" ? "movies" : "shows"}/${result.mediaItemId}`);
-      await invalidateAll();
+      await refreshAll();
       onClose();
     } catch (applyError) {
       error = applyError instanceof Error ? applyError.message : "Could not update the match.";

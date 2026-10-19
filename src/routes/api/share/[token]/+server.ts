@@ -1,7 +1,7 @@
-import { apiError, apiJson } from "$lib/server/api/json";
-import type { GuestSharePageResponse } from "$lib/server/api/types";
-import { getSharePageData } from "$lib/server/shares";
-import { enforceGuestShareRateLimit } from "$lib/server/shares/rate-limit";
+import { apiError, apiJson } from "#lib/server/api/json.js";
+import type { GuestSharePageResponse } from "#lib/server/api/types.js";
+import { getSharePageData } from "#lib/server/shares/index.js";
+import { enforceGuestShareRateLimit } from "#lib/server/shares/rate-limit.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async (event) => {

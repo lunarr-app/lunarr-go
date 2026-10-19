@@ -1,7 +1,7 @@
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import { requireJsonUser } from "$lib/server/api";
-import { isInWatchlist, removeFromWatchlist } from "$lib/server/media/watchlist";
-import type { WatchlistStatusResponse } from "$lib/server/api/types";
+import { apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import { requireJsonUser } from "#lib/server/api.js";
+import { isInWatchlist, removeFromWatchlist } from "#lib/server/media/watchlist.js";
+import type { WatchlistStatusResponse } from "#lib/server/api/types.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {

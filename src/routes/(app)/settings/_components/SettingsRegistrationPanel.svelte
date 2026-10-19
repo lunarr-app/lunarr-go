@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SwitchField from "$lib/components/SwitchField.svelte";
+  import SwitchField from "#lib/components/SwitchField.svelte";
 
   let {
     signupOpen: initialSignupOpen,

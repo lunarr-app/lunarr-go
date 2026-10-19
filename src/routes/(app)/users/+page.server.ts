@@ -1,16 +1,16 @@
-import { isAdmin, requireAdmin } from "$lib/server/auth/users";
+import { isAdmin, requireAdmin } from "#lib/server/auth/users.js";
 import {
   createUserDraft,
   parseCreateUserInput,
   parseUpdateUserRoleInput,
   UserManagementError,
-} from "$lib/server/auth/users-input";
+} from "#lib/server/auth/users-input.js";
 import {
   createManagedUser,
   deleteManagedUser,
   listManagedUsers,
   updateManagedUserRole,
-} from "$lib/server/auth/users-admin";
+} from "#lib/server/auth/users-admin.js";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

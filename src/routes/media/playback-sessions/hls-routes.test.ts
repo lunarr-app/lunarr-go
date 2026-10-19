@@ -6,8 +6,8 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { spawnSync } from "node:child_process";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import type { Database } from "$lib/server/db/schema";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import type { Database } from "#lib/server/db/schema.js";
 import {
   isSafeHlsSegmentName,
   hlsSegmentReadCountForTests,
@@ -20,7 +20,7 @@ import {
   setHlsHeadResponseDelayForTests,
   setHlsPlaylistReadDelayForTests,
   setHlsSegmentReadDelayForTests,
-} from "$lib/server/transcoding/hls";
+} from "#lib/server/transcoding/hls.js";
 import {
   cancelActivePlaybackSessions,
   cancelPlaybackSession,
@@ -30,7 +30,7 @@ import {
   setTranscodeBackendForTests,
   setTranscodePolicyRecheckDelayForTests,
   setTranscodeStorageFactoryForTests,
-} from "$lib/server/transcoding/manager";
+} from "#lib/server/transcoding/manager.js";
 import {
   createTranscodeSession,
   registerTranscodeHlsArtifact,
@@ -38,11 +38,11 @@ import {
   updateTranscodeSessionPipeline,
   updateTranscodeSessionMode,
   updateTranscodeSessionStatus,
-} from "$lib/server/transcoding/sessions";
-import { setTranscodingEnabled, setUserPreferredAudioLanguage } from "$lib/server/transcoding/policy";
-import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "$lib/server/transcoding/backend";
-import { resolveFfmpegPath } from "$lib/server/transcoding/ffmpeg-cli";
-import type { LibraryStorage } from "$lib/server/storage";
+} from "#lib/server/transcoding/sessions.js";
+import { setTranscodingEnabled, setUserPreferredAudioLanguage } from "#lib/server/transcoding/policy.js";
+import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "#lib/server/transcoding/backend.js";
+import { resolveFfmpegPath } from "#lib/server/transcoding/ffmpeg-cli.js";
+import type { LibraryStorage } from "#lib/server/storage/index.js";
 import { GET as getPlaylist, HEAD as headPlaylist } from "./[sessionId]/master.m3u8/+server";
 import { GET as getSegment, HEAD as headSegment } from "./[sessionId]/segments/[segment]/+server";
 

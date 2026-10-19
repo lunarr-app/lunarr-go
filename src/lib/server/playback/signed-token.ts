@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { appEnv } from "$lib/server/config/env";
+import { appEnv } from "#lib/server/config/env.js";
 
 export const SIGNED_PLAYBACK_TOKEN_QUERY_PARAM = "remoteToken";
 

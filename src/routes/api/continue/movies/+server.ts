@@ -1,7 +1,7 @@
-import { BROWSE_RAIL_LIMIT, normalizeLimit, normalizePage } from "$lib/server/media/catalog";
-import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import { continueMovieRows } from "$lib/server/media/movies/browse";
+import { BROWSE_RAIL_LIMIT, normalizeLimit, normalizePage } from "#lib/server/media/catalog.js";
+import { apiErrorFrom, requireJsonUser } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import { continueMovieRows } from "#lib/server/media/movies/browse.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {

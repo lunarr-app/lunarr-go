@@ -1,4 +1,5 @@
 import { goto } from "$app/navigation";
+import type { ReadonlyURLSearchParams } from "$app/state";
 
 export const CATALOG_SEARCH_DEBOUNCE_MS = 350;
 export const MOVIE_SEARCH_PLACEHOLDER = "Search title, keyword, genre, filename";
@@ -12,11 +13,11 @@ export type CatalogSearchInput = {
 
 export function catalogSearchHref(
   pathname: string,
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
   input: CatalogSearchInput,
   defaultSort = "title",
 ) {
-  const params = new URLSearchParams(searchParams);
+  const params = new URLSearchParams(searchParams.toString());
   if (input.query !== undefined) {
     const trimmed = input.query.trim();
     if (trimmed) params.set("q", trimmed);
@@ -37,12 +38,12 @@ export function catalogSearchHref(
 
 export function gotoCatalogSearch(
   pathname: string,
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
   input: CatalogSearchInput,
   defaultSort = "title",
 ) {
   const href = catalogSearchHref(pathname, searchParams, input, defaultSort);
   const current = `${pathname}${searchParams.toString() ? `?${searchParams}` : ""}`;
   if (href === current) return;
-  void goto(href, { keepFocus: true, noScroll: true, invalidateAll: true });
+  void goto(href, { reset: false, refreshAll: true });
 }

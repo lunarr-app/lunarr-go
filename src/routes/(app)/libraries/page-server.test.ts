@@ -3,8 +3,14 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
-import type { ScanJobStatus } from "$lib/server/db/schema";
+import {
+  closeDatabaseForTests,
+  getDb,
+  migrateDatabase,
+  useDatabaseFileForTests,
+  type Database,
+} from "#lib/server/db/index.js";
+import type { ScanJobStatus } from "#lib/server/db/schema.js";
 import { actions, load } from "./+page.server";
 
 type LibrariesLoadResult = {

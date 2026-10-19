@@ -1,5 +1,5 @@
-import { normalizePage, normalizeShowSort, FULL_LIBRARY_PAGE_SIZE } from "$lib/server/media/catalog";
-import { showBrowseRows } from "$lib/server/media/shows/browse";
+import { normalizePage, normalizeShowSort, FULL_LIBRARY_PAGE_SIZE } from "#lib/server/media/catalog.js";
+import { showBrowseRows } from "#lib/server/media/shows/browse.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

@@ -1,7 +1,7 @@
-import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse } from "$lib/server/api/types";
-import { revokeApiKey, apiKeyHttpStatus } from "$lib/server/auth/api-keys";
-import { requireJsonUser } from "$lib/server/api";
+import { apiError, apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { ApiOkResponse } from "#lib/server/api/types.js";
+import { revokeApiKey, apiKeyHttpStatus } from "#lib/server/auth/api-keys.js";
+import { requireJsonUser } from "#lib/server/api.js";
 import type { RequestHandler } from "./$types";
 
 export const DELETE: RequestHandler = async ({ params, locals, request }) => {

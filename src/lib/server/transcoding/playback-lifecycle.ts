@@ -9,8 +9,9 @@ import {
   updateTranscodeSessionStatus,
 } from "./sessions";
 import { getPlaybackCacheBindingForSession, releasePlaybackCacheForSession } from "./cache";
-import type { ClientPlaybackCapabilities } from "$lib/playback/capabilities";
-import { type HlsSegmentFormat, hlsSegmentName, pruneHlsSegmentsBehind } from "./hls";
+import type { ClientPlaybackCapabilities } from "#lib/playback/capabilities.js";
+import { hlsSegmentName, pruneHlsSegmentsBehind } from "./hls";
+import type { HlsSegmentFormat } from "./hls";
 import { TRANSCODING_DISABLED_MESSAGE } from "./hls-segment-jobs";
 import { onEncodeSessionEnded } from "./encode-coordinator";
 import { transcodeBackend } from "./ffmpeg-cli";

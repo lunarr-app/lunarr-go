@@ -1,6 +1,6 @@
-import { SHARE_RATE_LIMIT_PLAYBACK_PER_MINUTE, SHARE_RATE_LIMIT_RESOLVE_PER_MINUTE } from "$lib/shares/constants";
-import { createSlidingWindowRateLimiter } from "$lib/server/cache/sliding-window-rate-limit";
-import { apiError } from "$lib/server/api/json";
+import { SHARE_RATE_LIMIT_PLAYBACK_PER_MINUTE, SHARE_RATE_LIMIT_RESOLVE_PER_MINUTE } from "#lib/shares/constants.js";
+import { createSlidingWindowRateLimiter } from "#lib/server/cache/sliding-window-rate-limit.js";
+import { apiError } from "#lib/server/api/json.js";
 import type { RequestEvent } from "@sveltejs/kit";
 
 export type GuestShareRateLimitBucket = "share:resolve" | "share:playback";

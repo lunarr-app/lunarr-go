@@ -5,11 +5,11 @@ import {
   normalizePage,
   normalizeShowSort,
   parseBrowseRails,
-} from "$lib/server/media/catalog";
-import { tvRows } from "$lib/server/media/shows/episodes";
-import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import type { ShowBrowseRailResponse, ShowRowsResponse } from "$lib/server/api/types";
+} from "#lib/server/media/catalog.js";
+import { tvRows } from "#lib/server/media/shows/episodes.js";
+import { apiErrorFrom, requireJsonUser } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import type { ShowBrowseRailResponse, ShowRowsResponse } from "#lib/server/api/types.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {

@@ -1,5 +1,5 @@
-import { FULL_LIBRARY_PAGE_SIZE, normalizeLimit, normalizePage } from "$lib/server/media/catalog";
-import { listBecauseYouWatchedMovies } from "$lib/server/media/movies/discover";
+import { FULL_LIBRARY_PAGE_SIZE, normalizeLimit, normalizePage } from "#lib/server/media/catalog.js";
+import { listBecauseYouWatchedMovies } from "#lib/server/media/movies/discover.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

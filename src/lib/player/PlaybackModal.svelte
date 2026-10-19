@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
-  import { goto, invalidateAll } from "$app/navigation";
+  import { browser } from "$app/env";
+  import { goto, refreshAll } from "$app/navigation";
   import { page } from "$app/state";
-  import MediaPlayer from "$lib/player/MediaPlayer.svelte";
-  import PlayerShell from "$lib/player/PlayerShell.svelte";
-  import { shouldClosePlaybackModalOnKeydown } from "$lib/playback/controls";
-  import { buildClientPlaybackApiHref } from "$lib/playback/client-href";
-  import { webPlaybackApiPath } from "$lib/playback/capabilities";
-  import type { PlaybackData } from "$lib/server/playback";
+  import type { ReadonlyURL } from "$app/state";
+  import MediaPlayer from "#lib/player/MediaPlayer.svelte";
+  import PlayerShell from "#lib/player/PlayerShell.svelte";
+  import { shouldClosePlaybackModalOnKeydown } from "#lib/playback/controls.js";
+  import { buildClientPlaybackApiHref } from "#lib/playback/client-href.js";
+  import { webPlaybackApiPath } from "#lib/playback/capabilities.js";
+  import type { PlaybackData } from "#lib/server/playback/index.js";
 
   let playbackData: PlaybackData | null = $state(null);
   let loading = $state(false);
@@ -20,15 +21,15 @@
   const modalOpen = $derived(Boolean(mediaItemId));
   const playbackRequestHref = $derived.by(() => (mediaItemId ? playbackApiHref(mediaItemId, page.url) : null));
 
-  function playbackApiHref(id: string, sourceUrl: URL) {
+  function playbackApiHref(id: string, sourceUrl: ReadonlyURL) {
     return buildClientPlaybackApiHref({
       pathname: webPlaybackApiPath(id),
       sourceUrl,
     });
   }
 
-  function closeHref(sourceUrl = page.url) {
-    const url = new URL(sourceUrl);
+  function closeHref(sourceUrl: ReadonlyURL = page.url) {
+    const url = new URL(sourceUrl.href);
     for (const key of ["play", "file", "start", "transcode", "target"]) {
       url.searchParams.delete(key);
     }
@@ -45,17 +46,15 @@
       progressInvalidationTimer = null;
     }
     void goto(closeHref(), {
-      replaceState: true,
-      noScroll: true,
-      keepFocus: true,
-    }).then(() => invalidateAll());
+      replace: true,
+      reset: false,
+    }).then(() => refreshAll());
   }
 
   function repositionPlayback(href: string) {
     void goto(href, {
-      replaceState: true,
-      noScroll: true,
-      keepFocus: true,
+      replace: true,
+      reset: false,
     });
   }
 
@@ -63,7 +62,7 @@
     if (progressInvalidationTimer) return;
     progressInvalidationTimer = setTimeout(() => {
       progressInvalidationTimer = null;
-      void invalidateAll();
+      void refreshAll();
     }, 750);
   }
 
@@ -90,6 +89,7 @@
           throw new Error(body?.detail ?? "Playback could not be started.");
         }
         if (token !== reloadToken) return;
+
         playbackData = (await response.json()) as PlaybackData;
       })
       .catch((fetchError) => {

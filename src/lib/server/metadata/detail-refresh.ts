@@ -1,4 +1,4 @@
-import { isAdmin } from "$lib/server/auth/users";
+import { isAdmin } from "#lib/server/auth/users.js";
 import { fail } from "@sveltejs/kit";
 import { tmdbCredentialsConfigured } from "./tmdb";
 

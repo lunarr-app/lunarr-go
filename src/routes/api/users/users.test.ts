@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import { resetAuthForTests, sessionHeadersFor } from "#lib/server/auth/test/setup.js";
 
 describe("users API routes", () => {
   let tempDir: string;

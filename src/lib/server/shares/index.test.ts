@@ -5,7 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
-import { expectRejectsToThrow } from "$lib/test/async-expect";
+import { expectRejectsToThrow } from "#lib/test/async-expect.js";
 import {
   assertShareAllowsPlayableItem,
   createShare,

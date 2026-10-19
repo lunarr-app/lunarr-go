@@ -1,6 +1,6 @@
-import { auth } from "$lib/server/auth";
-import { POST_LOGIN_REDIRECT_QUERY_PARAM, sanitizePostLoginRedirect } from "$lib/auth/post-login-redirect";
-import { signupAllowed } from "$lib/server/auth/users";
+import { auth } from "#lib/server/auth/index.js";
+import { POST_LOGIN_REDIRECT_QUERY_PARAM, sanitizePostLoginRedirect } from "#lib/auth/post-login-redirect.js";
+import { signupAllowed } from "#lib/server/auth/users.js";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

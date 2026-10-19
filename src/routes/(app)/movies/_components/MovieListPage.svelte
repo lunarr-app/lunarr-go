@@ -1,10 +1,10 @@
 <script lang="ts">
-  import MovieCard from "$lib/components/MovieCard.svelte";
-  import Pagination from "$lib/components/Pagination.svelte";
-  import SearchField from "$lib/components/SearchField.svelte";
-  import { createDebouncedCatalogSearch } from "$lib/media/catalog-search.svelte";
-  import { MOVIE_SEARCH_PLACEHOLDER } from "$lib/media/search";
-  import type { MovieSummary } from "$lib/media/types";
+  import MovieCard from "#lib/components/MovieCard.svelte";
+  import Pagination from "#lib/components/Pagination.svelte";
+  import SearchField from "#lib/components/SearchField.svelte";
+  import { createDebouncedCatalogSearch } from "#lib/media/catalog-search.svelte.js";
+  import { MOVIE_SEARCH_PLACEHOLDER } from "#lib/media/search.js";
+  import type { MovieSummary } from "#lib/media/types.js";
 
   type PageInfo = {
     page: number;

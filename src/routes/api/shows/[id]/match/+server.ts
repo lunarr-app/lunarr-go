@@ -1,8 +1,8 @@
-import { parseBody, requireJsonAdmin } from "$lib/server/api";
-import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { MediaMatchResponse } from "$lib/server/api/types";
-import { fixShowMatch, matchBodySchema, revertFixMatch } from "$lib/server/metadata/fix-match";
-import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
+import { parseBody, requireJsonAdmin } from "#lib/server/api.js";
+import { apiError, apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { MediaMatchResponse } from "#lib/server/api/types.js";
+import { fixShowMatch, matchBodySchema, revertFixMatch } from "#lib/server/metadata/fix-match.js";
+import { tmdbCredentialsConfigured } from "#lib/server/metadata/tmdb.js";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async ({ params, locals, request }) => {

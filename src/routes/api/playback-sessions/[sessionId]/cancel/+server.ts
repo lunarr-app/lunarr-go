@@ -1,8 +1,8 @@
-import { apiError, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse } from "$lib/server/api/types";
-import { isAdmin } from "$lib/server/auth/users";
-import { cancelPlaybackSession } from "$lib/server/transcoding/manager";
-import { getTranscodeSession } from "$lib/server/transcoding/sessions";
+import { apiError, apiJson } from "#lib/server/api/json.js";
+import type { ApiOkResponse } from "#lib/server/api/types.js";
+import { isAdmin } from "#lib/server/auth/users.js";
+import { cancelPlaybackSession } from "#lib/server/transcoding/manager.js";
+import { getTranscodeSession } from "#lib/server/transcoding/sessions.js";
 import type { RequestHandler } from "@sveltejs/kit";
 
 export const POST: RequestHandler = async ({ locals, params }) => {

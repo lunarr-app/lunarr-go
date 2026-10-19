@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SimilarMediaPage from "$lib/components/SimilarMediaPage.svelte";
+  import SimilarMediaPage from "#lib/components/SimilarMediaPage.svelte";
 
   let { data } = $props();
 </script>

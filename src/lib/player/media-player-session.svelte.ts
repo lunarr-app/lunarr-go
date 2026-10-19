@@ -1,13 +1,15 @@
-import { browser } from "$app/environment";
-import { playbackProgressSnapshot, shouldCancelPlaybackSessionForCleanup } from "$lib/playback/controls";
+import { browser } from "$app/env";
+
+import { playbackProgressSnapshot, shouldCancelPlaybackSessionForCleanup } from "#lib/playback/controls.js";
+
 import {
   activePlaybackSessionId,
   cancelPlaybackSessionOnce,
   postWithBeaconFallback,
   shouldCancelCapturedPlaybackSession,
   shouldInvalidateAfterHeartbeat,
-} from "$lib/playback/session";
-import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
+} from "#lib/playback/session.js";
+import type { PlaybackData, PlaybackDecision } from "#lib/server/playback/index.js";
 
 export const PLAYBACK_SESSION_HEARTBEAT_INTERVAL_MS = 30000;
 
@@ -162,6 +164,7 @@ export function createMediaPlayerSession(deps: MediaPlayerSessionDeps) {
     $effect(() => {
       if (!browser || !shouldRunPlaybackHeartbeat()) return;
       const playback = deps.getData().playback;
+
       if (
         (playback.mode !== "transcode" && playback.mode !== "remux") ||
         !playback.playbackSessionId ||

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { POST_LOGIN_REDIRECT_QUERY_PARAM } from "$lib/auth/post-login-redirect";
+  import { POST_LOGIN_REDIRECT_QUERY_PARAM } from "#lib/auth/post-login-redirect.js";
 
   let { data, form } = $props();
 

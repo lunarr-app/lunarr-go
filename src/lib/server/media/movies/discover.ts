@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import { tmdbImageUrl } from "$lib/media/images";
+import { tmdbImageUrl } from "#lib/media/images.js";
 import { getDb } from "../../db";
 import { MOVIE_PAGE_SIZE, accessibleLibrarySql, catalogPageInfo, emptyCatalogPage } from "../catalog";
 import { publicMovieSummary, summarizeMovieProgress } from "../progress";

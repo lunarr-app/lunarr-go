@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import type { CatalogPageInfo } from "$lib/media/types";
+import type { CatalogPageInfo } from "#lib/media/types.js";
 
 const MOVIE_STATUS_FILTERS = ["all", "watched", "unwatched"] as const;
 const MOVIE_SORTS = ["title", "recent", "year_desc", "rating", "release_date"] as const;

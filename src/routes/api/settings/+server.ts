@@ -1,7 +1,7 @@
-import { apiErrorFrom, requireJsonAdmin } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import type { SettingsResponse } from "$lib/server/api/types";
-import { getAdminSettingsResponse } from "$lib/server/settings-commands";
+import { apiErrorFrom, requireJsonAdmin } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import type { SettingsResponse } from "#lib/server/api/types.js";
+import { getAdminSettingsResponse } from "#lib/server/settings-commands.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals }) => {

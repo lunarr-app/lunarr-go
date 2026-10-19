@@ -2,8 +2,8 @@ import {
   DEVICE_PAIRING_APPROVE_RATE_LIMIT_PER_MINUTE,
   DEVICE_PAIRING_POLL_RATE_LIMIT_PER_MINUTE,
   DEVICE_PAIRING_START_RATE_LIMIT_PER_MINUTE,
-} from "$lib/device-pairing/constants";
-import { createSlidingWindowRateLimiter } from "$lib/server/cache/sliding-window-rate-limit";
+} from "#lib/device-pairing/constants.js";
+import { createSlidingWindowRateLimiter } from "#lib/server/cache/sliding-window-rate-limit.js";
 import type { RequestEvent } from "@sveltejs/kit";
 
 export type DevicePairingRateLimitBucket = "device-pairing:start" | "device-pairing:poll" | "device-pairing:approve";

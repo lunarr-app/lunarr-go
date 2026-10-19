@@ -1,7 +1,7 @@
 <script lang="ts">
-  import MovieCard from "$lib/components/MovieCard.svelte";
-  import ShowCard from "$lib/components/ShowCard.svelte";
-  import Rail from "$lib/components/Rail.svelte";
+  import MovieCard from "#lib/components/MovieCard.svelte";
+  import ShowCard from "#lib/components/ShowCard.svelte";
+  import Rail from "#lib/components/Rail.svelte";
   import { ChevronRight, Film, Tv } from "@lucide/svelte";
 
   let { data } = $props();

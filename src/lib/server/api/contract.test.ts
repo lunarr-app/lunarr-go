@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { openApiDocument } from "$lib/server/openapi";
+import { openApiDocument } from "#lib/server/openapi.js";
 import { OPENAPI_TYPED_SCHEMAS } from "./types";
 
 describe("API OpenAPI contract", () => {

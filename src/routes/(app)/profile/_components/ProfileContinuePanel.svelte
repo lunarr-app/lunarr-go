@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
+  import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "#lib/media/continue.js";
 
   let {
     continueMaxAgeDays: initialContinueMaxAgeDays,

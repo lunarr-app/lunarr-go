@@ -3,16 +3,16 @@ import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import type { Database } from "$lib/server/db/schema";
-import { clearTmdbDetailCachesForTests } from "$lib/server/metadata/tmdb";
-import { getBooleanSetting, getSetting, setSetting } from "$lib/server/settings";
-import { registerTranscodeHlsArtifact } from "$lib/server/transcoding/sessions";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import type { Database } from "#lib/server/db/schema.js";
+import { clearTmdbDetailCachesForTests } from "#lib/server/metadata/tmdb.js";
+import { getBooleanSetting, getSetting, setSetting } from "#lib/server/settings.js";
+import { registerTranscodeHlsArtifact } from "#lib/server/transcoding/sessions.js";
 import {
   DEFAULT_PLAYBACK_SESSION_ARTIFACT_MAX_BYTES,
   PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS,
-} from "$lib/server/transcoding/sessions";
-import type { TranscodePolicy } from "$lib/server/transcoding/policy";
+} from "#lib/server/transcoding/sessions.js";
+import type { TranscodePolicy } from "#lib/server/transcoding/policy.js";
 import { actions, load } from "./+page.server";
 
 type SettingsLoadResult = {

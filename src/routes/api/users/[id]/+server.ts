@@ -1,8 +1,8 @@
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { UserResponse } from "$lib/server/api/types";
-import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
-import { parseUpdateUserRoleInput } from "$lib/server/auth/users-input";
-import { deleteManagedUser, updateManagedUserRole, userManagementHttpStatus } from "$lib/server/auth/users-admin";
+import { apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { UserResponse } from "#lib/server/api/types.js";
+import { parseBody, recordObjectSchema, requireJsonAdmin } from "#lib/server/api.js";
+import { parseUpdateUserRoleInput } from "#lib/server/auth/users-input.js";
+import { deleteManagedUser, updateManagedUserRole, userManagementHttpStatus } from "#lib/server/auth/users-admin.js";
 import type { RequestHandler } from "./$types";
 
 export const PATCH: RequestHandler = async ({ params, request, locals }) => {

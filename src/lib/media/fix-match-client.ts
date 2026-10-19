@@ -1,4 +1,4 @@
-import type { FixMatchCandidate } from "$lib/media/types";
+import type { FixMatchCandidate } from "#lib/media/types.js";
 
 export type FixMatchSearchResult = {
   candidates: FixMatchCandidate[];

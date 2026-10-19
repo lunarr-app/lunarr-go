@@ -1,5 +1,6 @@
 import { page } from "$app/state";
-import { CATALOG_SEARCH_DEBOUNCE_MS, gotoCatalogSearch, type CatalogSearchInput } from "$lib/media/search";
+import { CATALOG_SEARCH_DEBOUNCE_MS, gotoCatalogSearch } from "#lib/media/search.js";
+import type { CatalogSearchInput } from "#lib/media/search.js";
 
 export function createDebouncedCatalogSearch(
   getServerQuery: () => string,

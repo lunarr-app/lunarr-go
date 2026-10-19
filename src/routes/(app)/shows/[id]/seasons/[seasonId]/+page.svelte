@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import SeasonTabs, { type SeasonTab } from "$lib/components/SeasonTabs.svelte";
-  import { showSeasonHref } from "$lib/media/seasons";
-  import { playbackModalHref } from "$lib/playback/links";
+  import SeasonTabs, { type SeasonTab } from "#lib/components/SeasonTabs.svelte";
+  import { showSeasonHref } from "#lib/media/seasons.js";
+  import { playbackModalHref } from "#lib/playback/links.js";
   import SeasonDetailHero from "./_components/SeasonDetailHero.svelte";
   import SeasonEpisodeList from "./_components/SeasonEpisodeList.svelte";
 

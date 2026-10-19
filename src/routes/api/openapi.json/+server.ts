@@ -1,5 +1,4 @@
-import { openApiDocument } from "$lib/server/openapi";
-import { json } from "@sveltejs/kit";
+import { openApiDocument } from "#lib/server/openapi.js";
 import type { RequestHandler } from "./$types";
 
-export const GET: RequestHandler = async () => json(openApiDocument);
+export const GET: RequestHandler = async () => Response.json(openApiDocument);

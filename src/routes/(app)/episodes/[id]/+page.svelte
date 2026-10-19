@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
-  import MediaFilesSection from "$lib/components/MediaFilesSection.svelte";
-  import { deriveDetailPlaybackState } from "$lib/media/detail-playback";
+  import MediaDetailLayout from "#lib/components/MediaDetailLayout.svelte";
+  import MediaFilesSection from "#lib/components/MediaFilesSection.svelte";
+  import { deriveDetailPlaybackState } from "#lib/media/detail-playback.js";
   import {
     formatEpisodeCode,
     formatFileCountLabel,
@@ -10,9 +10,9 @@
     formatReleaseDate,
     formatVoteAverageLabel,
     formatVoteCountLabel,
-  } from "$lib/media/format";
-  import { showSeasonHref } from "$lib/media/seasons";
-  import { playbackModalHref } from "$lib/playback/links";
+  } from "#lib/media/format.js";
+  import { showSeasonHref } from "#lib/media/seasons.js";
+  import { playbackModalHref } from "#lib/playback/links.js";
   import EpisodeDetailHero from "./_components/EpisodeDetailHero.svelte";
   import EpisodeMetadataSidebar from "./_components/EpisodeMetadataSidebar.svelte";
 

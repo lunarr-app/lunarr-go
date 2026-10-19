@@ -1,6 +1,6 @@
 <script lang="ts">
-  import SwitchField from "$lib/components/SwitchField.svelte";
-  import type { SegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
+  import SwitchField from "#lib/components/SwitchField.svelte";
+  import type { SegmentSkipPreferences } from "#lib/server/playback/segment-skip-preferences.js";
 
   let {
     segmentSkip: initialSegmentSkip,

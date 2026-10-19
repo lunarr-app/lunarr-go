@@ -1,7 +1,7 @@
-import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse } from "$lib/server/api/types";
-import { parseBody, requireJsonUser } from "$lib/server/api";
-import { markWatched } from "$lib/server/playback";
+import { apiError, apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { ApiOkResponse } from "#lib/server/api/types.js";
+import { parseBody, requireJsonUser } from "#lib/server/api.js";
+import { markWatched } from "#lib/server/playback/index.js";
 import { z } from "zod";
 import type { RequestHandler } from "./$types";
 

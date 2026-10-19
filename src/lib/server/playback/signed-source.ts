@@ -3,11 +3,11 @@ import {
   appendSignedPlaybackToken,
   createSignedPlaybackToken,
   type SignedPlaybackRoute,
-} from "$lib/server/playback/signed-token";
-import { SHARE_TOKEN_QUERY_PARAM } from "$lib/shares/constants";
-import { hlsPlaylistFileExists } from "$lib/server/transcoding/hls";
-import { getAuthorizedHlsArtifact, isEndedPlaybackArtifactFresh } from "$lib/server/transcoding/sessions";
-import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
+} from "#lib/server/playback/signed-token.js";
+import { SHARE_TOKEN_QUERY_PARAM } from "#lib/shares/constants.js";
+import { hlsPlaylistFileExists } from "#lib/server/transcoding/hls.js";
+import { getAuthorizedHlsArtifact, isEndedPlaybackArtifactFresh } from "#lib/server/transcoding/sessions.js";
+import type { PlaybackData, PlaybackDecision } from "#lib/server/playback/index.js";
 
 export class PlaybackSourceRequestError extends Error {
   readonly status: number;

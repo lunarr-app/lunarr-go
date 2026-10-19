@@ -3,8 +3,14 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
-import { setBooleanSetting } from "$lib/server/settings";
+import {
+  closeDatabaseForTests,
+  getDb,
+  migrateDatabase,
+  useDatabaseFileForTests,
+  type Database,
+} from "#lib/server/db/index.js";
+import { setBooleanSetting } from "#lib/server/settings.js";
 import type * as SignupPageServer from "./+page.server";
 
 const signUpEmail = mock(async (_input: unknown) => ({}));
@@ -32,7 +38,7 @@ describe("signup page server", () => {
 
   beforeEach(async () => {
     signUpEmail.mockClear();
-    const authModule = await import("$lib/server/auth");
+    const authModule = await import("#lib/server/auth/index.js");
     signUpEmailSpy = spyOn(authModule.auth.api, "signUpEmail").mockImplementation(
       signUpEmail as unknown as typeof authModule.auth.api.signUpEmail,
     );

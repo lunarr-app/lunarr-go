@@ -4,8 +4,9 @@ import type {
   ShareEpisode,
   SharePageData,
   ShareSeasonData,
-} from "$lib/shares/types";
-import { SHARE_LIST_RECENTLY_EXPIRED_MS, SHARE_PAGE_SIZE, type ShareListStatus } from "$lib/shares/constants";
+} from "#lib/shares/types.js";
+import { SHARE_LIST_RECENTLY_EXPIRED_MS, SHARE_PAGE_SIZE } from "#lib/shares/constants.js";
+import type { ShareListStatus } from "#lib/shares/constants.js";
 import { catalogPageInfo, catalogPageSize } from "../media/catalog";
 import { randomBytes } from "node:crypto";
 import { getDb } from "../db";

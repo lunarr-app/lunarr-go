@@ -1,6 +1,6 @@
 import { fail } from "@sveltejs/kit";
-import { requireAdmin } from "$lib/server/auth/users";
-import { listAdminSharesPage, revokeShare as revokeShareRecord, shareListCounts } from "$lib/server/shares";
+import { requireAdmin } from "#lib/server/auth/users.js";
+import { listAdminSharesPage, revokeShare as revokeShareRecord, shareListCounts } from "#lib/server/shares/index.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

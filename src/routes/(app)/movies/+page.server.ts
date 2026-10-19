@@ -3,8 +3,8 @@ import {
   normalizeMovieStatusFilter,
   normalizePage,
   FULL_LIBRARY_PAGE_SIZE,
-} from "$lib/server/media/catalog";
-import { movieRows } from "$lib/server/media/movies/browse";
+} from "#lib/server/media/catalog.js";
+import { movieRows } from "#lib/server/media/movies/browse.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

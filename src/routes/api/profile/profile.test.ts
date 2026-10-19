@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
-import { getSegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
+import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "#lib/server/media/continue-max-age.js";
+import { getSegmentSkipPreferences } from "#lib/server/playback/segment-skip-preferences.js";
 import {
   getTranscodePolicy,
   setUserPlaybackPreference,
   setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
-} from "$lib/server/transcoding/policy";
+} from "#lib/server/transcoding/policy.js";
 import { PATCH } from "./+server";
 
 const testUser = { id: "user-1", role: "user" as const };

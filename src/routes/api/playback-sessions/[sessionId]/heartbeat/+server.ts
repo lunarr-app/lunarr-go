@@ -1,11 +1,11 @@
-import { apiError, requireJsonUser } from "$lib/server/api";
-import { getTranscodePolicy } from "$lib/server/transcoding/policy";
+import { apiError, requireJsonUser } from "#lib/server/api.js";
+import { getTranscodePolicy } from "#lib/server/transcoding/policy.js";
 import {
   cancelPlaybackSession,
   expireStalePlaybackSessions,
   TRANSCODING_DISABLED_MESSAGE,
-} from "$lib/server/transcoding/manager";
-import { getTranscodeSession, touchTranscodeSessionHeartbeat } from "$lib/server/transcoding/sessions";
+} from "#lib/server/transcoding/manager.js";
+import { getTranscodeSession, touchTranscodeSessionHeartbeat } from "#lib/server/transcoding/sessions.js";
 import type { RequestHandler } from "@sveltejs/kit";
 
 export const POST: RequestHandler = async ({ params, locals, request }) => {

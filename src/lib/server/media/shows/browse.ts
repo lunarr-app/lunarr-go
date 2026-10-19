@@ -1,6 +1,6 @@
-import type { ShowBrowseRailResponse, ShowBrowseRowsResponse } from "$lib/media/types";
+import type { ShowBrowseRailResponse, ShowBrowseRowsResponse } from "#lib/media/types.js";
 import { sql } from "kysely";
-import { tmdbImageUrl } from "$lib/media/images";
+import { tmdbImageUrl } from "#lib/media/images.js";
 import { getDb } from "../../db";
 import {
   SHOW_PAGE_SIZE,

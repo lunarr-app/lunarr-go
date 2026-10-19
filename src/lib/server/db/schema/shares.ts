@@ -1,5 +1,5 @@
 import type { NullableText, TimestampText } from "./common";
-import type { ShareKind } from "$lib/shares/types";
+import type { ShareKind } from "#lib/shares/types.js";
 
 export type MediaShareKind = ShareKind;
 

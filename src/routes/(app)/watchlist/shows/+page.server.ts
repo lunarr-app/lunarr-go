@@ -1,5 +1,5 @@
-import { FULL_LIBRARY_PAGE_SIZE, normalizePage } from "$lib/server/media/catalog";
-import { getWatchlistShows } from "$lib/server/media/watchlist";
+import { FULL_LIBRARY_PAGE_SIZE, normalizePage } from "#lib/server/media/catalog.js";
+import { getWatchlistShows } from "#lib/server/media/watchlist.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

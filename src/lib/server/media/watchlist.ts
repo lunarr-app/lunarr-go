@@ -1,8 +1,8 @@
 import { sql } from "kysely";
 import { getDb } from "../db";
 import { nowIso } from "../time";
-import type { CatalogPageInfo, MovieSummary, ShowSummary } from "$lib/media/types";
-import { tmdbImageUrl } from "$lib/media/images";
+import type { CatalogPageInfo, MovieSummary, ShowSummary } from "#lib/media/types.js";
+import { tmdbImageUrl } from "#lib/media/images.js";
 import { catalogPageInfo, FULL_LIBRARY_PAGE_SIZE, accessibleLibrarySql } from "./catalog";
 import { summarizeMovieProgress, publicMovieSummary } from "./progress";
 

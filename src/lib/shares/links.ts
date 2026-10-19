@@ -1,11 +1,13 @@
-export function sharePlaybackHref(input: { currentUrl: URL; mediaItemId: string }) {
-  const url = new URL(input.currentUrl);
+import type { ReadonlyURL } from "$app/state";
+
+export function sharePlaybackHref(input: { currentUrl: ReadonlyURL; mediaItemId: string }) {
+  const url = new URL(input.currentUrl.href);
   url.searchParams.set("play", input.mediaItemId);
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-export function shareClosePlaybackHref(sourceUrl: URL) {
-  const url = new URL(sourceUrl);
+export function shareClosePlaybackHref(sourceUrl: ReadonlyURL) {
+  const url = new URL(sourceUrl.href);
   url.searchParams.delete("play");
   return `${url.pathname}${url.search}${url.hash}`;
 }

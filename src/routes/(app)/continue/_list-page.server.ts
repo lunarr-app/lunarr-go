@@ -1,6 +1,6 @@
-import { FULL_LIBRARY_PAGE_SIZE, normalizePage } from "$lib/server/media/catalog";
-import { continueMovieRows } from "$lib/server/media/movies/browse";
-import { continueEpisodeRows, nextUpEpisodeRows } from "$lib/server/media/shows/episodes";
+import { FULL_LIBRARY_PAGE_SIZE, normalizePage } from "#lib/server/media/catalog.js";
+import { continueMovieRows } from "#lib/server/media/movies/browse.js";
+import { continueEpisodeRows, nextUpEpisodeRows } from "#lib/server/media/shows/episodes.js";
 
 type ContinueListLoadEvent = {
   locals: App.Locals;

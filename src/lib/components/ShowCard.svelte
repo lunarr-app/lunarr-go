@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ShowSummary } from "$lib/media/types";
+  import type { ShowSummary } from "#lib/media/types.js";
 
   let { show }: { show: ShowSummary } = $props();
 </script>

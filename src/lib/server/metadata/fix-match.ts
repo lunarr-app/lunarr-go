@@ -1,8 +1,10 @@
-import type { FixMatchCandidate } from "$lib/media/types";
+import type { FixMatchCandidate } from "#lib/media/types.js";
 import { getDb } from "../db";
 import { nowIso } from "../time";
-import { applyMatchedMovieMetadata, rematchMovieItemFiles, type RefreshMetadataOptions } from "./movies";
-import { applyMatchedTvSeasonMetadata, rematchTvShowSeasons, type RefreshTvMetadataOptions } from "./tv";
+import { applyMatchedMovieMetadata, rematchMovieItemFiles } from "./movies";
+import type { RefreshMetadataOptions } from "./movies";
+import { applyMatchedTvSeasonMetadata, rematchTvShowSeasons } from "./tv";
+import type { RefreshTvMetadataOptions } from "./tv";
 import {
   fetchTmdbShowMetadata,
   matchMovieMetadataById,

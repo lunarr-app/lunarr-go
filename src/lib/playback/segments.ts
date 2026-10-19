@@ -1,4 +1,4 @@
-import type { PlaybackSegment, PlaybackSegmentType } from "$lib/server/playback";
+import type { PlaybackSegment, PlaybackSegmentType } from "#lib/server/playback/index.js";
 
 const SEGMENT_LEAD_OUT_SECONDS = 2;
 

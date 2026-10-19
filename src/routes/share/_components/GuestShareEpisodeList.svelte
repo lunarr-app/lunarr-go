@@ -1,8 +1,8 @@
 <script lang="ts">
-  import SeasonTabs from "$lib/components/SeasonTabs.svelte";
-  import { formatEpisodeCode, formatMediaDuration } from "$lib/media/format";
-  import type { ShareEpisode, ShareSeasonStub } from "$lib/shares/types";
-  import { fetchGuestShareSeason } from "$lib/shares/client";
+  import SeasonTabs from "#lib/components/SeasonTabs.svelte";
+  import { formatEpisodeCode, formatMediaDuration } from "#lib/media/format.js";
+  import type { ShareEpisode, ShareSeasonStub } from "#lib/shares/types.js";
+  import { fetchGuestShareSeason } from "#lib/shares/client.js";
   import { CirclePlay } from "@lucide/svelte";
 
   let {

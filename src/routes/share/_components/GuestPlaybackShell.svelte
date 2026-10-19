@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
-  import MediaPlayer from "$lib/player/MediaPlayer.svelte";
-  import PlayerShell from "$lib/player/PlayerShell.svelte";
-  import { shouldClosePlaybackModalOnKeydown } from "$lib/playback/controls";
-  import type { PlaybackData } from "$lib/server/playback";
+  import { browser } from "$app/env";
+  import MediaPlayer from "#lib/player/MediaPlayer.svelte";
+  import PlayerShell from "#lib/player/PlayerShell.svelte";
+  import { shouldClosePlaybackModalOnKeydown } from "#lib/playback/controls.js";
+  import type { PlaybackData } from "#lib/server/playback/index.js";
 
   let {
     playbackRequestHref,
@@ -46,6 +46,7 @@
           throw new Error(body?.detail ?? "Playback could not be started.");
         }
         if (token !== reloadToken) return;
+
         playbackData = (await response.json()) as PlaybackData;
       })
       .catch((fetchError) => {

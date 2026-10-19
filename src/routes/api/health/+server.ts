@@ -1,6 +1,6 @@
-import { apiJson } from "$lib/server/api/json";
-import type { HealthResponse } from "$lib/server/api/types";
-import { getHealthStatus } from "$lib/server/health";
+import { apiJson } from "#lib/server/api/json.js";
+import type { HealthResponse } from "#lib/server/api/types.js";
+import { getHealthStatus } from "#lib/server/health.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async () => {

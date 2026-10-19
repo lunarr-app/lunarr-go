@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { getErrorMessage, getErrorTitle, shouldShowRetry } from "$lib/errors/page-copy";
+  import { getErrorMessage, getErrorTitle, shouldShowRetry } from "#lib/errors/page-copy.js";
   import { Film, RotateCw, Tv } from "@lucide/svelte";
 
   const status = $derived(page.status);

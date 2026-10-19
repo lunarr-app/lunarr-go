@@ -3,9 +3,15 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
-import { setTranscodeBackendForTests } from "$lib/server/transcoding/manager";
-import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "$lib/server/transcoding/backend";
+import {
+  closeDatabaseForTests,
+  getDb,
+  migrateDatabase,
+  useDatabaseFileForTests,
+  type Database,
+} from "#lib/server/db/index.js";
+import { setTranscodeBackendForTests } from "#lib/server/transcoding/manager.js";
+import type { HlsSegmentWindowGeneration, HlsSegmentWindowTranscodeInput } from "#lib/server/transcoding/backend.js";
 import { getPlaybackData } from ".";
 import { setSegmentSkipPreferences } from "./segment-skip-preferences";
 

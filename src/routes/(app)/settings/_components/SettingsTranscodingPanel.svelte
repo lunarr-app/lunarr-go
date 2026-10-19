@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { formatGibibytes } from "$lib/media/format";
+  import { formatGibibytes } from "#lib/media/format.js";
   import SettingsActionRow from "./SettingsActionRow.svelte";
-  import SwitchField from "$lib/components/SwitchField.svelte";
+  import SwitchField from "#lib/components/SwitchField.svelte";
 
   let {
     transcodePolicy,

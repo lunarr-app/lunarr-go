@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import MovieCard from "$lib/components/MovieCard.svelte";
-  import Pagination from "$lib/components/Pagination.svelte";
-  import ShowCard from "$lib/components/ShowCard.svelte";
+  import MovieCard from "#lib/components/MovieCard.svelte";
+  import Pagination from "#lib/components/Pagination.svelte";
+  import ShowCard from "#lib/components/ShowCard.svelte";
   import { Clapperboard, Film, Star, User } from "@lucide/svelte";
 
   let { data } = $props();
@@ -17,7 +17,7 @@
   const characters = $derived(data.stats.characters);
 
   function personHref(next: { moviesPage?: number; showsPage?: number }) {
-    const url = new URL(page.url);
+    const url = new URL(page.url.href);
     if (next.moviesPage !== undefined) {
       if (next.moviesPage <= 1) url.searchParams.delete("moviesPage");
       else url.searchParams.set("moviesPage", String(next.moviesPage));

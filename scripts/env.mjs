@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+/**
+ * @param {string} line
+ * @returns {{ key: string, value: string } | undefined}
+ */
 export function parseDotenvLine(line) {
   const trimmed = line.trim();
   if (!trimmed || trimmed.startsWith("#")) return undefined;
@@ -20,6 +24,30 @@ export function parseDotenvLine(line) {
   return { key, value };
 }
 
+/**
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {string}
+ */
+export function buildDefaultOrigin(env = process.env) {
+  let host = env.HOST || "127.0.0.1";
+  const port = env.PORT || "3000";
+  if (host === "0.0.0.0" || host === "::") host = "127.0.0.1";
+  if (host.includes(":") && !host.startsWith("[")) host = `[${host}]`;
+  return `http://${host}:${port}`;
+}
+
+/**
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {string}
+ */
+export function resolveOrigin(env = process.env) {
+  return env.ORIGIN?.trim() || buildDefaultOrigin(env);
+}
+
+/**
+ * @param {{ cwd?: string, env?: NodeJS.ProcessEnv }} [options]
+ * @returns {number}
+ */
 export function loadDotenv({ cwd = process.cwd(), env = process.env } = {}) {
   let source;
   try {

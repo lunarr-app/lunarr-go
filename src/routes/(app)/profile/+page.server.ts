@@ -1,14 +1,14 @@
-import { auth } from "$lib/server/auth";
+import { auth } from "#lib/server/auth/index.js";
 import {
   createApiKey,
   isApiKeyUnauthorized,
   listApiKeys,
   revokeApiKey as revokePersonalApiKey,
   apiKeyHttpStatus,
-} from "$lib/server/auth/api-keys";
-import { buildLinkDevicePath, readLinkDevicePrefill } from "$lib/device-pairing/url";
-import { devicePairingApiKeyExpirySettings } from "$lib/server/device-pairing/env";
-import { getUserProfilePreferences, updateUserProfilePreferences } from "$lib/server/profile/preferences";
+} from "#lib/server/auth/api-keys.js";
+import { buildLinkDevicePath, readLinkDevicePrefill } from "#lib/device-pairing/url.js";
+import { devicePairingApiKeyExpirySettings } from "#lib/server/device-pairing/env.js";
+import { getUserProfilePreferences, updateUserProfilePreferences } from "#lib/server/profile/preferences.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

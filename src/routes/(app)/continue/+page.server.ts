@@ -1,6 +1,6 @@
-import { BROWSE_RAIL_LIMIT } from "$lib/server/media/catalog";
-import { continueMovieRows } from "$lib/server/media/movies/browse";
-import { continueTvRows } from "$lib/server/media/shows/episodes";
+import { BROWSE_RAIL_LIMIT } from "#lib/server/media/catalog.js";
+import { continueMovieRows } from "#lib/server/media/movies/browse.js";
+import { continueTvRows } from "#lib/server/media/shows/episodes.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {

@@ -1,28 +1,31 @@
-import { building } from "$app/environment";
-import { auth } from "$lib/server/auth";
-import { hasRegisteredUsers } from "$lib/server/auth/users";
-import { cleanupStaleDevicePairings } from "$lib/server/auth/device-pairing";
-import { ensureDatabaseReady } from "$lib/server/db";
-import { cleanupJobHistory } from "$lib/server/jobs";
-import { cleanupExpiredShares } from "$lib/server/shares";
-import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM } from "$lib/server/playback/signed-token";
-import { SHARE_TOKEN_QUERY_PARAM } from "$lib/shares/constants";
-import { resumeInterruptedJobs } from "$lib/server/scanner/scan-jobs";
-import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
-import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
-import { startStaleTranscodeExpiryLoop } from "$lib/server/transcoding/manager";
-import { syncScheduledMetadataRefresh } from "$lib/server/metadata/scheduler";
+import { redirect } from "@sveltejs/kit";
+import type { RequestEvent } from "@sveltejs/kit";
+import type { Handle } from "@sveltejs/kit/hooks";
+import { building } from "$app/env";
+import { auth } from "#lib/server/auth/index.js";
+import { hasRegisteredUsers } from "#lib/server/auth/users.js";
+import { cleanupStaleDevicePairings } from "#lib/server/auth/device-pairing.js";
+import { ensureDatabaseReady } from "#lib/server/db/index.js";
+import { cleanupJobHistory } from "#lib/server/jobs/index.js";
+import { cleanupExpiredShares } from "#lib/server/shares/index.js";
+import { SIGNED_PLAYBACK_TOKEN_QUERY_PARAM } from "#lib/server/playback/signed-token.js";
+import { SHARE_TOKEN_QUERY_PARAM } from "#lib/shares/constants.js";
+import { resumeInterruptedJobs } from "#lib/server/scanner/scan-jobs.js";
+import { syncScheduledLibraryScans } from "#lib/server/scanner/scheduler.js";
+import { syncLibraryWatchers } from "#lib/server/scanner/watchers.js";
+import { startStaleTranscodeExpiryLoop } from "#lib/server/transcoding/manager.js";
+import { syncScheduledMetadataRefresh } from "#lib/server/metadata/scheduler.js";
 import {
   cleanupConfiguredPlaybackSessionArtifacts,
   recoverInterruptedTranscodeSessions,
-} from "$lib/server/transcoding/sessions";
+} from "#lib/server/transcoding/sessions.js";
 import {
   loginPathWithRedirect,
   POST_LOGIN_REDIRECT_QUERY_PARAM,
   sanitizePostLoginRedirect,
-} from "$lib/auth/post-login-redirect";
-import { redirect, type Handle, type RequestEvent } from "@sveltejs/kit";
-import { apiError } from "$lib/server/api/json";
+} from "#lib/auth/post-login-redirect.js";
+
+import { apiError } from "#lib/server/api/json.js";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
 let startupPromise: Promise<void> | undefined;

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { EpisodeSummary } from "$lib/media/types";
+  import type { EpisodeSummary } from "#lib/media/types.js";
   import { Eye, EyeOff } from "@lucide/svelte";
 
   let { episode, href = `/episodes/${episode.id}` }: { episode: EpisodeSummary; href?: string } = $props();

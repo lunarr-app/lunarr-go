@@ -2,9 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { createApiKeyForUserId } from "$lib/server/auth/api-keys";
-import { resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import { createApiKeyForUserId } from "#lib/server/auth/api-keys.js";
+import { resetAuthForTests, sessionHeadersFor } from "#lib/server/auth/test/setup.js";
 
 describe("API key routes", () => {
   let tempDir: string | undefined;

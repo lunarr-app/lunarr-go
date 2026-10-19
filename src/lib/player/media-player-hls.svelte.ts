@@ -1,12 +1,16 @@
-import { browser } from "$app/environment";
+import { browser } from "$app/env";
+import type Hls from "hls.js";
 import { tick } from "svelte";
 import {
   defaultSubtitleTrackId,
   shouldApplyLocalWaitingState,
   shouldAttemptLocalAutoplay,
   type PlayerControlUiState,
-} from "$lib/playback/controls";
-import { formatHlsError, formatMediaElementError, type HlsPlaybackErrorData } from "$lib/playback/errors";
+} from "#lib/playback/controls.js";
+
+import { formatHlsError, formatMediaElementError } from "#lib/playback/errors.js";
+import type { HlsPlaybackErrorData } from "#lib/playback/errors.js";
+
 import {
   absolutePlaybackSeconds,
   createHlsSeekEventController,
@@ -14,8 +18,8 @@ import {
   shouldReloadHlsPlaybackDataOnError,
   shouldRecoverHlsPlaybackError,
   streamRelativePlaybackSeconds,
-} from "$lib/playback/seek";
-import type { PlaybackData, PlaybackDecision } from "$lib/server/playback";
+} from "#lib/playback/seek.js";
+import type { PlaybackData, PlaybackDecision } from "#lib/server/playback/index.js";
 
 export type MediaPlayerHlsDeps = {
   getData: () => PlaybackData;
@@ -101,7 +105,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
 
         if (playback.status !== "ready" || !playback.streamUrl || !player) return;
 
-        let hls: import("hls.js").default | null = null;
+        let hls: Hls | null = null;
         const currentPlaybackActivityKey = [
           playback.mode,
           playback.playbackSessionId ?? playback.streamUrl,
@@ -234,6 +238,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
           });
         const clearTransientOverlayIfPlaying = () => {
           const playerUiState = deps.getPlayerUiState();
+
           if (
             deps.castControlsPlayback() ||
             (playerUiState !== "buffering" && playerUiState !== "seeking") ||
@@ -243,6 +248,7 @@ export function createMediaPlayerHls(deps: MediaPlayerHlsDeps) {
             player.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
           )
             return;
+
           deps.setHasPlaybackActivity(true);
           deps.setHasStartedPlayback(true);
           deps.setPlayerUiState("playing");

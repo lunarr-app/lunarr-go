@@ -1,8 +1,8 @@
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { UserResponse, UsersResponse } from "$lib/server/api/types";
-import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
-import { parseCreateUserInput } from "$lib/server/auth/users-input";
-import { createManagedUser, listManagedUsers, userManagementHttpStatus } from "$lib/server/auth/users-admin";
+import { apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { UserResponse, UsersResponse } from "#lib/server/api/types.js";
+import { parseBody, recordObjectSchema, requireJsonAdmin } from "#lib/server/api.js";
+import { parseCreateUserInput } from "#lib/server/auth/users-input.js";
+import { createManagedUser, listManagedUsers, userManagementHttpStatus } from "#lib/server/auth/users-admin.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, request }) => {

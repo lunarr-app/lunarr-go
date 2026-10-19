@@ -1,4 +1,3 @@
-import { json } from "@sveltejs/kit";
 import type { ApiErrorResponse } from "./types";
 
 const STATUS_TITLES: Record<number, string> = {
@@ -21,11 +20,11 @@ export function statusTitle(status: number): string {
 }
 
 export function apiJson<T>(body: T, init?: ResponseInit) {
-  return json(body, init);
+  return Response.json(body, init);
 }
 
 export function apiError(detail: string, status = 400) {
-  return json(
+  return Response.json(
     {
       type: "about:blank",
       title: statusTitle(status),

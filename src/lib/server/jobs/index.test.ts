@@ -6,7 +6,7 @@ import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
 import { cleanupJobHistory, getScanJobSummary, listScanErrorsForJob } from ".";
-import { expectRejectsToThrow } from "$lib/test/async-expect";
+import { expectRejectsToThrow } from "#lib/test/async-expect.js";
 
 describe("scan job listings", () => {
   let tempDir: string;

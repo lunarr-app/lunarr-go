@@ -1,7 +1,7 @@
-import { authorizeDirectMediaStream } from "$lib/server/shares/media-auth";
-import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "$lib/server/playback/signed-token";
-import { mediaStreamHeadResponse, mediaStreamResponse } from "$lib/server/media/stream";
-import { apiError } from "$lib/server/api/json";
+import { authorizeDirectMediaStream } from "#lib/server/shares/media-auth.js";
+import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "#lib/server/playback/signed-token.js";
+import { mediaStreamHeadResponse, mediaStreamResponse } from "#lib/server/media/stream.js";
+import { apiError } from "#lib/server/api/json.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, request, locals, url }) => {

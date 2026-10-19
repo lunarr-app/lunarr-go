@@ -1,4 +1,4 @@
-import { tmdbImageUrl } from "$lib/media/images";
+import { tmdbImageUrl } from "#lib/media/images.js";
 import type { MovieBrowseRow, MovieProgressRow } from "./types";
 
 export function summarizeMovieProgress(progressRows: MovieProgressRow[]) {

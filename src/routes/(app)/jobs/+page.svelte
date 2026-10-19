@@ -1,8 +1,8 @@
 <script lang="ts">
-  import ConfirmAction from "$lib/components/ConfirmAction.svelte";
+  import ConfirmAction from "#lib/components/ConfirmAction.svelte";
   import ScanJobErrors from "./_components/ScanJobErrors.svelte";
-  import { invalidateAll } from "$app/navigation";
-  import { formatDateTime, formatElapsedDuration, formatRelativeTime } from "$lib/media/format";
+  import { refreshAll } from "$app/navigation";
+  import { formatDateTime, formatElapsedDuration, formatRelativeTime } from "#lib/media/format.js";
   import { Activity } from "@lucide/svelte";
   import { onMount } from "svelte";
 
@@ -119,7 +119,7 @@
   onMount(() => {
     const interval = window.setInterval(() => {
       now = Date.now();
-      if (hasActiveJobs) void invalidateAll();
+      if (hasActiveJobs) void refreshAll();
     }, 3000);
 
     return () => window.clearInterval(interval);

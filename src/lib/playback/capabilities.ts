@@ -1,3 +1,5 @@
+import type { ReadonlyURL } from "$app/state";
+
 export type ClientPlaybackCapabilities = {
   hevc: boolean;
   av1: boolean;
@@ -45,7 +47,7 @@ export function normalizePlaybackTarget(value: string | null | undefined): Playb
 
 export const WEB_PLAYBACK_API_QUERY_KEYS = ["file", "start", "transcode"] as const;
 
-export function appendWebPlaybackApiParamsFromPage(apiParams: URLSearchParams, pageUrl: URL) {
+export function appendWebPlaybackApiParamsFromPage(apiParams: URLSearchParams, pageUrl: ReadonlyURL) {
   for (const key of WEB_PLAYBACK_API_QUERY_KEYS) {
     const value = pageUrl.searchParams.get(key);
     if (value) apiParams.set(key, value);

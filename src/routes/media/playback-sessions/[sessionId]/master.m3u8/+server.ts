@@ -1,15 +1,15 @@
-import { authorizePlaybackSessionMedia } from "$lib/server/shares/media-auth";
+import { authorizePlaybackSessionMedia } from "#lib/server/shares/media-auth.js";
 import {
   SIGNED_PLAYBACK_TOKEN_QUERY_PARAM,
   signedPlaybackOptionsResponse,
   signedPlaybackSegmentQuery,
   withSignedPlaybackHeaders,
-} from "$lib/server/playback/signed-token";
-import { ensureHlsPlaylistOnDisk, hlsPlaylistHeadResponse, hlsPlaylistResponse } from "$lib/server/transcoding/hls";
-import { lookupVideoFrameRate } from "$lib/server/transcoding/probe";
-import { touchTranscodeSessionHeartbeat } from "$lib/server/transcoding/sessions";
-import { requestDrivenHlsSegmentFormat } from "$lib/server/transcoding/playback-lifecycle";
-import { apiError } from "$lib/server/api/json";
+} from "#lib/server/playback/signed-token.js";
+import { ensureHlsPlaylistOnDisk, hlsPlaylistHeadResponse, hlsPlaylistResponse } from "#lib/server/transcoding/hls.js";
+import { lookupVideoFrameRate } from "#lib/server/transcoding/probe.js";
+import { touchTranscodeSessionHeartbeat } from "#lib/server/transcoding/sessions.js";
+import { requestDrivenHlsSegmentFormat } from "#lib/server/transcoding/playback-lifecycle.js";
+import { apiError } from "#lib/server/api/json.js";
 import {
   currentPlayableHlsArtifact,
   currentUnchangedPlayableHlsArtifact,

@@ -1,20 +1,20 @@
-import { authorizePlaybackSessionMedia } from "$lib/server/shares/media-auth";
-import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "$lib/server/playback/signed-token";
+import { authorizePlaybackSessionMedia } from "#lib/server/shares/media-auth.js";
+import { signedPlaybackOptionsResponse, withSignedPlaybackHeaders } from "#lib/server/playback/signed-token.js";
 import {
   hlsSegmentIndex,
   hlsSegmentHeadResponse,
   hlsSegmentResponse,
   pruneHlsSegmentsBehind,
-} from "$lib/server/transcoding/hls";
-import { getPlaybackCacheBindingForSession } from "$lib/server/transcoding/cache";
-import { ensureHlsLookaheadForSegment, ensureHlsSegmentForRequest } from "$lib/server/transcoding/manager";
+} from "#lib/server/transcoding/hls.js";
+import { getPlaybackCacheBindingForSession } from "#lib/server/transcoding/cache.js";
+import { ensureHlsLookaheadForSegment, ensureHlsSegmentForRequest } from "#lib/server/transcoding/manager.js";
 import {
   getAuthorizedHlsArtifact,
   touchTranscodeSessionHeartbeat,
   touchTranscodeSessionSegmentRequest,
   type AuthorizedHlsArtifact,
-} from "$lib/server/transcoding/sessions";
-import { apiError } from "$lib/server/api/json";
+} from "#lib/server/transcoding/sessions.js";
+import { apiError } from "#lib/server/api/json.js";
 import {
   currentPlayableHlsArtifact,
   currentUnchangedPlayableHlsArtifact,

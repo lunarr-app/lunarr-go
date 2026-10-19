@@ -1,7 +1,7 @@
 <script lang="ts">
-  import MediaHero from "$lib/components/MediaHero.svelte";
-  import ShowWatchSummary from "$lib/components/ShowWatchSummary.svelte";
-  import { formatEpisodeCode } from "$lib/media/format";
+  import MediaHero from "#lib/components/MediaHero.svelte";
+  import ShowWatchSummary from "#lib/components/ShowWatchSummary.svelte";
+  import { formatEpisodeCode } from "#lib/media/format.js";
   import { CirclePlay, Eye, EyeOff, Star } from "@lucide/svelte";
 
   let {

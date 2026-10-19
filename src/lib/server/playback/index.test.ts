@@ -6,8 +6,8 @@ import { Readable } from "node:stream";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import type { Database } from "../db/schema";
-import { expectRejectsToThrow } from "$lib/test/async-expect";
-import { parseClientPlaybackCapabilities } from "$lib/playback/capabilities";
+import { expectRejectsToThrow } from "#lib/test/async-expect.js";
+import { parseClientPlaybackCapabilities } from "#lib/playback/capabilities.js";
 import {
   completionThresholdSeconds,
   getPlaybackDecision,

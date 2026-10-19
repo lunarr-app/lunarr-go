@@ -3,15 +3,17 @@ import {
   parseClientPlaybackCapabilities,
   type ClientPlaybackCapabilities,
   type PlaybackTarget,
-} from "$lib/playback/capabilities";
-import { normalizePreferredLanguage } from "$lib/media/preferred-language";
+} from "#lib/playback/capabilities.js";
+import { normalizePreferredLanguage } from "#lib/media/preferred-language.js";
 import { getDb } from "../db";
 import type { MediaKind } from "../db/schema";
 import { loadPlaybackSegmentsForMediaItem } from "../introdb";
 import { getFirstPlayableFile, getPlayableFile, getWatchItemDetail } from "../media/files";
-import { getSegmentSkipPreferences, type SegmentSkipPreferences } from "./segment-skip-preferences";
+import { getSegmentSkipPreferences } from "./segment-skip-preferences";
+import type { SegmentSkipPreferences } from "./segment-skip-preferences";
 import { nowIso } from "../time";
-import { decidePlaybackMode, type PlaybackModeDecision } from "../transcoding/capabilities";
+import { decidePlaybackMode } from "../transcoding/capabilities";
+import type { PlaybackModeDecision } from "../transcoding/capabilities";
 import {
   requestDrivenHlsSegmentFormat,
   resolveHlsPlayback,

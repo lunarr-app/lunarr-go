@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { THEME_STORAGE_KEY, applyTheme, getStoredTheme, normalizeTheme, setStoredTheme } from "$lib/theme";
+import { THEME_STORAGE_KEY, applyTheme, getStoredTheme, normalizeTheme, setStoredTheme } from "#lib/theme.js";
 
 function memoryStorage(initial?: string) {
   let value = initial ?? null;

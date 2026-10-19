@@ -1,16 +1,17 @@
-import { browser } from "$app/environment";
+import { browser } from "$app/env";
+import type { ReadonlyURL } from "$app/state";
 import {
   appendClientPlaybackCapabilityParams,
   appendWebPlaybackApiParamsFromPage,
   detectClientPlaybackCapabilities,
-} from "$lib/playback/capabilities";
+} from "#lib/playback/capabilities.js";
 
 export function canUseFmp4MediaSource() {
   if (!browser || !("MediaSource" in window)) return false;
   return window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
 }
 
-export function buildClientPlaybackApiHref(input: { pathname: string; sourceUrl: URL }) {
+export function buildClientPlaybackApiHref(input: { pathname: string; sourceUrl: ReadonlyURL }) {
   const apiUrl = new URL(input.pathname, input.sourceUrl.origin);
   appendWebPlaybackApiParamsFromPage(apiUrl.searchParams, input.sourceUrl);
   if (browser) {

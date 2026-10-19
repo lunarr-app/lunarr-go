@@ -1,10 +1,10 @@
-import { isAdmin } from "$lib/server/auth/users";
-import { getMovieDetail } from "$lib/server/media/movies/detail";
-import { toggleWatchlist } from "$lib/server/media/watchlist";
-import { metadataRefreshFailure, metadataRefreshPrerequisites } from "$lib/server/metadata/detail-refresh";
-import { refreshMovieMetadataResult } from "$lib/server/metadata/movies";
-import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
-import { markWatched } from "$lib/server/playback";
+import { isAdmin } from "#lib/server/auth/users.js";
+import { getMovieDetail } from "#lib/server/media/movies/detail.js";
+import { toggleWatchlist } from "#lib/server/media/watchlist.js";
+import { metadataRefreshFailure, metadataRefreshPrerequisites } from "#lib/server/metadata/detail-refresh.js";
+import { refreshMovieMetadataResult } from "#lib/server/metadata/movies.js";
+import { tmdbCredentialsConfigured } from "#lib/server/metadata/tmdb.js";
+import { markWatched } from "#lib/server/playback/index.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

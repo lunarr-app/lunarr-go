@@ -3,9 +3,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
-import { POST_LOGIN_REDIRECT_QUERY_PARAM } from "$lib/auth/post-login-redirect";
-import { setBooleanSetting } from "$lib/server/settings";
+import {
+  closeDatabaseForTests,
+  getDb,
+  migrateDatabase,
+  useDatabaseFileForTests,
+  type Database,
+} from "#lib/server/db/index.js";
+import { POST_LOGIN_REDIRECT_QUERY_PARAM } from "#lib/auth/post-login-redirect.js";
+import { setBooleanSetting } from "#lib/server/settings.js";
 import type * as LoginPageServer from "./+page.server";
 
 const signInEmail = mock(async (_input: unknown) => ({}));
@@ -33,7 +39,7 @@ describe("login page server", () => {
 
   beforeEach(async () => {
     signInEmail.mockClear();
-    const authModule = await import("$lib/server/auth");
+    const authModule = await import("#lib/server/auth/index.js");
     signInEmailSpy = spyOn(authModule.auth.api, "signInEmail").mockImplementation(
       signInEmail as unknown as typeof authModule.auth.api.signInEmail,
     );

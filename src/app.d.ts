@@ -1,4 +1,4 @@
-import type { AuthSession } from "$lib/server/auth";
+import type { AuthSession } from "#lib/server/auth/index.js";
 
 declare module "*.sql?raw" {
   const source: string;

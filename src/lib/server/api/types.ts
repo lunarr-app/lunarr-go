@@ -1,36 +1,41 @@
-import type { getHealthStatus } from "$lib/server/health";
-import type { approveDevicePairing, pollDevicePairing, startDevicePairing } from "$lib/server/auth/device-pairing";
-import type { runSettingsAction, getAdminSettingsResponse } from "$lib/server/settings-commands";
-import type { startAllLibraryScans } from "$lib/server/scanner/scan-jobs";
-import type { startMovieMetadataRefreshJob } from "$lib/server/metadata/movies";
-import type { listAllShares, listSharesForMedia } from "$lib/server/shares/index";
-import type { createApiKey, listApiKeys } from "$lib/server/auth/api-keys";
-import type { createManagedUser, listManagedUsers } from "$lib/server/auth/users-admin";
-import type { RefreshMovieMetadataResult } from "$lib/server/metadata/movies";
-import type { RefreshTvShowMetadataResult } from "$lib/server/metadata/tv";
-import type { getMovieCredits, getMovieDetail, getMovieOverview } from "$lib/server/media/movies/detail";
-import type { listBecauseYouWatchedMovies } from "$lib/server/media/movies/discover";
-import type { getPersonDetail } from "$lib/server/media/people";
-import type { loadSimilarMovies, loadSimilarShows } from "$lib/server/media/similar-page-load";
+import type { getHealthStatus } from "#lib/server/health.js";
+import type { approveDevicePairing, pollDevicePairing, startDevicePairing } from "#lib/server/auth/device-pairing.js";
+import type { runSettingsAction, getAdminSettingsResponse } from "#lib/server/settings-commands.js";
+import type { startAllLibraryScans } from "#lib/server/scanner/scan-jobs.js";
+import type { startMovieMetadataRefreshJob } from "#lib/server/metadata/movies.js";
+import type { listAllShares, listSharesForMedia } from "#lib/server/shares/index.js";
+import type { createApiKey, listApiKeys } from "#lib/server/auth/api-keys.js";
+import type { createManagedUser, listManagedUsers } from "#lib/server/auth/users-admin.js";
+import type { RefreshMovieMetadataResult } from "#lib/server/metadata/movies.js";
+import type { RefreshTvShowMetadataResult } from "#lib/server/metadata/tv.js";
+import type { getMovieCredits, getMovieDetail, getMovieOverview } from "#lib/server/media/movies/detail.js";
+import type { listBecauseYouWatchedMovies } from "#lib/server/media/movies/discover.js";
+import type { getPersonDetail } from "#lib/server/media/people.js";
+import type { loadSimilarMovies, loadSimilarShows } from "#lib/server/media/similar-page-load.js";
 import type {
   getEpisodeDetail,
   getShowCredits,
   getShowDetail,
   getShowOverview,
   getShowSeasonDetail,
-} from "$lib/server/media/shows/detail";
-import type { listBecauseYouWatchedShows } from "$lib/server/media/shows/discover";
+} from "#lib/server/media/shows/detail.js";
+import type { listBecauseYouWatchedShows } from "#lib/server/media/shows/discover.js";
 import type {
   createLibrary,
   getLibrary,
   listLibrariesWithScanStatus,
   listLibraryShareUsers,
-} from "$lib/server/libraries";
-import type { getScanJobSummary, listPlaybackSessions, listScanErrorsForJob, listScanJobs } from "$lib/server/jobs";
-import type { PlaybackData } from "$lib/server/playback";
-import type { SegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
-import type { TranscodePolicy } from "$lib/server/transcoding/policy";
-import type { CreateSharePayload, PublicShareRecord, SharePageData, ShareSeasonData } from "$lib/shares/types";
+} from "#lib/server/libraries/index.js";
+import type {
+  getScanJobSummary,
+  listPlaybackSessions,
+  listScanErrorsForJob,
+  listScanJobs,
+} from "#lib/server/jobs/index.js";
+import type { PlaybackData } from "#lib/server/playback/index.js";
+import type { SegmentSkipPreferences } from "#lib/server/playback/segment-skip-preferences.js";
+import type { TranscodePolicy } from "#lib/server/transcoding/policy.js";
+import type { CreateSharePayload, PublicShareRecord, SharePageData, ShareSeasonData } from "#lib/shares/types.js";
 import type {
   CatalogPageInfo,
   FixMatchCandidate,
@@ -38,7 +43,7 @@ import type {
   MovieSummary,
   ShowRowsResponse,
   ShowSummary,
-} from "$lib/media/types";
+} from "#lib/media/types.js";
 
 export type {
   CatalogPageInfo,
@@ -50,7 +55,7 @@ export type {
   ShowBrowseRowsResponse,
   ShowRowsResponse,
   ShowSummary,
-} from "$lib/media/types";
+} from "#lib/media/types.js";
 
 export type ApiErrorResponse = {
   type: string;
@@ -66,7 +71,7 @@ export type ApiOkResponse = {
 export type PersonDetailResponse = NonNullable<Awaited<ReturnType<typeof getPersonDetail>>>;
 export type PersonRecord = PersonDetailResponse["person"];
 
-export type { PersonFilmographyStats } from "$lib/server/media/people";
+export type { PersonFilmographyStats } from "#lib/server/media/people.js";
 
 export type MovieFullResponse = NonNullable<Awaited<ReturnType<typeof getMovieDetail>>>;
 export type MovieOverviewResponse = NonNullable<Awaited<ReturnType<typeof getMovieOverview>>>;
@@ -236,8 +241,8 @@ export type WatchlistShowsResponse = {
   pageInfo: CatalogPageInfo;
 };
 
-export type { ManagedUser } from "$lib/server/auth/users-admin";
-export type { ApiKeySummary } from "$lib/server/auth/api-keys";
+export type { ManagedUser } from "#lib/server/auth/users-admin.js";
+export type { ApiKeySummary } from "#lib/server/auth/api-keys.js";
 
 /** OpenAPI component schemas backed by concrete TypeScript contract types. */
 export const OPENAPI_TYPED_SCHEMAS = [

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tmdbImageUrl } from "$lib/media/images";
+  import { tmdbImageUrl } from "#lib/media/images.js";
   import { Users } from "@lucide/svelte";
 
   type CastPerson = {

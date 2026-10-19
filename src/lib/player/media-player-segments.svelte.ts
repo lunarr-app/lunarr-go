@@ -1,12 +1,12 @@
-import { browser } from "$app/environment";
-import { PLAYER_OVERLAY_DISMISS_MS } from "$lib/playback/controls";
+import { browser } from "$app/env";
+import { PLAYER_OVERLAY_DISMISS_MS } from "#lib/playback/controls.js";
 import {
   activePlaybackSegment,
   playbackSegmentKey,
   SEGMENT_LABELS,
   segmentSkipTargetSeconds,
-} from "$lib/playback/segments";
-import type { PlaybackData, PlaybackSegment } from "$lib/server/playback";
+} from "#lib/playback/segments.js";
+import type { PlaybackData, PlaybackSegment } from "#lib/server/playback/index.js";
 
 export type MediaPlayerSegmentsDeps = {
   getData: () => PlaybackData;

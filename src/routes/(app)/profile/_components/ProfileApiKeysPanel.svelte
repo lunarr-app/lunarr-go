@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
-  import ConfirmAction from "$lib/components/ConfirmAction.svelte";
-  import ModalDialog from "$lib/components/ModalDialog.svelte";
-  import { formatDateTime } from "$lib/media/format";
+  import { browser } from "$app/env";
+  import ConfirmAction from "#lib/components/ConfirmAction.svelte";
+  import ModalDialog from "#lib/components/ModalDialog.svelte";
+  import { formatDateTime } from "#lib/media/format.js";
   import { enhance } from "$app/forms";
   import { Clipboard, ExternalLink, KeyRound, Plus } from "@lucide/svelte";
 

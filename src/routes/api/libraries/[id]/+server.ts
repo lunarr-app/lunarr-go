@@ -1,10 +1,10 @@
-import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { LibraryDetailResponse } from "$lib/server/api/types";
-import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
-import { deleteLibrary, getLibrary, updateLibrary } from "$lib/server/libraries";
-import { parseUpdateLibraryInput } from "$lib/server/libraries/input";
-import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
-import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
+import { apiError, apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { LibraryDetailResponse } from "#lib/server/api/types.js";
+import { parseBody, recordObjectSchema, requireJsonAdmin } from "#lib/server/api.js";
+import { deleteLibrary, getLibrary, updateLibrary } from "#lib/server/libraries/index.js";
+import { parseUpdateLibraryInput } from "#lib/server/libraries/input.js";
+import { syncScheduledLibraryScans } from "#lib/server/scanner/scheduler.js";
+import { syncLibraryWatchers } from "#lib/server/scanner/watchers.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {

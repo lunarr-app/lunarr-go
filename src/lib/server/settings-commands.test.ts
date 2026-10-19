@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
+import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
 import * as schedulerModule from "./metadata/scheduler";
 import { getMetadataRefreshIntervalHours, getMetadataStalenessDays } from "./metadata/settings";
 import { updateMetadataSettings } from "./settings-commands";

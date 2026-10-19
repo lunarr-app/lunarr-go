@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
+  import { browser } from "$app/env";
   import { page } from "$app/state";
   import {
     Activity,
@@ -16,8 +16,8 @@
     Users,
   } from "@lucide/svelte";
   import type { Snippet } from "svelte";
-  import LunarrBrand from "$lib/components/LunarrBrand.svelte";
-  import type PlaybackModalComponent from "$lib/player/PlaybackModal.svelte";
+  import LunarrBrand from "#lib/components/LunarrBrand.svelte";
+  import type PlaybackModalComponent from "#lib/player/PlaybackModal.svelte";
 
   let {
     children,
@@ -91,7 +91,7 @@
     if (!browser || !playbackRequested || PlaybackModal || playbackModalLoading) return;
 
     playbackModalLoading = true;
-    void import("$lib/player/PlaybackModal.svelte")
+    void import("#lib/player/PlaybackModal.svelte")
       .then((module) => {
         PlaybackModal = module.default;
       })
@@ -139,9 +139,8 @@
           aria-haspopup="menu"
           aria-expanded={accountMenuOpen}
           onclick={() => (accountMenuOpen = !accountMenuOpen)}
+          ><span>{(user.name || user.email || "L").slice(0, 1).toUpperCase()}</span></button
         >
-          <span>{(user.name || user.email || "L").slice(0, 1).toUpperCase()}</span>
-        </button>
 
         {#if accountMenuOpen}
           <div class="account-popover" role="menu">

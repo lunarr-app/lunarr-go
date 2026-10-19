@@ -1,12 +1,12 @@
-import { parseBody, requireJsonUser } from "$lib/server/api";
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ProfilePreferencesResponse } from "$lib/server/api/types";
+import { parseBody, requireJsonUser } from "#lib/server/api.js";
+import { apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { ProfilePreferencesResponse } from "#lib/server/api/types.js";
 import {
   getUserProfilePreferences,
   hasProfilePreferenceUpdate,
   profilePreferencesSchema,
   updateUserProfilePreferences,
-} from "$lib/server/profile/preferences";
+} from "#lib/server/profile/preferences.js";
 import type { RequestHandler } from "./$types";
 
 export const PATCH: RequestHandler = async ({ request, locals }) => {

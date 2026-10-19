@@ -1,6 +1,6 @@
 <script lang="ts">
   import { CirclePlus } from "@lucide/svelte";
-  import ModalDialog from "$lib/components/ModalDialog.svelte";
+  import ModalDialog from "#lib/components/ModalDialog.svelte";
 
   let {
     draft,

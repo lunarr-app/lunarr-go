@@ -1,7 +1,7 @@
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { DevicePairingPollResponse } from "$lib/server/api/types";
-import { devicePairingHttpStatus, pollDevicePairing } from "$lib/server/auth/device-pairing";
-import { enforceDevicePairingRateLimit } from "$lib/server/auth/device-pairing-rate-limit";
+import { apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { DevicePairingPollResponse } from "#lib/server/api/types.js";
+import { devicePairingHttpStatus, pollDevicePairing } from "#lib/server/auth/device-pairing.js";
+import { enforceDevicePairingRateLimit } from "#lib/server/auth/device-pairing-rate-limit.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async (event) => {

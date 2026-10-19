@@ -1,7 +1,7 @@
 <script lang="ts">
-  import EpisodeCard from "$lib/components/EpisodeCard.svelte";
-  import Pagination from "$lib/components/Pagination.svelte";
-  import type { EpisodeSummary } from "$lib/media/types";
+  import EpisodeCard from "#lib/components/EpisodeCard.svelte";
+  import Pagination from "#lib/components/Pagination.svelte";
+  import type { EpisodeSummary } from "#lib/media/types.js";
 
   type PageInfo = {
     page: number;

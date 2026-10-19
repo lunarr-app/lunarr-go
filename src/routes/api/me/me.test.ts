@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
-import { setSegmentSkipPreferences } from "$lib/server/playback/segment-skip-preferences";
-import { setUserPlaybackPreference } from "$lib/server/transcoding/policy";
+import { closeDatabaseForTests, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import { setUserContinueMaxAgeDays } from "#lib/server/media/continue-max-age.js";
+import { setSegmentSkipPreferences } from "#lib/server/playback/segment-skip-preferences.js";
+import { setUserPlaybackPreference } from "#lib/server/transcoding/policy.js";
 import { GET } from "./+server";
 
 describe("GET /api/me", () => {

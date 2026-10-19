@@ -1,11 +1,11 @@
 <script lang="ts">
-  import ConfirmAction from "$lib/components/ConfirmAction.svelte";
+  import ConfirmAction from "#lib/components/ConfirmAction.svelte";
   import LibraryAutomationFields from "./_components/LibraryAutomationFields.svelte";
   import LibraryEditModal from "./_components/LibraryEditModal.svelte";
   import LibrarySharingModal from "./_components/LibrarySharingModal.svelte";
   import RemoteLibraryFields from "./_components/RemoteLibraryFields.svelte";
   import type { RemoteLibraryFieldValues } from "./_components/libraryRemoteFieldValues";
-  import { formatDateTime } from "$lib/media/format";
+  import { formatDateTime } from "#lib/media/format.js";
   import { CirclePlus, Settings, TriangleAlert } from "@lucide/svelte";
   import type { PageData } from "./$types";
 

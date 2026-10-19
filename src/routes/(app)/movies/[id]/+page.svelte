@@ -1,20 +1,20 @@
 <script lang="ts">
-  import { goto, invalidateAll } from "$app/navigation";
+  import { goto, refreshAll } from "$app/navigation";
   import { page } from "$app/state";
-  import MediaCastRail from "$lib/components/MediaCastRail.svelte";
-  import MediaDetailLayout from "$lib/components/MediaDetailLayout.svelte";
-  import MediaFilesSection from "$lib/components/MediaFilesSection.svelte";
-  import FixMatchModal from "$lib/components/FixMatchModal.svelte";
-  import ShareLinkModal from "$lib/components/ShareLinkModal.svelte";
-  import { deriveDetailPlaybackState } from "$lib/media/detail-playback";
-  import { revertFixMatch } from "$lib/media/fix-match-client";
+  import MediaCastRail from "#lib/components/MediaCastRail.svelte";
+  import MediaDetailLayout from "#lib/components/MediaDetailLayout.svelte";
+  import MediaFilesSection from "#lib/components/MediaFilesSection.svelte";
+  import FixMatchModal from "#lib/components/FixMatchModal.svelte";
+  import ShareLinkModal from "#lib/components/ShareLinkModal.svelte";
+  import { deriveDetailPlaybackState } from "#lib/media/detail-playback.js";
+  import { revertFixMatch } from "#lib/media/fix-match-client.js";
   import {
     formatFileCountLabel,
     formatMediaDuration,
     formatVoteAverageLabel,
     formatVoteCountLabel,
-  } from "$lib/media/format";
-  import { playbackModalHref } from "$lib/playback/links";
+  } from "#lib/media/format.js";
+  import { playbackModalHref } from "#lib/playback/links.js";
   import MovieDetailHero from "./_components/MovieDetailHero.svelte";
   import MovieMetadataSidebar from "./_components/MovieMetadataSidebar.svelte";
 
@@ -28,7 +28,7 @@
     try {
       const result = await revertFixMatch("movie", data.movie.id);
       await goto(result.mediaItemId ? `/movies/${result.mediaItemId}` : "/movies");
-      await invalidateAll();
+      await refreshAll();
     } catch (error) {
       revertError = error instanceof Error ? error.message : "Could not revert the match.";
     }

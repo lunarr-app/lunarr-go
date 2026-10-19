@@ -1,6 +1,6 @@
-import { apiErrorFrom } from "$lib/server/api/json";
-import { parseBody, requireJsonAdmin } from "$lib/server/api";
-import { updateLibraryAccess } from "$lib/server/libraries";
+import { apiErrorFrom } from "#lib/server/api/json.js";
+import { parseBody, requireJsonAdmin } from "#lib/server/api.js";
+import { updateLibraryAccess } from "#lib/server/libraries/index.js";
 import { z } from "zod";
 import type { RequestHandler } from "./$types";
 

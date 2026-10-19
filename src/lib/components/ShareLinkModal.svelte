@@ -1,19 +1,19 @@
 <script lang="ts">
-  import ModalDialog from "$lib/components/ModalDialog.svelte";
-  import { createShare, listSharesForMedia, revokeShare, shareLinkUrl } from "$lib/shares/client";
+  import ModalDialog from "#lib/components/ModalDialog.svelte";
+  import { createShare, listSharesForMedia, revokeShare, shareLinkUrl } from "#lib/shares/client.js";
   import {
     DEFAULT_SHARE_EXPIRY_SECONDS,
     SHARE_EXPIRY_PRESET_OPTIONS,
     type ShareExpiryPresetKey,
-  } from "$lib/shares/constants";
+  } from "#lib/shares/constants.js";
   import {
     customShareExpirySeconds,
     maxCustomShareExpiryAmount,
     shareStatusDetail,
     shareStatusLabel,
     validateCustomShareExpiry,
-  } from "$lib/shares/format";
-  import type { CreateSharePayload, PublicShareRecord } from "$lib/shares/types";
+  } from "#lib/shares/format.js";
+  import type { CreateSharePayload, PublicShareRecord } from "#lib/shares/types.js";
   import { Copy, Link2, Trash2 } from "@lucide/svelte";
 
   type SeasonOption = {

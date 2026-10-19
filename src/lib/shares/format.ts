@@ -1,6 +1,6 @@
-import { formatDateTime } from "$lib/media/format";
-import { MAX_SHARE_EXPIRY_SECONDS } from "$lib/shares/constants";
-import type { PublicShareRecord } from "$lib/shares/types";
+import { formatDateTime } from "#lib/media/format.js";
+import { MAX_SHARE_EXPIRY_SECONDS } from "#lib/shares/constants.js";
+import type { PublicShareRecord } from "#lib/shares/types.js";
 
 export function formatShareExpiryDescription(expiresAt: string) {
   return `Expires ${formatDateTime(expiresAt)}`;

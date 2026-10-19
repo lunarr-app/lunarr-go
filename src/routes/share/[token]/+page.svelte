@@ -3,12 +3,12 @@
   import { page } from "$app/state";
   import GuestPlaybackShell from "../_components/GuestPlaybackShell.svelte";
   import GuestShareEpisodeList from "../_components/GuestShareEpisodeList.svelte";
-  import LunarrBrand from "$lib/components/LunarrBrand.svelte";
-  import MediaHero from "$lib/components/MediaHero.svelte";
-  import { formatMediaDuration } from "$lib/media/format";
-  import { buildClientPlaybackApiHref } from "$lib/playback/client-href";
-  import { formatShareExpiryDescription } from "$lib/shares/format";
-  import { shareClosePlaybackHref, sharePlaybackApiPath, sharePlaybackHref } from "$lib/shares/links";
+  import LunarrBrand from "#lib/components/LunarrBrand.svelte";
+  import MediaHero from "#lib/components/MediaHero.svelte";
+  import { formatMediaDuration } from "#lib/media/format.js";
+  import { buildClientPlaybackApiHref } from "#lib/playback/client-href.js";
+  import { formatShareExpiryDescription } from "#lib/shares/format.js";
+  import { shareClosePlaybackHref, sharePlaybackApiPath, sharePlaybackHref } from "#lib/shares/links.js";
   import { CirclePlay, Clock3, Tv } from "@lucide/svelte";
 
   let { data } = $props();
@@ -31,25 +31,22 @@
 
   function closePlayer() {
     void goto(shareClosePlaybackHref(page.url), {
-      replaceState: true,
-      noScroll: true,
-      keepFocus: true,
+      replace: true,
+      reset: false,
     });
   }
 
   function openPlayer(id: string) {
     void goto(sharePlaybackHref({ currentUrl: page.url, mediaItemId: id }), {
-      replaceState: false,
-      noScroll: true,
-      keepFocus: true,
+      replace: false,
+      reset: false,
     });
   }
 
   function repositionPlayback(href: string) {
     void goto(href, {
-      replaceState: true,
-      noScroll: true,
-      keepFocus: true,
+      replace: true,
+      reset: false,
     });
   }
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import ConfirmAction from "$lib/components/ConfirmAction.svelte";
-  import { formatDateTime } from "$lib/media/format";
+  import ConfirmAction from "#lib/components/ConfirmAction.svelte";
+  import { formatDateTime } from "#lib/media/format.js";
   import UserCreateModal from "./_components/UserCreateModal.svelte";
   import { CirclePlus, Shield } from "@lucide/svelte";
 

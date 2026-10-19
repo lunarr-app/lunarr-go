@@ -1,15 +1,15 @@
+import type { Handle } from "@sveltejs/kit/hooks";
 import { beforeAll, afterAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { Handle } from "@sveltejs/kit";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import type { Database } from "$lib/server/db/schema";
-import { loginPathWithRedirect } from "$lib/auth/post-login-redirect";
-import { expectRejectsToMatchObject } from "$lib/test/async-expect";
-import { createApiKeyForUserId } from "$lib/server/auth/api-keys";
-import { resetAuthForTests } from "$lib/server/auth/test/setup";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import type { Database } from "#lib/server/db/schema.js";
+import { loginPathWithRedirect } from "#lib/auth/post-login-redirect.js";
+import { expectRejectsToMatchObject } from "#lib/test/async-expect.js";
+import { createApiKeyForUserId } from "#lib/server/auth/api-keys.js";
+import { resetAuthForTests } from "#lib/server/auth/test/setup.js";
 
 type TestEvent = {
   request: Request;

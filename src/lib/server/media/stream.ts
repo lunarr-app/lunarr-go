@@ -1,9 +1,11 @@
 import { Readable } from "node:stream";
 import { getMediaFile } from "./files";
-import { mediaContentTypeForExtension } from "$lib/playback/content-type";
+import { mediaContentTypeForExtension } from "#lib/playback/content-type.js";
 import type { LibrarySource } from "../db/schema";
-import { createLibraryStorage, createLocalStorage, type LibraryStorage } from "../storage";
-import { type ByteRange, parseByteRange } from "../http/byte-range";
+import { createLibraryStorage, createLocalStorage } from "../storage";
+import type { LibraryStorage } from "../storage";
+import { parseByteRange } from "../http/byte-range";
+import type { ByteRange } from "../http/byte-range";
 
 type StreamableMediaFile = {
   path: string;

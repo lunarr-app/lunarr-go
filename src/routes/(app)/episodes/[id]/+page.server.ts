@@ -1,5 +1,5 @@
-import { getEpisodeDetail } from "$lib/server/media/shows/detail";
-import { markWatched } from "$lib/server/playback";
+import { getEpisodeDetail } from "#lib/server/media/shows/detail.js";
+import { markWatched } from "#lib/server/playback/index.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

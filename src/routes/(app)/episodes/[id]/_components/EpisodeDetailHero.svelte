@@ -1,7 +1,7 @@
 <script lang="ts">
-  import MediaHero from "$lib/components/MediaHero.svelte";
-  import MediaHeroPlaybackActions from "$lib/components/MediaHeroPlaybackActions.svelte";
-  import MediaHeroResumeBar from "$lib/components/MediaHeroResumeBar.svelte";
+  import MediaHero from "#lib/components/MediaHero.svelte";
+  import MediaHeroPlaybackActions from "#lib/components/MediaHeroPlaybackActions.svelte";
+  import MediaHeroResumeBar from "#lib/components/MediaHeroResumeBar.svelte";
   import { Calendar, Clock3 } from "@lucide/svelte";
 
   let {

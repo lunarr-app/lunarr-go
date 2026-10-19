@@ -1,8 +1,8 @@
-import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import type { DiscoverShowsResponse } from "$lib/server/api/types";
-import { SHOW_PAGE_SIZE, normalizeLimit, normalizePage } from "$lib/server/media/catalog";
-import { listBecauseYouWatchedShows } from "$lib/server/media/shows/discover";
+import { apiErrorFrom, requireJsonUser } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import type { DiscoverShowsResponse } from "#lib/server/api/types.js";
+import { SHOW_PAGE_SIZE, normalizeLimit, normalizePage } from "#lib/server/media/catalog.js";
+import { listBecauseYouWatchedShows } from "#lib/server/media/shows/discover.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {

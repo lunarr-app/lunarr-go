@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ModalDialog from "$lib/components/ModalDialog.svelte";
+  import ModalDialog from "#lib/components/ModalDialog.svelte";
   import type { Library, LibraryUser } from "./types";
 
   let {

@@ -1,6 +1,6 @@
-import { BROWSE_RAIL_LIMIT } from "$lib/server/media/catalog";
-import { listBecauseYouWatchedMovies } from "$lib/server/media/movies/discover";
-import { listBecauseYouWatchedShows } from "$lib/server/media/shows/discover";
+import { BROWSE_RAIL_LIMIT } from "#lib/server/media/catalog.js";
+import { listBecauseYouWatchedMovies } from "#lib/server/media/movies/discover.js";
+import { listBecauseYouWatchedShows } from "#lib/server/media/shows/discover.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { UserRound } from "@lucide/svelte";
-  import ModalDialog from "$lib/components/ModalDialog.svelte";
+  import ModalDialog from "#lib/components/ModalDialog.svelte";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
 

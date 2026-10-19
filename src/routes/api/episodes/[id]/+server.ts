@@ -1,7 +1,7 @@
-import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
-import { apiError, apiJson } from "$lib/server/api/json";
-import type { EpisodeDetailResponse } from "$lib/server/api/types";
-import { getEpisodeDetail } from "$lib/server/media/shows/detail";
+import { apiErrorFrom, requireJsonUser } from "#lib/server/api.js";
+import { apiError, apiJson } from "#lib/server/api/json.js";
+import type { EpisodeDetailResponse } from "#lib/server/api/types.js";
+import { getEpisodeDetail } from "#lib/server/media/shows/detail.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {

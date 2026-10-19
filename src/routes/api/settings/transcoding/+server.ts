@@ -1,6 +1,6 @@
-import { apiErrorFrom } from "$lib/server/api/json";
-import { parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
-import { updateTranscodingSettings } from "$lib/server/settings-commands";
+import { apiErrorFrom } from "#lib/server/api/json.js";
+import { parseBody, recordObjectSchema, requireJsonAdmin } from "#lib/server/api.js";
+import { updateTranscodingSettings } from "#lib/server/settings-commands.js";
 import type { RequestHandler } from "./$types";
 
 export const PATCH: RequestHandler = async ({ request, locals }) => {

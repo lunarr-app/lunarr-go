@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { resetAuthForTests } from "$lib/server/auth/test/setup";
-import { expectRejectsToMatchObject } from "$lib/test/async-expect";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import { resetAuthForTests } from "#lib/server/auth/test/setup.js";
+import { expectRejectsToMatchObject } from "#lib/test/async-expect.js";
+import type * as LinkDevicePage from "./+page.server";
 
 const testUser = {
   id: "user-1",
@@ -15,9 +16,7 @@ const testUser = {
 
 describe("link-device page server", () => {
   let tempDir: string;
-  let load: (
-    event: Parameters<(typeof import("./+page.server"))["load"]>[0],
-  ) => ReturnType<(typeof import("./+page.server"))["load"]>;
+  let load: (event: Parameters<typeof LinkDevicePage.load>[0]) => ReturnType<typeof LinkDevicePage.load>;
 
   beforeEach(async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "lunarr-link-device-page-"));

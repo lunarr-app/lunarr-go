@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { DEVICE_PAIRING_CODE_EXPIRY_MINUTES } from "$lib/device-pairing/constants";
-  import type { DevicePairingApiKeyExpirySettings } from "$lib/device-pairing/expiry-label";
-  import { formatUserCode, normalizeUserCode } from "$lib/device-pairing/format";
+  import { DEVICE_PAIRING_CODE_EXPIRY_MINUTES } from "#lib/device-pairing/constants.js";
+  import type { DevicePairingApiKeyExpirySettings } from "#lib/device-pairing/expiry-label.js";
+  import { formatUserCode, normalizeUserCode } from "#lib/device-pairing/format.js";
   import { Link2 } from "@lucide/svelte";
 
   let {

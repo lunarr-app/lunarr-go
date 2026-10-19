@@ -1,8 +1,8 @@
-import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse, PlaybackDataResponse } from "$lib/server/api/types";
-import { requireJsonUser } from "$lib/server/api";
-import { getPlaybackData, parsePlaybackProgressBody, saveProgress } from "$lib/server/playback";
-import { PlaybackSourceRequestError, withSignedPlaybackSource } from "$lib/server/playback/signed-source";
+import { apiError, apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { ApiOkResponse, PlaybackDataResponse } from "#lib/server/api/types.js";
+import { requireJsonUser } from "#lib/server/api.js";
+import { getPlaybackData, parsePlaybackProgressBody, saveProgress } from "#lib/server/playback/index.js";
+import { PlaybackSourceRequestError, withSignedPlaybackSource } from "#lib/server/playback/signed-source.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {

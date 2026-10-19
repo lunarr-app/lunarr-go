@@ -5,7 +5,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from ".";
 import type { Database } from "./schema";
-import { expectRejectsToThrow } from "$lib/test/async-expect";
+import { expectRejectsToThrow } from "#lib/test/async-expect.js";
 
 describe("streaming schema", () => {
   let tempDir: string;

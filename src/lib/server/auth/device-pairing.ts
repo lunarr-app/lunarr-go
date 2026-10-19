@@ -3,10 +3,10 @@ import {
   DEVICE_PAIRING_RETENTION_MS,
   DEVICE_PAIRING_TTL_MS,
   DEVICE_PAIRING_USER_CODE_LENGTH,
-} from "$lib/device-pairing/constants";
-import { buildLinkDeviceUrl } from "$lib/device-pairing/url";
-import { formatUserCode, generateUserCode, normalizeUserCode } from "$lib/device-pairing/format";
-import { devicePairingApiKeyExpiresInSeconds } from "$lib/server/device-pairing/env";
+} from "#lib/device-pairing/constants.js";
+import { buildLinkDeviceUrl } from "#lib/device-pairing/url.js";
+import { formatUserCode, generateUserCode, normalizeUserCode } from "#lib/device-pairing/format.js";
+import { devicePairingApiKeyExpiresInSeconds } from "#lib/server/device-pairing/env.js";
 import { randomUUID } from "node:crypto";
 import { getDb } from "../db";
 import type { DevicePairingStatus } from "../db/schema/device-pairing";

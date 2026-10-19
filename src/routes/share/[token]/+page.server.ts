@@ -1,5 +1,5 @@
-import { getSharePageData } from "$lib/server/shares";
-import { enforceGuestShareRateLimit } from "$lib/server/shares/rate-limit";
+import { getSharePageData } from "#lib/server/shares/index.js";
+import { enforceGuestShareRateLimit } from "#lib/server/shares/rate-limit.js";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 

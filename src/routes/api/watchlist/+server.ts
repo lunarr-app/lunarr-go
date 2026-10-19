@@ -1,8 +1,8 @@
-import { apiError, apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { ApiOkResponse } from "$lib/server/api/types";
-import { parseBody, requireJsonUser } from "$lib/server/api";
-import { toggleWatchlist, getWatchlistMovies, getWatchlistShows } from "$lib/server/media/watchlist";
-import { FULL_LIBRARY_PAGE_SIZE, normalizeLimit, normalizePage } from "$lib/server/media/catalog";
+import { apiError, apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { ApiOkResponse } from "#lib/server/api/types.js";
+import { parseBody, requireJsonUser } from "#lib/server/api.js";
+import { toggleWatchlist, getWatchlistMovies, getWatchlistShows } from "#lib/server/media/watchlist.js";
+import { FULL_LIBRARY_PAGE_SIZE, normalizeLimit, normalizePage } from "#lib/server/media/catalog.js";
 import { z } from "zod";
 import type { RequestHandler } from "./$types";
 

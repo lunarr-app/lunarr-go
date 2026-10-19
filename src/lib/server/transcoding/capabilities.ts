@@ -2,7 +2,7 @@ import {
   emptyClientPlaybackCapabilities,
   type ClientPlaybackCapabilities,
   type PlaybackTarget,
-} from "$lib/playback/capabilities";
+} from "#lib/playback/capabilities.js";
 import type { HlsSegmentFormat } from "./hls";
 import type { PlaybackPreference, TranscodePolicy } from "./policy";
 

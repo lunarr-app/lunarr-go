@@ -1,4 +1,4 @@
-import { requireAdmin } from "$lib/server/auth/users";
+import { requireAdmin } from "#lib/server/auth/users.js";
 import {
   getScanJobSummary,
   getPlaybackSessionSummary,
@@ -6,9 +6,9 @@ import {
   listPlaybackSessions,
   PLAYBACK_SESSION_LIST_LIMIT,
   SCAN_JOB_LIST_LIMIT,
-} from "$lib/server/jobs";
-import { cancelScanJob } from "$lib/server/scanner/scan-jobs";
-import { cancelPlaybackSession as stopPlaybackSession } from "$lib/server/transcoding/manager";
+} from "#lib/server/jobs/index.js";
+import { cancelScanJob } from "#lib/server/scanner/scan-jobs.js";
+import { cancelPlaybackSession as stopPlaybackSession } from "#lib/server/transcoding/manager.js";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

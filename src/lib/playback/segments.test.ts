@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { PlaybackSegment } from "$lib/server/playback";
+import type { PlaybackSegment } from "#lib/server/playback/index.js";
 import { activePlaybackSegment, playbackSegmentKey, segmentSkipTargetSeconds } from "./segments";
 
 const segments: PlaybackSegment[] = [

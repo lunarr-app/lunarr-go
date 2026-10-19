@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
+import { resolveOrigin } from "../../../../scripts/env.mjs";
 
 export const AUTH_SECRET_FILE = "auth-secret";
 
@@ -112,16 +113,8 @@ function buildEnvInput(env: NodeJS.ProcessEnv) {
   return {
     AUTH_SECRET: resolveAuthSecret(dataDir, env.AUTH_SECRET),
     ...env,
-    ORIGIN: env.ORIGIN || buildDefaultOrigin(env),
+    ORIGIN: resolveOrigin(env),
   };
-}
-
-function buildDefaultOrigin(env: NodeJS.ProcessEnv) {
-  let host = env.HOST || "127.0.0.1";
-  const port = env.PORT || "3000";
-  if (host === "0.0.0.0" || host === "::") host = "127.0.0.1";
-  if (host.includes(":") && !host.startsWith("[")) host = `[${host}]`;
-  return `http://${host}:${port}`;
 }
 
 function parseAppEnv() {

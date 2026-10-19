@@ -1,7 +1,7 @@
-import { apiErrorFrom, parseBody, recordObjectSchema, requireJsonAdmin } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import type { AdminSharesListResponse, MediaSharesListResponse, ShareCreateResponse } from "$lib/server/api/types";
-import { createShare, listAllShares, listSharesForMedia, parseCreateShareInput } from "$lib/server/shares";
+import { apiErrorFrom, parseBody, recordObjectSchema, requireJsonAdmin } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import type { AdminSharesListResponse, MediaSharesListResponse, ShareCreateResponse } from "#lib/server/api/types.js";
+import { createShare, listAllShares, listSharesForMedia, parseCreateShareInput } from "#lib/server/shares/index.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals, url }) => {

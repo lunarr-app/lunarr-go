@@ -1,5 +1,5 @@
-import { normalizePage, BROWSE_RAIL_LIMIT } from "$lib/server/media/catalog";
-import { getWatchlistMovies, getWatchlistShows } from "$lib/server/media/watchlist";
+import { normalizePage, BROWSE_RAIL_LIMIT } from "#lib/server/media/catalog.js";
+import { getWatchlistMovies, getWatchlistShows } from "#lib/server/media/watchlist.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {

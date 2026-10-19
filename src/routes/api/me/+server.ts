@@ -1,7 +1,7 @@
-import { apiErrorFrom, requireJsonUser } from "$lib/server/api";
-import { apiJson } from "$lib/server/api/json";
-import type { MeResponse } from "$lib/server/api/types";
-import { getUserProfilePreferences } from "$lib/server/profile/preferences";
+import { apiErrorFrom, requireJsonUser } from "#lib/server/api.js";
+import { apiJson } from "#lib/server/api/json.js";
+import type { MeResponse } from "#lib/server/api/types.js";
+import { getUserProfilePreferences } from "#lib/server/profile/preferences.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ locals }) => {

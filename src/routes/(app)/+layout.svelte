@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import AppShell from "$lib/components/AppShell.svelte";
+  import AppShell from "#lib/components/AppShell.svelte";
 
   let { children, data } = $props();
   const isErrorPage = $derived(Boolean(page.error));

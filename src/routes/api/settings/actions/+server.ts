@@ -1,7 +1,7 @@
-import { apiErrorFrom, apiJson } from "$lib/server/api/json";
-import type { SettingsActionResponse } from "$lib/server/api/types";
-import { parseBody, requireJsonAdmin } from "$lib/server/api";
-import { runSettingsAction } from "$lib/server/settings-commands";
+import { apiErrorFrom, apiJson } from "#lib/server/api/json.js";
+import type { SettingsActionResponse } from "#lib/server/api/types.js";
+import { parseBody, requireJsonAdmin } from "#lib/server/api.js";
+import { runSettingsAction } from "#lib/server/settings-commands.js";
 import { z } from "zod";
 import type { RequestHandler } from "./$types";
 

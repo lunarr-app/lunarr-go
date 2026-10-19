@@ -3,13 +3,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import type { Database } from "$lib/server/db/schema";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import type { Database } from "#lib/server/db/schema.js";
 import {
   resetGuestShareRateLimitsForTests,
   setGuestShareRateLimitOverridesForTests,
-} from "$lib/server/shares/rate-limit";
-import type { SharePageData } from "$lib/shares/types";
+} from "#lib/server/shares/rate-limit.js";
+import type { SharePageData } from "#lib/shares/types.js";
 import { load } from "./+page.server";
 
 const guestEventBase = {

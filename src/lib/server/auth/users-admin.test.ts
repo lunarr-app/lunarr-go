@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "$lib/server/db";
-import { setBooleanSetting } from "$lib/server/settings";
-import { resetAuthForTests, sessionHeadersFor } from "$lib/server/auth/test/setup";
-import { expectRejectsToThrow } from "$lib/test/async-expect";
+import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "#lib/server/db/index.js";
+import { setBooleanSetting } from "#lib/server/settings.js";
+import { resetAuthForTests, sessionHeadersFor } from "#lib/server/auth/test/setup.js";
+import { expectRejectsToThrow } from "#lib/test/async-expect.js";
 import { guardLastAdminOnUserRoleUpdate } from "./admin-safeguards";
 import { createManagedUser, deleteManagedUser, listManagedUsers, updateManagedUserRole } from "./users-admin";
 

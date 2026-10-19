@@ -1,8 +1,8 @@
 <script lang="ts">
-  import MovieCard from "$lib/components/MovieCard.svelte";
-  import Pagination from "$lib/components/Pagination.svelte";
-  import ShowCard from "$lib/components/ShowCard.svelte";
-  import type { CatalogPageInfo, MovieSummary, ShowSummary } from "$lib/media/types";
+  import MovieCard from "#lib/components/MovieCard.svelte";
+  import Pagination from "#lib/components/Pagination.svelte";
+  import ShowCard from "#lib/components/ShowCard.svelte";
+  import type { CatalogPageInfo, MovieSummary, ShowSummary } from "#lib/media/types.js";
 
   let {
     kind,

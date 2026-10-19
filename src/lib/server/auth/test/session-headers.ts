@@ -1,5 +1,5 @@
-import { createId } from "$lib/server/id";
-import { getDb } from "$lib/server/db";
+import { createId } from "#lib/server/id.js";
+import { getDb } from "#lib/server/db/index.js";
 import { hashPassword } from "better-auth/crypto";
 import { auth } from "../index";
 

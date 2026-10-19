@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { formatDateTime } from "$lib/media/format";
-  import MediaMetadataPanel from "$lib/components/MediaMetadataPanel.svelte";
+  import { formatDateTime } from "#lib/media/format.js";
+  import MediaMetadataPanel from "#lib/components/MediaMetadataPanel.svelte";
 
   let {
     show,

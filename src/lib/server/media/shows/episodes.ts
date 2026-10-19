@@ -1,6 +1,7 @@
-import type { ShowRowsResponse } from "$lib/media/types";
-import { sql, type Kysely } from "kysely";
-import { tmdbImageUrl } from "$lib/media/images";
+import type { ShowRowsResponse } from "#lib/media/types.js";
+import { sql } from "kysely";
+import type { Kysely } from "kysely";
+import { tmdbImageUrl } from "#lib/media/images.js";
 import { getDb } from "../../db";
 import type { Database } from "../../db/schema";
 import {

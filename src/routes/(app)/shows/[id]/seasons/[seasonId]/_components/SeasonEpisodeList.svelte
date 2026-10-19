@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatEpisodeCode, formatFileCountLabel } from "$lib/media/format";
+  import { formatEpisodeCode, formatFileCountLabel } from "#lib/media/format.js";
   import { Calendar, CirclePlay, Clock3, Eye, EyeOff } from "@lucide/svelte";
 
   type Episode = {

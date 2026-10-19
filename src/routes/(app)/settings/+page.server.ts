@@ -1,12 +1,12 @@
-import { isAdmin, requireAdmin } from "$lib/server/auth/users";
-import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
+import { isAdmin, requireAdmin } from "#lib/server/auth/users.js";
+import { tmdbCredentialsConfigured } from "#lib/server/metadata/tmdb.js";
 import {
   getAdminSettingsResponse,
   runSettingsAction,
   updateMetadataSettings,
   updateRegistrationSettings,
   updateTranscodingSettings,
-} from "$lib/server/settings-commands";
+} from "#lib/server/settings-commands.js";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

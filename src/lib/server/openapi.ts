@@ -1,13 +1,13 @@
 import { APP_VERSION } from "./version";
-import { CLIENT_PLAYBACK_CAPABILITY_KEYS, PLAYBACK_TARGETS } from "$lib/playback/capabilities";
+import { CLIENT_PLAYBACK_CAPABILITY_KEYS, PLAYBACK_TARGETS } from "#lib/playback/capabilities.js";
 import {
   HARDWARE_ACCELERATION_MODES,
   PLAYBACK_PREFERENCES,
   TRANSCODE_QUALITY_PRESETS,
-} from "$lib/server/transcoding/policy";
-import { PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS } from "$lib/server/transcoding/session-artifacts";
+} from "#lib/server/transcoding/policy.js";
+import { PLAYBACK_SESSION_ARTIFACT_MAX_BYTES_OPTIONS } from "#lib/server/transcoding/session-artifacts.js";
 import { API_KEY_MAX_EXPIRES_IN_SECONDS, API_KEY_MAX_NAME_LENGTH } from "./auth/api-key-config";
-import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
+import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "#lib/media/continue.js";
 
 function playbackCapabilityParameters() {
   return CLIENT_PLAYBACK_CAPABILITY_KEYS.map((name) => ({

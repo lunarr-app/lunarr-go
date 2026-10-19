@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatDateTime, formatGibibytes } from "$lib/media/format";
+  import { formatDateTime, formatGibibytes } from "#lib/media/format.js";
 
   let {
     signupOpen,

@@ -3,9 +3,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Kysely } from "kysely";
-import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests, type Database } from "$lib/server/db";
-import { clearTmdbDetailCachesForTests } from "$lib/server/metadata/tmdb";
-import { setSetting } from "$lib/server/settings";
+import {
+  closeDatabaseForTests,
+  getDb,
+  migrateDatabase,
+  useDatabaseFileForTests,
+  type Database,
+} from "#lib/server/db/index.js";
+import { clearTmdbDetailCachesForTests } from "#lib/server/metadata/tmdb.js";
+import { setSetting } from "#lib/server/settings.js";
 import { actions, load } from "./+page.server";
 
 type MovieDetailLoadResult = {

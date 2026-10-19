@@ -5,7 +5,7 @@ import path from "node:path";
 import { closeDatabaseForTests, getDb, migrateDatabase, useDatabaseFileForTests } from "../db";
 import { decryptSecret } from "../secrets";
 import { createLibrary, deleteLibrary, listLibraries, listLibrariesWithScanStatus, updateLibrary } from ".";
-import { expectRejectsToThrow } from "$lib/test/async-expect";
+import { expectRejectsToThrow } from "#lib/test/async-expect.js";
 
 let tempDir: string;
 

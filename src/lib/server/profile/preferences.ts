@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "$lib/media/continue";
-import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "$lib/server/media/continue-max-age";
+import { CONTINUE_MAX_AGE_DAYS_MAX, CONTINUE_MAX_AGE_DAYS_MIN } from "#lib/media/continue.js";
+import { getContinueMaxAgeDays, setUserContinueMaxAgeDays } from "#lib/server/media/continue-max-age.js";
 import {
   DEFAULT_SEGMENT_SKIP_PREFERENCES,
   getSegmentSkipPreferences,
   normalizeBooleanSetting,
   setSegmentSkipPreferences,
   type SegmentSkipPreferences,
-} from "$lib/server/playback/segment-skip-preferences";
+} from "#lib/server/playback/segment-skip-preferences.js";
 import {
   getTranscodePolicy,
   normalizePlaybackPreference,
@@ -15,7 +15,7 @@ import {
   setUserPlaybackPreference,
   setUserPreferredAudioLanguage,
   setUserPreferredSubtitleLanguage,
-} from "$lib/server/transcoding/policy";
+} from "#lib/server/transcoding/policy.js";
 
 const PROFILE_PREFERENCE_KEYS = [
   "playbackPreference",

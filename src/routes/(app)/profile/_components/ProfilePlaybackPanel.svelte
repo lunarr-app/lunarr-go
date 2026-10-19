@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { normalizePreferredLanguage } from "$lib/media/preferred-language";
+  import { normalizePreferredLanguage } from "#lib/media/preferred-language.js";
 
   let {
     transcodePolicy,

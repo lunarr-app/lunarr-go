@@ -1,8 +1,9 @@
-import { SEGMENT_LABELS } from "$lib/playback/segments";
-import { createTtlCache } from "$lib/server/cache/ttl-cache";
-import { getDb } from "$lib/server/db";
-import type { PlaybackSegment, PlaybackSegmentType } from "$lib/server/playback";
-import { getMedia, type GetMediaParams, type MediaRecord, type NormalizedSegmentTimestamp } from "theintrodb";
+import { SEGMENT_LABELS } from "#lib/playback/segments.js";
+import { createTtlCache } from "#lib/server/cache/ttl-cache.js";
+import { getDb } from "#lib/server/db/index.js";
+import type { PlaybackSegment, PlaybackSegmentType } from "#lib/server/playback/index.js";
+import { getMedia } from "theintrodb";
+import type { GetMediaParams, MediaRecord, NormalizedSegmentTimestamp } from "theintrodb";
 
 const INTRODB_FETCH_TIMEOUT_MS = 3_000;
 const INTRODB_CACHE_TTL_MS = 24 * 60 * 60 * 1000;

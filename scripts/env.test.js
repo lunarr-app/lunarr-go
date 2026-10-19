@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { loadDotenv, parseDotenvLine } from "./env.mjs";
+import { loadDotenv, parseDotenvLine, resolveOrigin } from "./env.mjs";
 
 describe("startup env loader", () => {
   test("parses dotenv lines used by Lunarr start", () => {
@@ -19,6 +19,14 @@ describe("startup env loader", () => {
       value: "http://127.0.0.1:3000",
     });
     expect(parseDotenvLine("# comment")).toBeUndefined();
+  });
+
+  test("resolves the public origin used for request URLs", () => {
+    expect(resolveOrigin({ ORIGIN: "https://lunarr.example.com" })).toBe("https://lunarr.example.com");
+    expect(resolveOrigin({ HOST: "127.0.0.1", PORT: "3000" })).toBe("http://127.0.0.1:3000");
+    expect(resolveOrigin({ HOST: "0.0.0.0", PORT: "8080" })).toBe("http://127.0.0.1:8080");
+    expect(resolveOrigin({ HOST: "::", PORT: "8080" })).toBe("http://127.0.0.1:8080");
+    expect(resolveOrigin({ HOST: "::1", PORT: "3000" })).toBe("http://[::1]:3000");
   });
 
   test("loads .env without overwriting explicit process values", async () => {

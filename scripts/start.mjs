@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadDotenv } from "./env.mjs";
+import { loadDotenv, resolveOrigin } from "./env.mjs";
 
 loadDotenv();
 
@@ -29,4 +29,20 @@ if (arg === "-v" || arg === "--version") {
   process.exit(0);
 }
 
-await import("../build/index.js");
+const origin = resolveOrigin(process.env);
+
+// adapter-node 6 dropped the runtime ORIGIN env var (paths.origin is
+// build-time only), so hand the runtime ORIGIN to SvelteKit via the forwarded
+// headers it derives request URLs from. Without this, plain HTTP form
+// submissions fail the CSRF check. The env vars must be set before the server
+// module loads.
+process.env.PROTOCOL_HEADER = "x-forwarded-proto";
+process.env.HOST_HEADER = "x-forwarded-host";
+
+const { server } = await import("../build/index.js");
+
+const forwardedOrigin = new URL(origin);
+server.prependListener("request", (request) => {
+  request.headers["x-forwarded-proto"] = forwardedOrigin.protocol.slice(0, -1);
+  request.headers["x-forwarded-host"] = forwardedOrigin.host;
+});

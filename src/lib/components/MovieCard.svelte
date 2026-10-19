@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { MovieSummary } from "$lib/media/types";
+  import type { MovieSummary } from "#lib/media/types.js";
 
   let { movie, href = `/movies/${movie.id}` }: { movie: MovieSummary; href?: string } = $props();
 

@@ -1,4 +1,4 @@
-import { building } from "$app/environment";
+import { building } from "$app/env";
 import { MAX_SCHEDULED_TIMEOUT_MS, nowIso } from "../time";
 import { tmdbCredentialsConfigured } from "./tmdb";
 import {

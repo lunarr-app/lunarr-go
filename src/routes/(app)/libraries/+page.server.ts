@@ -1,4 +1,4 @@
-import { isAdmin, requireAdmin } from "$lib/server/auth/users";
+import { isAdmin, requireAdmin } from "#lib/server/auth/users.js";
 import {
   createLibrary,
   deleteLibrary,
@@ -6,12 +6,12 @@ import {
   listLibraryShareUsers,
   updateLibrary,
   updateLibraryAccess,
-} from "$lib/server/libraries";
-import { libraryFormState, parseCreateLibraryInput, parseUpdateLibraryInput } from "$lib/server/libraries/input";
-import { tmdbCredentialsConfigured } from "$lib/server/metadata/tmdb";
-import { startScan } from "$lib/server/scanner/scan-jobs";
-import { syncScheduledLibraryScans } from "$lib/server/scanner/scheduler";
-import { syncLibraryWatchers } from "$lib/server/scanner/watchers";
+} from "#lib/server/libraries/index.js";
+import { libraryFormState, parseCreateLibraryInput, parseUpdateLibraryInput } from "#lib/server/libraries/input.js";
+import { tmdbCredentialsConfigured } from "#lib/server/metadata/tmdb.js";
+import { startScan } from "#lib/server/scanner/scan-jobs.js";
+import { syncScheduledLibraryScans } from "#lib/server/scanner/scheduler.js";
+import { syncLibraryWatchers } from "#lib/server/scanner/watchers.js";
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

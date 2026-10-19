@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { APP_VERSION } from "$lib/server/version";
+import { APP_VERSION } from "#lib/server/version.js";
 import { GET as jsonGet } from "./openapi.json/+server";
 import { GET as yamlGet } from "./openapi.yaml/+server";
 
