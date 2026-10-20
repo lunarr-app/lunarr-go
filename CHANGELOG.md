@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.11.0 - 2026-10-20
+
+### Upgrade Note
+
+- Requires Node `22.17` or newer for source installs, which is a SvelteKit 3 requirement. The published Docker image already runs Node 24, so it is unaffected
+- Adds the `0012` migration, which drops the `account.issuer` column and its unique index to restore the Better Auth 1.6 account schema
+- Migrations run automatically on startup, so no manual step is needed
+- Downgrade is not supported after this upgrade
+
+### Changed
+
+- Updated to SvelteKit 3 and `@sveltejs/adapter-node` 6. Configuration moved from `svelte.config.js` into `vite.config.ts`, `tsconfig.json` now extends `$app/tsconfig`, and the `$lib` alias is replaced by `#lib` subpath imports
+- Updated `theintrodb` from `3.2.0` to `4.0.0`, so intro lookups now use API v4. Responses are keyed by TVDB id, and Lunarr still resolves titles through its TMDb metadata
+- Removed the `cookie` override, since SvelteKit 3 requires `cookie` 2 and resolves the patched version itself
+- Updated `better-auth` and `@better-auth/api-key` to `1.7.11`, `kysely` to `0.29.7`, `@lucide/svelte` to `1.59.0`, `svelte-check` to `4.7.7`, `zod` to `4.6.7`, `webdav` to `5.11.0`, `vite` to `8.3.4`, and other minor and patch dependencies
+
+### Fixed
+
+- Fixed every route returning `500` on a fresh database, because Better Auth validated the schema before migrations ran. Migrations now run once before auth initialises
+- Fixed form submissions returning `403` after the adapter upgrade, by passing the configured `ORIGIN` to SvelteKit through forwarded headers
+- Fixed IntroDB lookups to ignore response shapes that carry no timestamps and to key the cache by every lookup field
+
 ## 0.10.0 - 2026-09-02
 
 ### Upgrade Note
