@@ -1,6 +1,7 @@
 import LibsqlDatabase from "libsql";
 import { Kysely, SqliteDialect, sql } from "kysely";
-import { Migrator, type Migration, type MigrationProvider } from "kysely/migration";
+import { Migrator } from "kysely/migration";
+import type { Migration, MigrationProvider } from "kysely/migration";
 import path from "node:path";
 import { mkdir } from "node:fs/promises";
 import { appEnv } from "../config/env";
