@@ -9,7 +9,7 @@
         "@lucide/svelte": "1.59.0",
         "better-auth": "1.7.11",
         "chokidar": "5.0.0",
-        "guessit-js": "4.0.0",
+        "guessit-js": "4.8.0",
         "hls.js": "1.7.3",
         "kysely": "0.29.7",
         "libsql": "0.5.29",
@@ -311,7 +311,7 @@
 
     "graceful-fs": ["graceful-fs@4.2.11", "", {}, "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="],
 
-    "guessit-js": ["guessit-js@4.0.0", "", { "dependencies": { "rebulk-js": "^3.3.1" } }, "sha512-B4XE1MgxzFbxsFM95AE1oOE33hAUIq1AjEFL87V3QvHkAA8ohSfa425wIFdFqhtIC0avHpY4PjthTwMP8bAlYg=="],
+    "guessit-js": ["guessit-js@4.8.0", "", { "bin": { "guessit": "bin/cli.mjs", "guessit-js": "bin/cli.mjs" } }, "sha512-yXOXpb5aXXcFlAvkTjYSHU0ZVm7Xz0WTdEWKjBnbzoV31iI7RqN8TtwGNTS+BmHFUUQit3/d2Cntca1WZFMZyQ=="],
 
     "hls.js": ["hls.js@1.7.3", "", {}, "sha512-MsPlx6yVW4Qv4C7mEVou4/gk/5cN2dVxOTnrNjPSmyH2f0Ln+/UkG10Ax1PE6OvrmTVPKgQYozTtBaPOuCzq7A=="],
 
@@ -440,8 +440,6 @@
     "readable-stream": ["readable-stream@2.3.8", "", { "dependencies": { "core-util-is": "~1.0.0", "inherits": "~2.0.3", "isarray": "~1.0.0", "process-nextick-args": "~2.0.0", "safe-buffer": "~5.1.1", "string_decoder": "~1.1.1", "util-deprecate": "~1.0.1" } }, "sha512-8p0AUk4XODgIewSi0l8Epjs+EVnWiK7NoDIEGU0HhE7+ZyY8D1IMY7odu5lRrFXGg71L15KG8QrPmum45RTtdA=="],
 
     "readdirp": ["readdirp@5.0.0", "", {}, "sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ=="],
-
-    "rebulk-js": ["rebulk-js@3.4.0", "", {}, "sha512-8XPbW2jhdmfdx4RxwWDVx+s9QrpeDBW992mdYpivW98/Mk/ZeGz+5UV0q/LOJ/5Rrlbf0iKOetgespL1gEhZGA=="],
 
     "reflect-metadata": ["reflect-metadata@0.2.2", "", {}, "sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q=="],
 
