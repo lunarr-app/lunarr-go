@@ -26,7 +26,7 @@
     "verify:tmdb": "node scripts/verify-tmdb.mjs"
   },
   "dependencies": {
-    "@better-auth/api-key": "1.7.11",
+    "@better-auth/api-key": "1.7.12",
     "@lucide/svelte": "1.59.0",
     "better-auth": "1.7.11",
     "chokidar": "5.0.0",
